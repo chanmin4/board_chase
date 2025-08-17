@@ -9,7 +9,7 @@ public class TileOutliner : MonoBehaviour
     public float sizeY = 1f;
 
     [Header("Border")]
-    public float thickness = 0.01f;
+    public float thickness = 0.03f;
     public float height = 0.02f;     // 윗면에서 살짝 띄워 Z-fighting 방지
     public Color color = Color.black;
 

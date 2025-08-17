@@ -58,37 +58,48 @@ public class DiskLauncher : MonoBehaviour
         }
     }
 
-  TileCenter FindNearestTileCenter()
+    TileCenter FindNearestTileCenter()
+    {
+        // 1) 우선 충돌 기반 탐색
+        var hits = Physics.OverlapSphere(
+            transform.position,
+            snapSearchRadius,
+            tileMask,
+            QueryTriggerInteraction.Collide
+        );
+
+        TileCenter best = null; float bestD = float.MaxValue;
+
+        foreach (var h in hits)
+        {
+            var tc = h.GetComponent<TileCenter>() ?? h.GetComponentInChildren<TileCenter>() ?? h.GetComponentInParent<TileCenter>();
+            if (!tc) continue;
+            float d = (tc.transform.position - transform.position).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = tc; }
+        }
+
+        if (best != null) return best;
+
+        // 2) 실패 시: 레지스트리에서 전수 검색 (레이어/콜라이더 무시)
+        foreach (var tc in TileCenter.Registry)
+        {
+            if (!tc) continue;
+            float d = (tc.transform.position - transform.position).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = tc; }
+        }
+        return best;
+    }
+
+
+public void WarpTo(TileCenter tc, float yOff = 0f)
 {
-    // 1) 우선 충돌 기반 탐색
-    var hits = Physics.OverlapSphere(
-        transform.position,
-        snapSearchRadius,
-        tileMask,
-        QueryTriggerInteraction.Collide
-    );
-
-    TileCenter best = null; float bestD = float.MaxValue;
-
-    foreach (var h in hits)
-    {
-        var tc = h.GetComponent<TileCenter>() ?? h.GetComponentInChildren<TileCenter>() ?? h.GetComponentInParent<TileCenter>();
-        if (!tc) continue;
-        float d = (tc.transform.position - transform.position).sqrMagnitude;
-        if (d < bestD) { bestD = d; best = tc; }
-    }
-
-    if (best != null) return best;
-
-    // 2) 실패 시: 레지스트리에서 전수 검색 (레이어/콜라이더 무시)
-    foreach (var tc in TileCenter.Registry)
-    {
-        if (!tc) continue;
-        float d = (tc.transform.position - transform.position).sqrMagnitude;
-        if (d < bestD) { bestD = d; best = tc; }
-    }
-    return best;
+    if (!tc) return;
+    rb.linearVelocity = Vector3.zero;
+    launched = false;
+    var p = tc.transform.position;
+    transform.position = new Vector3(p.x, p.y + yOff + snapYOffset, p.z);
 }
+
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()

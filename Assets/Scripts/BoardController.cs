@@ -15,10 +15,14 @@ public class BoardController : MonoBehaviour
     public Color activeColor   = new(1,1,1,1);      // 활성(뒤1~앞6)
     public Color inactiveColor = new(1,1,1,0.25f);  // 비활성(그 외)
     public Color previewColor  = new(1,1,1,0.7f);   // tile_7~tile_12 미리보기(랜덤)
+    [Header("Spawn (옵션)")]
+        public Transform tileParent;       // 새 타일 부모(없으면 this)
+        public TileCell tilecell;        // 새 타일이 필요할 때 생성할 프리팹
 
     // index(절대) -> TileCell
     Dictionary<int, TileCell> cells = new();
-
+    int prevL = int.MinValue;
+      int startFace = 1;
     void Awake()
     {
         // 씬의 모든 TileCell 등록 (TileCenter.index 필수)
@@ -36,82 +40,105 @@ public class BoardController : MonoBehaviour
         if (launcher != null) launcher.OnStoppedOnTile -= HandleLanded;
     }
 
-    void HandleLanded(TileCenter tc)
+void HandleLanded(TileCenter tc)
+{
+    if (tc == null) return;
+    int L = tc.index;
+
+    // 1) 착지 타입 분석 → 다음 턴 시작 숫자 결정
+    switch (tc.type)
     {
-        if (tc == null) return;
-        int L = tc.index;          // 이번에 멈춘 칸(=tile_1)
-
-        // 1) 유리벽은 [L-1 .. L+5] 범위(뒤1+앞6)만 감쌈
-        float fromX = (L - 1) * tileLen;
-        float toX   = (L + 5) * tileLen;
-        if (windowwall != null) windowwall.SetWindowSmooth(fromX, toX, halfZ);
-
-        // 2) 타일 스타일 재배치
-        UpdateTiles(L);
-
-        // 3) 착지 타일 효과(랜덤 주사위 등)
-        ResolveEffect(tc);
+        case TileType.Random:
+            startFace = Random.Range(1, 7);                           // 주사위 결과
+            break;
+        case TileType.Face1:
+        case TileType.Face2:
+        case TileType.Face3:
+        case TileType.Face4:
+        case TileType.Face5:
+        case TileType.Face6:
+            startFace = (int)tc.type - (int)TileType.Face1 + 1;       // N
+            break;
     }
 
-    void UpdateTiles(int L)
+    // 2) 필요한 범위 보장 (index는 계속 증가)
+    EnsureRange(L - 1, L + 11);
+
+    // 3) 현재 창 타입 재배치 (표시는 하지 않음)
+    SetWindowTypes(L);
+
+    // 4) type을 읽어 라벨만 갱신
+    RefreshLabels(L - 1, L + 11);
+
+    // (선택) 왼쪽 끝 Random(L-1)로 디스크 워프해 다음 턴 시작
+    if (launcher != null && cells.TryGetValue(L - 1, out var left) && left?.center)
+        launcher.WarpTo(left.center);
+
+    // (선택) 유리벽 이동
+    // float fromX = (L - 1) * tileLen, toX = (L + 5) * tileLen;
+    // windowwall?.SetWindowSmooth(fromX, toX, halfZ);
+}
+void SetWindowTypes(int L)
+{
+    // S0 = Random
+    if (cells.TryGetValue(L - 1, out var c0) && c0?.center) c0.center.type = TileType.Random;
+
+    // S1..S6 = Face(startFace..)
+    for (int i = 0; i <= 5; i++)
     {
-        // 일단 전부 비활성 톤
-        foreach (var kv in cells) kv.Value.SetColor(inactiveColor, inactiveColor.a);
-
-        // random_1 = L-1
-        PaintRandom(L - 1, preview:false);
-
-        // tile_1..tile_6 = L..L+5
-        for (int i = 0; i <= 5; i++)
-            PaintFace(L + i, i + 1); // Face1~6
-
-        // tile_7..tile_12 = L+6..L+11 (미리보기 랜덤)
-        for (int i = 6; i <= 11; i++)
-            PaintRandom(L + i, preview:true);
+        if (!cells.TryGetValue(L + i, out var cell) || !cell?.center) continue;
+        int face = ((startFace - 1 + i) % 6); // 0..5
+        cell.center.type = (TileType)((int)TileType.Face1 + face);
     }
 
-    void PaintFace(int idx, int face)
+    // S7..S12 = Random (미리보기)
+    for (int i = 6; i <= 11; i++)
     {
-        if (!cells.TryGetValue(idx, out var cell)) return;
-        cell.SetColor(activeColor, activeColor.a);
-        if (cell.center) cell.center.type = (TileType)((int)TileType.Face1 + (face - 1));
-        // 숫자 텍스트/스프라이트 갱신은 여기에서
+        if (!cells.TryGetValue(L + i, out var cr) || !cr?.center) continue;
+        cr.center.type = TileType.Random;
     }
+}
 
-    void PaintRandom(int idx, bool preview)
-    {
-        if (!cells.TryGetValue(idx, out var cell)) return;
-        var col = preview ? previewColor : activeColor;
-        var a   = preview ? previewColor.a : activeColor.a;
-        cell.SetColor(col, a);
-        if (cell.center) cell.center.type = TileType.Random;
-        // 미리보기면 "?" 아이콘 표시 등
-    }
+TileCell EnsureTile(int idx)
+{
+    if (cells.TryGetValue(idx, out var exist) && exist) return exist;
+    if (tilecell == null) return null;
 
-    void ResolveEffect(TileCenter landed)
+    var parent = tileParent != null ? tileParent : transform;
+    var tile = Instantiate(tilecell, parent);
+
+    // 위치 & 인덱스
+    var t = tile.transform;
+    t.position = new Vector3(idx * tileLen, 0f, 0f);
+    if (!tile.center) tile.center = tile.GetComponentInChildren<TileCenter>();
+    if (tile.center)  tile.center.index = idx;
+
+    // ★ 라벨 보장(없으면 자동 생성, 배치)
+    tile.RefreshLabelFromType();     // 초기 표시(기본 type 기준)
+
+    cells[idx] = tile;
+    return tile;
+}
+
+void RefreshLabels(int a, int b)
+{
+    for (int i = a; i <= b; i++)
+        if (cells.TryGetValue(i, out var cell) && cell)
+            cell.RefreshLabelFromType();  // type→글씨 자동 갱신
+}
+    // --- 새로 추가: [a..b] 범위 타일 보장 ---
+    void EnsureRange(int a, int b)
     {
-        // 착지한 칸의 즉시 효과 처리
-        switch (landed.type)
+        for (int i = a; i <= b; i++)
+            EnsureTile(i);
+
+        // 선택: 범위 밖(왼쪽 오래된 타일)은 비활성화(“사라진” 느낌)
+        foreach (var kv in cells)
         {
-            case TileType.Random:
-                int roll = Random.Range(1, 7);
-                Debug.Log($"[Random] roll={roll} at {landed.index}");
-                // 연출/버프/패널티 적용 지점
-                break;
-
-            case TileType.Face1:
-            case TileType.Face2:
-            case TileType.Face3:
-            case TileType.Face4:
-            case TileType.Face5:
-            case TileType.Face6:
-                int face = (int)landed.type - (int)TileType.Face1 + 1;
-                Debug.Log($"[Face] {face} at {landed.index}");
-                // 페이스별 룰 적용 지점
-                break;
-
-            default:
-                break;
+            bool inside = (kv.Key >= a && kv.Key <= b);
+            if (kv.Value != null)
+                kv.Value.gameObject.SetActive(inside);
         }
     }
+
 }
