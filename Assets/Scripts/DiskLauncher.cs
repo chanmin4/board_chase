@@ -1,111 +1,100 @@
-// DiskLauncher.cs (교체/수정)
 using UnityEngine;
 using System;
 
 [RequireComponent(typeof(Rigidbody))]
 public class DiskLauncher : MonoBehaviour
 {
-    [Header("힘→속도")]
-    public float powerScale   = 0.16f;
-    public float minStopSpeed = 0.25f;
+    [Header("Launch / Stop")]
+    public float powerScale   = 0.16f;   // 드래그 게이지→속도 스케일
+    public float minStopSpeed = 0.25f;   // 이 속도 미만이면 '멈춤' 판정
 
-    [Header("스냅 설정")]
-    public LayerMask tileMask;              // ← Tile 레이어만 체크
-    public float snapSearchRadius = 5f;   // ← 타일 탐색 반경
-    public float snapYOffset = 0f;          // ← 센터에 살짝 높이 보정이 필요하면 사용
+    [Header("Grid")]
+    [SerializeField] BoardGrid board;    // 반드시 연결(그리드 스냅/좌표 변환)
+    public Vector2Int CurrentTile { get; private set; } = new Vector2Int(-1,-1);
+    public bool HasValidTile { get; private set; } = false;
+
+    // 이벤트
+    /// <summary>타일이 바뀔 때마다(이동 중에도) 계속 호출</summary>
+    public event Action<int,int> OnTileChanged;
+    /// <summary>정지 후 스냅이 끝난 최종 타일 리포트</summary>
+    public event Action<int,int> OnStoppedOnTile;
 
     Rigidbody rb;
-    bool launched;
-    public bool IsMoving => launched;
+    bool launched;         // 발사 상태
+    Vector2Int _lastTile = new Vector2Int(-1,-1);
 
-    public event Action<TileCenter> OnStoppedOnTile;
+    void Awake(){
+        rb = GetComponent<Rigidbody>();
+        if (!board){
+            board = FindAnyObjectByType<BoardGrid>();
+            if (!board) Debug.LogError("[DiskLauncher] BoardGrid reference missing.");
+        }
+        // 시작 타일 초기화
+        UpdateCurrentTile(forceEvent:true);
+    }
 
-    void Awake(){ rb = GetComponent<Rigidbody>(); }
-
+    // 외부에서 드래그 방향/세기를 받아서 발사
     public void Launch(Vector3 dir, float pull)
     {
         dir.y = 0f; dir.Normalize();
-        rb.linearVelocity = dir * (pull * powerScale);
+        rb.linearVelocity = dir * (pull * powerScale);   // ← 기존 코드 컨벤션 유지
         launched = true;
     }
 
     void FixedUpdate()
     {
-        if (!launched) return;
+        // 1) 항상 현 타일 계산 (움직이는 중에도)
+        UpdateCurrentTile(forceEvent:false);
 
-        if (rb.linearVelocity.magnitude < minStopSpeed)
+        // 2) 멈춤 판정 → 스냅 + 최종 리포트
+        if (launched && rb.linearVelocity.magnitude < minStopSpeed)
         {
             launched = false;
             rb.linearVelocity = Vector3.zero;
-            SnapAndReport();
+            SnapToTileCenterAndReport();
         }
     }
 
-    void SnapAndReport()
+    // === 내부 유틸 ===
+
+    void UpdateCurrentTile(bool forceEvent)
     {
-        TileCenter best = FindNearestTileCenter();
+        if (!board) { HasValidTile = false; return; }
 
-        if (best != null)
+        int ix, iy;
+        Vector3 pos = transform.position;
+        // 보드 밖이어도 클램프 스냅 기준으로 인덱스 산출
+        if (!board.WorldToIndex(pos, out ix, out iy))
         {
-            var p = best.transform.position;
-            transform.position = new Vector3(p.x, p.y + snapYOffset, p.z);  // ← 스냅!
-            OnStoppedOnTile?.Invoke(best);
+            // 인덱스만 보정 (스냅은 멈췄을 때)
+            var local = pos - board.origin;
+            ix = Mathf.Clamp(Mathf.FloorToInt(local.x / board.tileSize), 0, board.width - 1);
+            iy = Mathf.Clamp(Mathf.FloorToInt(local.z / board.tileSize), 0, board.height - 1);
+            HasValidTile = false; // 아직 보드 밖이므로 센터 스냅 전
         }
-        else
+        else HasValidTile = true;
+
+        CurrentTile = new Vector2Int(ix, iy);
+
+        if (forceEvent || CurrentTile != _lastTile)
         {
-            Debug.LogWarning("[DiskLauncher] 근처 TileCenter를 찾지 못했습니다. tileMask/Collider/Index 확인!");
-            OnStoppedOnTile?.Invoke(null);
+            _lastTile = CurrentTile;
+            OnTileChanged?.Invoke(ix, iy);   // ← 생존영역 시스템은 이 이벤트만 구독해도 실시간 반응 가능
         }
     }
 
-    TileCenter FindNearestTileCenter()
+    void SnapToTileCenterAndReport()
     {
-        // 1) 우선 충돌 기반 탐색
-        var hits = Physics.OverlapSphere(
-            transform.position,
-            snapSearchRadius,
-            tileMask,
-            QueryTriggerInteraction.Collide
-        );
+        if (!board) return;
 
-        TileCenter best = null; float bestD = float.MaxValue;
+        Vector3 p = transform.position;
+        board.SnapToNearest(ref p, out int ix, out int iy);
+        transform.position = p;          // 타일 센터로 위치 스냅
+        CurrentTile = new Vector2Int(ix, iy);
+        _lastTile   = CurrentTile;
+        HasValidTile = true;
 
-        foreach (var h in hits)
-        {
-            var tc = h.GetComponent<TileCenter>() ?? h.GetComponentInChildren<TileCenter>() ?? h.GetComponentInParent<TileCenter>();
-            if (!tc) continue;
-            float d = (tc.transform.position - transform.position).sqrMagnitude;
-            if (d < bestD) { bestD = d; best = tc; }
-        }
-
-        if (best != null) return best;
-
-        // 2) 실패 시: 레지스트리에서 전수 검색 (레이어/콜라이더 무시)
-        foreach (var tc in TileCenter.Registry)
-        {
-            if (!tc) continue;
-            float d = (tc.transform.position - transform.position).sqrMagnitude;
-            if (d < bestD) { bestD = d; best = tc; }
-        }
-        return best;
+        OnTileChanged?.Invoke(ix, iy);   // 스냅으로 바뀐 경우도 브로드캐스트
+        OnStoppedOnTile?.Invoke(ix, iy); // 정지 이벤트 (턴 처리/생존영역 갱신 트리거)
     }
-
-
-public void WarpTo(TileCenter tc, float yOff = 0f)
-{
-    if (!tc) return;
-    rb.linearVelocity = Vector3.zero;
-    launched = false;
-    var p = tc.transform.position;
-    transform.position = new Vector3(p.x, p.y + yOff + snapYOffset, p.z);
-}
-
-
-#if UNITY_EDITOR
-    void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, snapSearchRadius);
-    }
-#endif
 }

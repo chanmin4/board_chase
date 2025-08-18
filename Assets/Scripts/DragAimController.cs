@@ -34,13 +34,11 @@ public class DragAimController : MonoBehaviour
         SetVis(false);
 
         // 멈추면 다시 드래그 허용
-        if (launcher) launcher.OnStoppedOnTile += _ => { canDrag = true; };
+       
     }
 
     void Update()
     {
-        // 이동 중엔 입력 무시
-        if (!canDrag || (launcher && launcher.IsMoving)) return;
 
         // 시작
         if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos))

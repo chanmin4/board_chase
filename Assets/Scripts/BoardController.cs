@@ -21,7 +21,7 @@ public class BoardController : MonoBehaviour
 
     // index(절대) -> TileCell
     Dictionary<int, TileCell> cells = new();
-    int prevL = int.MinValue;
+    //int prevL = int.MinValue;
       int startFace = 1;
     void Awake()
     {
@@ -31,14 +31,6 @@ public class BoardController : MonoBehaviour
                 cells[cell.center.index] = cell;
     }
 
-    void OnEnable()
-    {
-        if (launcher != null) launcher.OnStoppedOnTile += HandleLanded;
-    }
-    void OnDisable()
-    {
-        if (launcher != null) launcher.OnStoppedOnTile -= HandleLanded;
-    }
 
 void HandleLanded(TileCenter tc)
 {
@@ -61,84 +53,7 @@ void HandleLanded(TileCenter tc)
             break;
     }
 
-    // 2) 필요한 범위 보장 (index는 계속 증가)
-    EnsureRange(L - 1, L + 11);
-
-    // 3) 현재 창 타입 재배치 (표시는 하지 않음)
-    SetWindowTypes(L);
-
-    // 4) type을 읽어 라벨만 갱신
-    RefreshLabels(L - 1, L + 11);
-
-    // (선택) 왼쪽 끝 Random(L-1)로 디스크 워프해 다음 턴 시작
-    if (launcher != null && cells.TryGetValue(L - 1, out var left) && left?.center)
-        launcher.WarpTo(left.center);
-
-    // (선택) 유리벽 이동
-    // float fromX = (L - 1) * tileLen, toX = (L + 5) * tileLen;
-    // windowwall?.SetWindowSmooth(fromX, toX, halfZ);
-}
-void SetWindowTypes(int L)
-{
-    // S0 = Random
-    if (cells.TryGetValue(L - 1, out var c0) && c0?.center) c0.center.type = TileType.Random;
-
-    // S1..S6 = Face(startFace..)
-    for (int i = 0; i <= 5; i++)
-    {
-        if (!cells.TryGetValue(L + i, out var cell) || !cell?.center) continue;
-        int face = ((startFace - 1 + i) % 6); // 0..5
-        cell.center.type = (TileType)((int)TileType.Face1 + face);
-    }
-
-    // S7..S12 = Random (미리보기)
-    for (int i = 6; i <= 11; i++)
-    {
-        if (!cells.TryGetValue(L + i, out var cr) || !cr?.center) continue;
-        cr.center.type = TileType.Random;
-    }
 }
 
-TileCell EnsureTile(int idx)
-{
-    if (cells.TryGetValue(idx, out var exist) && exist) return exist;
-    if (tilecell == null) return null;
-
-    var parent = tileParent != null ? tileParent : transform;
-    var tile = Instantiate(tilecell, parent);
-
-    // 위치 & 인덱스
-    var t = tile.transform;
-    t.position = new Vector3(idx * tileLen, 0f, 0f);
-    if (!tile.center) tile.center = tile.GetComponentInChildren<TileCenter>();
-    if (tile.center)  tile.center.index = idx;
-
-    // ★ 라벨 보장(없으면 자동 생성, 배치)
-    tile.RefreshLabelFromType();     // 초기 표시(기본 type 기준)
-
-    cells[idx] = tile;
-    return tile;
-}
-
-void RefreshLabels(int a, int b)
-{
-    for (int i = a; i <= b; i++)
-        if (cells.TryGetValue(i, out var cell) && cell)
-            cell.RefreshLabelFromType();  // type→글씨 자동 갱신
-}
-    // --- 새로 추가: [a..b] 범위 타일 보장 ---
-    void EnsureRange(int a, int b)
-    {
-        for (int i = a; i <= b; i++)
-            EnsureTile(i);
-
-        // 선택: 범위 밖(왼쪽 오래된 타일)은 비활성화(“사라진” 느낌)
-        foreach (var kv in cells)
-        {
-            bool inside = (kv.Key >= a && kv.Key <= b);
-            if (kv.Value != null)
-                kv.Value.gameObject.SetActive(inside);
-        }
-    }
 
 }
