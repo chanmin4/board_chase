@@ -11,14 +11,14 @@ public class DragAimController : MonoBehaviour
     [Header("Pull Settings")]
     public float minPull = 0.5f;
     public float maxPull = 6f;
-    public float deadZone = 0.15f;
+    public float deadZone = 0.20f;
 
     [Header("Power Tuning")]
-    public float launchBoost = 4f;   // ← 이동량 키우는 추가 배율
+    public float launchBoost = 6f;   // ← 이동량 키우는 추가 배율
 
     [Header("Visual Scaling")]
-    public float circleMin = 0.6f, circleMax = 2.0f;
-    public float arrowMin  = 0.4f, arrowMax  = 3.5f;
+    public float circleMin = 1f, circleMax = 3.0f;
+    public float arrowMin  = 0.2f, arrowMax  = 4f;
     public float arrowBodyBaseZ = 1f;
 
     Plane ground;
@@ -26,11 +26,12 @@ public class DragAimController : MonoBehaviour
     bool canDrag = true;               // ← 발사 중엔 잠금
     Vector3 startPos, currPos, dragDir; // dragDir = start→current
     float pull;
+    bool launchedThisDrag = false;
 
     void Start()
     {
         if (!cam) cam = Camera.main;
-        ground = new Plane(Vector3.up, Vector3.zero);
+        ground = new Plane(Vector3.up, new Vector3(0f, launcher.transform.position.y, 0f));
         SetVis(false);
 
         // 멈추면 다시 드래그 허용
@@ -41,8 +42,9 @@ public class DragAimController : MonoBehaviour
     {
 
         // 시작
-        if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos))
+        if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos)&&launcher.Charges>=1)
         {
+            launchedThisDrag = false; 
             dragging = true; SetVis(true); InitAt(startPos);
         }
 
@@ -58,9 +60,10 @@ public class DragAimController : MonoBehaviour
         if (dragging && Input.GetMouseButton(0) && RayToGround(Input.mousePosition, out currPos))
         {
             var delta = currPos - startPos; delta.y = 0f;
-            float raw = delta.magnitude; if (raw < deadZone) raw = 0f;
-            pull    = Mathf.Clamp(raw, 0f, maxPull);
-            dragDir = delta.sqrMagnitude > 1e-6f ? delta.normalized : Vector3.forward;
+            float raw = delta.magnitude;
+            float eff = Mathf.Max(0f, raw - deadZone);   
+            pull    = Mathf.Clamp(eff, 0f, maxPull);
+            dragDir = eff > 1e-5f ? delta.normalized : dragDir; // ← 방향 잔상 유지
             UpdateVis(pull / maxPull);
         }
 
@@ -68,11 +71,18 @@ public class DragAimController : MonoBehaviour
         if (dragging && Input.GetMouseButtonUp(0))
         {
             dragging = false; SetVis(false);
-            if (pull >= minPull)
+            if (!launchedThisDrag && pull >= minPull)
             {
+                launchedThisDrag = true;   
                 Vector3 launchDir = -dragDir;
                 float strength = pull * launchBoost;
-                canDrag = false;
+
+                // ⬇ 추가: 기존 이동속도 제거 → Launch가 AddForce여도 겹가속 방지
+                var rb = launcher.GetComponent<Rigidbody>();
+                if (rb) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+
+                // (기존 그대로)
+                canDrag = false;           // 원 코드 유지 (원하면 지워도 동작엔 영향 없음)
                 launcher.Launch(launchDir, strength);
             }
             pull = 0f;

@@ -13,15 +13,27 @@ public class DiskLauncher : MonoBehaviour
     public Vector2Int CurrentTile { get; private set; } = new Vector2Int(-1,-1);
     public bool HasValidTile { get; private set; } = false;
 
+    [Header("Bounce Charges")]
+    [Tooltip("세트가 시작될 때(또는 게임 시작) 충전되는 기본 횟수")]
+    public int baseCharges = 2;
+    [Tooltip("보상으로 늘어날 수 있는 최대 한도(0 이하면 제한 없음)")]
+    public int maxCharges = 5; // 0 or less => unlimited cap
+    public int Charges { get; private set; }
+
     // 이벤트
     /// <summary>타일이 바뀔 때마다(이동 중에도) 계속 호출</summary>
     public event Action<int,int> OnTileChanged;
     /// <summary>정지 후 스냅이 끝난 최종 타일 리포트</summary>
     public event Action<int,int> OnStoppedOnTile;
+    /// <summary>충전량이 바뀔 때마다 (현재, 최대) 보고</summary>
+    public event Action<int,int> OnChargesChanged;
 
     Rigidbody rb;
     bool launched;         // 발사 상태
     Vector2Int _lastTile = new Vector2Int(-1,-1);
+
+    // 외부 참조(세트 시작/소비 이벤트 구독용)
+    SurvivalDirector director;
 
     void Awake(){
         rb = GetComponent<Rigidbody>();
@@ -29,15 +41,78 @@ public class DiskLauncher : MonoBehaviour
             board = FindAnyObjectByType<BoardGrid>();
             if (!board) Debug.LogError("[DiskLauncher] BoardGrid reference missing.");
         }
+        director = FindAnyObjectByType<SurvivalDirector>();
+        if (director != null)
+        {
+            // 세트 시작마다 기본 2회로 초기화
+            director.OnZonesReset  += HandleSetReset;
+            // 존 성공 진입 시 +1
+            director.OnZoneConsumed += HandleZoneConsumed;
+        }
+
         // 시작 타일 초기화
         UpdateCurrentTile(forceEvent:true);
+
+        // 게임 시작 시에도 기본 2회
+        ResetChargesToBase();
+    }
+
+    void OnDestroy()
+    {
+        if (director != null)
+        {
+            director.OnZonesReset   -= HandleSetReset;
+            director.OnZoneConsumed -= HandleZoneConsumed;
+        }
+    }
+
+    // === 충전(횟수) 제어 ===
+    void ResetChargesToBase()
+    {
+        Charges = baseCharges;
+        if (maxCharges > 0 && Charges > maxCharges) Charges = maxCharges;
+        OnChargesChanged?.Invoke(Charges, EffectiveMax());
+    }
+    void AddCharge(int amount = 1)
+    {
+        if (amount <= 0) return;
+        if (maxCharges > 0) Charges = Mathf.Min(Charges + amount, maxCharges);
+        else Charges += amount;
+        OnChargesChanged?.Invoke(Charges, EffectiveMax());
+    }
+    bool ConsumeCharge()
+    {
+        if (Charges <= 0) return false;
+        Charges--;
+        OnChargesChanged?.Invoke(Charges, EffectiveMax());
+        return true;
+    }
+    int EffectiveMax() => maxCharges > 0 ? maxCharges : Mathf.Max(baseCharges, Charges);
+
+    void HandleSetReset()
+    {
+        // 세트(setRemain) 초기화 시 발사 가능 횟수도 초기화
+        ResetChargesToBase();
+    }
+    void HandleZoneConsumed(int _)
+    {
+        // 존에 들어갈 때마다 +1
+        AddCharge(1);
     }
 
     // 외부에서 드래그 방향/세기를 받아서 발사
     public void Launch(Vector3 dir, float pull)
     {
+        // 발사 가능 횟수 체크
+        if (!ConsumeCharge())
+        {
+            // 필요하다면 여기서 UI/사운드 알림을 호출해도 됨
+            // Debug.Log("[DiskLauncher] No charges left.");
+            return;
+        }
+
         dir.y = 0f; dir.Normalize();
-        rb.linearVelocity = dir * (pull * powerScale);   // ← 기존 코드 컨벤션 유지
+        rb.linearVelocity = dir * (pull * powerScale);   // 표준 속성 사용
         launched = true;
     }
 
@@ -79,7 +154,7 @@ public class DiskLauncher : MonoBehaviour
         if (forceEvent || CurrentTile != _lastTile)
         {
             _lastTile = CurrentTile;
-            OnTileChanged?.Invoke(ix, iy);   // ← 생존영역 시스템은 이 이벤트만 구독해도 실시간 반응 가능
+            OnTileChanged?.Invoke(ix, iy);   // 생존영역 시스템은 이 이벤트만 구독해도 실시간 반응 가능
         }
     }
 
@@ -95,6 +170,6 @@ public class DiskLauncher : MonoBehaviour
         HasValidTile = true;
 
         OnTileChanged?.Invoke(ix, iy);   // 스냅으로 바뀐 경우도 브로드캐스트
-        OnStoppedOnTile?.Invoke(ix, iy); // 정지 이벤트 (턴 처리/생존영역 갱신 트리거)
+        OnStoppedOnTile?.Invoke(ix, iy); // 정지 이벤트 (턴 처리/세트 갱신 트리거 등)
     }
 }

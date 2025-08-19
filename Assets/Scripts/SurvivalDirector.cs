@@ -23,7 +23,7 @@ public class SurvivalDirector : MonoBehaviour
     public SurvivalGauge gauge;
 
     [Header("Zone Lifetime")]
-    public float zoneLifetime = 10f;       // 시간 내 미진입 → 만료
+    public float zoneLifetime = 7f;       // 시간 내 미진입 → 만료
     [Header("Zone Spacing")]
     [Tooltip("존들 사이 최소 간격(타일 기준, 원 반지름 합 + 이 값 이상 떨어지도록)")]
     public float minZoneSeparationTiles = 0.35f;
@@ -39,9 +39,9 @@ public class SurvivalDirector : MonoBehaviour
     public float relaxStep = 0.05f;        // 5%p
 
     [Header("Wall Hit Requirements")]
-    public int reqSmall = 2;
-    public int reqMedium = 1;
-    public int reqLarge = 0;
+    public int reqSmall = 4;
+    public int reqMedium = 2;
+    public int reqLarge = 1;
 
     [Header("Zone Footprints (tile size)")]
     public Vector2Int smallSize = new Vector2Int(2, 2);
@@ -60,13 +60,14 @@ public class SurvivalDirector : MonoBehaviour
     [Header("Zone Bounce Cooldown")]
     public float zoneBounceCooldown = 0.08f; // 같은 존에서 연속 튕김 방지
     int lastBounceZoneId = -1;
-    float lastBounceTime = -999f;
+
+    float lastBounceZoneTime = -999f;
 
     // 클래스 상단 헤더 근처에 추가
     [Header("Zone Entry (consume)")]
-    public float enterBonusSmall = 15f;
-    public float enterBonusMedium = 12f;
-    public float enterBonusLarge = 9f;
+    public float enterBonusSmall = 40f;
+    public float enterBonusMedium = 30f;
+    public float enterBonusLarge = 20f;
     [Tooltip("플레이어-돔 접촉 판정 여유(타일 단위)")]
     public float zoneTouchToleranceTiles = 0.35f;   // 0.35~0.5 권장
 
@@ -92,6 +93,13 @@ public event System.Action<int> OnZoneConsumed; // ★ 소비(성공 진입) 알
     public int CurrentWallHits => wallHits;
 
     int nextZoneId = 1;
+    float setRemain; // 세트(라이프존) 남은 시간
+    // === Set Timer getters (for HUD) ===
+    public float SetRemain   => Mathf.Max(0f, setRemain);                                  // 남은 시간(초)
+    public float SetDuration => Mathf.Max(0.0001f, zoneLifetime);                          // 전체 세트 시간(초)
+    public float SetProgress01 => 1f - Mathf.Clamp01(setRemain / Mathf.Max(0.0001f, zoneLifetime)); // 0→1
+
+
 
     // ===== 내부 상태 =====
     public enum ZoneKind { Small, Medium, Large }
@@ -145,39 +153,31 @@ public event System.Action<int> OnZoneConsumed; // ★ 소비(성공 진입) 알
         bool onBoard = board.WorldToIndex(player.position, out px, out py);
         gauge?.SetContaminated(onBoard && IsContaminated(px, py));
 
-        // 2) 존 타이머 업데이트 & 세트 만료 여부
         float dt = Time.deltaTime;
-        bool anyExpired = false;
-        for (int i = 0; i < zones.Count; i++)
-        {
-            var z = zones[i];
-            z.remain -= dt;
-            if (z.remain <= 0f) anyExpired = true;
-        }
 
-        if (anyExpired)
+        // 2) 세트(라이프존) 타이머
+        setRemain -= dt;
+
+        // 3) 진행도 브로드캐스트(존이 남아있다면 모두 같은 진행도 사용)
+        float setProgress = 1f - Mathf.Clamp01(setRemain / Mathf.Max(0.0001f, zoneLifetime));
+        for (int i = 0; i < zones.Count; i++)
+            OnZoneProgress?.Invoke(zones[i].id, setProgress);
+
+        // 4) 세트 종료: setRemain <= 0 이면
+        if (setRemain <= 0f)
         {
-            // ★ 세트 종료: 남아있는 "모든" 존을 오염 처리 + 시각 삭제
+            // 규칙: "지나가지 않은 생존영역은 지뢰칸으로 변환"
+            // 남아있는(=소비되지 않은) 존 전부를 원형 오염으로 찍어둔다.
             for (int i = 0; i < zones.Count; i++)
-            {
-                var z = zones[i];
-                OnZoneExpired?.Invoke(z.id);
-                MarkContaminationCircle(z); // state 오염 + 보라 원 디스크
-            }
+                MarkContaminationCircle(zones[i]); // state 오염 + 보라 디스크
+
+            // 세트 리셋(돔/링은 OnZonesReset에서 한번에 정리됨)
             ResetWallHits();
-            RegenerateAllZones(); // 이때만 3개 동시 재생성
-            return;               // 이번 프레임 종료
+            RegenerateAllZones(); // ← 이때만 3개 동시 재생성
+            return;
         }
 
-        // 3) 진행도 브로드캐스트 (만료 없을 때만)
-        for (int i = 0; i < zones.Count; i++)
-        {
-            var z = zones[i];
-            float p = 1f - Mathf.Clamp01(z.remain / Mathf.Max(0.0001f, zoneLifetime));
-            OnZoneProgress?.Invoke(z.id, p);
-        }
-
-        // 4) 플레이어-존 상호작용
+        // 5) 플레이어-존 상호작용 (소비/튕김)
         if (onBoard)
         {
             Vector3 pWorld = player.position;
@@ -190,7 +190,7 @@ public event System.Action<int> OnZoneConsumed; // ★ 소비(성공 진입) 알
                 // 원형 돔 내부 판정
                 bool inside = PlayerInsideZoneWorld(z, pWorld);
 
-                // 미충족 튕김 이후엔 한 번 밖으로 나가야 재진입 가능
+                // 미충족 튕김 이후엔 한 번 밖으로 나가야 재진입 허용
                 if (requireExitReenterAfterBounce && z.mustExitFirst && !inside)
                     z.mustExitFirst = false;
 
@@ -198,22 +198,22 @@ public event System.Action<int> OnZoneConsumed; // ★ 소비(성공 진입) 알
 
                 if (wallHits >= z.reqHits)
                 {
-                    // 잠금 시간/재진입 조건 검사
+                    // 잠금/재진입 검사
                     if (Time.time < z.consumeUnlockTime) continue;
                     if (requireExitReenterAfterBounce && z.mustExitFirst) continue;
 
-                    // ★ 조건 충족: 즉시 소비(보너스만, 오염 X). 개별 재스폰 없음!
+                    // ★ 성공 진입: 즉시 소비(보너스만, 오염 X). 개별 재스폰 없음!
                     ConsumeZone(z);
                 }
                 else
                 {
                     // ★ 조건 미달: 즉시 튕김 + 벽스택 증가 + 잠금/재진입 요구
-                    if (!(lastBounceZoneId == z.id && Time.time - lastBounceTime < zoneBounceCooldown))
+                    if (!(lastBounceZoneId == z.id && Time.time - lastBounceZoneTime < zoneBounceCooldown))
                     {
                         BounceFromZone(z);
                         AddWallHit(1);
-                        lastBounceZoneId = z.id;
-                        lastBounceTime   = Time.time;
+                        lastBounceZoneId   = z.id;
+                        lastBounceZoneTime = Time.time;
 
                         z.consumeUnlockTime = Time.time + consumeLockAfterBounce;
                         z.mustExitFirst     = true;
@@ -222,6 +222,7 @@ public event System.Action<int> OnZoneConsumed; // ★ 소비(성공 진입) 알
             }
         }
     }
+
     bool CirclesOverlapExisting(Vector2Int candCenter, Vector2Int candFootprint)
 {
     // 후보 원 정보
@@ -250,19 +251,26 @@ public event System.Action<int> OnZoneConsumed; // ★ 소비(성공 진입) 알
         zones.Clear();
         OnZonesReset?.Invoke(); // 비주얼(돔/링) 정리
         ResetWallHits();
-        var s = TrySpawnZone(ZoneKind.Small, smallSize, reqSmall, gainSmall);
-        var m = TrySpawnZone(ZoneKind.Medium, mediumSize, reqMedium, gainMedium);
-        var l = TrySpawnZone(ZoneKind.Large, largeSize, reqLarge, gainLarge);
-
+        setRemain = zoneLifetime;
+        // ✅ 소 → 즉시 등록
+        var s = TrySpawnZone(ZoneKind.Small,  smallSize,  reqSmall,  gainSmall);
         if (s != null) SpawnAndNotify(s);
+
+        // ✅ 중 → "이미 등록된 소"와 겹침 검사됨
+        var m = TrySpawnZone(ZoneKind.Medium, mediumSize, reqMedium, gainMedium);
         if (m != null) SpawnAndNotify(m);
+
+        // ✅ 대 → "소/중"과 겹침 검사됨
+        var l = TrySpawnZone(ZoneKind.Large,  largeSize,  reqLarge,  gainLarge);
         if (l != null) SpawnAndNotify(l);
 
-        // 실패 보정
-        while (zones.Count < 3)
+        // 부족하면 소형으로 채우는 안전망(겹침/간격 검사 그대로 통과해야 추가됨)
+        int guard = 100; // 무한 루프 방지
+        while (zones.Count < 3 && guard-- > 0)
         {
             var forced = ForceSpawnFallback();
-            if (forced != null) SpawnAndNotify(forced); else break;
+            if (forced != null) SpawnAndNotify(forced);
+            else break;
         }
     }
 
