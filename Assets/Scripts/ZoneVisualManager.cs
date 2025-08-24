@@ -8,45 +8,42 @@ public class ZoneVisualManager : MonoBehaviour
     public BoardGrid board;
     public SurvivalDirector director;
 
-    [Header("Prefabs & Materials")]
-    public GameObject hemispherePrefab;  // 반구(스피어 스케일로 반구처럼)
-    public GameObject ringPrefab;        // 밑면 원(얇은 Cylinder 등)
-    public Material smallMat, mediumMat, largeMat;
-    public Material smallRingMat, mediumRingMat, largeRingMat;
+    [Header("Prefabs & Default Materials")]
+    public GameObject hemispherePrefab;      // 반구 프리팹(스피어를 y 반만 보이게한 형태여도 OK)
+    public GameObject ringPrefab;            // 밑면 원(얇은 Cylinder/Disc 등)
+    public Material defaultDomeMat;
+    public Material defaultRingMat;
 
-    [Header("Contaminated (Disc)")]
-    [NonSerialized] public GameObject contamDiscPrefab;  // 비어있으면 Cylinder로 생성
-    public Material contamMat;           // 보라 반투명
-    public float contamDiscY = 0.01f;    // 바닥과 간섭 방지
+    [Header("Contaminated (Disc Visual)")]
+    public GameObject contamDiscPrefab;      // 없으면 Cylinder로 생성
+    public Material contamMat;               // 보라/자주 반투명
+    public float contamDiscY = 0.01f;        // 바닥과의 간섭 방지
 
-    // 돔 관리(id → 인스턴스)
     class Visual
     {
         public GameObject root;
-        public Transform dome;      // 반구
-        public Transform ring;      // 밑면 원(진행도에 따라 XZ 스케일)
+        public Transform dome;
+        public Transform ring;
         public float baseRadius;
     }
     Dictionary<int, Visual> map = new Dictionary<int, Visual>();
-
-    Transform contamRoot; // 오염 디스크 부모
+    Transform contamRoot;
 
     void Awake()
     {
         if (!board) board = FindAnyObjectByType<BoardGrid>();
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
 
-        // 오염 디스크 용 루트
         contamRoot = new GameObject("ContaminatedDiscs").transform;
         contamRoot.SetParent(transform, false);
 
         if (director)
         {
-            director.OnZonesReset += HandleReset;        // 돔/링만 정리
+            director.OnZonesReset += HandleReset;
             director.OnZoneSpawned += HandleSpawn;
             director.OnZoneExpired += HandleExpired;
             director.OnZoneProgress += HandleProgress;
-            director.OnZoneContaminatedCircle += HandleContamCircle; // ★ 원형 오염 유지
+            director.OnZoneContaminatedCircle += HandleContamCircle;
             director.OnZoneConsumed += HandleConsumed;
         }
     }
@@ -62,45 +59,43 @@ public class ZoneVisualManager : MonoBehaviour
         director.OnZoneConsumed -= HandleConsumed;
     }
 
-    void HandleConsumed(int id)
-{
-    // 소비는 '오염 없이' 돔만 제거 → 만료 처리와 동일하게 시각만 삭제
-    HandleExpired(id);
-}
+    // 소비(성공 진입) → 돔/링 제거
+    void HandleConsumed(int id) => HandleExpired(id);
 
-    // === 돔/링 리셋(오염 디스크는 남김) ===
+    // 돔/링 전체 리셋(오염 디스크는 유지)
     void HandleReset()
     {
         foreach (var v in map.Values) if (v.root) Destroy(v.root);
         map.Clear();
-        // contamRoot는 그대로 둔다 (오염 디스크 유지)
+        // contamRoot는 그대로 유지 (지나간 세트 오염을 맵에 남김)
     }
 
-    // === 돔/링 스폰 ===
+    // 스폰: 스냅샷의 재질/반경 적용
     void HandleSpawn(ZoneSnapshot snap)
     {
-        var root = new GameObject($"Zone_{snap.id}_{snap.kind}");
+        Debug.Log($"[ZoneVisual] Spawn id={snap.id} profile={snap.profileIndex} r={snap.baseRadius}");
+        var root = new GameObject($"Zone_{snap.id}_P{snap.profileIndex}");
         root.transform.SetParent(transform, false);
         root.transform.position = snap.centerWorld;
 
         // 돔
         GameObject dome = Instantiate(hemispherePrefab, root.transform);
         dome.transform.localPosition = Vector3.zero;
-        dome.transform.localScale = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
-        StripAllColliders(dome); 
+        dome.transform.localScale    = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
+        StripAllColliders(dome);
 
-        var rend = dome.GetComponentInChildren<Renderer>();
-        if (rend) rend.sharedMaterial = GetMat(snap.kind);
+        var dRend = dome.GetComponentInChildren<Renderer>();
+        if (dRend) dRend.sharedMaterial = snap.domeMat ? snap.domeMat : defaultDomeMat;
 
-        // 밑면 원(링) — 시작은 반경 0
+        // 링(초기 반경 0 → 진행도에 따라 확장)
         GameObject ring = Instantiate(ringPrefab, root.transform);
         ring.transform.localPosition = Vector3.zero;
         ring.transform.localRotation = Quaternion.identity;
-        ring.transform.localScale = new Vector3(0.0001f, 0.02f, 0.0001f);
-        StripAllColliders(ring);   
+        ring.transform.localScale    = new Vector3(0.0001f, 0.02f, 0.0001f);
+        StripAllColliders(ring);
 
         var rRend = ring.GetComponentInChildren<Renderer>();
-        if (rRend) rRend.sharedMaterial = GetRingMat(snap.kind);
+        if (rRend) rRend.sharedMaterial = snap.ringMat ? snap.ringMat : defaultRingMat;
 
         map[snap.id] = new Visual
         {
@@ -111,81 +106,54 @@ public class ZoneVisualManager : MonoBehaviour
         };
     }
 
-    // === 돔 제거(만료) ===
+    // 만료(세트 종료로 오염 처리 후) → 해당 돔/링만 삭제
     void HandleExpired(int id)
     {
-        if (map.TryGetValue(id, out var v))
-        {
-            if (v.root) Destroy(v.root);
-            map.Remove(id);
-        }
+        if (!map.TryGetValue(id, out var v)) return;
+        if (v.root) Destroy(v.root);
+        map.Remove(id);
     }
 
-    // === 진행도에 따라 링 반경 확대 ===
+    // 진행도에 따라 링 반경 보간(0 → baseRadius)
     void HandleProgress(int id, float progress01)
     {
         if (!map.TryGetValue(id, out var v)) return;
-
         float r = Mathf.Lerp(0f, v.baseRadius, Mathf.Clamp01(progress01));
         v.ring.localScale = new Vector3(r * 2f, v.ring.localScale.y, r * 2f);
-        // 필요하면 여기서 돔 투명도 보간 등 추가 가능
+        // 필요하면 돔 투명도/색 보간도 여기서 함께 처리 가능
     }
-    
+
+    // 오염 디스크(보라색) 생성
+void HandleContamCircle(int id, Vector3 centerWorld, float radiusWorld)
+{
+    GameObject go;
+    if (contamDiscPrefab)
+    {
+        go = Instantiate(contamDiscPrefab, centerWorld + Vector3.up * contamDiscY, Quaternion.identity, contamRoot);
+    }
+    else
+    {
+        go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        go.transform.SetParent(contamRoot, false);
+        go.transform.position = centerWorld + Vector3.up * contamDiscY;
+        var col = go.GetComponent<Collider>(); if (col) Destroy(col);
+        StripAllColliders(go);
+    }
+
+    go.transform.localScale = new Vector3(radiusWorld * 2f, 0.02f, radiusWorld * 2f);
+
+    //  모든 렌더러에 contamMat 강제 적용 (프리팹 머티 무시)
+    if (contamMat)
+    {
+        var rends = go.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in rends) r.sharedMaterial = contamMat;
+    }
+}
+
     void StripAllColliders(GameObject go)
     {
         if (!go) return;
         var cols = go.GetComponentsInChildren<Collider>(true);
-        foreach (var c in cols) Destroy(c);  // 완전히 제거
-        // 만약 제거 대신 트리거로 바꾸고 싶다면:
-        // foreach (var c in cols) c.isTrigger = true;
+        foreach (var c in cols) Destroy(c);
     }
-
-    // === 원형 오염 디스크 생성/유지 ===
-    void HandleContamCircle(int id, Vector3 centerWorld, float radiusWorld)
-    {
-        GameObject go;
-        if (contamDiscPrefab)
-        {
-            go = Instantiate(contamDiscPrefab, centerWorld + Vector3.up * contamDiscY, Quaternion.identity, contamRoot);
-        }
-        else
-        {
-            // 기본 Cylinder 생성
-            go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.transform.SetParent(contamRoot, false);
-            go.transform.position = centerWorld + Vector3.up * contamDiscY;
-            // 콜라이더 제거
-            var col = go.GetComponent<Collider>(); if (col) Destroy(col);
-            StripAllColliders(go);   
-        }
-
-        // XZ = 지름, Y = 얇게
-        go.transform.localScale = new Vector3(radiusWorld * 2f, 0.02f, radiusWorld * 2f);
-
-        var r = go.GetComponentInChildren<Renderer>();
-        if (r && contamMat) r.sharedMaterial = contamMat;
-    }
-
-    // ===== 머티리얼 선택 =====
-    Material GetMat(SurvivalDirector.ZoneKind kind)
-    {
-        switch (kind)
-        {
-            case SurvivalDirector.ZoneKind.Small: return smallMat ? smallMat : mediumMat;
-            case SurvivalDirector.ZoneKind.Medium: return mediumMat ? mediumMat : smallMat;
-            default: return largeMat ? largeMat : mediumMat;
-        }
-    }
-
-    Material GetRingMat(SurvivalDirector.ZoneKind kind)
-    {
-        switch (kind)
-        {
-            case SurvivalDirector.ZoneKind.Small: return smallRingMat ? smallRingMat : smallMat;
-            case SurvivalDirector.ZoneKind.Medium: return mediumRingMat ? mediumRingMat : mediumMat;
-            default: return largeRingMat ? largeRingMat : largeMat;
-        }
-    }
-    
-
 }

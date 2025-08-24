@@ -1,36 +1,146 @@
 #if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
+using System.Collections.Generic;
 
+/// <summary>
+/// SceneView에 보드 격자, 오염 타일, 현재 스폰된 LifeZone(원형), 플레이어 타일을 그려주는 Gizmo.
+/// - Inspector-Driven ZoneProfile 구조에 맞춰 동작
+/// - Director 이벤트를 구독하여 현재 존 스냅샷을 캐시하고 그림
+/// </summary>
 [ExecuteAlways]
 public class SurvivalGizmo : MonoBehaviour
 {
+    [Header("Refs")]
     public BoardGrid board;
     public SurvivalDirector director;
     public Transform player;
 
-    public Color zoneSmall = new Color(0.1f, 0.8f, 1f, 0.25f);
-    public Color zoneMedium = new Color(0.1f, 1f, 0.4f, 0.25f);
-    public Color zoneLarge = new Color(1f, 0.9f, 0.1f, 0.25f);
-    public Color contam = new Color(0.6f, 0.2f, 0.8f, 0.25f);
-    public Color gridLine = new Color(0,0,0,0.25f);
-    public Color border = new Color(0,0,0,0.8f);
-    public Color playerTile = new Color(1f, 1f, 1f, 0.35f);
+    [Header("Colors")]
+    public Color gridLine    = new Color(0, 0, 0, 0.25f);
+    public Color border      = new Color(0, 0, 0, 0.80f);
+    public Color playerTileC = new Color(1f, 1f, 1f, 0.35f);
+    public Color contamTileC = new Color(0.6f, 0.2f, 0.8f, 0.25f);
+
+    // 프로필 인덱스별 기본 팔레트 (필요시 인스펙터에서 바꿔도 됨)
+    public Color[] profileFill = new Color[]
+    {
+        new Color(0.10f, 0.80f, 1.00f, 0.20f), // P0
+        new Color(0.10f, 1.00f, 0.40f, 0.20f), // P1
+        new Color(1.00f, 0.90f, 0.10f, 0.20f), // P2
+        new Color(1.00f, 0.40f, 0.20f, 0.20f), // P3
+        new Color(0.60f, 0.50f, 1.00f, 0.20f), // P4
+        new Color(0.20f, 1.00f, 0.80f, 0.20f), // P5
+    };
+    public Color ringLine = new Color(0f, 0f, 0f, 0.9f);
+
+    // 진행도(세트 타이머) 표시에 쓰는 링 두께
+    const float RING_THICKNESS = 2.0f;
+
+    // 현재 스폰된 존 스냅샷 캐시 (director 이벤트로 갱신)
+    struct Snap
+    {
+        public int id;
+        public int profileIndex;
+        public Vector3 centerW;
+        public float baseRadiusW;
+        public float progress01; // 세트 진행도(0~1)
+    }
+    Dictionary<int, Snap> _zones = new Dictionary<int, Snap>();
+
+    void OnEnable()
+    {
+        if (!board)    board    = FindAnyObjectByType<BoardGrid>();
+        if (!director) director = FindAnyObjectByType<SurvivalDirector>();
+
+        Subscribe();
+        // 플레이 모드가 아니면 즉시 그림만 담당(스폰 이벤트는 런타임에 들어옴)
+    }
+
+    void OnDisable()
+    {
+        Unsubscribe();
+        _zones.Clear();
+    }
+
+    void Subscribe()
+    {
+        if (!director) return;
+        Unsubscribe();
+
+        director.OnZonesReset += HandleReset;
+        director.OnZoneSpawned += HandleSpawn;
+        director.OnZoneExpired += HandleExpired;
+        director.OnZoneProgress += HandleProgress;
+        director.OnZoneConsumed += HandleConsumed;
+    }
+
+    void Unsubscribe()
+    {
+        if (!director) return;
+        director.OnZonesReset    -= HandleReset;
+        director.OnZoneSpawned   -= HandleSpawn;
+        director.OnZoneExpired   -= HandleExpired;
+        director.OnZoneProgress  -= HandleProgress;
+        director.OnZoneConsumed  -= HandleConsumed;
+    }
+
+    void HandleReset()
+    {
+        _zones.Clear();
+        SceneView.RepaintAll();
+    }
+
+    void HandleSpawn(ZoneSnapshot s)
+    {
+        _zones[s.id] = new Snap {
+            id           = s.id,
+            profileIndex = s.profileIndex,
+            centerW      = s.centerWorld,
+            baseRadiusW  = s.baseRadius,
+            progress01   = 0f
+        };
+        SceneView.RepaintAll();
+    }
+
+    void HandleExpired(int id)
+    {
+        if (_zones.ContainsKey(id)) _zones.Remove(id);
+        SceneView.RepaintAll();
+    }
+
+    void HandleConsumed(int id)
+    {
+        // 소비로 사라진 존: 기즈모에서도 제거
+        if (_zones.ContainsKey(id)) _zones.Remove(id);
+        SceneView.RepaintAll();
+    }
+
+    void HandleProgress(int id, float p01)
+    {
+        if (_zones.TryGetValue(id, out var s))
+        {
+            s.progress01 = Mathf.Clamp01(p01);
+            _zones[id] = s;
+            // SceneView.RepaintAll(); // 매 프레임 호출되므로 생략 가능
+        }
+    }
 
     void OnDrawGizmos()
     {
         if (!board) return;
+
         var o = board.origin;
         float s = board.tileSize;
 
-        // 격자
+        // 1) 격자
         Handles.color = gridLine;
         for (int x = 0; x <= board.width; x++)
             Handles.DrawLine(o + new Vector3(x * s, 0, 0), o + new Vector3(x * s, 0, board.height * s));
         for (int y = 0; y <= board.height; y++)
             Handles.DrawLine(o + new Vector3(0, 0, y * s), o + new Vector3(board.width * s, 0, y * s));
 
-        // 테두리
+        // 2) 테두리
         Handles.color = border;
         Vector3 p0 = o;
         Vector3 p1 = o + new Vector3(board.width * s, 0, 0);
@@ -38,13 +148,15 @@ public class SurvivalGizmo : MonoBehaviour
         Vector3 p3 = o + new Vector3(0, 0, board.height * s);
         Handles.DrawAAPolyLine(3f, p0, p1, p2, p3, p0);
 
-        if (!director || !director.HasState) return;
-            // ✅ 유효 크기 계산 (board/direction 둘 중 작은 값 사용)
-    int w = Mathf.Min(board.width,  director.Width);
-    int h = Mathf.Min(board.height, director.Height);
-    if (w <= 0 || h <= 0) return;
+        // 디렉터 상태 체크(오염/존)
+        if (director == null || !director.HasState) 
+        {
+            DrawPlayerTile(o, s);
+            return;
+        }
 
-        // 오염칸
+        // 3) 오염 타일
+        Handles.color = contamTileC;
         for (int y = 0; y < board.height; y++)
         {
             for (int x = 0; x < board.width; x++)
@@ -52,39 +164,54 @@ public class SurvivalGizmo : MonoBehaviour
                 if (director.IsContaminated(x, y))
                 {
                     Handles.DrawSolidRectangleWithOutline(
-                        new Rect(o.x + x * s, o.z + y * s, s, s), contam, Color.clear);
+                        new Rect(o.x + x * s, o.z + y * s, s, s), contamTileC, Color.clear);
                 }
             }
         }
 
-        // 영역 (정식 enum으로 스위치)
-        foreach (var zone in director.GetZones())
+        // 4) 존(원형)
+        foreach (var kv in _zones)
         {
-            var kind = zone.kind;
-            var tiles = zone.tiles;
+            var z = kv.Value;
+            var fill = ProfileFill(z.profileIndex);
 
-            Color c;
-            switch (kind)
-            {
-                case SurvivalDirector.ZoneKind.Small:  c = zoneSmall;  break;
-                case SurvivalDirector.ZoneKind.Medium: c = zoneMedium; break;
-                default:                               c = zoneLarge;  break;
-            }
+            // 밑면 채우기(반투명 원 디스크)
+            Handles.color = fill;
+            Handles.DrawSolidDisc(z.centerW, Vector3.up, z.baseRadiusW);
 
-            foreach (var t in tiles)
+            // 진행 링(0 → baseRadius까지)
+            float r = Mathf.Lerp(0f, z.baseRadiusW, z.progress01);
+            if (r > 0.0001f)
             {
-                if (t.x < 0 || t.y < 0 || t.x >= w || t.y >= h) continue;
-                Handles.DrawSolidRectangleWithOutline(
-                    new Rect(o.x + t.x * s, o.z + t.y * s, s, s), c, Color.clear);
+                Handles.color = ringLine;
+                Handles.DrawWireDisc(z.centerW, Vector3.up, r, RING_THICKNESS);
             }
         }
 
-        // 플레이어 현재 칸
-        if (player && board.WorldToIndex(player.position, out int px, out int py))
+        // 5) 플레이어 타일 마커
+        DrawPlayerTile(o, s);
+    }
+
+    void DrawPlayerTile(Vector3 origin, float tileSize)
+    {
+        if (!player || !board) return;
+        if (board.WorldToIndex(player.position, out int px, out int py))
         {
             Handles.DrawSolidRectangleWithOutline(
-                new Rect(o.x + px * s, o.z + py * s, s, s), playerTile, Color.clear);
+                new Rect(origin.x + px * tileSize, origin.z + py * tileSize, tileSize, tileSize),
+                playerTileC, Color.clear);
         }
+    }
+
+    Color ProfileFill(int profileIndex)
+    {
+        if (profileFill != null && profileFill.Length > 0)
+        {
+            int i = Mathf.Abs(profileIndex) % profileFill.Length;
+            return profileFill[i];
+        }
+        // fallback
+        return new Color(0.2f, 0.8f, 1f, 0.2f);
     }
 }
 #endif
