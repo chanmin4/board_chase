@@ -72,8 +72,9 @@ public class SurvivalDirector : MonoBehaviour
     [Tooltip("플레이어-돔 접촉 판정 여유(타일 단위)")]
     public float zoneTouchToleranceTiles = 0.35f;
 
-    [Header("조건 미달 시 벽처럼 튕기기")]
-    public float reflectClampSpeed = 18f;
+    [Header("Zone Bounce Tuning")]
+    public float zoneRestitution = 0.98f;   // 1=속도 보존, 0.98~1.05 권장
+    public float reflectClampSpeed = 0f;
     public float zoneBounceCooldown = 0.08f;
     [Tooltip("미충족 튕김 직후 소비 금지 시간")]
     public float consumeLockAfterBounce = 0.15f;
@@ -422,11 +423,17 @@ public class SurvivalDirector : MonoBehaviour
 
         Vector3 zoneCenterW = z.centerWorld;
         Vector3 v = playerRb.linearVelocity;
-        if (v.sqrMagnitude < 0.0001f) v = (player.position - zoneCenterW).normalized * 2f;
+        if (v.sqrMagnitude < 0.0001f)
+            v = (player.position - zoneCenterW).normalized * 2f;
 
-        Vector3 n = (player.position - zoneCenterW).normalized;
-        Vector3 r = Vector3.Reflect(v, n).normalized * Mathf.Min(v.magnitude, reflectClampSpeed);
-        playerRb.linearVelocity = r;
+        Vector3 n    = (player.position - zoneCenterW).normalized;
+        Vector3 rDir = Vector3.Reflect(v, n).normalized;
+
+        float speed = v.magnitude * zoneRestitution;  // 속도 보존/미세 증감
+        if (reflectClampSpeed > 0f)                   // 0이면 캡 해제
+            speed = Mathf.Min(speed, reflectClampSpeed);
+
+        playerRb.linearVelocity = rDir * speed;
     }
 
     // ===== 오염 처리 & 청소 유틸 =====

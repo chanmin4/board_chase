@@ -77,7 +77,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             return; 
         // 시작
-        if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos) && launcher.Charges >= 1)
+        if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos) && launcher.CanLaunchNow)
         {
             launchedThisDrag = false;
             dragging = true; SetVis(true); InitAt(startPos);

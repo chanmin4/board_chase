@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using TMPro;
 
 public class CardManager : MonoBehaviour
@@ -9,6 +10,7 @@ public class CardManager : MonoBehaviour
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI chargeText; // “현재/최대”
     public Button useButton;
+    public TextMeshProUGUI durationText;
 
     [Header("Resource Key")]
     public string cardResourceName = "Cards/Cleaner"; // Resources/Cards/Cleaner.asset
@@ -23,6 +25,7 @@ public class CardManager : MonoBehaviour
     CardAbility ability;
 
     int lastWallHits;
+    private Coroutine durationCo;
 
     void Awake()
     {
@@ -43,6 +46,7 @@ public class CardManager : MonoBehaviour
     void OnDestroy()
     {
         if (director) director.OnWallHitsChanged -= HandleWallHitsChanged;
+        if (durationCo != null) StopCoroutine(durationCo);
     }
 
     void HandleWallHitsChanged(int hitsNow)
@@ -65,7 +69,7 @@ public class CardManager : MonoBehaviour
         if (icon)     icon.sprite = data.icon;
         if (nameText) nameText.text = data.cardName;
         if (chargeText) chargeText.text = $"{charge} / {data.maxCharge}";
-
+         if (durationText) durationText.text = $"{data.duration:0.0}s";
         bool ready = !onCooldown && charge >= data.maxCharge;
         if (useButton) useButton.interactable = ready;
     }
@@ -78,6 +82,8 @@ public class CardManager : MonoBehaviour
 
         charge = 0;
         ApplyUI();
+        if (durationCo != null) StopCoroutine(durationCo);
+        durationCo = StartCoroutine(DurationCountdownCo(data.duration));
 
         if (data.cooldown > 0f) StartCoroutine(CooldownCo(data.cooldown));
     }
@@ -87,6 +93,23 @@ public class CardManager : MonoBehaviour
         onCooldown = true; ApplyUI();
         yield return new WaitForSeconds(sec);
         onCooldown = false; ApplyUI();
+    }
+  System.Collections.IEnumerator DurationCountdownCo(float sec)
+    {
+        float t = Mathf.Max(0f, sec);
+        // 시작 프레임에 즉시 반영
+        if (durationText) durationText.text = $"{t:0.0}s";
+
+        var wait = new WaitForEndOfFrame();
+        while (t > 0f)
+        {
+            t -= Time.deltaTime;
+            if (durationText) durationText.text = $"{Mathf.Max(0f, t):0.0}s";
+            yield return wait;
+        }
+        // 종료 후 기본 표시(리소스 값)로 복귀
+        if (durationText) durationText.text = $"{data.duration:0.0}s";
+        durationCo = null;
     }
 
     void EnsureAbility()
