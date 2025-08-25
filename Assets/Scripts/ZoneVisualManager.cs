@@ -18,7 +18,8 @@ public class ZoneVisualManager : MonoBehaviour
     public GameObject contamDiscPrefab;      // 없으면 Cylinder로 생성
     public Material contamMat;               // 보라/자주 반투명
     public float contamDiscY = 0.01f;        // 바닥과의 간섭 방지
-
+    [Header("Legacy Contam Discs (off when using ContamTileRenderer)")]
+    public bool useLegacyContamDiscs = false;
     class Visual
     {
         public GameObject root;
@@ -43,10 +44,13 @@ public class ZoneVisualManager : MonoBehaviour
             director.OnZoneSpawned += HandleSpawn;
             director.OnZoneExpired += HandleExpired;
             director.OnZoneProgress += HandleProgress;
-            director.OnZoneContaminatedCircle += HandleContamCircle;
-            director.OnZoneConsumed += HandleConsumed;
-            director.OnClearedCircleWorld += HandleClearedCircleWorld;
-        }
+            if (useLegacyContamDiscs)
+            {
+                director.OnZoneContaminatedCircle += HandleContamCircle;
+                director.OnClearedCircleWorld     += HandleClearedCircleWorld; // ★ 추가
+            }
+
+            director.OnZoneConsumed += HandleConsumed;}
     }
 
     void OnDestroy()
@@ -56,9 +60,15 @@ public class ZoneVisualManager : MonoBehaviour
         director.OnZoneSpawned -= HandleSpawn;
         director.OnZoneExpired -= HandleExpired;
         director.OnZoneProgress -= HandleProgress;
-        director.OnZoneContaminatedCircle -= HandleContamCircle;
         director.OnZoneConsumed -= HandleConsumed;
         director.OnClearedCircleWorld -= HandleClearedCircleWorld;
+
+        if (useLegacyContamDiscs)
+        {
+            director.OnZoneContaminatedCircle -= HandleContamCircle;
+            director.OnClearedCircleWorld -= HandleClearedCircleWorld; // ★ 추가
+
+        }
     }
 
     // 소비(성공 진입) → 돔/링 제거

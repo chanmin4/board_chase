@@ -92,7 +92,7 @@ public class SurvivalDirector : MonoBehaviour
     public event Action<int, Vector3, float> OnZoneContaminatedCircle;    // (id, centerW, radiusW)
     public event Action<int> OnZoneConsumed;                               // 성공 진입으로 소비
     public event Action<int> OnWallHitsChanged;                            // 벽 튕김 수 UI
-
+    
     public bool HasState =>
     board != null &&
     state != null &&
@@ -520,10 +520,18 @@ public class SurvivalDirector : MonoBehaviour
         if (!board) return;
         if (!board.WorldToIndex(centerWorld, out int cx, out int cy)) return;
 
-        float radiusTiles = radiusWorld / Mathf.Max(0.0001f, board.tileSize);
-        foreach (var t in CollectCircleTiles(new Vector2Int(cx, cy), radiusTiles))
-            ClearContamination(t.x, t.y);
+        float rTiles = radiusWorld / Mathf.Max(0.0001f, board.tileSize);
+
+        foreach (var t in CollectCircleTiles(new Vector2Int(cx, cy), rTiles))
+            ClearContamination(t.x, t.y); // ← 기존 타일 청소 유틸 사용 :contentReference[oaicite:5]{index=5}
+
         OnClearedCircleWorld?.Invoke(centerWorld, radiusWorld);
+    }
+
+    // Instancing 렌더러에서 쓰기 위한 래퍼(내부 이터레이터 노출)
+    public IEnumerable<Vector2Int> CollectCircleTilesPublic(Vector2Int center, float radiusTiles)
+    {
+        return CollectCircleTiles(center, radiusTiles); // 기존 구현 재사용 :contentReference[oaicite:6]{index=6}
     }
 
 
