@@ -51,7 +51,7 @@ public class SurvivalDirector : MonoBehaviour
 
     [Header("Zone Lifetime")]
     [Tooltip("세트(현재 리스트 분량의 존 묶음)의 지속 시간. 시간이 끝나면 소비 안 된 존들을 오염 처리하고 세트 재생성")]
-    public float zoneLifetime = 7f;
+    public float zoneLifetime = 8f;
 
     [Header("Spawn Rules")]
     [Tooltip("서로 다른 존들 사이 최소 간격(타일 기준, 원 반지름 합 + 이 값 이상)")]
@@ -83,6 +83,7 @@ public class SurvivalDirector : MonoBehaviour
 
 
     // ===== 이벤트 =====
+    public event System.Action<Vector3, float> OnClearedCircleWorld;
     public event System.Action<int> OnZonesResetSeq;  // 리셋 순번 이벤트
     public event Action<ZoneSnapshot> OnZoneSpawned;
     public event Action<int> OnZoneExpired;
@@ -253,7 +254,7 @@ public class SurvivalDirector : MonoBehaviour
             var extra = TrySpawnZoneByProfile(pick);
             if (extra != null) SpawnAndNotify(extra); else break;
         }
-        
+
     }
 
     Zone TrySpawnZoneByProfile(int profileIndex)
@@ -500,18 +501,30 @@ public class SurvivalDirector : MonoBehaviour
         return false;
     }
     // === 외부에서 월드 좌표/반경으로 오염 지대 생성 ===
-// === 외부에서 '월드 좌표 + 월드 반경'으로 원형 오염 생성 ===
-public void ContaminateCircleWorld(Vector3 centerWorld, float radiusWorld)
-{
-    if (!board) return;
-    if (!board.WorldToIndex(centerWorld, out int cx, out int cy)) return;
+    // === 외부에서 '월드 좌표 + 월드 반경'으로 원형 오염 생성 ===
+    public void ContaminateCircleWorld(Vector3 centerWorld, float radiusWorld)
+    {
+        if (!board) return;
+        if (!board.WorldToIndex(centerWorld, out int cx, out int cy)) return;
 
-    float radiusTiles = radiusWorld / Mathf.Max(0.0001f, board.tileSize);
+        float radiusTiles = radiusWorld / Mathf.Max(0.0001f, board.tileSize);
 
-    foreach (var t in CollectCircleTiles(new Vector2Int(cx, cy), radiusTiles))
-        state[Idx(t.x, t.y)] = TileState.Contaminated;
+        foreach (var t in CollectCircleTiles(new Vector2Int(cx, cy), radiusTiles))
+            state[Idx(t.x, t.y)] = TileState.Contaminated;
 
-    OnZoneContaminatedCircle?.Invoke(-999, centerWorld, radiusWorld);
-}
+        OnZoneContaminatedCircle?.Invoke(-999, centerWorld, radiusWorld);
+    }
+
+    public void ClearCircleWorld(Vector3 centerWorld, float radiusWorld)
+    {
+        if (!board) return;
+        if (!board.WorldToIndex(centerWorld, out int cx, out int cy)) return;
+
+        float radiusTiles = radiusWorld / Mathf.Max(0.0001f, board.tileSize);
+        foreach (var t in CollectCircleTiles(new Vector2Int(cx, cy), radiusTiles))
+            ClearContamination(t.x, t.y);
+        OnClearedCircleWorld?.Invoke(centerWorld, radiusWorld);
+    }
+
 
 }

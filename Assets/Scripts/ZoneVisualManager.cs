@@ -45,6 +45,7 @@ public class ZoneVisualManager : MonoBehaviour
             director.OnZoneProgress += HandleProgress;
             director.OnZoneContaminatedCircle += HandleContamCircle;
             director.OnZoneConsumed += HandleConsumed;
+            director.OnClearedCircleWorld += HandleClearedCircleWorld;
         }
     }
 
@@ -57,6 +58,7 @@ public class ZoneVisualManager : MonoBehaviour
         director.OnZoneProgress -= HandleProgress;
         director.OnZoneContaminatedCircle -= HandleContamCircle;
         director.OnZoneConsumed -= HandleConsumed;
+        director.OnClearedCircleWorld -= HandleClearedCircleWorld;
     }
 
     // 소비(성공 진입) → 돔/링 제거
@@ -124,31 +126,48 @@ public class ZoneVisualManager : MonoBehaviour
     }
 
     // 오염 디스크(보라색) 생성
-void HandleContamCircle(int id, Vector3 centerWorld, float radiusWorld)
-{
-    GameObject go;
-    if (contamDiscPrefab)
+    void HandleContamCircle(int id, Vector3 centerWorld, float radiusWorld)
     {
-        go = Instantiate(contamDiscPrefab, centerWorld + Vector3.up * contamDiscY, Quaternion.identity, contamRoot);
-    }
-    else
-    {
-        go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        go.transform.SetParent(contamRoot, false);
-        go.transform.position = centerWorld + Vector3.up * contamDiscY;
-        var col = go.GetComponent<Collider>(); if (col) Destroy(col);
-        StripAllColliders(go);
-    }
+        GameObject go;
+        if (contamDiscPrefab)
+        {
+            go = Instantiate(contamDiscPrefab, centerWorld + Vector3.up * contamDiscY, Quaternion.identity, contamRoot);
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.transform.SetParent(contamRoot, false);
+            go.transform.position = centerWorld + Vector3.up * contamDiscY;
+            var col = go.GetComponent<Collider>(); if (col) Destroy(col);
+            StripAllColliders(go);
+        }
 
-    go.transform.localScale = new Vector3(radiusWorld * 2f, 0.02f, radiusWorld * 2f);
+        go.transform.localScale = new Vector3(radiusWorld * 2f, 0.02f, radiusWorld * 2f);
 
-    //  모든 렌더러에 contamMat 강제 적용 (프리팹 머티 무시)
-    if (contamMat)
-    {
-        var rends = go.GetComponentsInChildren<Renderer>(true);
-        foreach (var r in rends) r.sharedMaterial = contamMat;
+        //  모든 렌더러에 contamMat 강제 적용 (프리팹 머티 무시)
+        if (contamMat)
+        {
+            var rends = go.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in rends) r.sharedMaterial = contamMat;
+        }
     }
-}
+    void HandleClearedCircleWorld(Vector3 cW, float rW) {
+        if (!contamRoot) return;
+        // contamRoot 하위의 보라 디스크들을 훑어서,
+        // '디스크 중심이 청소 원 안'이면 제거
+        var toRemove = new List<Transform>();
+        for (int i = 0; i < contamRoot.childCount; i++) {
+            var t = contamRoot.GetChild(i);
+            if (!t) continue;
+            var p = t.position; p.y = cW.y;
+            float discRadius = t.localScale.x * 0.5f; // 생성 시 x=지름으로 잡아둔 경우
+            float d = Vector3.Distance(p, cW);
+            if (d <= rW + 0.01f) { // 중심이 들어왔으면 통째로 지움(1차 버전)
+                toRemove.Add(t);
+            }
+        }
+        foreach (var t in toRemove) Destroy(t.gameObject);
+    }
 
     void StripAllColliders(GameObject go)
     {

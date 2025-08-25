@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 public enum VisualSanitizeLevel
 {
     Noop,          // ← 아무것도 하지 않음 (원인검사용)
@@ -72,7 +73,9 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
 
     void Update()
     {
-            
+        // UI 위에서 클릭하면 드래그/발사 로직 전부 무시 (카드 버튼 클릭과 충돌 방지)
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            return; 
         // 시작
         if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos) && launcher.Charges >= 1)
         {
