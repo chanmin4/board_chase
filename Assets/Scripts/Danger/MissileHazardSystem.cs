@@ -10,63 +10,67 @@ public class MissileHazardSystem : MonoBehaviour
     public HomingMissile missilePrefab;
 
     [Header("Timing")]
-    [Min(1)] public int triggerEveryN = 3;  // 3번째 재생성마다 스폰
-    public float spawnYOffset = 0.0f;
+    [Min(1)] public int triggerEveryN = 3;  // N의 배수 리셋마다 스폰
+    [Min(1)] public int firstSpawnAt = 3;   // 첫 스폰이 일어날 '정확한 리셋 번호' (요구: 3)
 
-    int   regenCount      = 0;      // 시작 0
-    bool  seenFirstReset  = false;  // 첫 OnZonesReset은 “오프닝”으로 무시
+    public float spawnYOffset = 0f;
+
     HomingMissile active;
 
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
-        if (!board) board = FindAnyObjectByType<BoardGrid>();
-                // 혹시 씬에 미리 놓인 미사일이 있으면 제거(첫 턴 스폰처럼 보이는 현상 방지)
-        active = null;
-        regenCount = 0;
-        seenFirstReset = false;
+        if (!board)    board    = FindAnyObjectByType<BoardGrid>();
     }
 
     void OnEnable()
     {
-        if (director) director.OnZonesReset += HandleZonesReset;
+        if (director != null)
+        {
+            // 번호를 함께 받는다 → 레이스/초기화 상관없음
+            director.OnZonesResetSeq += HandleResetSeq;
+        }
     }
     void OnDisable()
     {
-        if (director) director.OnZonesReset -= HandleZonesReset;
+        if (director != null)
+        {
+            director.OnZonesResetSeq -= HandleResetSeq;
+        }
     }
 
-    void HandleZonesReset()
+    void HandleResetSeq(int seq)
     {
-        // 씬 시작 직후 Director.Start()에서 오는 첫 호출은 무시
-        if (!seenFirstReset)
-        {
-            seenFirstReset = true;
-            regenCount = 0;
-            return;
-        }
-
-        // 직전 사이클의 미사일을 '이번' 리셋 시점에 폭발
+        // 직전 사이클 미사일은 '이번 리셋'에 폭발
         if (active)
         {
             active.Explode();
             active = null;
         }
 
-        regenCount++;
+        // 첫 스폰은 정확히 firstSpawnAt 에서만
+        if (seq < firstSpawnAt) return;
 
-        if (regenCount % Mathf.Max(1, triggerEveryN) == 0)
+        // 이후에는 triggerEveryN의 배수에서만 스폰
+        if ((seq - firstSpawnAt) % Mathf.Max(1, triggerEveryN) == 0)
+        {
             SpawnMissile();
+        }
+        Debug.Log($"ResetSeq={seq}, firstSpawnAt={firstSpawnAt}, everyN={triggerEveryN}");
+        Debug.Log($"Spawned at seq={seq}");
+
     }
 
     void SpawnMissile()
-    {
-        if (!missilePrefab || !board || !director) return;
+{
+    if (!missilePrefab || !board || !director) return;
 
-        Vector3 center = board.origin + new Vector3(board.width * board.tileSize * 0.5f, 0f, board.height * board.tileSize * 0.5f);
-        center.y += spawnYOffset;
+    Vector3 center = board.origin + new Vector3(board.width * board.tileSize * 0.5f, 0f, board.height * board.tileSize * 0.5f);
+    center.y += spawnYOffset;
 
-        active = Instantiate(missilePrefab, center, Quaternion.identity, transform);
-        active.Setup(director, director.SetDuration); // 다음 리셋까지의 수명/성장 시간
-    }
+    active = Instantiate(missilePrefab, center, Quaternion.identity, transform);
+    active.enabled = true; // 예방 차원
+    // ✅ 수명 + 타겟 + 속도까지 세팅하면서 강제 Enable
+    active.Setup(director, director.SetDuration);
+}
 }

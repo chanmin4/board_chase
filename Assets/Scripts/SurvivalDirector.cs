@@ -79,8 +79,11 @@ public class SurvivalDirector : MonoBehaviour
     public float consumeLockAfterBounce = 0.15f;
     [Tooltip("미충족 후엔 한 번 존 밖으로 나갔다 재진입해야 소비 허용")]
     public bool requireExitReenterAfterBounce = true;
+    public int ResetSeq { get; private set; } = 0;
+
 
     // ===== 이벤트 =====
+    public event System.Action<int> OnZonesResetSeq;  // 리셋 순번 이벤트
     public event Action<ZoneSnapshot> OnZoneSpawned;
     public event Action<int> OnZoneExpired;
     public event Action OnZonesReset;
@@ -226,6 +229,9 @@ public class SurvivalDirector : MonoBehaviour
     // ===== 존 재생성(리스트 기반) =====
     void RegenerateAllZones()
     {
+
+        ResetSeq++;
+        OnZonesResetSeq?.Invoke(ResetSeq);
         zones.Clear();
         OnZonesReset?.Invoke();
         ResetWallHits();
@@ -247,6 +253,7 @@ public class SurvivalDirector : MonoBehaviour
             var extra = TrySpawnZoneByProfile(pick);
             if (extra != null) SpawnAndNotify(extra); else break;
         }
+        
     }
 
     Zone TrySpawnZoneByProfile(int profileIndex)

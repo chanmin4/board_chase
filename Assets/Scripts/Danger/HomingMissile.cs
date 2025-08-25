@@ -4,10 +4,10 @@ public class HomingMissile : MonoBehaviour
 {
     [Header("Refs")]
     public SurvivalDirector director;
-    public Transform previewParent;        // 비워두면 자동 생성
-    public GameObject previewRingPrefab;   // 비워두면 Cylinder 자동 생성
+    public Transform previewParent;
+    public GameObject previewRingPrefab;
     public Material previewRingMat;
-    public string previewLayerName = "Ignore Raycast"; // 충돌 안 하는 레이어 권장
+    public string previewLayerName = "Ignore Raycast";
 
     [Header("Motion")]
     public float startHeight = 6f;
@@ -17,36 +17,45 @@ public class HomingMissile : MonoBehaviour
     [Header("Radius Growth (World)")]
     public float minRadius = 0.6f;
     public float maxRadius = 2.4f;
-    public AnimationCurve growth = AnimationCurve.Linear(0,0, 1,1);
+    public AnimationCurve growth = AnimationCurve.Linear(0,0,1,1);
     float totalLifetime = 7f;
 
     [Header("Optional Homing")]
-    public bool  followTargetXZ = false;  // 필요하면 켜기
+    public bool  followTargetXZ = false;   // 인스펙터 무시하고 코드에서 켭니다
     public Transform target;
-    public float moveSpeed = 7.0f;        // 추적 속도
+    public float moveSpeed = 7.0f;
 
     Transform _tf;
     float _elapsed, _fallElapsed;
     Transform _ringTf;
+    bool _configured = false;
 
     public void Setup(SurvivalDirector dir, float lifetimeSeconds)
     {
         director = dir;
         totalLifetime = Mathf.Max(0.1f, lifetimeSeconds);
-        if (!target) target = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        // ✅ 반드시 호밍 켜고 타겟 지정(우선순위: director.player > Player 태그)
+        followTargetXZ = true;
+        target = (dir && dir.player) ? dir.player
+                 : GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        _configured = true;
+
+        if (!target) Debug.LogWarning("[Missile] target is NULL. Check director.player or Player tag.");
+        if (!director) Debug.LogWarning("[Missile] director is NULL. Explode() will do nothing.");
+
+        InitVisuals();
     }
 
     void Awake()
     {
         _tf = transform;
 
-        // 시작 높이
         var p = _tf.position; p.y = startHeight; _tf.position = p;
 
-        // 본체 및 자식에서 콜라이더/리지드바디 제거 + 레이어 설정
         MakePureVisual(gameObject);
 
-        // 프리뷰 부모
         if (!previewParent)
         {
             var go = new GameObject("Preview");
@@ -55,7 +64,6 @@ public class HomingMissile : MonoBehaviour
             previewParent.SetParent(transform, false);
         }
 
-        // 링 생성
         if (!previewRingPrefab)
         {
             previewRingPrefab = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -76,27 +84,27 @@ public class HomingMissile : MonoBehaviour
         if (r && previewRingMat) r.sharedMaterial = previewRingMat;
     }
 
+    void InitVisuals() { /* 비워도 OK — Awake에서 이미 생성 */ }
+
     void Update()
     {
+        if (!_configured) return;  // ← Setup 전에 아무것도 안함
+
         float dt = Time.deltaTime;
         _elapsed     += dt;
         _fallElapsed += dt;
 
-        // 하강
         float f = Mathf.Clamp01(_fallElapsed / Mathf.Max(0.0001f, fallDuration));
         float y = Mathf.Lerp(startHeight, groundY, f);
 
-        // (옵션) XZ 추적
         Vector3 pos = _tf.position;
         if (followTargetXZ && target)
         {
             Vector3 t = target.position; t.y = pos.y;
             pos = Vector3.MoveTowards(pos, t, moveSpeed * dt);
         }
-
         _tf.position = new Vector3(pos.x, y, pos.z);
 
-        // 반경 성장
         float t01   = Mathf.Clamp01(_elapsed / Mathf.Max(0.0001f, totalLifetime));
         float k     = Mathf.Clamp01(growth.Evaluate(t01));
         float radius = Mathf.Lerp(minRadius, maxRadius, k);
@@ -105,14 +113,11 @@ public class HomingMissile : MonoBehaviour
 
     public void Explode()
     {
+        if (!director) { Destroy(gameObject); return; }
+
         float radius = _ringTf ? (_ringTf.localScale.x * 0.5f) : minRadius;
-
-        // 프리뷰 잔재 제거
+        director.ContaminateCircleWorld(transform.position, radius);
         if (previewParent) Destroy(previewParent.gameObject);
-
-        // 오염 장판 생성(ZoneVisualManager가 contamMat 덮어씀)
-        director?.ContaminateCircleWorld(transform.position, radius);
-
         Destroy(gameObject);
     }
 
