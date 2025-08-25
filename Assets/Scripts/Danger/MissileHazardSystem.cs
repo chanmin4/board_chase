@@ -10,10 +10,11 @@ public class MissileHazardSystem : MonoBehaviour
     public HomingMissile missilePrefab;
 
     [Header("Timing")]
-    [Min(1)] public int triggerEveryN = 3;  // N의 배수 리셋마다 스폰
-    [Min(1)] public int firstSpawnAt = 3;   // 첫 스폰이 일어날 '정확한 리셋 번호' (요구: 3)
+    [Min(1)] public int triggerEveryN = 3; // 이후 간격 (3,6,9,…)
+    [Min(1)] public int firstSpawnAt = 3;  // 첫 스폰 리셋 번호 (정확히 3)
 
     public float spawnYOffset = 0f;
+    public float homingSpeed = 7f;
 
     HomingMissile active;
 
@@ -25,52 +26,43 @@ public class MissileHazardSystem : MonoBehaviour
 
     void OnEnable()
     {
-        if (director != null)
-        {
-            // 번호를 함께 받는다 → 레이스/초기화 상관없음
-            director.OnZonesResetSeq += HandleResetSeq;
-        }
+        if (director) director.OnZonesResetSeq += HandleResetSeq;
     }
     void OnDisable()
     {
-        if (director != null)
-        {
-            director.OnZonesResetSeq -= HandleResetSeq;
-        }
+        if (director) director.OnZonesResetSeq -= HandleResetSeq;
     }
 
     void HandleResetSeq(int seq)
     {
-        // 직전 사이클 미사일은 '이번 리셋'에 폭발
+        // 직전 사이클 미사일 폭발(오염 생성)
         if (active)
         {
             active.Explode();
             active = null;
         }
 
-        // 첫 스폰은 정확히 firstSpawnAt 에서만
         if (seq < firstSpawnAt) return;
+        if ((seq - firstSpawnAt) % Mathf.Max(1, triggerEveryN) != 0) return;
 
-        // 이후에는 triggerEveryN의 배수에서만 스폰
-        if ((seq - firstSpawnAt) % Mathf.Max(1, triggerEveryN) == 0)
-        {
-            SpawnMissile();
-        }
-        Debug.Log($"ResetSeq={seq}, firstSpawnAt={firstSpawnAt}, everyN={triggerEveryN}");
-        Debug.Log($"Spawned at seq={seq}");
-
+        SpawnMissile();
     }
 
     void SpawnMissile()
-{
-    if (!missilePrefab || !board || !director) return;
+    {
+        if (!missilePrefab || !board || !director) return;
 
-    Vector3 center = board.origin + new Vector3(board.width * board.tileSize * 0.5f, 0f, board.height * board.tileSize * 0.5f);
-    center.y += spawnYOffset;
+        Vector3 center = board.origin + new Vector3(
+            board.width  * board.tileSize * 0.5f,
+            0f,
+            board.height * board.tileSize * 0.5f
+        );
+        center.y += spawnYOffset;
 
-    active = Instantiate(missilePrefab, center, Quaternion.identity, transform);
-    active.enabled = true; // 예방 차원
-    // ✅ 수명 + 타겟 + 속도까지 세팅하면서 강제 Enable
-    active.Setup(director, director.SetDuration);
-}
+        active = Instantiate(missilePrefab, center, Quaternion.identity, transform);
+
+        // 수명(=다음 리셋까지) + 타겟/속도까지 강제 지정
+        var target = director ? director.player : null;
+        active.Setup(director, director.SetDuration, target, homingSpeed, true);
+    }
 }
