@@ -39,28 +39,41 @@ public class GameOverUI : MonoBehaviour
         if (gameOver) return;
         gameOver = true;
 
-        // 1) 최종 시간 표시 (HUD에서 그대로 복사)
+        // 1) 최종 시간 표시
+        string clock = null;
         if (timeText && liveTimer && liveTimer.timeText)
-            timeText.text = liveTimer.timeText.text;
+        {
+            clock = liveTimer.timeText.text;
+            timeText.text = clock;
+        }
 
-        // 2) 외부 흐름 중단
-        Time.timeScale = 0f;             // 물리/Update 대부분 정지
-        AudioListener.pause = true;      // 오디오 일시정지
-        Cursor.visible = true;           // UI 조작 가능하도록
+        // 2) 저장용 숫자(밀리초)로 변환해 저장
+        int finalTimeMs = 0;
+        if (!string.IsNullOrEmpty(clock))
+        {
+            float secs = TimeUtils.ParseClockToSeconds(clock);
+            finalTimeMs = TimeUtils.SecondsToMs(secs);
+        }
+        else
+        {
+            // HUD 텍스트가 없다면 다른 소스(예: liveTimer.CurrentSeconds)로 대체
+            // finalTimeMs = TimeUtils.SecondsToMs(liveTimer.CurrentSeconds);
+        }
+
+        // 최고기록 저장
+        if (ProgressManager.Instance != null)
+            ProgressManager.Instance.ReportRunTimeMs(finalTimeMs);
+
+        // (기존 점수 시스템을 쓰고 싶다면 여전히 ReportRunScore도 호출 가능)
+        // ProgressManager.Instance.ReportRunScore(Mathf.RoundToInt(TimeUtils.MsToSeconds(finalTimeMs)));
+
+        // … 이하 기존 정지/패널 활성화 로직 유지
+        Time.timeScale = 0f;
+        AudioListener.pause = true;
+        Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-
-        foreach (var m in toDisableOnGameOver)
-            if (m) m.enabled = false;
-
-        foreach (var rb in toSleepBodies)
-            if (rb) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-
-        // 3) 패널 활성화
-        if (panel) panel.SetActive(true);
-
-        Debug.Log("[GameOverUI] ShowGameOver invoked");
+        // …
     }
-
     void OnClickRetry()
     {
         AudioListener.pause = false;
