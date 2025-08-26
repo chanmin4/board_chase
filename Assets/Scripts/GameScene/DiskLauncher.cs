@@ -17,23 +17,33 @@ public class DiskLauncher : MonoBehaviour
     // ==== 쿨타임 모드 추가 ====
     [Header("Cooldown Mode")]
     public bool  useCooldown      = true;   // ← 쿨타임 모드 활성화
-    public float cooldownSeconds  = 2.5f;     // ← 요청: 3초
+    public float cooldownSeconds  = 3f;     //
     public float CooldownRemain { get; private set; } = 0f;
     public bool  CanLaunchNow => useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
     public event Action<float,float> OnCooldownChanged; // (remain, duration)
 
-    [Header("Bounce Charges")]
+    [Header("Cooldown Bonus On Wall Bounce")]
+    [Tooltip("벽에 튕길 때마다 남은 쿨다운을 줄입니다 (useCooldown이 true일 때만 동작).")]
+    public bool cooldownBonusOnBounce = true;
+
+    [Tooltip("한 번 튕길 때 줄일 쿨다운(초).")]
+    [Min(0f)] public float cooldownReducePerBounce = 0.5f;
+
+    [Header("Bounce Charges")] //구기능 충전형 튕기기
     public int baseCharges = 2;
     public int maxCharges  = 5; // 0 or less => unlimited cap
     public int Charges { get; private set; }
+    
+    // 내부 상태
+    int _lastWallHitsForBonus = 0;
 
     // 이벤트
-    public event Action<int,int> OnTileChanged;
+    public event Action<int, int> OnTileChanged;
     public event Action<int,int> OnStoppedOnTile;
     public event Action<int,int> OnChargesChanged;
 
     Rigidbody rb;
-    bool launched;
+    //bool launched;
     Vector2Int _lastTile = new Vector2Int(-1,-1);
 
     SurvivalDirector director;
@@ -47,8 +57,9 @@ public class DiskLauncher : MonoBehaviour
         director = FindAnyObjectByType<SurvivalDirector>();
         if (director != null)
         {
-            director.OnZonesReset  += HandleSetReset;
+            director.OnZonesReset += HandleSetReset;
             director.OnZoneConsumed += HandleZoneConsumed;
+            director.OnWallHitsChanged += HandleWallHitsChanged_Bonus;
         }
 
         UpdateCurrentTile(forceEvent:true);
@@ -62,8 +73,9 @@ public class DiskLauncher : MonoBehaviour
     {
         if (director != null)
         {
-            director.OnZonesReset   -= HandleSetReset;
+            director.OnZonesReset -= HandleSetReset;
             director.OnZoneConsumed -= HandleZoneConsumed;
+            director.OnWallHitsChanged -= HandleWallHitsChanged_Bonus;
         }
     }
 
@@ -134,24 +146,44 @@ public class DiskLauncher : MonoBehaviour
         // ② 실제 발사
         dir.y = 0f; dir.Normalize();
         rb.linearVelocity = dir * (pull * powerScale);
-        launched = true;
+        //launched = true;
 
         // ③ 쿨타임 시작
         if (useCooldown) StartCooldown();
     }
-/*
-    void FixedUpdate()
-    {
-        UpdateCurrentTile(forceEvent:false);
+    // 벽 튕김수 변경 시 호출됨
+void HandleWallHitsChanged_Bonus(int hitsNow)
+{
+    if (!useCooldown) return;                  // 쿨타임 모드일 때만
+    if (!cooldownBonusOnBounce) return;        // 토글 Off면 무시
 
-        if (launched && rb.linearVelocity.magnitude < minStopSpeed)
+    int delta = Mathf.Max(0, hitsNow - _lastWallHitsForBonus);
+    _lastWallHitsForBonus = hitsNow;
+    if (delta <= 0) return;
+
+    ReduceCooldown(delta * cooldownReducePerBounce);
+}
+
+// 남은 쿨다운을 줄이는 유틸
+void ReduceCooldown(float seconds)
+{
+    if (seconds <= 0f) return;
+    CooldownRemain = Mathf.Max(0f, CooldownRemain - seconds);
+    NotifyCooldown(); // HUD 갱신
+}
+/*
+        void FixedUpdate()
         {
-            launched = false;
-            rb.linearVelocity = Vector3.zero;
-            SnapToTileCenterAndReport();
+            UpdateCurrentTile(forceEvent:false);
+
+            if (launched && rb.linearVelocity.magnitude < minStopSpeed)
+            {
+                launched = false;
+                rb.linearVelocity = Vector3.zero;
+                SnapToTileCenterAndReport();
+            }
         }
-    }
-*/
+    */
     // === 내부 유틸 ===
     void UpdateCurrentTile(bool forceEvent)
     {

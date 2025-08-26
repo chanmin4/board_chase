@@ -16,13 +16,17 @@ public class RotatingSpinner : MonoBehaviour
     [Header("Motion")]
     public float angularSpeed = 120f; // 초당 회전(deg/s, Y축)
     public bool  crossShape = false;  // true면 십자(막대 2개)
+        [Tooltip("체크 시 반시계(혹은 기존의 반대) 방향으로 회전합니다.")]
+    public bool  reverseDirection = false;      // ← 인스펙터 토글 (false/true)
+    [Tooltip("로컬 축 기준으로 돌리고 싶다면 체크 해제하세요. 기본은 월드 Y 축 기준.")]
+    public bool  worldSpace = true;
 
     [Header("Physics")]
     public PhysicsMaterial bounceMaterial; // bounciness=1, friction=0, combine=Max 권장
     public bool addKinematicRigidbody = true;
 
     BoxCollider col;
-
+  const string kArmName = "Arm90";
     void Awake()
     {
         col = GetComponent<BoxCollider>();
@@ -37,26 +41,66 @@ public class RotatingSpinner : MonoBehaviour
             rb.interpolation = RigidbodyInterpolation.Interpolate;
         }
 
-        // 선택적으로 십자 형태 보강
+         SetupCrossArm();
+    }
+    void SetupCrossArm()
+    {
+        // crossShape 설정에 따라 Arm90 생성/제거
+        var armTf = transform.Find(kArmName);
         if (crossShape)
         {
-            var arm = new GameObject("Arm90").AddComponent<BoxCollider>();
-            arm.transform.SetParent(transform, false);
-            arm.size = new Vector3(thickness, height, length);
-            if (bounceMaterial) arm.material = bounceMaterial;
+            if (!armTf)
+            {
+                var arm = new GameObject(kArmName).AddComponent<BoxCollider>();
+                arm.transform.SetParent(transform, false);
+                arm.size = new Vector3(thickness, height, length);
+                if (bounceMaterial) arm.material = bounceMaterial;
+            }
+            else
+            {
+                var armCol = armTf.GetComponent<BoxCollider>();
+                if (armCol) armCol.size = new Vector3(thickness, height, length);
+                if (bounceMaterial && armCol) armCol.material = bounceMaterial;
+            }
+        }
+        else
+        {
+            if (armTf) DestroyImmediate(armTf.gameObject);
         }
     }
-
-    void Update()
+     void Update()
     {
-        transform.Rotate(0f, angularSpeed * Time.deltaTime, 0f, Space.World);
+        float dir = reverseDirection ? -1f : 1f;       // ← 방향 토글
+        float delta = dir * Mathf.Abs(angularSpeed) * Time.deltaTime;
+
+        if (worldSpace)
+            transform.Rotate(0f, delta, 0f, Space.World);
+        else
+            transform.Rotate(0f, delta, 0f, Space.Self);
     }
 
 #if UNITY_EDITOR
     void OnValidate()
     {
         if (!col) col = GetComponent<BoxCollider>();
-        if (col) col.size = new Vector3(Mathf.Max(0.01f, length), Mathf.Max(0.01f, height), Mathf.Max(0.01f, thickness));
+        if (col)
+        {
+            col.size = new Vector3(Mathf.Max(0.01f, length),
+                                   Mathf.Max(0.01f, height),
+                                   Mathf.Max(0.01f, thickness));
+        }
+        SetupCrossArm();
+    }
+
+    [ContextMenu("Toggle Direction")]
+    void ToggleDirectionContext()
+    {
+        reverseDirection = !reverseDirection;
     }
 #endif
+
+    /// <summary>코드에서 방향을 바꾸고 싶을 때 호출</summary>
+    public void SetReverse(bool reverse) => reverseDirection = reverse;
+    /// <summary>현재 방향을 토글</summary>
+    public void ToggleDirection() => reverseDirection = !reverseDirection;
 }

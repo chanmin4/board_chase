@@ -28,4 +28,13 @@ public static class SaveSystem
         }
         catch (System.Exception e) { Debug.LogError(e); }
     }
+     public static bool Delete()
+    {
+        try
+        {
+            if (File.Exists(Path)) { File.Delete(Path); return true; }
+        }
+        catch (System.Exception e) { Debug.LogError($"[Save] Delete failed: {e}"); }
+        return false;
+    }
 }

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 354bd51e40b1ec14abc115e49bc37559, type: 3}
+  m_Name: MainSceneAudio
+  m_EditorClassIdentifier: 
+  items:
+  - key: bgm.main
+    channel: 0
+    ev: {fileID: 11400000, guid: 7291f20dd77094f429988e15ae9e55cb, type: 2}

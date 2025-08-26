@@ -15,7 +15,16 @@ public class ProgressManager : MonoBehaviour
     public string achievementsFolder = "Achievements"; // ScriptableObject 모음 폴더
 
     List<AchievementDef> _defs = new();
-
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void AutoCreate()
+    {
+        // 씬 로드 전에 무조건 한 번 존재 보장
+        if (Instance == null)
+        {
+            var go = new GameObject("ProgressManager");
+            go.AddComponent<ProgressManager>();
+        }
+    }
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -94,5 +103,18 @@ public class ProgressManager : MonoBehaviour
             Save();
         }
     }
+    public void ResetProgress(bool saveFileAfter = false)
+    {
+        Data = new SaveData();
+        if (!Data.unlockedSkins.Contains("skin_default"))
+            Data.unlockedSkins.Add("skin_default");
 
+        // UI 갱신 이벤트 쏘기
+        OnBestScoreChanged?.Invoke(Data.bestScore);
+        OnBestTimeChangedMs?.Invoke(Data.bestTimeMs);
+        OnUnlocksChanged?.Invoke();
+
+        if (saveFileAfter) Save(); // 기본값 false면 파일은 안 만듦(완전 초기화 느낌)
+        Debug.Log("[Progress] Reset done");
+    }
 }

@@ -73,61 +73,76 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
 
     void Update()
     {
-        // UI 위에서 클릭하면 드래그/발사 로직 전부 무시 (카드 버튼 클릭과 충돌 방지)
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-            return; 
-        // 시작
-        if (Input.GetMouseButtonDown(0) && RayToGround(Input.mousePosition, out startPos) && launcher.CanLaunchNow)
+        bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+
+        // ───────────── 드래그 시작 ─────────────
+        if (!dragging && Input.GetMouseButtonDown(0))
         {
-            launchedThisDrag = false;
-            dragging = true; SetVis(true); InitAt(startPos);
+            if (!overUI && RayToGround(Input.mousePosition, out startPos) && launcher.CanLaunchNow)
+            {
+                launchedThisDrag = false;
+                dragging = true; SetVis(true); InitAt(startPos);
+            }
+            // UI 위에서 누른 경우: 드래그 시작을 ‘무시’만 하고 그대로 종료
         }
 
-        // 취소: 우클릭 또는 ESC
+        // 취소(우클릭/ESC)
         if (dragging && (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)))
         {
             dragging = false; SetVis(false);
-            pull = 0f;                               // ← 리셋
-            return;                                  // ← 발사 안 함
-        }
-
-        // 드래그 중
-        if (dragging && Input.GetMouseButton(0) && RayToGround(Input.mousePosition, out currPos))
-        {
-            var fromCenter = currPos - DiskCenter(); 
-            fromCenter.y = 0f;
-
-            float raw = fromCenter.magnitude;
-            float eff = Mathf.Max(0f, raw - deadZone);
-            pull = Mathf.Clamp(eff, 0f, maxPull);
-
-            // deadZone 밖이면 그 방향, 아니면 이전 방향 유지(표시 쪽에서 숨김 처리)
-            dragDir = raw > 1e-5f ? fromCenter.normalized : dragDir;
-
-            UpdateVis(pull / maxPull);
-        }
-
-        // 놓기(발사)
-        if (dragging && Input.GetMouseButtonUp(0))
-        {
-            dragging = false; SetVis(false);
-            if (!launchedThisDrag && pull >= minPull)
-            {
-                launchedThisDrag = true;
-                Vector3 launchDir = -dragDir;
-                float strength = pull * launchBoost;
-
-                // ⬇ 추가: 기존 이동속도 제거 → Launch가 AddForce여도 겹가속 방지
-                var rb = launcher.GetComponent<Rigidbody>();
-                if (rb) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-
-                // (기존 그대로)
-                canDrag = false;           // 원 코드 유지 (원하면 지워도 동작엔 영향 없음)
-                launcher.Launch(launchDir, strength);
-            }
             pull = 0f;
+            return;
+        }
+
+        // ───────────── 드래그 중 ─────────────
+        if (dragging)
+        {
+            // 마우스 눌린 채 이동 업데이트: UI 위일 땐 위치 업데이트만 스킵 (놓기는 아래에서 처리)
+            if (Input.GetMouseButton(0))
+            {
+                if (!overUI && RayToGround(Input.mousePosition, out currPos))
+                {
+                    var fromCenter = currPos - DiskCenter();
+                    fromCenter.y = 0f;
+
+                    float raw = fromCenter.magnitude;
+                    float eff = Mathf.Max(0f, raw - deadZone);
+                    pull = Mathf.Clamp(eff, 0f, maxPull);
+
+                    if (raw > 1e-5f) dragDir = fromCenter.normalized;
+
+                    UpdateVis(pull / maxPull);
+                }
+            }
+
+            // 놓기: UI 위에서도 반드시 처리!
+            if (Input.GetMouseButtonUp(0))
+            {
+                dragging = false; SetVis(false);
+                if (!launchedThisDrag && pull >= minPull)
+                {
+                    launchedThisDrag = true;
+                    Vector3 launchDir = -dragDir;
+                    float strength = pull * launchBoost;
+
+                    var rb = launcher.GetComponent<Rigidbody>();
+                    if (rb) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+
+                    launcher.Launch(launchDir, strength);
+                }
+                pull = 0f;
+            }
+
+            // 안전장치: 포커스 잃거나 버튼 상태가 꼬였을 때
+            if (!Input.GetMouseButton(0) && !Input.GetMouseButtonUp(0) && !Input.GetMouseButtonDown(0))
+            {
+                // 버튼이 완전히 올라가 있는데 dragging이 남아있다면 시각만 접어둠
+                // (여기서 바로 발사하지는 않음)
+                if (dragCircle && dragCircle.gameObject.activeSelf) SetVis(false);
+            }
         }
     }
+
     Vector3 DiskCenter() => launcher ? launcher.transform.position : Vector3.zero;
 
     // 디스크 가장자리 바깥 기준점

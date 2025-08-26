@@ -11,6 +11,12 @@ public class CardManager : MonoBehaviour
     public TextMeshProUGUI chargeText; // “현재/최대”
     public Button useButton;
     public TextMeshProUGUI durationText;
+        [Header("Input")]
+    public bool enableSpacebarUse = true;
+    public KeyCode useKey = KeyCode.Space;
+    public bool enableDoubleClick = true;
+    [Range(0.15f, 0.5f)] public float doubleClickWindow = 0.3f; // 초
+    float lastClickTime = -999f;
 
     [Header("Resource Key")]
     public string cardResourceName = "Cards/Cleaner"; // Resources/Cards/Cleaner.asset
@@ -35,7 +41,7 @@ public class CardManager : MonoBehaviour
         data = Resources.Load<CardData>(cardResourceName);
         if (!data) Debug.LogError($"[CardManager] CardData not found: {cardResourceName}");
 
-        if (useButton) useButton.onClick.AddListener(TryUse);
+         if (useButton) useButton.onClick.AddListener(OnUseButtonClicked);
 
         // ⬇⬇ 여기서 “벽 튕김 수 변경” 이벤트 직접 구독 → Δ만큼 충전
         if (director) director.OnWallHitsChanged += HandleWallHitsChanged;
@@ -49,11 +55,50 @@ public class CardManager : MonoBehaviour
         if (durationCo != null) StopCoroutine(durationCo);
     }
 
+    void Update()
+    {
+        // 스페이스바(혹은 지정 키)로 사용
+        if (enableSpacebarUse && Input.GetKeyDown(useKey) && IsReady())
+        {
+            TryUse();
+        }
+    }
+    bool IsReady() => data && !onCooldown && charge >= data.maxCharge;
+     void OnUseButtonClicked()
+    {
+        if (!IsReady()) return;
+
+        if (enableDoubleClick)
+        {
+            float now = Time.unscaledTime;
+            if (now - lastClickTime <= doubleClickWindow)
+            {
+                // 더블클릭으로 인정
+                lastClickTime = -999f;
+                TryUse();
+            }
+            else
+            {
+                // 첫 클릭만 기록 (싱글클릭 발동은 하지 않음)
+                lastClickTime = now;
+            }
+        }
+        else
+        {
+            // 옵션으로 싱글클릭 허용하고 싶을 때 사용
+            TryUse();
+        }
+    }
     void HandleWallHitsChanged(int hitsNow)
     {
         int delta = Mathf.Max(0, hitsNow - lastWallHits);
         lastWallHits = hitsNow;
-        if (delta > 0 && data) AddCharge(delta * Mathf.Max(1, data.gainPerWallBounce));
+        if (delta <= 0 || !data) return;
+
+        int baseGain = Mathf.Max(1, data.gainPerWallBounce);
+        float mul = FeverManager.ChargeMul;                 // ★ FEVER중이면 2배(인스펙터 값)
+        int gain = Mathf.RoundToInt(delta * baseGain * mul);
+        AddCharge(gain);
     }
 
     void AddCharge(int amount)
