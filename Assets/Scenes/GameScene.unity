@@ -3721,8 +3721,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   max: 100
   current: 100
-  baseDrain: 5
-  contaminatedExtra: 20
+  baseDrain: 4
+  contaminatedExtra: 16
   slider: {fileID: 1919896537}
   fill: {fileID: 780712386}
   colorGreen: {r: 0.2, g: 1, b: 0.4, a: 1}
@@ -4166,35 +4166,35 @@ MonoBehaviour:
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
     ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
+  - name: Large
+    footprint: {x: 4, y: 4}
+    requiredWallHits: 0
+    enterBonus: 15
+    gainPerSec: 0
+    domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
+    ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
   - name: Medium
     footprint: {x: 3, y: 3}
     requiredWallHits: 2
-    enterBonus: 20
+    enterBonus: 25
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 968663742a0fcac4b8df869c2634773e, type: 2}
     ringMat: {fileID: 2100000, guid: a9b7d61bd5ac1b940bc5621595e4ccef, type: 2}
   - name: Medium
     footprint: {x: 3, y: 3}
     requiredWallHits: 2
-    enterBonus: 20
+    enterBonus: 25
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 968663742a0fcac4b8df869c2634773e, type: 2}
     ringMat: {fileID: 2100000, guid: a9b7d61bd5ac1b940bc5621595e4ccef, type: 2}
   - name: Small
     footprint: {x: 2, y: 2}
-    requiredWallHits: 4
-    enterBonus: 25
+    requiredWallHits: 3
+    enterBonus: 40
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
     ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
-  - name: Small
-    footprint: {x: 2, y: 2}
-    requiredWallHits: 4
-    enterBonus: 25
-    gainPerSec: 0
-    domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
-    ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
-  zoneLifetime: 10
+  zoneLifetime: 12
   minZoneSeparationTiles: 0.35
   excludeRadius: 1
   minSpawnTileDistance: 6
@@ -5704,6 +5704,8 @@ MonoBehaviour:
   diskRadius: 0.5
   edgeGap: 0.1
   aimHeight: 0.12
+  director: {fileID: 1606759577}
+  resetWallHitsAtDrag: 1
   sanitizeLevel: 3
   debugForceHideAim: 0
 --- !u!1 &2113993630

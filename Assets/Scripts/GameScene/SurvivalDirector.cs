@@ -236,7 +236,6 @@ public class SurvivalDirector : MonoBehaviour
         OnZonesResetSeq?.Invoke(ResetSeq);
         zones.Clear();
         OnZonesReset?.Invoke();
-        ResetWallHits();
 
         setRemain = zoneLifetime;
 
