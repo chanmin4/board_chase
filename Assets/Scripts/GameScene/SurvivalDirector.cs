@@ -45,6 +45,7 @@ public class SurvivalDirector : MonoBehaviour
     public Transform player;               // 디스크 Transform
     public Rigidbody playerRb;             // 디스크 Rigidbody
     public SurvivalGauge gauge;
+    public DragAimController dragaimcontroller;
 
     [Header("Inspector-Driven Zones")]
     public List<ZoneProfile> zoneProfiles = new List<ZoneProfile>(); // ★ 인스펙터에서 관리: 항목 수 = 존 수
@@ -484,6 +485,8 @@ public class SurvivalDirector : MonoBehaviour
     {
         wallHits = 0;
         OnWallHitsChanged?.Invoke(wallHits);
+        dragaimcontroller.DragCount = 0;
+
     }
 
     // 외부 조회

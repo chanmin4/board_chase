@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02664a29d441e63459a5d3e59cf81a92, type: 3}
+  m_Name: RISKSET_Default
+  m_EditorClassIdentifier: 
+  setId: default_contract
+  title: Base
+  desc: 
+  baseSuccessSeconds: 300
+  baseDragCooldown: 2
+  baseLayout:
+    large: 2
+    medium: 2
+    small: 1
+  secondsPerPoint: 0
+  available:
+  - {fileID: 11400000, guid: 9d44744ae5710db4a9bde5499927767b, type: 2}
+  - {fileID: 11400000, guid: f8f61b4ff21c746478db33cb69653514, type: 2}
+  defaultTypeCap: 1
+  typeCaps:
+  - type: 0
+    maxActive: 1

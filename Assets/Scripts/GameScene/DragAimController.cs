@@ -33,10 +33,12 @@ public class DragAimController : MonoBehaviour
     public float edgeGap = 0.1f;  // 원 바깥으로 살짝 띄우기
     [Header("Aim Visuals")]
     public float aimHeight = 0.12f; // 디스크 위로 살짝 띄우기
-    // DragAimController.cs 상단 필드들 사이에 추가
-[Header("Integrations")]
-public SurvivalDirector director;                 // 인스펙터에서 연결(없으면 자동 탐색)
-public bool resetWallHitsAtDrag = true;           // 드래그 시작시 리셋할지 토글
+                                    // DragAimController.cs 상단 필드들 사이에 추가
+    [Header("Integrations")]
+    public SurvivalDirector director;                 // 인스펙터에서 연결(없으면 자동 탐색)
+    public int DragCount=0;  //현재 리셋까지 드래그한횟수 
+    public int resetDragNum = 2;          // 리셋 드래그 허용량
+
 
     [Header("Debug · Aim Visual Sanitize")]
 
@@ -124,7 +126,14 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
             // 놓기: UI 위에서도 반드시 처리!
             if (Input.GetMouseButtonUp(0))
             {
-                if (resetWallHitsAtDrag) director?.ResetWallHits();
+                if (DragCount >=resetDragNum)
+                {
+                    director?.ResetWallHits();
+                }
+                else
+                {
+                    DragCount++;
+                }
                 dragging = false; SetVis(false);
                 if (!launchedThisDrag && pull >= minPull)
                 {

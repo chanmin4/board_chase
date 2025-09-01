@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db75b0e16d0673847ad55c86eefc830b, type: 3}
+  m_Name: RISK_DragCooldownAdd2
+  m_EditorClassIdentifier: 
+  riskId: drag_cool_1
+  title: drag cooldown +(2)
+  desc: "\uB4DC\uB798\uADF8 \uD6C4 \uC7AC\uC2DC\uB3C4 \uB300\uAE30\uC2DC\uAC04\uC774
+    1.0\uCD08 \uC99D\uAC00\uD569\uB2C8\uB2E4."
+  points: 2
+  icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  type: 0
+  float_parameter1: 2
+  float_parameter2: 0
+  float_parameter3: 0
+  bool_parameter: 0
+  layout:
+    large: 2
+    medium: 2
+    small: 1
+  excludes: []

@@ -4158,6 +4158,7 @@ MonoBehaviour:
   player: {fileID: 2113993634}
   playerRb: {fileID: 2113993635}
   gauge: {fileID: 1445786933}
+  dragaimcontroller: {fileID: 2093660876}
   zoneProfiles:
   - name: Large
     footprint: {x: 4, y: 4}
@@ -5705,7 +5706,8 @@ MonoBehaviour:
   edgeGap: 0.1
   aimHeight: 0.12
   director: {fileID: 1606759577}
-  resetWallHitsAtDrag: 1
+  DragCount: 0
+  resetDragNum: 2
   sanitizeLevel: 3
   debugForceHideAim: 0
 --- !u!1 &2113993630
@@ -5866,8 +5868,8 @@ MonoBehaviour:
   powerScale: 1.4
   board: {fileID: 1290663343}
   useCooldown: 1
-  cooldownSeconds: 4
-  cooldownBonusOnBounce: 1
+  cooldownSeconds: 2
+  cooldownBonusOnBounce: 0
   cooldownReducePerBounce: 0.5
   baseCharges: 2
   maxCharges: 5

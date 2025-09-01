@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class MainMenuController : MonoBehaviour
 {
-    public string gameSceneName = "GameScene";
+    public string StartButtonSceneName = "RiskSelectionScene";
     public TMP_Text bestText;
     public Button StartButton;
     public Button QuitButton;
@@ -77,7 +77,7 @@ public class MainMenuController : MonoBehaviour
             if (bestText) bestText.text = "BEST: 00:00.0";
         }
 
-        SceneManager.LoadScene(gameSceneName);
+        SceneManager.LoadScene(StartButtonSceneName);
     }
 
     public void OnClickQuit()

@@ -6,7 +6,7 @@ using System;
 public class DiskLauncher : MonoBehaviour
 {
     [Header("Launch / Stop")]
-    public float powerScale   = 1.5f;
+    public float powerScale   = 1.4f;
     //public float minStopSpeed = 0.25f;
 
     [Header("Grid")]
@@ -17,14 +17,14 @@ public class DiskLauncher : MonoBehaviour
     // ==== 쿨타임 모드 추가 ====
     [Header("Cooldown Mode")]
     public bool  useCooldown      = true;   // ← 쿨타임 모드 활성화
-    public float cooldownSeconds  = 3f;     //
+    public float cooldownSeconds  = 2f;     //
     public float CooldownRemain { get; private set; } = 0f;
     public bool  CanLaunchNow => useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
     public event Action<float,float> OnCooldownChanged; // (remain, duration)
 
     [Header("Cooldown Bonus On Wall Bounce")]
     [Tooltip("벽에 튕길 때마다 남은 쿨다운을 줄입니다 (useCooldown이 true일 때만 동작).")]
-    public bool cooldownBonusOnBounce = true;
+    public bool cooldownBonusOnBounce = false;
 
     [Tooltip("한 번 튕길 때 줄일 쿨다운(초).")]
     [Min(0f)] public float cooldownReducePerBounce = 0.5f;
