@@ -1,13 +1,13 @@
 using UnityEngine;
 
-public class MissileHazardSystem : MonoBehaviour
+public class RocketHazardSystem : MonoBehaviour
 {
     [Header("Refs")]
     public SurvivalDirector director;
     public BoardGrid board;
 
     [Header("Missile Prefab")]
-    public HomingMissile missilePrefab;
+    public HomingRocket missilePrefab;
 
     [Header("Timing")]
     [Min(1)] public int triggerEveryN = 3; // 이후 간격 (3,6,9,…)
@@ -16,7 +16,7 @@ public class MissileHazardSystem : MonoBehaviour
     public float spawnYOffset = 0f;
     public float homingSpeed = 7f;
 
-    HomingMissile active;
+    HomingRocket active;
 
     void Awake()
     {

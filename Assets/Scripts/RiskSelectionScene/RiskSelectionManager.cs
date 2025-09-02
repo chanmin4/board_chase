@@ -4,276 +4,347 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
-
 public class RiskSelectionManager : MonoBehaviour
 {
-    [Header("Data")]
-    public RiskSet riskSet;
-    public List<RiskDef> currentPicked = new();
+    public Button StartButton;
+    [SerializeField]public string GameSceneName = "GameScene";
+    [SerializeField] RiskSet currentSet;
 
-    [Header("UI Roots")]
-    public Transform headerRowRoot;   // 가로 헤더(좌–우)
-    public Transform gridRoot;        // 세로 본문(ScrollRect Content)
-    public Transform summaryRoot;
+    [Header("Roots")]
+    public RectTransform Content;       // ScrollRect의 Content (레이아웃 컴포넌트 없음)
+    public RectTransform summaryRoot;    // (선택) 총합 요약 패널
 
-    [Header("Prefabs (Project 에셋)")]
-    public GameObject pointHeaderPrefab;
-    public GameObject typeHeaderPrefab;
-    public GameObject cellContainerPrefab;   // 비어있는 RectTransform(자식 없음)
-    public GameObject togglePrefab;          // Toggle 루트
+    [System.Serializable]
+    public struct PointAnchor   // 상단 1pt/2pt/3pt 텍스트의 RectTransform 등록
+    {
+        public int points;
+        public RectTransform header;
+    }
 
-    [Header("Summary UI")]
+    [Header("Column Anchors (1pt/2pt/3pt 헤더 좌표)")]
+    public List<PointAnchor> columnAnchors = new();  // 캔버스에 배치한 1pt/2pt/3pt 텍스트를 드롭
+
+    [System.Serializable]
+    public class TypeGroup
+    {
+        public RiskType type;
+        [Tooltip("이 타입의 모든 리스크(인스펙터에 모아서 넣기)")]
+        public List<RiskDef> defs = new();  // 여기다 한 타입의 모든 항목을 던져넣기
+        [Tooltip("행 라벨(비워두면 type.ToString())")]
+        public string customRowTitle = "";
+    }
+
+    [Header("Manual Groups (타입별로만 넣으면, 포인트는 각 항목의 points필드로 자동 분배)")]
+    public List<TypeGroup> groups = new();
+
+    [Header("Prefabs")]
+    public GameObject cellContainerPrefab;  // 빈 RectTransform(VerticalLayoutGroup 없어도 됨)
+    public GameObject togglePrefab;         // 내부에 Toggle & (선택) Toggle_Title, Toggle_Image
+
+    [Header("Layout")]
+    public float topY = -40f;      // 첫 행 Y (gridRoot 기준, 아래로 갈수록 -)
+    public float rowHeight = 80f;  // 행 높이(시각적 가이드용)
+    public float rowSpacing = 12f; // 행 간격
+    public float cellWidthFallback = 240f;
+    public float cellMinHeight = 70f;
+    public float columnMargin = 24f;  // 열 간 여유(겹침 방지)
+
+    [Header("Summary UI (선택)")]
     public TextMeshProUGUI totalPtsText;
-    public TextMeshProUGUI targetTimeText;
-    public TextMeshProUGUI changesText;
+    //public TextMeshProUGUI changesText;
 
-    [Header("Layout Sizes")]
-    public float typeColWidth = 160f;
-    public float colWidth = 220f;
-    public float rowHeight = 72f;
+    [Header("Changes List (Prefab 방식)")]
+    public RectTransform changesContent;     // ScrollRect의 Content
+    public GameObject changeItemPrefab;      // 한 줄짜리 변경점 프리팹(자식에 "Label" TMP 있어야 함)
 
-    [Header("Start")]
-    public Button startButton;
-    public string gameSceneName = "GameScene";
+    Dictionary<RiskDef, GameObject> _changeItems = new(); // def -> 생성된 item
 
-    readonly Dictionary<(RiskType type, int points), RectTransform> _cellMap = new();
-    List<int> _pointColumns = new();
+readonly Dictionary<Toggle, ToggleAlpha> _alphaByToggle = new();
+
+    // 내부 계산 캐시
+    // 내부: 타입별 토글/선택 관리
+    readonly Dictionary<RiskType, List<Toggle>> _togglesByType = new();
+    readonly Dictionary<Toggle, RiskDef> _defByToggle = new();
+    readonly Dictionary<RiskType, Toggle> _currentOnByType = new();
+    readonly Dictionary<int, float> colX = new();   // points -> column center X(local)
+    readonly Dictionary<int, float> colW = new();   // points -> usable width
+
+    // 선택 결과
+    public List<RiskDef> picked = new();
 
     void Awake()
     {
-        BuildGrid();
-        RefreshAll();
-        if (startButton) startButton.onClick.AddListener(OnClickStartGame);
+        Build();
+        RefreshSummary();
+    }
+    void Start()
+    {
+        StartButton.onClick.AddListener(OnClickStart);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    #region Build
-
-    void BuildGrid()
+  public void OnClickStart()
     {
-        if (!riskSet)
+        RiskSession.SetSelection(currentSet, picked); 
+        SceneManager.LoadScene(GameSceneName);
+    }
+
+    public void Build()
+    {
+        if (!Content) { Debug.LogWarning("[RiskUI] gridRoot 미할당"); return; }
+
+        // 초기화
+        for (int i = Content.childCount - 1; i >= 0; --i)
+            Destroy(Content.GetChild(i).gameObject);
+        colX.Clear(); colW.Clear();
+
+        // 1) 헤더 centerX 수집 (월드->gridRoot 로컬X)
+        foreach (var a in columnAnchors)
         {
-            Debug.LogWarning("[RiskUI] riskSet 미지정");
+            if (!a.header) continue;
+            colX[a.points] = WorldCenterToLocalX(a.header, Content);
+            Debug.Log($"[RiskUI] col {a.points} → X={colX[a.points]} ({a.header.name})");
+        }
+        if (colX.Count == 0)
+        {
+            Debug.LogWarning("[RiskUI] columnAnchors 비어있음");
             return;
         }
 
-        Clear(headerRowRoot);
-        Clear(gridRoot);
-        _cellMap.Clear();
-
-        // 1) 컬럼(점수) 수집
-        _pointColumns = riskSet.available
-            .Where(d => d)
-            .Select(d => Mathf.Max(0, d.points))
-            .Distinct()
-            .OrderBy(p => p)
-            .ToList();
-
-        // 2) 헤더(좌상단 코너 + pt 헤더들)
-        // 2-1) 코너
-        var corner = Instantiate(typeHeaderPrefab, headerRowRoot, false)
-                     .GetComponent<RectTransform>();
-        SetPreferred(corner, typeColWidth, rowHeight);
-        var cTxt = corner.GetComponentInChildren<TextMeshProUGUI>();
-        if (cTxt) cTxt.text = "";
-
-        // 2-2) 포인트 헤더
-        foreach (var p in _pointColumns)
+        // 1-1) 열 너비 추정(다음 헤더와의 간격 - margin)
+        var ordered = colX.OrderBy(p => p.Key).ToList();
+        for (int i = 0; i < ordered.Count; i++)
         {
-            var h = Instantiate(pointHeaderPrefab, headerRowRoot, false)
-                    .GetComponent<RectTransform>();
-            SetPreferred(h, colWidth, rowHeight);
-            var t = h.GetComponentInChildren<TextMeshProUGUI>();
-            if (t) t.text = $"{p} pt";
+            float curX = ordered[i].Value;
+            float nextX = (i < ordered.Count - 1) ? ordered[i + 1].Value : curX + cellWidthFallback * 1.2f;
+            float usable = Mathf.Max(120f, (nextX - curX) - columnMargin);
+            colW[ordered[i].Key] = usable;
         }
 
-        // 3) 행(타입별)
-        var types = riskSet.available.Where(d => d).Select(d => d.type).Distinct().ToList();
-
-        foreach (var type in types)
+        // 2) 행(타입) 별로 배치
+        for (int r = 0; r < groups.Count; r++)
         {
-            // 3-1) 수평 행 컨테이너
-            var rowGO = new GameObject($"{type}_Row",
-                typeof(RectTransform),
-                typeof(HorizontalLayoutGroup),
-                typeof(LayoutElement));
+            var g = groups[r];
+            if (!_togglesByType.ContainsKey(g.type))
+                _togglesByType[g.type] = new List<Toggle>();
 
+            // (A) Row 래퍼 생성 → GridRoot(Content)의 자식으로 추가
+            var rowGO = new GameObject($"Row_{g.type}", typeof(RectTransform), typeof(LayoutElement), typeof(RowAutoHeight));
             var row = rowGO.GetComponent<RectTransform>();
-            row.SetParent(gridRoot, false);
-            SetPreferred(row, -1, rowHeight);
+            row.SetParent(Content, false);
+            row.anchorMin = row.anchorMax = new Vector2(0f, 1f);
+            row.pivot = new Vector2(0f, 1f);
+            row.GetComponent<RowAutoHeight>().minHeight = rowHeight; // 최소 행 높이
 
-            var hl = rowGO.GetComponent<HorizontalLayoutGroup>();
-            hl.spacing = 6;
-            hl.childControlWidth = true;
-            hl.childControlHeight = true;
-            hl.childForceExpandWidth = false;
-            hl.childForceExpandHeight = false;
-            hl.childAlignment = TextAnchor.MiddleCenter;
+            // (B) defs를 points로 그룹화
+            var byPt = g.defs.Where(d => d != null)
+                             .GroupBy(d => d.points)
+                             .OrderBy(gr => gr.Key);
 
-            // 3-2) 좌측 타입 헤더
-            var th = Instantiate(typeHeaderPrefab, row, false).GetComponent<RectTransform>();
-            SetPreferred(th, typeColWidth, rowHeight);
-            var thText = th.GetComponentInChildren<TextMeshProUGUI>();
-            if (thText) thText.text = type.ToString();
-
-            // 3-3) 각 점수 칸(빈 셀)
-            foreach (var p in _pointColumns)
+            // (C) 각 칼럼 셀: X만 마커(colX)로, Y는 0 (행의 맨 위)
+            string rowLabel = string.IsNullOrEmpty(g.customRowTitle) ? g.type.ToString() : g.customRowTitle;
+            foreach (var bucket in byPt)
             {
-                var cell = Instantiate(cellContainerPrefab, row, false).GetComponent<RectTransform>();
-                SetPreferred(cell, colWidth, rowHeight);
-                EnsureEmpty(cell);
-                _cellMap[(type, p)] = cell;
+                int pt = bucket.Key;
+                if (!colX.TryGetValue(pt, out float cx)) continue;
+
+                float w = colW.TryGetValue(pt, out var cw) ? cw : cellWidthFallback;
+
+                var cellGO = Instantiate(cellContainerPrefab, row);
+                var cell = cellGO.GetComponent<RectTransform>();
+                ForceTopWithPivot(cell, 0.5f);                 // pivot=(0.5,1)
+                cell.anchoredPosition = new Vector2(cx, 0f);   // ★ X만 고정, Y=0
+                cell.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
+                cell.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, cellMinHeight);
+
+                // 셀 내부: 세로 스택 자동
+                var v = cellGO.GetComponent<VerticalLayoutGroup>() ?? cellGO.AddComponent<VerticalLayoutGroup>();
+                v.spacing = 6; v.childAlignment = TextAnchor.UpperCenter;
+                v.childForceExpandWidth = true; v.childForceExpandHeight = false;
+                var fitter = cellGO.GetComponent<ContentSizeFitter>() ?? cellGO.AddComponent<ContentSizeFitter>();
+                fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+                // 토글 생성
+                foreach (var def in bucket)
+                {
+                    var item = Instantiate(togglePrefab, cell);
+                    var rt = item.GetComponent<RectTransform>();
+                    ForceFixedWidth(rt, w);
+                    BindToggle(item, def, g.type, rowLabel, picked.Contains(def));
+                }
             }
         }
 
-        // 4) RiskDef → 해당 셀에 토글 배치
-        foreach (var def in riskSet.available.Where(d => d))
-        {
-            var key = (def.type, Mathf.Max(0, def.points));
-            if (!_cellMap.TryGetValue(key, out var cell)) continue;
-
-            var item = Instantiate(togglePrefab);
-            // ★ 강제 리패런팅(셀 밖으로 튀는 레이아웃 이슈 방지)
-            item.transform.SetParent(cell, false);
-
-            var rt = item.GetComponent<RectTransform>();
-            SetPreferred(rt, colWidth, rowHeight);
-
-            BindToggleItem(item, def, currentPicked.Contains(def));
-
-#if UNITY_EDITOR
-            if (item.transform.parent != cell)
-                Debug.LogWarning($"[RiskUI] Toggle reparent failed → {def.title}");
-#endif
-        }
     }
 
-    void Clear(Transform root)
-    {
-        if (!root) return;
-        for (int i = root.childCount - 1; i >= 0; --i)
-            Destroy(root.GetChild(i).gameObject);
-    }
 
-    void EnsureEmpty(RectTransform rt)
-    {
-        for (int i = rt.childCount - 1; i >= 0; --i)
-            Destroy(rt.GetChild(i).gameObject);
-    }
 
-    void SetPreferred(RectTransform rt, float w, float h)
-    {
-        if (!rt) return;
-        var le = rt.GetComponent<LayoutElement>() ?? rt.gameObject.AddComponent<LayoutElement>();
-        if (w > 0) le.preferredWidth = w;
-        if (h > 0) le.preferredHeight = h;
-    }
-
-    #endregion
-
-    // ──────────────────────────────────────────────────────────────
-    #region Toggle / Refresh
-
-    void BindToggleItem(GameObject go, RiskDef def, bool isOn)
+    // ── UI 바인딩 ────────────────────────────────────────────────
+    void BindToggle(GameObject go, RiskDef def, RiskType type, string rowLabel, bool isOn)
     {
         var toggle = go.GetComponentInChildren<Toggle>(true);
-        var icon   = Find<Image>(go.transform, "Toggle_Image");
-        var title  = Find<TextMeshProUGUI>(go.transform, "Toggle_Title");
+        var icon = Find<Image>(go.transform, "Toggle_Image");
+        var title = Find<TextMeshProUGUI>(go.transform, "Toggle_Title");
 
-        if (title) title.text = def.title;
-        if (icon)  icon.sprite = def.icon;
+        if (title) title.text = def.title;          // ★ 타입명 표기
+        if (icon) icon.sprite = def.icon;
 
-        var meta = go.GetComponent<RiskToggleMeta>() ?? go.AddComponent<RiskToggleMeta>();
-        meta.def = def;
+      // 알파 세팅
+    var alpha = go.GetComponent<ToggleAlpha>() ?? go.AddComponent<ToggleAlpha>();
+    alpha.toggle = toggle;
+    alpha.canvasGroup = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
 
-        if (toggle)
-        {
-            toggle.SetIsOnWithoutNotify(isOn);
-            toggle.onValueChanged.AddListener(on => OnToggle(def, toggle, on));
-        }
-    }
+    toggle.SetIsOnWithoutNotify(isOn);
+    alpha.Sync(toggle.isOn);
 
-    void OnToggle(RiskDef def, Toggle ui, bool isOn)
+    // 🔹 초기 선택되어 있는 항목이면 변경점 생성
+    if (isOn) UpdateChangeItem(def, true);
+
+    // 매핑들...
+    _alphaByToggle[toggle] = alpha;
+    _defByToggle[toggle]   = def;
+    if (!_togglesByType.ContainsKey(type)) _togglesByType[type] = new List<Toggle>();
+    _togglesByType[type].Add(toggle);
+    if (isOn) _currentOnByType[type] = toggle;
+
+    toggle.onValueChanged.RemoveAllListeners();
+    toggle.onValueChanged.AddListener(on =>
     {
-        string reason;
-        var temp = new List<RiskDef>(currentPicked);
-        if (isOn) temp.Add(def); else temp.Remove(def);
-
-        if (!riskSet.CanToggle(currentPicked, def, isOn, out reason))
+        if (on)
         {
-            ui.SetIsOnWithoutNotify(!isOn);
-            Debug.Log($"[Risk] 선택 불가: {reason}");
-            return;
-        }
-        currentPicked = temp;
-        RefreshAll();
-    }
-
-    void RefreshAll()
-    {
-        // 토글 상호작용 상태 갱신
-        foreach (var rt in _cellMap.Values)
-        {
-            foreach (var t in rt.GetComponentsInChildren<Toggle>(true))
+            // 동일 타입 이전 선택 해제
+            if (_currentOnByType.TryGetValue(type, out var prev) && prev && prev != toggle)
             {
-                var meta = t.GetComponent<RiskToggleMeta>();
-                if (!meta || !meta.def) { t.interactable = false; continue; }
+                var prevDef = _defByToggle[prev];
+                prev.SetIsOnWithoutNotify(false);
+                picked.Remove(prevDef);
+                if (_alphaByToggle.TryGetValue(prev, out var prevAlpha)) prevAlpha.Sync(false);
 
-                bool isOn = currentPicked.Contains(meta.def);
-                if (t.isOn != isOn) t.SetIsOnWithoutNotify(isOn);
-
-                string reason;
-                bool canOn = riskSet.CanToggle(currentPicked, meta.def, true, out reason);
-                t.interactable = isOn || canOn; // 켜는 건 검증, 끄는 건 항상 허용
+                // 🔹 이전 변경점 제거
+                UpdateChangeItem(prevDef, false);
             }
+
+            _currentOnByType[type] = toggle;
+            picked.RemoveAll(d => d != null && d.type == type);
+            if (!picked.Contains(def)) picked.Add(def);
+
+            // 🔹 새 변경점 추가
+            UpdateChangeItem(def, true);
+        }
+        else
+        {
+            if (_currentOnByType.TryGetValue(type, out var cur) && cur == toggle)
+                _currentOnByType[type] = null;
+
+            picked.Remove(def);
+
+            // 🔹 자기 변경점 제거
+            UpdateChangeItem(def, false);
         }
 
-        // 요약
-        int pts = riskSet.SumPoints(currentPicked);
-        if (totalPtsText)   totalPtsText.text   = $"total: {pts} pt";
-        float target = riskSet.ComputeTargetSeconds(currentPicked);
-        if (targetTimeText) targetTimeText.text = $"target Time:\n{FormatTime(target)}";
-        if (changesText)    changesText.text    = BuildChangesSummary();
+        if (_alphaByToggle.TryGetValue(toggle, out var selfAlpha)) selfAlpha.Sync(on);
+        RefreshSummary();
+    });
+
+        // (선택) 버튼 보강
+        var btn = go.GetComponent<Button>();
+        if (btn)
+        {
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => toggle.isOn = !toggle.isOn);
+        }
+
     }
 
-    class RiskToggleMeta : MonoBehaviour { public RiskDef def; }
 
-    #endregion
-
-    // ──────────────────────────────────────────────────────────────
-    #region Summary / Start
-
-    string BuildChangesSummary()
+    void RefreshSummary()
     {
-        if (currentPicked.Count == 0) return "No Change";
-        // 간단: 선택된 Risk 제목 나열
-        return string.Join("\n", currentPicked.Where(d => d).Select(d => d.title));
+        int sum = picked.Sum(d => d ? Mathf.Max(0, d.points) : 0);
+        if (totalPtsText) totalPtsText.text = $"total: {sum} pt";
+        // changesText는 미사용 (지우거나 No Change 같은 기본 문구만 남겨도 됨)
     }
 
-    string FormatTime(float sec)
+    string GetDesc(RiskDef d)
     {
-        int s = Mathf.RoundToInt(sec);
-        int m = s / 60; s %= 60;
-        return $"{m:00}:{s:00}";
+        if (d == null) return "";
+        // 프로젝트 필드명이 'desc'가 아니라면 여기에서 바꿔주세요.
+        return string.IsNullOrEmpty(d.desc) ? d.title : d.desc;
     }
 
-    public void OnClickStartGame()
+    // ── 좌표/유틸 ────────────────────────────────────────────────
+    float WorldCenterToLocalX(RectTransform header, RectTransform targetRoot)
     {
-        RiskSession.SetSelection(riskSet, currentPicked);
-        RiskInstaller.Spawn(gameSceneName);
-        SceneManager.LoadScene(gameSceneName);
+        // header의 바운드를 targetRoot 좌표계로 환산한 뒤 center.x 사용
+        var b = RectTransformUtility.CalculateRelativeRectTransformBounds(targetRoot, header);
+        return b.center.x;
     }
 
-    #endregion
+    void ForceFixedWidth(RectTransform rt, float width)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.sizeDelta = new Vector2(width, rt.sizeDelta.y);
 
-    // ──────────────────────────────────────────────────────────────
-    #region Helpers
+        var le = rt.GetComponent<LayoutElement>() ?? rt.gameObject.AddComponent<LayoutElement>();
+        le.minWidth = width;
+        le.preferredWidth = width;
+        le.preferredHeight = Mathf.Max(cellMinHeight, 60f);
+    }
+
+    void ForceTopLeft(RectTransform rt)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+    }
+    void ForceTopWithPivot(RectTransform rt, float pivotX = 0.5f)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); // 좌상단 기준(스크롤 콘텐츠 좌표)
+        rt.pivot = new Vector2(pivotX, 1f);            // ← X 피벗을 가운데(0.5)로
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+    }
+
 
     T Find<T>(Transform root, string name) where T : Component
     {
         var t = root.Find(name);
         return t ? t.GetComponent<T>() : null;
     }
+    void UpdateChangeItem(RiskDef def, bool add)
+    {
+        if (!changesContent || !changeItemPrefab || def == null) return;
 
-    #endregion
+        if (add)
+        {
+            if (_changeItems.ContainsKey(def)) return;
+            var go = Instantiate(changeItemPrefab, changesContent);
+            var label = go.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
+            string desc = string.IsNullOrEmpty(def.desc) ? def.title : def.desc;
+            if (label) label.text = desc;
+            _changeItems[def] = go;
+        }
+        else
+        {
+            if (_changeItems.TryGetValue(def, out var go) && go)
+            {
+                Destroy(go);
+                _changeItems.Remove(def);
+            }
+        }
+    }
+    void AdjustContentHeightToChildren()
+    {
+        if (!Content) return;
+        Canvas.ForceUpdateCanvases(); // 레이아웃 즉시 갱신
+        var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(Content, Content);
+        // gridRoot는 상단 앵커(0,1), pivot(0,1) 가정. 높이는 양수로 내려감.
+        float needed = bounds.size.y + 20f;  // 여분
+        var sz = Content.sizeDelta;
+        if (needed > 0f)
+            Content.sizeDelta = new Vector2(sz.x, needed);
+    }
+
+
 }

@@ -9,7 +9,7 @@ public class BarrageMissileSpawner : MonoBehaviour
     public SurvivalGauge gauge;            // 맞았을 때 패널티 적용(선택)
 
     [Header("Missile Prefab")]
-    public SmallHomingShot missilePrefab;
+    public SmallHomingMissile missilePrefab;
 
     [Header("Spawn Anchors")]
     [Tooltip("상/하/좌/우 센터에 배치한 앵커들. 비어 있으면 자동 좌표를 사용합니다.")]

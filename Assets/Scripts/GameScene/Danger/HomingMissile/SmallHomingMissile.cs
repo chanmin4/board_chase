@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class SmallHomingShot : MonoBehaviour
+public class SmallHomingMissile : MonoBehaviour
 {
     [Header("Refs")]
     public SurvivalDirector director;
@@ -11,13 +11,13 @@ public class SmallHomingShot : MonoBehaviour
     [Header("Movement")]
     public float moveSpeed = 6f;             // 느린 추적 속도
     public float turnLerp = 10f;             // 방향 전환 민감도
-    public float groundY  = 1.0f;            // ★ 바닥과 분리(회전벽 피함, 디폴트 1)
+    public float groundY = 1.0f;            // ★ 바닥과 분리(회전벽 피함, 디폴트 1)
 
     [Header("Lifetime / Explosion")]
     public float lifetime = 4f;              // 사이클 길이만큼 세팅됨
-    public float hitRadiusWorld     = 2.0f;  // 플레이어 맞췄을 때 오염(“크게”)
+    public float hitRadiusWorld = 2.0f;  // 플레이어 맞췄을 때 오염(“크게”)
     public float timeoutRadiusWorld = 0.8f;  // 수명 만료 시 오염(“작게”)
-    public float gaugePenaltyOnHit  = 1.2f;  // 맞으면 게이지 감소량(프로젝트 단위에 맞춰 조절)
+    public float gaugePenaltyOnHit = 1.2f;  // 맞으면 게이지 감소량(프로젝트 단위에 맞춰 조절)
     public LayerMask playerMask;             // Player 레이어(또는 Tag) 충돌 체크
 
     [Header("Hit Check")]
@@ -28,7 +28,7 @@ public class SmallHomingShot : MonoBehaviour
     [Header("FX (optional)")]
     public ParticleSystem trailFx;
     public ParticleSystem explodeFx;
-    public AudioSource    explodeSfx;
+    public AudioSource explodeSfx;
 
     SphereCollider trigger;                   // 보조용(있어도 되고 없어도 됨)
     float t;
@@ -50,7 +50,7 @@ public class SmallHomingShot : MonoBehaviour
                       SurvivalGauge gaugeRef = null, float yHeight = 1.0f)
     {
         director = dir;
-        target   = tgt;
+        target = tgt;
         lifetime = Mathf.Max(0.1f, lifeSeconds);
         moveSpeed = speed;
         hitRadiusWorld = hitR;
@@ -89,7 +89,7 @@ public class SmallHomingShot : MonoBehaviour
         if (planarHitCheck && target)
         {
             Vector2 a = new Vector2(transform.position.x, transform.position.z);
-            Vector2 b = new Vector2(target.position.x,   target.position.z);
+            Vector2 b = new Vector2(target.position.x, target.position.z);
             if ((a - b).sqrMagnitude <= planarHitRadius * planarHitRadius)
             {
                 if (gauge && gaugePenaltyOnHit > 0f) gauge.Add(-gaugePenaltyOnHit);

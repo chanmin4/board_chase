@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// 미사일 시각/로직 프리팹. Awake에서는 "아무것도 생성하지 않음".
 /// 반드시 MissileHazardSystem이 Instantiate 후 Setup()을 호출해야 동작함.
-public class HomingMissile : MonoBehaviour
+public class HomingRocket : MonoBehaviour
 {
     [Header("Refs")]
     public SurvivalDirector director;
