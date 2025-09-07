@@ -82,20 +82,20 @@ public class WallHitHUD : MonoBehaviour
             {
                 var p = director.zoneProfiles[i];
                 string pname = showProfileNames && !string.IsNullOrWhiteSpace(p.name) ? p.name : $"P{i + 1}";
-                sb.Append(pname).Append('=').Append(Mathf.Clamp(p.requiredWallHits, 0, 5));
+                int eff = Mathf.Clamp(director.GetEffectiveRequiredHits(p), 0, 5);
+                sb.Append(pname).Append('=').Append(eff);                           
                 if (i < director.zoneProfiles.Count - 1) sb.Append(", ");
             }
         }
         else
         {
-            // 멀티라인 상세
-            for (int i = 0; i < director.zoneProfiles.Count; i++)
+             for (int i = 0; i < director.zoneProfiles.Count; i++)
             {
                 var p = director.zoneProfiles[i];
                 string pname = showProfileNames && !string.IsNullOrWhiteSpace(p.name) ? p.name : $"Profile {i + 1}";
-                sb.Append("- ").Append(pname)
-                  .Append(" : need ").Append(Mathf.Clamp(p.requiredWallHits, 0, 5))
-                  .AppendLine();
+                // sb.Append("- ").Append(pname).Append(" : need ").Append(Mathf.Clamp(p.requiredWallHits, 0, 5)).AppendLine(); // (before)
+                int eff = Mathf.Clamp(director.GetEffectiveRequiredHits(p), 0, 5);  // ★ 교체
+                sb.Append("- ").Append(pname).Append(" : need ").Append(eff).AppendLine(); // ★
             }
         }
 
@@ -106,14 +106,12 @@ public class WallHitHUD : MonoBehaviour
     {
         if (!director || director.zoneProfiles == null || director.zoneProfiles.Count == 0)
             return 0;
-
-        // 현재 벽 히트보다 큰 요구치 중 최솟값
         var higher = director.zoneProfiles
-                             .Select(p => Mathf.Clamp(p.requiredWallHits, 0, 5))
+                             .Select(p => Mathf.Clamp(director.GetEffectiveRequiredHits(p), 0, 5)) // ★
                              .Where(req => req > wallHits)
                              .OrderBy(req => req)
-                             .FirstOrDefault();
+                             .FirstOrDefault(); // 없으면 0
 
-        return higher; // 없으면 0
+        return higher;
     }
 }

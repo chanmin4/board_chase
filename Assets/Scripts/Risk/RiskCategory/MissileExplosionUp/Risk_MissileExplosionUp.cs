@@ -14,8 +14,8 @@ public class Risk_MissileExplosionUp : MonoBehaviour
     [Header("Param")]
     [Min(0.01f)] public float radiusMul = 1.25f;
 
-    float[] _origHitR, _origTimeoutR;
-    bool _captured;
+    float[] origHit, origTimeout;
+    bool captured; //원본캡쳐여부
 
     void Awake()
     {
@@ -27,14 +27,14 @@ public class Risk_MissileExplosionUp : MonoBehaviour
 
         if (spawners != null && spawners.Length > 0)
         {
-            _origHitR     = new float[spawners.Length];
-            _origTimeoutR = new float[spawners.Length];
+            origHit     = new float[spawners.Length];
+            origTimeout = new float[spawners.Length];
             for (int i = 0; i < spawners.Length; i++)
             {
-                _origHitR[i]     = spawners[i].hitRadiusWorld;
-                _origTimeoutR[i] = spawners[i].timeoutRadiusWorld;
+                origHit[i]     = spawners[i].hitRadiusWorld;
+                origTimeout[i] = spawners[i].timeoutRadiusWorld;
             }
-            _captured = true;
+            captured = true;
         }
     }
 
@@ -44,24 +44,24 @@ public class Risk_MissileExplosionUp : MonoBehaviour
 
     public void Apply()
     {
-        if (!_captured) return;
+        if (!captured) return;
         float m = Mathf.Max(0.01f, radiusMul);
         for (int i = 0; i < spawners.Length; i++)
         {
             if (!spawners[i]) continue;
-            spawners[i].hitRadiusWorld     = _origHitR[i] * m;
-            spawners[i].timeoutRadiusWorld = _origTimeoutR[i] * m;
+            spawners[i].hitRadiusWorld     = origHit[i] * m;
+            spawners[i].timeoutRadiusWorld = origTimeout[i] * m;
         }
     }
 
     public void Revert()
     {
-        if (!_captured) return;
+        if (!captured) return;
         for (int i = 0; i < spawners.Length; i++)
         {
             if (!spawners[i]) continue;
-            spawners[i].hitRadiusWorld     = _origHitR[i];
-            spawners[i].timeoutRadiusWorld = _origTimeoutR[i];
+            spawners[i].hitRadiusWorld     = origHit[i];
+            spawners[i].timeoutRadiusWorld = origTimeout[i];
         }
     }
 }

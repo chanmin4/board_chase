@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Linq;
 using System.Collections.Generic;
+using System;
 
 public class RiskInstaller : MonoBehaviour
 {
@@ -20,15 +21,21 @@ public class RiskInstaller : MonoBehaviour
 
     [Header("Debug Aggregates (ReadOnly)")]
     public float dbgDragCooldownExtra = 0f;
-    public float dbgMissileSpeedMul   = 1f;
-    public float dbgExplosionRadiusMul= 1f;
-    public bool  dbgSpawnEachCycle    = false;
-    public int   dbgMissileCountAdd   = 0;
+    public float dbgMissileSpeedMul = 1f;
+    public float dbgExplosionRadiusMul = 1f;
+    public int dbgSpawnCycle = 1;
+    public int dbgMissileCountAdd = 0;
+    public int dbgZoneReqHitsUp_S = 0;
+    public int dbgZoneReqHitsUp_M = 0;
+    public int dbgZoneReqHitsUp_L = 0;
 
     [Header("Debug Targets (ReadOnly)")]
     public DiskLauncher dbgLauncher;
     public HomingRocket dbgMissile;
-
+    public SurvivalDirector dbgSurvivalDirector;
+    public CardManager dbgCardManager;
+    [Tooltip("Apply 직후 RiskSession을 바로 비울지 여부(기본: 비우지 않음). Retry를 지원하려면 false 권장")]
+    public bool clearOnApply = false;   // false일시 재도전 리스크 그대로 적용
     void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -73,16 +80,37 @@ public class RiskInstaller : MonoBehaviour
 
         // 2) 대상 탐색 (씬에만 있으면 됨)
         dbgLauncher = FindAnyObjectByType<DiskLauncher>();
-        dbgMissile  = FindAnyObjectByType<HomingRocket>();
+        dbgMissile = FindAnyObjectByType<HomingRocket>();
+        dbgSurvivalDirector = FindAnyObjectByType<SurvivalDirector>();
+        dbgCardManager = FindAnyObjectByType<CardManager>();
         if (!dbgLauncher) Debug.LogWarning("[RiskInstaller] DiskLauncher를 못 찾음");
-        if (!dbgMissile)  Debug.LogWarning("[RiskInstaller] HomingMissile를 못 찾음");
-
+        if (!dbgMissile) Debug.LogWarning("[RiskInstaller] HomingMissile를 못 찾음");
+        if (!dbgSurvivalDirector) Debug.LogWarning("[RiskInstaller] SurvivalDirector를 못 찾음");
+        if(!dbgCardManager)Debug.LogWarning("[RiskInstaller] CardManager를 못 찾음");
         // 3) 누적값 초기화
-        float dragCooldownExtra   = 0f;
-        float missileSpeedMul     = 1f;
-        float explosionRadiusMul  = 1f;
-        bool? spawnEachCycle      = null;
-        int   missileCountAdd     = 0;
+        float dragCooldownExtra = 0f;
+
+        float missileSpeedMul = 1f;
+
+        float explosionRadiusMul = 1f;
+
+        int spawnCycle = 0;
+
+        int missileCountAdd = 0;
+
+        float zoneEnterBonusMul = 1f;
+
+        int ZoneReqHitsUp_S = 0;
+        int ZoneReqHitsUp_M = 0;
+        int ZoneReqHitsUp_L = 0;
+
+        int ZoneCountS = 0;
+        int ZoneCountM = 0;
+        int ZoneCountL = 0;
+
+        int CardChargeAdd = 1;
+        
+        bool Carddisable = true;
 
         // 4) 선택 항목 집계
         foreach (var def in dbgSelected)
@@ -91,7 +119,7 @@ public class RiskInstaller : MonoBehaviour
             {
                 case RiskType.DragCooldownAdd:
                     // ★ 여기가 쿨다운 초를 더하는 부분
-                    dragCooldownExtra += Mathf.Max(0f, def.float_parameter1);
+                    dragCooldownExtra = Mathf.Max(0f, def.float_parameter1);
                     break;
 
                 case RiskType.MissileSpeedUp:
@@ -103,21 +131,48 @@ public class RiskInstaller : MonoBehaviour
                     break;
 
                 case RiskType.MissileSpawnEveryCycle:
-                    spawnEachCycle = def.bool_parameter;
+                    spawnCycle = Mathf.RoundToInt(def.float_parameter1);
                     break;
 
                 case RiskType.MissileCountUp:
-                    missileCountAdd += Mathf.RoundToInt(def.float_parameter1);
+                    missileCountAdd = Mathf.RoundToInt(def.float_parameter1);
                     break;
+                case RiskType.ZoneReqHitsUp:
+                    ZoneReqHitsUp_S = Mathf.RoundToInt(def.float_parameter1);
+                    ZoneReqHitsUp_M = Mathf.RoundToInt(def.float_parameter2);
+                    ZoneReqHitsUp_L = Mathf.RoundToInt(def.float_parameter3);
+                    break;
+                case RiskType.ZoneCompositionChange:
+                    ZoneCountS = Mathf.RoundToInt(def.float_parameter1);
+                    ZoneCountM = Mathf.RoundToInt(def.float_parameter2);
+                    ZoneCountL = Mathf.RoundToInt(def.float_parameter3);
+                    break;
+                case RiskType.CardChargeRequiredUp:
+                    CardChargeAdd =Mathf.RoundToInt(def.float_parameter1);
+                    break;
+
+                case RiskType.CardDisabled:
+                    Carddisable = def.bool_parameter;
+                    break;
+
             }
         }
 
         // 디버그 반영
-        dbgDragCooldownExtra   = dragCooldownExtra;
-        dbgMissileSpeedMul     = missileSpeedMul;
-        dbgExplosionRadiusMul  = explosionRadiusMul;
-        dbgSpawnEachCycle      = spawnEachCycle ?? dbgSpawnEachCycle;
-        dbgMissileCountAdd     = missileCountAdd;
+        dbgDragCooldownExtra = dragCooldownExtra;
+
+        dbgMissileSpeedMul = missileSpeedMul;
+
+        dbgExplosionRadiusMul = explosionRadiusMul;
+
+        dbgSpawnCycle = spawnCycle;
+
+        dbgMissileCountAdd = missileCountAdd;
+
+        dbgZoneReqHitsUp_S = ZoneReqHitsUp_S;
+        dbgZoneReqHitsUp_M = ZoneReqHitsUp_M;
+        dbgZoneReqHitsUp_L = ZoneReqHitsUp_L;
+
 
         // 5) 실제 적용
         // Drag Cooldown
@@ -126,7 +181,7 @@ public class RiskInstaller : MonoBehaviour
             var patch = dbgLauncher.GetComponent<Risk_DragCooldown>();
             if (!patch) patch = dbgLauncher.gameObject.AddComponent<Risk_DragCooldown>();
             patch.disklauncher = dbgLauncher;
-            patch.addSeconds   = dragCooldownExtra;      // ★ 여기로 값 전달
+            patch.addSeconds = dragCooldownExtra;      // ★ 여기로 값 전달
             patch.applyOnStart = false;
             patch.Apply();
             Debug.Log($"[RiskInstaller] DragCooldownAdd +{dragCooldownExtra:0.##}s 적용");
@@ -137,8 +192,8 @@ public class RiskInstaller : MonoBehaviour
         {
             var p = dbgMissile.GetComponent<Risk_MissileSpeedUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpeedUp>();
             p.homingMissile = dbgMissile;
-            p.speedMul      = missileSpeedMul;
-            p.applyOnStart  = false;
+            p.speedMul = missileSpeedMul;
+            p.applyOnStart = false;
             p.Apply();
             Debug.Log($"[RiskInstaller] MissileSpeedUp x{missileSpeedMul:0.##} 적용");
         }
@@ -148,15 +203,100 @@ public class RiskInstaller : MonoBehaviour
         {
             var p = dbgMissile.GetComponent<Risk_MissileExplosionUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileExplosionUp>();
             p.homingMissile = dbgMissile;
-            p.radiusMul     = explosionRadiusMul;
-            p.applyOnStart  = false;
+            p.radiusMul = explosionRadiusMul;
+            p.applyOnStart = false;
             p.Apply();
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{explosionRadiusMul:0.##} 적용");
         }
+        //missileCountUp
+        if (dbgMissile)
+        {
+            var p = dbgMissile.GetComponent<Risk_MissileCountUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileCountUp>();
+            p.homingMissile = dbgMissile;
+            p.missilecnt = missileCountAdd;
+            p.applyOnStart = false;
+            p.Apply();
+            Debug.Log($"[RiskInstaller] MissileExplosionUp x{missileCountAdd:0.##} 적용");
+        }
+        //missilespawneverycycle
+        if (dbgMissile)
+        {
+            var p = dbgMissile.GetComponent<Risk_MissileSpawnEveryCycle>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpawnEveryCycle>();
+            p.homingMissile = dbgMissile;
+            p.MissileSpawnCycle = spawnCycle;
+            p.applyOnStart = false;
+            p.Apply();
+            Debug.Log($"[RiskInstaller] MissileExplosionUp x{spawnCycle:0.##} 적용");
+        }
+        //ZoneGaugeGainDown
+        if (dbgSurvivalDirector)
+        {
+            var p = dbgSurvivalDirector.GetComponent<Risk_ZoneGaugeGainDown>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneGaugeGainDown>();
+            p.zoneEnterBonusMul = zoneEnterBonusMul;
+            p.applyOnStart = false;
+            p.Apply();
+        }
+
+        //ZoneReqHitsUp
+        if (dbgSurvivalDirector)
+        {
+            var p = dbgSurvivalDirector.GetComponent<Risk_ZoneReqHitsUp>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneReqHitsUp>();
+            p.addRequiredHits_L = ZoneReqHitsUp_L;
+            p.addRequiredHits_M = ZoneReqHitsUp_M;
+            p.addRequiredHits_S = ZoneReqHitsUp_S;
+            p.applyOnStart = false;
+            p.Apply();
+        }
+        //ZoneCompositionChange
+        if (dbgSurvivalDirector)
+        {           
+            var p = dbgSurvivalDirector.GetComponent<Risk_ZoneCompositionChange>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneCompositionChange>();
+            p.countL = ZoneCountL;
+            p.countM = ZoneCountM;
+            p.countS = ZoneCountS;
+            p.applyOnStart = false;
+            p.Apply();
+            
+        }
+        //CardChargeRequireAdd
+        if (dbgCardManager)
+        {
+            var p = dbgCardManager.GetComponent<Risk_CardChargeRequiredUp>() ?? dbgCardManager.gameObject.AddComponent<Risk_CardChargeRequiredUp>();
+            p.addChargeRequired = CardChargeAdd;
+            p.applyOnStart = false;
+            p.Apply();
+        }
+
+
+        //CardDisable
+        if (dbgCardManager)
+        {
+            var p = dbgCardManager.GetComponent<Risk_CardDisabled>() ?? dbgCardManager.gameObject.AddComponent<Risk_CardDisabled>();
+            p.disable = Carddisable;
+            p.applyOnStart = false;
+            p.Apply();
+        }
+        //
+
 
         // TODO: spawnEachCycle / missileCountAdd도 필요해지면 같은 패턴으로
 
         // 6) 1판 페이로드 비우기
-        RiskSession.Clear();
+        if (clearOnApply)
+            RiskSession.Clear();
     }
+    // 인스톨러 중복 방지
+    public static RiskInstaller EnsureSingleton(string applyOnSceneName = "")
+    {
+    #if UNITY_2023_1_OR_NEWER
+            var exist = UnityEngine.Object.FindFirstObjectByType<RiskInstaller>(FindObjectsInactive.Include);
+    #else
+            var exist = Object.FindObjectOfType<RiskInstaller>();
+    #endif
+            return exist ? exist : Spawn(applyOnSceneName);
+    }
+
+    
+
+
 }

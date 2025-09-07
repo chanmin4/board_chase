@@ -122,6 +122,7 @@ public class GameOverUI : MonoBehaviour
         AudioListener.pause = false;
         Time.timeScale = 1f;
         var scene = SceneManager.GetActiveScene().name;
+        RiskInstaller.EnsureSingleton("GameScene");
         SceneManager.LoadScene(scene);
     }
     public void OnClickMainMenu()

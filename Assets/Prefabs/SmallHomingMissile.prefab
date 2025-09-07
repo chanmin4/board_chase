@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1487118221911309778}
   - component: {fileID: 2644552899121420720}
   m_Layer: 0
-  m_Name: SmallHomingShot
+  m_Name: SmallHomingMissile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -96,16 +96,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 6782502785739278109}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 069e865cea51cfb4fa64c0ee514f83ea, type: 3}
+  m_Script: {fileID: 11500000, guid: afa5d0a89dc38b449b794db6fd82d1b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  director: {fileID: 0}
-  target: {fileID: 0}
-  gauge: {fileID: 0}
-  moveSpeed: 3
+  moveSpeed: 6
   turnLerp: 10
   groundY: 1
-  lifetime: 10
+  lifetime: 4
   hitRadiusWorld: 2
   timeoutRadiusWorld: 0.8
   gaugePenaltyOnHit: 1.2

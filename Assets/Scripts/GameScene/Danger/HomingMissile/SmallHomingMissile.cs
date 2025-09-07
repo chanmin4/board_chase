@@ -1,12 +1,13 @@
+using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 public class SmallHomingMissile : MonoBehaviour
 {
     [Header("Refs")]
-    public SurvivalDirector director;
-    public Transform target;                 // 보통 PlayerDisk
-    public SurvivalGauge gauge;              // 선택(없으면 패널티 생략)
+    [NonSerialized]public SurvivalDirector director;
+    [NonSerialized] public Transform target;                 // 보통 PlayerDisk
+    [NonSerialized] public SurvivalGauge gauge;              // 선택(없으면 패널티 생략)
 
     [Header("Movement")]
     public float moveSpeed = 6f;             // 느린 추적 속도

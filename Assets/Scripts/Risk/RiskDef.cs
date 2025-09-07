@@ -12,12 +12,12 @@ public enum RiskType
     MissileCountUp,              // i0 = 동시 최대 수 (예: 2)
 
     // 존/게이지
-    ZoneGaugeGainMinus,          // f0 = 게이지 획득 배수(예: 0.85)
-    ZoneReqHitsAdd,              // i0 = 요구 튕김 +N
+    ZoneGaugeGainDown,          // f0 = 게이지 획득 배수(예: 0.85)
+    ZoneReqHitsUp,              // i0 = 요구 튕김 +N
     ZoneCompositionChange,       // layout 사용 (L/M/S 지정)
 
     // 카드
-    CardChargeRequiredAdd,       // i0 = 요구 충전 +N
+    CardChargeRequiredUp,       // i0 = 요구 충전 +N
     CardDisabled,                // b0 = 청소 기능 비활성
 
     // 환경
@@ -53,9 +53,6 @@ public class RiskDef : ScriptableObject
 
     [Tooltip("주요 bool 파라미터(토글성)")]
     public bool bool_parameter = false;   // 예: 매턴 등장 활성화 등
-
-    [Tooltip("ZoneCompositionChange 전용 레이아웃")]
-    public ZoneLayout layout = new ZoneLayout { large = 2, medium = 2, small = 1 };
 
     [Header("Rules")]
     [Tooltip("함께 켤 수 없는 riskId들(서로 배타)")]

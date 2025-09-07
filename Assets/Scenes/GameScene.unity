@@ -1746,7 +1746,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 405202900}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a60ce6a9d60cd1441b70b5c0734d85ad, type: 3}
+  m_Script: {fileID: 11500000, guid: 259517d52eacba94ca5ce7133b32c567, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   director: {fileID: 1606759577}
@@ -1759,15 +1759,15 @@ MonoBehaviour:
   - {fileID: 714337926}
   - {fileID: 1162049249}
   randomPickAnchor: 1
-  fireOnEvenCycles: 1
-  fireOnOddCycles: 0
-  everyN: 0
+  spawncycle: 2
   spawnRadiusWorld: 0
-  spawnY: 0.1
-  missileSpeed: 3
+  spawnY: 1
+  missileSpeed: 6
   hitRadiusWorld: 2
   timeoutRadiusWorld: 0.8
   gaugePenaltyOnHit: 1.2
+  missileCount: 1
+  uniqueAnchorsPerBurst: 1
 --- !u!4 &405202902
 Transform:
   m_ObjectHideFlags: 0
@@ -3641,6 +3641,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   applyOnSceneName: GameScene
   autoDestroyAfterApply: 0
+  dbgSet: {fileID: 0}
+  dbgSelected: []
+  dbgSelectedTitles: []
+  dbgDragCooldownExtra: 0
+  dbgMissileSpeedMul: 1
+  dbgExplosionRadiusMul: 1
+  dbgSpawnCycle: 1
+  dbgMissileCountAdd: 0
+  dbgZoneReqHitsUp_S: 0
+  dbgZoneReqHitsUp_M: 0
+  dbgZoneReqHitsUp_L: 0
+  dbgLauncher: {fileID: 2113993636}
+  dbgMissile: {fileID: 1985554759}
+  dbgSurvivalDirector: {fileID: 1606759577}
+  clearOnApply: 0
 --- !u!4 &1354245682
 Transform:
   m_ObjectHideFlags: 0
@@ -4208,13 +4223,7 @@ MonoBehaviour:
   zoneProfiles:
   - name: Large
     footprint: {x: 4, y: 4}
-    requiredWallHits: 0
-    enterBonus: 15
-    gainPerSec: 0
-    domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
-    ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
-  - name: Large
-    footprint: {x: 4, y: 4}
+    size: 2
     requiredWallHits: 0
     enterBonus: 15
     gainPerSec: 0
@@ -4222,13 +4231,7 @@ MonoBehaviour:
     ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
   - name: Medium
     footprint: {x: 3, y: 3}
-    requiredWallHits: 2
-    enterBonus: 25
-    gainPerSec: 0
-    domeMat: {fileID: 2100000, guid: 968663742a0fcac4b8df869c2634773e, type: 2}
-    ringMat: {fileID: 2100000, guid: a9b7d61bd5ac1b940bc5621595e4ccef, type: 2}
-  - name: Medium
-    footprint: {x: 3, y: 3}
+    size: 1
     requiredWallHits: 2
     enterBonus: 25
     gainPerSec: 0
@@ -4236,12 +4239,13 @@ MonoBehaviour:
     ringMat: {fileID: 2100000, guid: a9b7d61bd5ac1b940bc5621595e4ccef, type: 2}
   - name: Small
     footprint: {x: 2, y: 2}
+    size: 0
     requiredWallHits: 3
     enterBonus: 40
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
     ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
-  zoneLifetime: 12
+  zoneLifetime: 3
   minZoneSeparationTiles: 0.35
   excludeRadius: 1
   minSpawnTileDistance: 6
@@ -4255,6 +4259,14 @@ MonoBehaviour:
   zoneBounceCooldown: 0.08
   consumeLockAfterBounce: 0.15
   requireExitReenterAfterBounce: 1
+  zoneEnterBonusMul: 1
+  zoneReqHitsAdd_S: 0
+  zoneReqHitsAdd_M: 0
+  zoneReqHitsAdd_L: 0
+  useLayoutCounts: 1
+  layoutCountSmall: 1
+  layoutCountMedium: 2
+  layoutCountLarge: 2
 --- !u!4 &1606759578
 Transform:
   m_ObjectHideFlags: 0
@@ -5333,7 +5345,7 @@ GameObject:
   - component: {fileID: 1985554759}
   - component: {fileID: 1985554758}
   m_Layer: 0
-  m_Name: HomingMissile
+  m_Name: HomingRocket
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5348,13 +5360,32 @@ MonoBehaviour:
   m_GameObject: {fileID: 1985554757}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2e133358dfd39ed4284a9db664447d00, type: 3}
+  m_Script: {fileID: 11500000, guid: baff306619007a843b84a1e6961df6cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   director: {fileID: 1606759577}
-  previewParent: {fileID: 1985554760}
+  board: {fileID: 1290663343}
+  missilePrefab: {fileID: 1985554759}
+  triggerEveryN: 3
+  firstSpawnAt: 3
+  spawnYOffset: 0
+  homingSpeed: 7
+--- !u!114 &1985554759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1985554757}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a43f00bd95b7d84ca2e300cc3abf34e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  director: {fileID: 1606759577}
+  previewParent: {fileID: 0}
   previewRingPrefab: {fileID: 0}
-  previewRingMat: {fileID: 2100000, guid: 162a3e88c234e2f4d815442f833918e1, type: 2}
+  previewRingMat: {fileID: 0}
   previewLayerName: Ignore Raycast
   startHeight: 6
   groundY: 0.1
@@ -5385,28 +5416,9 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  followTargetXZ: 1
+  followTargetXZ: 0
   target: {fileID: 2113993634}
-  moveSpeed: 5
---- !u!114 &1985554759
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1985554757}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 66c2917516346574abc17f2dd82ea3bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  director: {fileID: 1606759577}
-  board: {fileID: 1290663343}
-  missilePrefab: {fileID: 1985554758}
-  triggerEveryN: 3
-  firstSpawnAt: 3
-  spawnYOffset: 0
-  homingSpeed: 7
+  moveSpeed: 7
 --- !u!4 &1985554760
 Transform:
   m_ObjectHideFlags: 0

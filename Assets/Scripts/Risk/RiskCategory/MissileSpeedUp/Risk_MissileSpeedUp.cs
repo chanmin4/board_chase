@@ -23,7 +23,7 @@ public class Risk_MissileSpeedUp : MonoBehaviour
             spawners = Object.FindObjectsByType<BarrageMissileSpawner>(
     FindObjectsInactive.Include,   // ← 예전의 true (비활성 포함)
     FindObjectsSortMode.None       // 정렬 불필요하면 None이 가장 빠름
-);
+    );
         if (spawners != null && spawners.Length > 0)
         {
             _origSpeed = new float[spawners.Length];

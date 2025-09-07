@@ -17,11 +17,7 @@ public class BarrageMissileSpawner : MonoBehaviour
     public bool randomPickAnchor = true;
 
     [Header("Spawn Rule")]
-    [Tooltip("true면 (2,4,6,…) 짝수 사이클마다 1발 발사")]
-    public bool fireOnEvenCycles = true;   // “두 번째 lifetime마다”
-    [Tooltip("true면 (1,3,5,…) 홀수 사이클마다 1발 발사")]
-    public bool fireOnOddCycles  = false;
-    public int  everyN = 0;              // 0이면 미사용, N주기마다 스폰
+    public int  spawncycle = 2;              // 0이면 미사용, N주기마다 스폰
 
     [Header("Spawn Geometry (fallback when no anchors)")]
     [Tooltip("보드 중앙으로부터의 스폰 반경(월드 단위). 0 이면 자동(보드의 1/4)")]
@@ -33,6 +29,8 @@ public class BarrageMissileSpawner : MonoBehaviour
     public float hitRadiusWorld = 2.0f;
     public float timeoutRadiusWorld = 0.8f;
     public float gaugePenaltyOnHit = 1.2f;
+    public int missileCount = 1;
+    public bool uniqueAnchorsPerBurst = true;       // true면 한 번의 발사에서 서로 다른 앵커를 우선 사용
 
     int seq = 0;
     // 내부
@@ -75,42 +73,50 @@ public class BarrageMissileSpawner : MonoBehaviour
 
     void HandleResetSeq(int seq)
     {
-        bool should = (fireOnEvenCycles && (seq % 2 == 0)) || (fireOnOddCycles && (seq % 2 == 1));
-        if (!should || !missilePrefab || !director) return;
-
-        Vector3 pos;
+        if (spawncycle <= 0) return;
+        if ((seq % spawncycle) != 0) return;
+        if (!missilePrefab || !director) return;
+        int count = Mathf.Max(1, missileCount);
         // 1) 앵커가 있으면 거기서 랜덤 선택
         if (anchors != null && anchors.Length > 0)
         {
-            int idx = randomPickAnchor ? Random.Range(0, anchors.Length) : (seq % anchors.Length);
-            var a = anchors[idx];
-            pos = a ? a.position : transform.position;
-        }
-        else
-        {
-            // 2) 앵커가 없으면 기존 자동 좌표
-            float radius = spawnRadiusWorld > 0f
-                         ? spawnRadiusWorld
-                         : (board ? Mathf.Min(board.width, board.height) * board.tileSize * 0.25f : 5f);
-
-            Vector3[] auto =
+            int anchorL = anchors.Length;
+            int idx = randomPickAnchor ? Random.Range(0, anchorL) : (seq % anchorL);
+            if (uniqueAnchorsPerBurst)
             {
-                boardCenter + new Vector3( 0f, 0f,  radius),
-                boardCenter + new Vector3( 0f, 0f, -radius),
-                boardCenter + new Vector3( radius, 0f,  0f),
-                boardCenter + new Vector3(-radius, 0f,  0f)
-            };
-            int idx = Random.Range(0, auto.Length);
-            pos = auto[idx];
+                //일단 최대한 서로다른앵커 발사
+                int use = Mathf.Min(count, anchorL);
+                for (int k = 0; k < use; k++)
+                {
+                    var a = anchors[(idx + k) % anchorL];
+                    Vector3 p = a ? a.position : transform.position;
+                    p.y = spawnY;
+                    SpawnOne(p);
+                }
+                // 남는 분량은 랜덤 앵커에서 추가 발사
+                for (int k = anchorL; k < count; k++)
+                {
+                    var a = anchors[Random.Range(0, anchorL)];
+                    Vector3 p = a ? a.position : transform.position;
+                    p.y = spawnY;
+                    SpawnOne(p);
+                }
+            }
+            else
+            {
+                // 같은 앵커에서 count개 발사
+                var a = anchors[idx];
+                Vector3 p = a ? a.position : transform.position;
+                p.y = spawnY;
+                for (int k = 0; k < count; k++) SpawnOne(p);
+            }
         }
-
-        pos.y = spawnY; // ★ 항상 Y를 1로 올려 회전벽 무시
-        SpawnOne(pos);
     }
 
     void SpawnOne(Vector3 pos)
     {
         var m = Instantiate(missilePrefab, pos, Quaternion.identity, transform);
+
 
         float life = director.SetDuration; // 이 사이클 동안만 유효
 

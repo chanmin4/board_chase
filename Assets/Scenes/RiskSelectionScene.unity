@@ -2326,6 +2326,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   StartButton: {fileID: 1920869777}
   GameSceneName: GameScene
+  currentSet: {fileID: 11400000, guid: 4ef9f2e2b0dc840438dc6b6ff099d6c4, type: 2}
   Content: {fileID: 163342997}
   summaryRoot: {fileID: 293381928}
   columnAnchors:
@@ -2349,6 +2350,29 @@ MonoBehaviour:
   - type: 2
     defs:
     - {fileID: 11400000, guid: 59643f8bc5f3e9545903bcebc8322869, type: 2}
+    customRowTitle: 
+  - type: 4
+    defs:
+    - {fileID: 11400000, guid: 8ce10865af793224ab2332f637e91919, type: 2}
+    customRowTitle: 
+  - type: 3
+    defs:
+    - {fileID: 11400000, guid: 2fa4db776a35c0f45b0e4e9470947508, type: 2}
+    customRowTitle: 
+  - type: 6
+    defs:
+    - {fileID: 11400000, guid: 95dbfce26dd1c4942b343cf4149ba422, type: 2}
+    - {fileID: 11400000, guid: 0c193bd3d1a401445b7882582fa9a6dd, type: 2}
+    customRowTitle: 
+  - type: 7
+    defs:
+    - {fileID: 11400000, guid: 38e680dc09a97ca4e993bb8e94da7edf, type: 2}
+    - {fileID: 11400000, guid: 022182db7f4cc094e9af1cc9e47c583e, type: 2}
+    customRowTitle: 
+  - type: 6
+    defs:
+    - {fileID: 11400000, guid: b324cb065a364504394696ba32520056, type: 2}
+    - {fileID: 11400000, guid: 060aa53035383854c9ad89882cc30fd4, type: 2}
     customRowTitle: 
   cellContainerPrefab: {fileID: 6656189466376719195, guid: 94c6767839a3db54ba2870e0826461b3, type: 3}
   togglePrefab: {fileID: 3670165466118912026, guid: 83ae214e93912b648b86d1c331c994ab, type: 3}

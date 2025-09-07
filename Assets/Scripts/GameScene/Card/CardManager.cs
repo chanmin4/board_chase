@@ -25,6 +25,10 @@ public class CardManager : MonoBehaviour
     public SurvivalDirector director;
     public Transform player; // 디스크 Transform
 
+    public int riskAddRequiredCharge = 0;   // 요구 충전 +N
+    public bool riskDisableUse = false;     // 카드 사용 금지 ON/OFF
+    
+
     CardData data;
     int charge;
     bool onCooldown;
@@ -32,6 +36,8 @@ public class CardManager : MonoBehaviour
 
     int lastWallHits;
     private Coroutine durationCo;
+
+public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRequiredCharge) : 0);
 
     void Awake()
     {
@@ -113,15 +119,15 @@ public class CardManager : MonoBehaviour
         if (!data) { if (useButton) useButton.interactable = false; return; }
         if (icon)     icon.sprite = data.icon;
         if (nameText) nameText.text = data.cardName;
-        if (chargeText) chargeText.text = $"{charge} / {data.maxCharge}";
+        chargeText.text = $"{charge}/{EffectiveMaxCharge}";
          if (durationText) durationText.text = $"{data.duration:0.0}s";
         bool ready = !onCooldown && charge >= data.maxCharge;
-        if (useButton) useButton.interactable = ready;
+        useButton.interactable = !onCooldown && !riskDisableUse && charge >= EffectiveMaxCharge;
     }
 
     void TryUse()
     {
-        if (!data || onCooldown || charge < data.maxCharge) return;
+        if (!data || onCooldown || riskDisableUse || charge < EffectiveMaxCharge) return;
         EnsureAbility();
         ability.Activate(player, director, data);
 
