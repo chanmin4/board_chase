@@ -3457,6 +3457,8 @@ MonoBehaviour:
   cardResourceName: Cards/Cleaner
   director: {fileID: 1606759577}
   player: {fileID: 2113993634}
+  riskAddRequiredCharge: 0
+  riskDisableUse: 0
 --- !u!114 &1260950211
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3655,6 +3657,7 @@ MonoBehaviour:
   dbgLauncher: {fileID: 2113993636}
   dbgMissile: {fileID: 1985554759}
   dbgSurvivalDirector: {fileID: 1606759577}
+  dbgCardManager: {fileID: 0}
   clearOnApply: 0
 --- !u!4 &1354245682
 Transform:
@@ -5783,7 +5786,6 @@ GameObject:
   - component: {fileID: 2113993635}
   - component: {fileID: 2113993636}
   - component: {fileID: 2113993637}
-  - component: {fileID: 2113993638}
   - component: {fileID: 2113993639}
   m_Layer: 6
   m_Name: PlayerDisk
@@ -5949,24 +5951,6 @@ MonoBehaviour:
     m_Bits: 256
   minSpeed: 0.5
   cooldown: 0.08
---- !u!114 &2113993638
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2113993630}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 56a3743178f5f9541ba0e1577a389801, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  director: {fileID: 1606759577}
-  burningFX: {fileID: 0}
-  feverSfx: {fileID: 0}
-  requiredHitsThisCycle: 5
-  cardChargeMultiplierDuringFever: 2
-  log: 1
 --- !u!114 &2113993639
 MonoBehaviour:
   m_ObjectHideFlags: 0

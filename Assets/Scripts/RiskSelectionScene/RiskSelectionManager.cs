@@ -159,10 +159,10 @@ readonly Dictionary<Toggle, ToggleAlpha> _alphaByToggle = new();
                 // 셀 내부: 세로 스택 자동
                 var v = cellGO.GetComponent<VerticalLayoutGroup>() ?? cellGO.AddComponent<VerticalLayoutGroup>();
                 v.spacing = 6; v.childAlignment = TextAnchor.UpperCenter;
-                v.childForceExpandWidth = true; v.childForceExpandHeight = false;
-                var fitter = cellGO.GetComponent<ContentSizeFitter>() ?? cellGO.AddComponent<ContentSizeFitter>();
-                fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                v.childForceExpandWidth = false; v.childForceExpandHeight = false;
+                //var fitter = cellGO.GetComponent<ContentSizeFitter>() ?? cellGO.AddComponent<ContentSizeFitter>();
+                //fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                //fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
                 // 토글 생성
                 foreach (var def in bucket)

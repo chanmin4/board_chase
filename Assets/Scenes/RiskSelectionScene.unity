@@ -403,7 +403,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 10
+  m_ScrollSensitivity: 15
   m_Viewport: {fileID: 99084524}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 0}
@@ -560,7 +560,7 @@ GameObject:
   m_Component:
   - component: {fileID: 163342997}
   - component: {fileID: 163342999}
-  - component: {fileID: 163342998}
+  - component: {fileID: 163343000}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -587,20 +587,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1920, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &163342998
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 163342996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_HorizontalFit: 0
-  m_VerticalFit: 2
 --- !u!114 &163342999
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -622,11 +608,25 @@ MonoBehaviour:
   m_Spacing: 0
   m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 1
+  m_ChildControlWidth: 0
   m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &163343000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163342996}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1 &168639882
 GameObject:
   m_ObjectHideFlags: 0
@@ -2373,6 +2373,19 @@ MonoBehaviour:
     defs:
     - {fileID: 11400000, guid: b324cb065a364504394696ba32520056, type: 2}
     - {fileID: 11400000, guid: 060aa53035383854c9ad89882cc30fd4, type: 2}
+    customRowTitle: 
+  - type: 8
+    defs:
+    - {fileID: 11400000, guid: 549412dfc18971c4587850541a9d0396, type: 2}
+    - {fileID: 11400000, guid: 3966dd519570e7b489c91b736aed9544, type: 2}
+    customRowTitle: 
+  - type: 9
+    defs:
+    - {fileID: 11400000, guid: ba994090a0f7ee44f9b2ad3c4c827ef9, type: 2}
+    customRowTitle: 
+  - type: 9
+    defs:
+    - {fileID: 11400000, guid: a408b093017568440811178715870ce3, type: 2}
     customRowTitle: 
   cellContainerPrefab: {fileID: 6656189466376719195, guid: 94c6767839a3db54ba2870e0826461b3, type: 3}
   togglePrefab: {fileID: 3670165466118912026, guid: 83ae214e93912b648b86d1c331c994ab, type: 3}
