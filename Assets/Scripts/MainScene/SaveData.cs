@@ -15,4 +15,5 @@ public class SaveData
 
     // 선택(옵션)
     public string equippedSkinId = "skin_default";
+    public List<string> claimedAchievements = new();
 }

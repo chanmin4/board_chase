@@ -14,7 +14,6 @@ public class ProgressManager : MonoBehaviour
     [Header("Unlock Table (Resources/Achievements)")]
     public string achievementsFolder = "Achievements"; // ScriptableObject 모음 폴더
 
-    List<AchievementDef> _defs = new();
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void AutoCreate()
     {
@@ -38,10 +37,9 @@ public class ProgressManager : MonoBehaviour
             Data.unlockedSkins.Add("skin_default");
 
         // 도전과제 정의 로드
-        _defs.AddRange(Resources.LoadAll<AchievementDef>(achievementsFolder));
+        //_defs.AddRange(Resources.LoadAll<AchievementDef>(achievementsFolder));
 
         // 로드 직후 한 번 평가(버전 업그레이드 대비)
-        ReevaluateUnlocks();
     }
 
     public void Save() => SaveSystem.Save(Data);
@@ -53,7 +51,6 @@ public class ProgressManager : MonoBehaviour
         {
             Data.bestScore = score;
             OnBestScoreChanged?.Invoke(Data.bestScore);
-            ReevaluateUnlocks(); // 새 기록으로 해금 재평가
             Save();
         }
     }
@@ -66,40 +63,12 @@ public class ProgressManager : MonoBehaviour
         if (HasSkin(id)) { Data.equippedSkinId = id; Save(); }
     }
 
-    void ReevaluateUnlocks()
-    {
-        bool changed = false;
-        foreach (var def in _defs)
-        {
-            if (!def) continue;
-            if (Data.bestScore < def.requiredBestScore) continue;
-
-            switch (def.unlockType)
-            {
-                case AchievementDef.UnlockType.Skin:
-                    if (!Data.unlockedSkins.Contains(def.payloadId))
-                    { Data.unlockedSkins.Add(def.payloadId); changed = true; }
-                    break;
-                case AchievementDef.UnlockType.Ability:
-                    // payloadId에는 "Cards/Cleaner" 같은 CardData 리소스 키를 권장
-                    if (!Data.unlockedAbilities.Contains(def.payloadId))
-                    { Data.unlockedAbilities.Add(def.payloadId); changed = true; }
-                    break;
-            }
-        }
-        if (changed)
-        {
-            OnUnlocksChanged?.Invoke();
-            Save();
-        }
-    }
     public void ReportRunTimeMs(int timeMs)
     {
         if (timeMs > Data.bestTimeMs)
         {
             Data.bestTimeMs = timeMs;
             OnBestTimeChangedMs?.Invoke(Data.bestTimeMs);
-            ReevaluateUnlocks();
             Save();
         }
     }
@@ -117,4 +86,50 @@ public class ProgressManager : MonoBehaviour
         if (saveFileAfter) Save(); // 기본값 false면 파일은 안 만듦(완전 초기화 느낌)
         Debug.Log("[Progress] Reset done");
     }
+    public bool IsAchievementEligible(string achievementId)
+{
+    foreach (var a in Achievements.Table)
+        if (a.id == achievementId)
+            return Data.bestScore >= a.requiredBestScore;
+    return false;
+}
+
+public bool IsAchievementClaimed(string achievementId)
+{
+    return Data.claimedAchievements.Contains(achievementId);
+}
+
+    public bool TryClaim(string achievementId)
+    {
+        // 존재 확인 + 자격 + 중복 수령 방지
+        Achievement? found = null;
+        foreach (var a in Achievements.Table)
+            if (a.id == achievementId) { found = a; break; }
+        if (found == null) return false;
+
+        var ach = found.Value;
+        if (!IsAchievementEligible(achievementId)) return false;
+        if (IsAchievementClaimed(achievementId)) return false;
+
+        // 보상 지급
+        switch (ach.unlockType)
+        {
+            case UnlockType.Skin:
+                if (!Data.unlockedSkins.Contains(ach.payloadId))
+                    Data.unlockedSkins.Add(ach.payloadId);
+                break;
+
+            case UnlockType.Ability:
+                if (!Data.unlockedAbilities.Contains(ach.payloadId))
+                    Data.unlockedAbilities.Add(ach.payloadId);
+                break;
+        }
+
+        // 수령 기록 + 저장 + 이벤트
+        Data.claimedAchievements.Add(achievementId);
+        Save();
+        OnUnlocksChanged?.Invoke();
+        return true;
+    }
+
 }
