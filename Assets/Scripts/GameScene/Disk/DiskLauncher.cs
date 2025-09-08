@@ -119,7 +119,7 @@ public class DiskLauncher : MonoBehaviour
         OnChargesChanged?.Invoke(Charges, EffectiveMax());
         return true;
     }
-    int EffectiveMax() => maxCharges > 0 ? maxCharges : Mathf.Max(baseCharges, Charges);
+    int EffectiveMax() => maxCharges > 0 ? maxCharges : baseCharges;
 
     void HandleSetReset()
     {

@@ -153,13 +153,17 @@ readonly Dictionary<Toggle, ToggleAlpha> _alphaByToggle = new();
                 var cell = cellGO.GetComponent<RectTransform>();
                 ForceTopWithPivot(cell, 0.5f);                 // pivot=(0.5,1)
                 cell.anchoredPosition = new Vector2(cx, 0f);   // ★ X만 고정, Y=0
-                cell.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
+                //cell.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
                 cell.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, cellMinHeight);
 
                 // 셀 내부: 세로 스택 자동
                 var v = cellGO.GetComponent<VerticalLayoutGroup>() ?? cellGO.AddComponent<VerticalLayoutGroup>();
                 v.spacing = 6; v.childAlignment = TextAnchor.UpperCenter;
-                v.childForceExpandWidth = false; v.childForceExpandHeight = false;
+                v.childForceExpandWidth = false;
+                v.childForceExpandHeight = false;
+                v.childControlWidth  = false;
+                v.childControlHeight = false;
+
                 //var fitter = cellGO.GetComponent<ContentSizeFitter>() ?? cellGO.AddComponent<ContentSizeFitter>();
                 //fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
                 //fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -169,7 +173,7 @@ readonly Dictionary<Toggle, ToggleAlpha> _alphaByToggle = new();
                 {
                     var item = Instantiate(togglePrefab, cell);
                     var rt = item.GetComponent<RectTransform>();
-                    ForceFixedWidth(rt, w);
+                    //ForceFixedWidth(rt, w);
                     BindToggle(item, def, g.type, rowLabel, picked.Contains(def));
                 }
             }
@@ -285,10 +289,10 @@ readonly Dictionary<Toggle, ToggleAlpha> _alphaByToggle = new();
         rt.pivot = new Vector2(0f, 1f);
         rt.sizeDelta = new Vector2(width, rt.sizeDelta.y);
 
-        var le = rt.GetComponent<LayoutElement>() ?? rt.gameObject.AddComponent<LayoutElement>();
-        le.minWidth = width;
-        le.preferredWidth = width;
-        le.preferredHeight = Mathf.Max(cellMinHeight, 60f);
+        //var le = rt.GetComponent<LayoutElement>() ?? rt.gameObject.AddComponent<LayoutElement>();
+        //le.minWidth = width;
+        //le.preferredWidth = width;
+        //le.preferredHeight = Mathf.Max(cellMinHeight, 60f);
     }
 
     void ForceTopLeft(RectTransform rt)

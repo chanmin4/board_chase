@@ -18,6 +18,11 @@ public class ZoneVisualManager : MonoBehaviour
     public GameObject contamDiscPrefab;      // 없으면 Cylinder로 생성
     public Material contamMat;               // 보라/자주 반투명
     public float contamDiscY = 0.01f;        // 바닥과의 간섭 방지
+    public bool makeContamDiscsTriggers = true;
+    public string pollutionTag = "Pollution";
+    public string pollutionLayer = "Pollution";
+
+
     [Header("Legacy Contam Discs (off when using ContamTileRenderer)")]
     public bool useLegacyContamDiscs = false;
     class Visual
@@ -47,10 +52,11 @@ public class ZoneVisualManager : MonoBehaviour
             if (useLegacyContamDiscs)
             {
                 director.OnZoneContaminatedCircle += HandleContamCircle;
-                director.OnClearedCircleWorld     += HandleClearedCircleWorld; // ★ 추가
+                director.OnClearedCircleWorld += HandleClearedCircleWorld; // ★ 추가
             }
 
-            director.OnZoneConsumed += HandleConsumed;}
+            director.OnZoneConsumed += HandleConsumed;
+        }
     }
 
     void OnDestroy()
@@ -93,7 +99,7 @@ public class ZoneVisualManager : MonoBehaviour
         // 돔
         GameObject dome = Instantiate(hemispherePrefab, root.transform);
         dome.transform.localPosition = Vector3.zero;
-        dome.transform.localScale    = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
+        dome.transform.localScale = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
         StripAllColliders(dome);
 
         var dRend = dome.GetComponentInChildren<Renderer>();
@@ -103,7 +109,7 @@ public class ZoneVisualManager : MonoBehaviour
         GameObject ring = Instantiate(ringPrefab, root.transform);
         ring.transform.localPosition = Vector3.zero;
         ring.transform.localRotation = Quaternion.identity;
-        ring.transform.localScale    = new Vector3(0.0001f, 0.02f, 0.0001f);
+        ring.transform.localScale = new Vector3(0.0001f, 0.02f, 0.0001f);
         StripAllColliders(ring);
 
         var rRend = ring.GetComponentInChildren<Renderer>();
@@ -148,8 +154,11 @@ public class ZoneVisualManager : MonoBehaviour
             go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.transform.SetParent(contamRoot, false);
             go.transform.position = centerWorld + Vector3.up * contamDiscY;
-            var col = go.GetComponent<Collider>(); if (col) Destroy(col);
-            StripAllColliders(go);
+            var col = go.GetComponent<Collider>();
+            if (!col) col = go.AddComponent<CapsuleCollider>();
+            col.isTrigger = true;
+            //if (col) Destroy(col);
+            //StripAllColliders(go);
         }
 
         go.transform.localScale = new Vector3(radiusWorld * 2f, 0.02f, radiusWorld * 2f);
@@ -160,19 +169,27 @@ public class ZoneVisualManager : MonoBehaviour
             var rends = go.GetComponentsInChildren<Renderer>(true);
             foreach (var r in rends) r.sharedMaterial = contamMat;
         }
+        if (makeContamDiscsTriggers)
+        {
+            int layer = LayerMask.NameToLayer(pollutionLayer);   // 인스펙터의 "Pollution" 레이어명
+            SetTagLayerAndTriggerRecursively(go, pollutionTag, layer, true);
+        }
     }
-    void HandleClearedCircleWorld(Vector3 cW, float rW) {
+    void HandleClearedCircleWorld(Vector3 cW, float rW)
+    {
         if (!contamRoot) return;
         // contamRoot 하위의 보라 디스크들을 훑어서,
         // '디스크 중심이 청소 원 안'이면 제거
         var toRemove = new List<Transform>();
-        for (int i = 0; i < contamRoot.childCount; i++) {
+        for (int i = 0; i < contamRoot.childCount; i++)
+        {
             var t = contamRoot.GetChild(i);
             if (!t) continue;
             var p = t.position; p.y = cW.y;
             float discRadius = t.localScale.x * 0.5f; // 생성 시 x=지름으로 잡아둔 경우
             float d = Vector3.Distance(p, cW);
-            if (d <= rW + 0.01f) { // 중심이 들어왔으면 통째로 지움(1차 버전)
+            if (d <= rW + 0.01f)
+            { // 중심이 들어왔으면 통째로 지움(1차 버전)
                 toRemove.Add(t);
             }
         }
@@ -185,4 +202,30 @@ public class ZoneVisualManager : MonoBehaviour
         var cols = go.GetComponentsInChildren<Collider>(true);
         foreach (var c in cols) Destroy(c);
     }
+    static void SetTagLayerAndTriggerRecursively(GameObject go, string tag, int layer, bool makeTrigger)
+    {
+        if (!go) return;
+
+        // 태그가 프로젝트에 없으면 예외가 나서 방어
+        bool canTag = !string.IsNullOrEmpty(tag);
+        if (canTag)
+        {
+            try { _ = UnityEngine.EventSystems.EventSystem.current; /* no-op */ }
+            catch { canTag = false; }
+        }
+
+        var transforms = go.GetComponentsInChildren<Transform>(true);
+        foreach (var t in transforms)
+        {
+            if (canTag) t.gameObject.tag = tag;
+            if (layer >= 0) t.gameObject.layer = layer;
+
+            if (makeTrigger)
+            {
+                var col = t.GetComponent<Collider>();
+                if (col) col.isTrigger = true;
+            }
+        }
+    }
+
 }

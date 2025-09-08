@@ -21,7 +21,7 @@ public class ContamMaskRenderer : MonoBehaviour
     void OnEnable()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
-        if (!board)    board    = FindAnyObjectByType<BoardGrid>();
+        if (!board) board = FindAnyObjectByType<BoardGrid>();
 
         BuildMeshQuad();     // 보드 크기에 맞는 XZ 쿼드 한 장
         BuildMaskTexture();  // 보드 전체 마스크 텍스처 준비
@@ -34,15 +34,15 @@ public class ContamMaskRenderer : MonoBehaviour
         if (!director) return;
         if (on)
         {
-            director.OnZonesReset             += HandleReset;               // 세트 리셋: 비주얼 유지
+            director.OnZonesReset += HandleReset;               // 세트 리셋: 비주얼 유지
             director.OnZoneContaminatedCircle += HandleContamCircle;        // 오염 추가
-            director.OnClearedCircleWorld     += HandleClearedCircle;       // 지우개(청소)
+            director.OnClearedCircleWorld += HandleClearedCircle;       // 지우개(청소)
         }
         else
         {
-            director.OnZonesReset             -= HandleReset;
+            director.OnZonesReset -= HandleReset;
             director.OnZoneContaminatedCircle -= HandleContamCircle;
-            director.OnClearedCircleWorld     -= HandleClearedCircle;
+            director.OnClearedCircleWorld -= HandleClearedCircle;
         }
     }
 
@@ -60,7 +60,7 @@ public class ContamMaskRenderer : MonoBehaviour
 
     void BuildMaskTexture()
     {
-        _w = Mathf.Max(1, board.width  * pixelsPerTile);
+        _w = Mathf.Max(1, board.width * pixelsPerTile);
         _h = Mathf.Max(1, board.height * pixelsPerTile);
 
         _mask = new Texture2D(_w, _h, TextureFormat.Alpha8, false, true);
@@ -69,7 +69,7 @@ public class ContamMaskRenderer : MonoBehaviour
         _buf = new Color32[_w * _h];
 
         // 초기화(전부 0)
-        for (int i = 0; i < _buf.Length; i++) _buf[i] = new Color32(0,0,0,0);
+        for (int i = 0; i < _buf.Length; i++) _buf[i] = new Color32(0, 0, 0, 0);
         _mask.SetPixels32(_buf);
         _mask.Apply(false, false);
 
@@ -81,7 +81,7 @@ public class ContamMaskRenderer : MonoBehaviour
     {
         // 보드 폭/높이(월드)와 중심
         float tile = board.tileSize;
-        float w = board.width  * tile;
+        float w = board.width * tile;
         float h = board.height * tile;
         Vector3 origin = board.origin;
         Vector3 center = new Vector3(origin.x + w * 0.5f, origin.y + yOffset, origin.z + h * 0.5f);
@@ -91,14 +91,14 @@ public class ContamMaskRenderer : MonoBehaviour
 
         // XZ 1x1 유닛 쿼드 생성(-0.5..0.5)
         var m = new Mesh { name = "BoardQuad_XZ" };
-        m.vertices  = new Vector3[] {
+        m.vertices = new Vector3[] {
             new(-0.5f, 0f, -0.5f),
             new( 0.5f, 0f, -0.5f),
             new( 0.5f, 0f,  0.5f),
             new(-0.5f, 0f,  0.5f)
         };
-        m.uv = new Vector2[] { new(0,0), new(1,0), new(1,1), new(0,1) };
-        m.triangles = new int[] { 0,1,2, 0,2,3 };
+        m.uv = new Vector2[] { new(0, 0), new(1, 0), new(1, 1), new(0, 1) };
+        m.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
         m.RecalculateNormals(); m.RecalculateBounds();
         mf.sharedMesh = m;
 
@@ -144,7 +144,7 @@ public class ContamMaskRenderer : MonoBehaviour
                 {
                     int idx = y * w + x;
                     if (add) _buf[idx] = new Color32(0, 0, 0, 255); // 오염 = 1
-                    else     _buf[idx] = new Color32(0, 0, 0,   0); // 청소 = 0
+                    else _buf[idx] = new Color32(0, 0, 0, 0); // 청소 = 0
                 }
             }
         }
@@ -152,4 +152,13 @@ public class ContamMaskRenderer : MonoBehaviour
         _mask.Apply(false, false);
         _dirty = true;
     }
+
+    public bool IsContaminatedWorld(Vector3 worldPos)
+    {
+        if (_buf == null || _w == 0) return false;
+        if (!WorldToPixel(worldPos, out int px, out int py)) return false;
+        int idx = py * _w + px;
+        return _buf[idx].a > 0;  // 알파가 0보다 크면 오염
+    }
+
 }

@@ -69,7 +69,7 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
             TryUse();
         }
     }
-    bool IsReady() => data && !onCooldown && charge >= data.maxCharge;
+    bool IsReady() => data && !riskDisableUse && !onCooldown && charge >= data.maxCharge;
      void OnUseButtonClicked()
     {
         if (!IsReady()) return;
@@ -99,17 +99,17 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
     {
         int delta = Mathf.Max(0, hitsNow - lastWallHits);
         lastWallHits = hitsNow;
-        if (delta <= 0 || !data) return;
+        if (riskDisableUse || delta <= 0 || !data) return;  
 
         int baseGain = Mathf.Max(1, data.gainPerWallBounce);
-        float mul = FeverManager.ChargeMul;                 // ★ FEVER중이면 2배(인스펙터 값)
+        float mul = FeverManager.ChargeMul;      //피어중일경우 현재 적용x           
         int gain = Mathf.RoundToInt(delta * baseGain * mul);
         AddCharge(gain);
     }
 
     void AddCharge(int amount)
     {
-        if (onCooldown || data == null) return;
+        if (riskDisableUse || onCooldown || data == null) return; 
         charge = Mathf.Min(data.maxCharge, charge + amount);
         ApplyUI();
     }
@@ -121,7 +121,7 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
         if (nameText) nameText.text = data.cardName;
         chargeText.text = $"{charge}/{EffectiveMaxCharge}";
          if (durationText) durationText.text = $"{data.duration:0.0}s";
-        bool ready = !onCooldown && charge >= data.maxCharge;
+        bool ready = !riskDisableUse && !onCooldown && charge >= data.maxCharge;
         useButton.interactable = !onCooldown && !riskDisableUse && charge >= EffectiveMaxCharge;
     }
 

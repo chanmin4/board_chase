@@ -29,6 +29,10 @@ public class RiskInstaller : MonoBehaviour
     public int dbgZoneReqHitsUp_M = 0;
     public int dbgZoneReqHitsUp_L = 0;
 
+
+
+
+
     [Header("Debug Targets (ReadOnly)")]
     public DiskLauncher dbgLauncher;
     public HomingRocket dbgMissile;
@@ -88,6 +92,20 @@ public class RiskInstaller : MonoBehaviour
         if (!dbgSurvivalDirector) Debug.LogWarning("[RiskInstaller] SurvivalDirector를 못 찾음");
         if(!dbgCardManager)Debug.LogWarning("[RiskInstaller] CardManager를 못 찾음");
         // 3) 누적값 초기화
+        bool onDragCooldown = false;
+        bool onMissileSpeed = false;
+        bool onMissileExplosion =false;
+        bool onSpawnCycle = false;
+        bool onMissileCount =false;
+        bool onZoneGaugeMul = false;
+        bool onZoneReqHits = false;
+        bool onZoneComp =false;
+        bool onCardCharge = false;
+        bool onCardDisable =false;
+        bool onPollutionFriction = false;
+
+
+
         float dragCooldownExtra = 0f;
 
         float missileSpeedMul = 1f;
@@ -108,9 +126,12 @@ public class RiskInstaller : MonoBehaviour
         int ZoneCountM = 0;
         int ZoneCountL = 0;
 
-        int CardChargeAdd = 1;
+        int CardChargeAdd = 0;
         
-        bool Carddisable = true;
+        bool Carddisable = false;
+
+        bool pollutionfriction = false;
+        float damping = 0;
 
         // 4) 선택 항목 집계
         foreach (var def in dbgSelected)
@@ -120,40 +141,61 @@ public class RiskInstaller : MonoBehaviour
                 case RiskType.DragCooldownAdd:
                     // ★ 여기가 쿨다운 초를 더하는 부분
                     dragCooldownExtra = Mathf.Max(0f, def.float_parameter1);
+                    onDragCooldown = dragCooldownExtra > 0f;
                     break;
 
                 case RiskType.MissileSpeedUp:
                     missileSpeedMul *= Mathf.Max(0.01f, def.float_parameter1);
+                    onMissileSpeed = !Mathf.Approximately(missileSpeedMul, 1f);
                     break;
 
                 case RiskType.MissileExplosionUp:
                     explosionRadiusMul *= Mathf.Max(0.01f, def.float_parameter1);
+                    onMissileExplosion = !Mathf.Approximately(explosionRadiusMul, 1f);
                     break;
 
                 case RiskType.MissileSpawnEveryCycle:
                     spawnCycle = Mathf.RoundToInt(def.float_parameter1);
+                    onSpawnCycle = spawnCycle >= 1;
                     break;
 
                 case RiskType.MissileCountUp:
                     missileCountAdd = Mathf.RoundToInt(def.float_parameter1);
+                    onMissileCount = (missileCountAdd != 0);
+                    break;
+                case RiskType.ZoneGaugeGainDown:
+                    zoneEnterBonusMul *= Mathf.Max(0.01f, def.float_parameter1);
+                    onZoneGaugeMul = !Mathf.Approximately(zoneEnterBonusMul, 1f);    // ★
                     break;
                 case RiskType.ZoneReqHitsUp:
                     ZoneReqHitsUp_S = Mathf.RoundToInt(def.float_parameter1);
                     ZoneReqHitsUp_M = Mathf.RoundToInt(def.float_parameter2);
                     ZoneReqHitsUp_L = Mathf.RoundToInt(def.float_parameter3);
+                    onZoneReqHits = (ZoneReqHitsUp_S | ZoneReqHitsUp_M | ZoneReqHitsUp_L) != 0;
                     break;
                 case RiskType.ZoneCompositionChange:
                     ZoneCountS = Mathf.RoundToInt(def.float_parameter1);
                     ZoneCountM = Mathf.RoundToInt(def.float_parameter2);
                     ZoneCountL = Mathf.RoundToInt(def.float_parameter3);
+                    onZoneComp = (ZoneCountS + ZoneCountM + ZoneCountL) > 0;
                     break;
                 case RiskType.CardChargeRequiredUp:
-                    CardChargeAdd =Mathf.RoundToInt(def.float_parameter1);
+                    CardChargeAdd = Mathf.RoundToInt(def.float_parameter1);
+                    onCardCharge = (CardChargeAdd != 0);
                     break;
 
                 case RiskType.CardDisabled:
                     Carddisable = def.bool_parameter;
+                    onCardDisable = Carddisable;
                     break;
+                case RiskType.PollutionFrictionEnable:
+                    damping = def.float_parameter1;
+                    pollutionfriction = def.bool_parameter;
+                    onPollutionFriction = pollutionfriction;
+                    break;
+
+
+
 
             }
         }
@@ -176,7 +218,7 @@ public class RiskInstaller : MonoBehaviour
 
         // 5) 실제 적용
         // Drag Cooldown
-        if (dbgLauncher && dragCooldownExtra > 0f)
+        if (dbgLauncher && onDragCooldown)
         {
             var patch = dbgLauncher.GetComponent<Risk_DragCooldown>();
             if (!patch) patch = dbgLauncher.gameObject.AddComponent<Risk_DragCooldown>();
@@ -188,7 +230,7 @@ public class RiskInstaller : MonoBehaviour
         }
 
         // Missile speed
-        if (dbgMissile && !Mathf.Approximately(missileSpeedMul, 1f))
+        if (dbgMissile && onMissileSpeed)
         {
             var p = dbgMissile.GetComponent<Risk_MissileSpeedUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpeedUp>();
             p.homingMissile = dbgMissile;
@@ -199,7 +241,7 @@ public class RiskInstaller : MonoBehaviour
         }
 
         // Explosion radius
-        if (dbgMissile && !Mathf.Approximately(explosionRadiusMul, 1f))
+        if (dbgMissile && onMissileExplosion)
         {
             var p = dbgMissile.GetComponent<Risk_MissileExplosionUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileExplosionUp>();
             p.homingMissile = dbgMissile;
@@ -209,7 +251,7 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{explosionRadiusMul:0.##} 적용");
         }
         //missileCountUp
-        if (dbgMissile)
+        if (dbgMissile&&onMissileCount)
         {
             var p = dbgMissile.GetComponent<Risk_MissileCountUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileCountUp>();
             p.homingMissile = dbgMissile;
@@ -219,7 +261,7 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{missileCountAdd:0.##} 적용");
         }
         //missilespawneverycycle
-        if (dbgMissile)
+        if (dbgMissile && onSpawnCycle)
         {
             var p = dbgMissile.GetComponent<Risk_MissileSpawnEveryCycle>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpawnEveryCycle>();
             p.homingMissile = dbgMissile;
@@ -229,7 +271,7 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{spawnCycle:0.##} 적용");
         }
         //ZoneGaugeGainDown
-        if (dbgSurvivalDirector)
+        if (dbgSurvivalDirector && onZoneGaugeMul)
         {
             var p = dbgSurvivalDirector.GetComponent<Risk_ZoneGaugeGainDown>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneGaugeGainDown>();
             p.zoneEnterBonusMul = zoneEnterBonusMul;
@@ -238,7 +280,7 @@ public class RiskInstaller : MonoBehaviour
         }
 
         //ZoneReqHitsUp
-        if (dbgSurvivalDirector)
+        if (dbgSurvivalDirector && onZoneReqHits)
         {
             var p = dbgSurvivalDirector.GetComponent<Risk_ZoneReqHitsUp>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneReqHitsUp>();
             p.addRequiredHits_L = ZoneReqHitsUp_L;
@@ -248,7 +290,7 @@ public class RiskInstaller : MonoBehaviour
             p.Apply();
         }
         //ZoneCompositionChange
-        if (dbgSurvivalDirector)
+        if (dbgSurvivalDirector&& onZoneComp)
         {           
             var p = dbgSurvivalDirector.GetComponent<Risk_ZoneCompositionChange>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneCompositionChange>();
             p.countL = ZoneCountL;
@@ -259,7 +301,7 @@ public class RiskInstaller : MonoBehaviour
             
         }
         //CardChargeRequireAdd
-        if (dbgCardManager)
+        if (dbgCardManager && onCardCharge)
         {
             var p = dbgCardManager.GetComponent<Risk_CardChargeRequiredUp>() ?? dbgCardManager.gameObject.AddComponent<Risk_CardChargeRequiredUp>();
             p.addChargeRequired = CardChargeAdd;
@@ -269,14 +311,22 @@ public class RiskInstaller : MonoBehaviour
 
 
         //CardDisable
-        if (dbgCardManager)
+        if (dbgCardManager && onCardDisable)
         {
             var p = dbgCardManager.GetComponent<Risk_CardDisabled>() ?? dbgCardManager.gameObject.AddComponent<Risk_CardDisabled>();
             p.disable = Carddisable;
             p.applyOnStart = false;
             p.Apply();
         }
-        //
+        //pollution friction
+        if (dbgLauncher && onPollutionFriction)
+        {
+            var p = dbgCardManager.GetComponent<Risk_PollutionFrictionEnable>() ?? dbgLauncher.gameObject.AddComponent<Risk_PollutionFrictionEnable>();
+            p.enableFriction= pollutionfriction;
+            p.dampingPerSec = -Mathf.Log(Mathf.Clamp(damping, 0.01f, 0.999f)); // 지수형태의감속 0.1 이면 90퍼 감속
+            p.applyOnStart = false;
+            p.Apply();
+        }
 
 
         // TODO: spawnEachCycle / missileCountAdd도 필요해지면 같은 패턴으로

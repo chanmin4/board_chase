@@ -1974,7 +1974,7 @@ GameObject:
   - component: {fileID: 482727739}
   - component: {fileID: 482727738}
   - component: {fileID: 482727737}
-  - component: {fileID: 482727736}
+  - component: {fileID: 482727740}
   m_Layer: 0
   m_Name: ContamMaskRenderer
   m_TagString: Untagged
@@ -1982,23 +1982,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &482727736
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 482727735}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d0b3328f87a5c64c91a6b5c3cce65de, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  director: {fileID: 1606759577}
-  board: {fileID: 1290663343}
-  maskMat: {fileID: 2100000, guid: bf3e76a47020a8b46833fe7453bf2166, type: 2}
-  pixelsPerTile: 12
-  yOffset: 0.2
 --- !u!33 &482727737
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -2067,6 +2050,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &482727740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 482727735}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d0b3328f87a5c64c91a6b5c3cce65de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  director: {fileID: 1606759577}
+  board: {fileID: 1290663343}
+  maskMat: {fileID: 2100000, guid: bf3e76a47020a8b46833fe7453bf2166, type: 2}
+  pixelsPerTile: 15
+  yOffset: 0.02
 --- !u!1 &535951730
 GameObject:
   m_ObjectHideFlags: 0
@@ -4758,9 +4758,12 @@ MonoBehaviour:
   ringPrefab: {fileID: 1002405148688756089, guid: 33c6cf1379bee414cbef54d0ea88c826, type: 3}
   defaultDomeMat: {fileID: 0}
   defaultRingMat: {fileID: 0}
-  contamDiscPrefab: {fileID: 0}
+  contamDiscPrefab: {fileID: 7410912256784577975, guid: b7e2865e3bb911445a0a310b9d3ee4df, type: 3}
   contamMat: {fileID: 2100000, guid: 91bddfd53a45c384c9a37f1491db0669, type: 2}
   contamDiscY: 0.01
+  makeContamDiscsTriggers: 1
+  pollutionTag: Pollution
+  pollutionLayer: Pollution
   useLegacyContamDiscs: 0
 --- !u!4 &1796449637
 Transform:
@@ -5787,6 +5790,7 @@ GameObject:
   - component: {fileID: 2113993636}
   - component: {fileID: 2113993637}
   - component: {fileID: 2113993639}
+  - component: {fileID: 2113993640}
   m_Layer: 6
   m_Name: PlayerDisk
   m_TagString: Untagged
@@ -5964,6 +5968,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   key: sfx.wallhit
+--- !u!114 &2113993640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2113993630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 686790952d8fb894cbdb4f2f25649ad1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  riskEnabled: 0
+  dampingPerSec: 0.2
+  affectAngular: 0
+  mask: {fileID: 0}
+  dbgInside: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
