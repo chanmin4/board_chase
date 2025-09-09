@@ -5,15 +5,18 @@ using UnityEngine.UI;
 
 public class MainMenuController : MonoBehaviour
 {
-    public string StartButtonSceneName = "RiskSelectionScene";
+    public string StartButtonSceneName = "B_RiskSelectionScene";
     public TMP_Text bestText;
     public Button StartButton;
     public Button QuitButton;
     public Button SettingButton;
     public Button AchievementButton;
+    public Button skinWarehouseButton;
     public GameObject SettingPanel;
     public GameObject AchievementPanel;
     public AchievementManager achievemanager;
+
+    public SkinInventoryManager skin_inventory_manager;
     [Header("Reset Options")]
     [SerializeField] bool resetSaveWhenStarting = false;    // ← 항상 초기화하고 시작
     [SerializeField] bool allowShiftToReset = false;         // ← Shift 누른 채 Start 시 초기화
@@ -34,6 +37,8 @@ public class MainMenuController : MonoBehaviour
         QuitButton.onClick.AddListener(OnClickQuit);
         SettingButton.onClick.AddListener(OnClickSetting);
         AchievementButton.onClick.AddListener(OnClickAchievement);
+        if (skinWarehouseButton && skin_inventory_manager)
+            skinWarehouseButton.onClick.AddListener(() => skin_inventory_manager.Open());
         if (AudioMaster.I) AudioMaster.I.PlayBGMKey("bgm.main");
         Refresh();
     }

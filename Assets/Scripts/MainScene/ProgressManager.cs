@@ -3,6 +3,39 @@ using UnityEngine;
 
 public class ProgressManager : MonoBehaviour
 {
+    #if UNITY_EDITOR
+        [Header("Debug (Editor Only)")]
+        public bool debugOverrideBest = false;
+        [Range(0, 999)] public int debugBestScore = 0;
+        public bool debugAutoSave = false;
+
+        void OnValidate()
+        {
+            // 에디터에서 인스펙터 값 바뀔 때 호출됨
+            if (!Application.isPlaying) return;          // 플레이 중에만
+            if (!debugOverrideBest || Data == null) return;
+
+            if (Data.bestScore != debugBestScore)
+            {
+                Data.bestScore = debugBestScore;
+                OnBestScoreChanged?.Invoke(Data.bestScore); // UI/게이지 갱신
+                if (debugAutoSave) Save();                  // 원하면 자동 저장
+                Debug.Log($"[DEBUG] bestScore = {Data.bestScore}");
+            }
+        }
+
+        // 버튼으로 강제 적용하고 싶으면
+        [ContextMenu("DEBUG: Apply Inspector BestScore")]
+        public void DebugApplyInspectorBestScore()
+        {
+            if (!Application.isPlaying || Data == null) return;
+            Data.bestScore = debugBestScore;
+            OnBestScoreChanged?.Invoke(Data.bestScore);
+            if (debugAutoSave) Save();
+            Debug.Log($"[DEBUG] Applied bestScore = {Data.bestScore}");
+        }
+    #endif
+
     public static ProgressManager Instance { get; private set; }
     public SaveData Data { get; private set; }
 

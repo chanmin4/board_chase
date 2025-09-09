@@ -12,7 +12,7 @@ public class GameOverUI : MonoBehaviour
     public Button MainMenuButton;
     public SurvivalTimerHUD liveTimer;       // HUD의 현재 시간(Text) 복사
     public SurvivalGauge gauge;              // ★ 게이지 이벤트 자동 구독용(인스펙터 연결)
-    [SerializeField] string mainMenuSceneName = "MainScene";
+    [SerializeField] string mainMenuSceneName = "A_MainScene";
 
     [Header("Flow Stop")]
     [Tooltip("게임오버 시 끌 스크립트들(입력/스폰/조작 등)")]

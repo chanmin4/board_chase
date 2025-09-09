@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 public class RiskSelectionManager : MonoBehaviour
 {
     public Button StartButton;
-    [SerializeField]public string GameSceneName = "GameScene";
+    [SerializeField]public string GameSceneName = "C_GameScene";
     [SerializeField] RiskSet currentSet;
 
     [Header("Roots")]
