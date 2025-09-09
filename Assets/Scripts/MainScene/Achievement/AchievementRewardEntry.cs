@@ -19,7 +19,7 @@ public class AchievementRewardEntry : MonoBehaviour
         data = a;
         pm = manager;
 
-        if (titleText) titleText.text = string.IsNullOrEmpty(a.title) ? $"{a.requiredBestScore}pt 보상" : a.title;
+        if (titleText) titleText.text = string.IsNullOrEmpty(a.title) ? $"{a.requiredBestScore}pt reward" : a.title;
         if (descText)  descText.text  = a.description ?? "";
 
         RefreshState();
@@ -41,7 +41,7 @@ public class AchievementRewardEntry : MonoBehaviour
         bool claimed  = pm.IsAchievementClaimed(data.id);
 
         if (statusText)
-            statusText.text = !eligible ? "미달성" : (claimed ? "수령 완료" : "수령 가능");
+            statusText.text = !eligible ? "Not achieved" : (claimed ? "Received" : "achieved");
 
         if (claimButton)
         {

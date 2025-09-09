@@ -31,15 +31,13 @@ public class ProgressManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         Data = SaveSystem.Load();
-
-        // 업그레이드: 최초 저장에 기본 스킨 보장
+        //1. 기본 스킨이 없다면 추가
         if (!Data.unlockedSkins.Contains("skin_default"))
             Data.unlockedSkins.Add("skin_default");
 
-        // 도전과제 정의 로드
-        //_defs.AddRange(Resources.LoadAll<AchievementDef>(achievementsFolder));
-
-        // 로드 직후 한 번 평가(버전 업그레이드 대비)
+        // 2. 현재 장착 스킨이 비어 있으면 기본 스킨 장착
+        if (string.IsNullOrEmpty(Data.equippedSkinId))
+            Data.equippedSkinId = "skin_default";
     }
 
     public void Save() => SaveSystem.Save(Data);
@@ -116,7 +114,14 @@ public bool IsAchievementClaimed(string achievementId)
         {
             case UnlockType.Skin:
                 if (!Data.unlockedSkins.Contains(ach.payloadId))
+                {
                     Data.unlockedSkins.Add(ach.payloadId);
+                    Data.equippedSkinId = ach.payloadId;//바로장착 테스트용
+                    RewardDB.GrantVisualOrRuntime(ach.payloadId, this);
+                    Save();
+                    OnUnlocksChanged?.Invoke();
+                    Debug.Log($"[Skin] equipped = {ProgressManager.Instance.Data.equippedSkinId}");
+                }
                 break;
 
             case UnlockType.Ability:

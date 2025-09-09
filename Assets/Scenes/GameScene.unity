@@ -5791,6 +5791,7 @@ GameObject:
   - component: {fileID: 2113993637}
   - component: {fileID: 2113993639}
   - component: {fileID: 2113993640}
+  - component: {fileID: 2113993641}
   m_Layer: 6
   m_Name: PlayerDisk
   m_TagString: Untagged
@@ -5844,7 +5845,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 3a8cee54f9fb28947b066329c78c4b63, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5985,6 +5986,19 @@ MonoBehaviour:
   affectAngular: 0
   mask: {fileID: 0}
   dbgInside: 0
+--- !u!114 &2113993641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2113993630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c87ca84bc5fc3b4f894b853f1e5ca5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  meshRenderer: {fileID: 2113993632}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

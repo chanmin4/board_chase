@@ -25,18 +25,23 @@ public class AchievementManager : MonoBehaviour
 
     void Awake()
     {
+        Debug.Log("achievement awake");
         if (closeButton) closeButton.onClick.AddListener(() => panelRoot.SetActive(false));
         if (panelRoot) panelRoot.SetActive(false);
     }
 
     public void Open()
     {
+
+        RewardDB.EnsureLoaded();
         if (panelRoot) panelRoot.SetActive(true);
+        Canvas.ForceUpdateCanvases();
         Refresh();
     }
 
     public void Refresh()
     {
+        Debug.Log($"[Ach] defs={Achievements.Table.Length}, best={ProgressManager.Instance.Data.bestScore}");
         if (!ProgressManager.Instance) return;
 
         best = ProgressManager.Instance.Data.bestScore;
@@ -44,7 +49,7 @@ public class AchievementManager : MonoBehaviour
         foreach (var a in Achievements.Table)
             if (a.requiredBestScore > maxReq) maxReq = a.requiredBestScore;
 
-        if (bestScoreText) bestScoreText.text = $"최고 포인트: {best}pt";
+        if (bestScoreText) bestScoreText.text = $"Best Point: {best}pt";
         if (progressBar) progressBar.value = Mathf.Clamp01((float)best / maxReq);
 
         RebuildTicks();
@@ -53,6 +58,7 @@ public class AchievementManager : MonoBehaviour
 
     void RebuildTicks()
     {
+        Debug.Log($"[Ach] barWidth={barTrack.rect.width}");
         if (!barTrack || !tickContainer || !tickPrefab) return;
         foreach (Transform c in tickContainer) Destroy(c.gameObject);
 
@@ -61,7 +67,7 @@ public class AchievementManager : MonoBehaviour
         {
             float t = Mathf.Clamp01((float)a.requiredBestScore / maxReq);
             float x = (t - 0.5f) * width;
-
+            Debug.Log($"[Ach] make entry: {a.id} / {a.requiredBestScore}pt");
             var go = Instantiate(tickPrefab, tickContainer).GetComponent<RectTransform>();
             go.anchoredPosition = new Vector2(x, 0f);
 

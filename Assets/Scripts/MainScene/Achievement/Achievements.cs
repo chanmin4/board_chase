@@ -29,8 +29,9 @@ public static class Achievements
     // 필요 개수대로 마음껏 편집하세요
     public static readonly Achievement[] Table = new Achievement[]
     {
-        new Achievement("pt_1", 1, UnlockType.Ability, "Cards/Cleaner", "1pt 달성", "최고 포인트 1 이상"),
-        new Achievement("pt_2", 2, UnlockType.Skin,    "skin_silver",   "2pt 달성", "최고 포인트 2 이상"),
-        new Achievement("pt_3", 3, UnlockType.Skin,    "skin_gold",     "3pt 달성", "최고 포인트 3 이상"),
+        new Achievement("pt_0", 0, UnlockType.Skin, "skin_bottlecap", "0pt achieve", "wow"),
+        new Achievement("pt_1", 1, UnlockType.Ability, "Cards/Cleaner", "1pt achieve", "wow"),
+        new Achievement("pt_2", 2, UnlockType.Skin,    "skin_silver",   "2pt achieve", "wow"),
+        new Achievement("pt_3", 3, UnlockType.Skin,    "skin_gold",     "3pt achieve", "wow"),
     };
 }
