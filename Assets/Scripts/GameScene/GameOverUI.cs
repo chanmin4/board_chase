@@ -60,6 +60,8 @@ public class GameOverUI : MonoBehaviour
                 finalPoints = RiskSession.Selected.Sum(d => d ? Mathf.Max(0, d.points) : 0);
 
             if (pointText) pointText.text = $"Tried Point : {finalPoints} PT";
+
+
             if (!string.IsNullOrEmpty(clock))
             {
                 float secs = TimeUtils.ParseClockToSeconds(clock);
@@ -129,7 +131,7 @@ public class GameOverUI : MonoBehaviour
         AudioListener.pause = false;
         Time.timeScale = 1f;
         var scene = SceneManager.GetActiveScene().name;
-        RiskInstaller.EnsureSingleton("GameScene");
+        RiskInstaller.EnsureSingleton(scene);
         SceneManager.LoadScene(scene);
     }
     public void OnClickMainMenu()
@@ -149,7 +151,7 @@ public class GameOverUI : MonoBehaviour
               "Open File > Build Profiles and add it to 'Scenes In Build'.");
         }
     }
-        static bool IsSceneInBuild(string sceneName)
+    static bool IsSceneInBuild(string sceneName)
     {
         int count = SceneManager.sceneCountInBuildSettings;
         for (int i = 0; i < count; i++)
@@ -160,4 +162,7 @@ public class GameOverUI : MonoBehaviour
         }
         return false;
     }
+    
+    
+
 }
