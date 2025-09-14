@@ -11,7 +11,7 @@ public class MainMenuController : MonoBehaviour
     public Button QuitButton;
     public Button SettingButton;
     public Button AchievementButton;
-    public Button skinWarehouseButton;
+    public Button SkinInventoryButton;
     public GameObject SettingPanel;
     public GameObject AchievementPanel;
     public AchievementManager achievemanager;
@@ -37,8 +37,8 @@ public class MainMenuController : MonoBehaviour
         QuitButton.onClick.AddListener(OnClickQuit);
         SettingButton.onClick.AddListener(OnClickSetting);
         AchievementButton.onClick.AddListener(OnClickAchievement);
-        if (skinWarehouseButton && skin_inventory_manager)
-            skinWarehouseButton.onClick.AddListener(() => skin_inventory_manager.Open());
+        if (SkinInventoryButton && skin_inventory_manager)
+            SkinInventoryButton.onClick.AddListener(() => skin_inventory_manager.Open());
         if (AudioMaster.I) AudioMaster.I.PlayBGMKey("bgm.main");
         Refresh();
     }
@@ -53,8 +53,8 @@ public class MainMenuController : MonoBehaviour
     {
         if (bestText)
         {
-            int ms = ProgressManager.Instance.Data.bestTimeMs;
-            bestText.text = $"BEST: {TimeUtils.FormatMsClock(ms, 1)}"; // "03:27.5" 형태
+            int bestScore = ProgressManager.Instance.Data.bestScore;
+            bestText.text = $"BEST: {bestScore} PT";
         }
 
     }
@@ -83,7 +83,7 @@ public class MainMenuController : MonoBehaviour
 
             Debug.Log($"[MainMenu] Save reset {(deleted ? "OK" : "(no file)")} — starting fresh");
             // (선택) 화면에서도 바로 비워 보이게
-            if (bestText) bestText.text = "BEST: 00:00.0";
+            if (bestText) bestText.text = "BEST: 0 PT";
         }
 
         SceneManager.LoadScene(StartButtonSceneName);

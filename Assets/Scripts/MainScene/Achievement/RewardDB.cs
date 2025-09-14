@@ -10,7 +10,7 @@ public static class RewardDB
     static bool _loaded;
     static readonly Dictionary<string, RewardSO> _map = new();
 
-    public static void EnsureLoaded()
+    public static void EnsureLoaded()//경로 조회해서 db등록용
     {
         if (_loaded) return;
         _loaded = true;
@@ -25,7 +25,7 @@ public static class RewardDB
         }
     }
 
-    public static RewardSO Get(string id)
+    public static RewardSO Get(string id) //db조회용
     {
         EnsureLoaded();
         _map.TryGetValue(id, out var so);
@@ -44,4 +44,16 @@ public static class RewardDB
         var so = Get(id);
         if (so != null) so.Grant(pm);
     }
+
+    //인스펙터에서 수동등록 한거 db에넣기
+    public static void SyncFrom(IEnumerable<SkinRewardSO> list)
+    {
+        if (list == null) return;
+        foreach (var so in list)
+        {
+            if (so == null || string.IsNullOrEmpty(so.id)) continue;
+            _map[so.id] = so; // 수동 등록분을 덮어쓰기/보충
+        }
+    }
+
 }

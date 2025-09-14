@@ -3,11 +3,13 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 using System.IO;
+using System.Linq;
 public class GameOverUI : MonoBehaviour
 {
     [Header("Refs")]
     public GameObject panel;                 // GameOver 패널(시작 시 비활성)
     public TextMeshProUGUI timeText;         // 최종 시간 표시용
+    public TextMeshProUGUI pointText;
     public Button retryButton;
     public Button MainMenuButton;
     public SurvivalTimerHUD liveTimer;       // HUD의 현재 시간(Text) 복사
@@ -53,6 +55,11 @@ public class GameOverUI : MonoBehaviour
             if (liveTimer && liveTimer.timeText) clock = liveTimer.timeText.text;
             if (timeText) timeText.text = clock ?? "--:--.-";
             int finalTimeMs = 0;
+            int finalPoints = 0;
+            if (RiskSession.Selected != null)
+                finalPoints = RiskSession.Selected.Sum(d => d ? Mathf.Max(0, d.points) : 0);
+
+            if (pointText) pointText.text = $"Tried Point : {finalPoints} PT";
             if (!string.IsNullOrEmpty(clock))
             {
                 float secs = TimeUtils.ParseClockToSeconds(clock);

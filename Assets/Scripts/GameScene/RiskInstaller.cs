@@ -9,11 +9,17 @@ public class RiskInstaller : MonoBehaviour
     [Header("Apply When")]
     [Tooltip("비우면 다음 씬 로드될 때 첫 씬에 바로 적용, 채우면 해당 이름일 때만")]
     public string applyOnSceneName = "";
-    public bool autoDestroyAfterApply = true;
 
     bool _applied;
 
     // ── DEBUG (인스펙터에서 바로 확인) ─────────────────────────────
+    [Header("Debug View (ReadOnly)")]
+    [SerializeField] int dbgTotalPoints = 0;
+    [SerializeField, TextArea(3, 12)] string dbgSelectedSummary = "";
+    [SerializeField, TextArea(2, 6)] string dbgTypeCountSummary = "";
+
+
+
     [Header("Debug Set/Selection (ReadOnly)")]
     public RiskSet dbgSet;
     public List<RiskDef> dbgSelected = new();
@@ -42,6 +48,14 @@ public class RiskInstaller : MonoBehaviour
     public bool clearOnApply = false;   // false일시 재도전 리스크 그대로 적용
     void Awake()
     {
+        #if UNITY_2023_1_OR_NEWER
+            var first = FindFirstObjectByType<RiskInstaller>(FindObjectsInactive.Include);
+        #else
+            var first = FindObjectOfType<RiskInstaller>();
+        #endif
+            if (first && first != this) { Destroy(gameObject); return; }   // 중복 차단
+
+
         DontDestroyOnLoad(gameObject);
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
@@ -60,12 +74,11 @@ public class RiskInstaller : MonoBehaviour
 
     void OnSceneLoaded(Scene s, LoadSceneMode mode)
     {
-        if (_applied) return;
+        //if (_applied) return;
         if (!string.IsNullOrEmpty(applyOnSceneName) && s.name != applyOnSceneName) return;
 
         ApplyAll();
-        _applied = true;
-        if (autoDestroyAfterApply) Destroy(gameObject);
+        //_applied = true;
     }
 
     [ContextMenu("ApplyAll (Manual)")]
@@ -81,6 +94,12 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log("[RiskInstaller] 선택이 비어있음 — 적용할 게 없음");
             return;
         }
+        dbgTotalPoints = dbgSelected.Sum(d => Mathf.Max(0, d.points));
+        dbgSelectedSummary = string.Join("\n", dbgSelected.Select(FormatRiskLine));
+        var byType = dbgSelected.GroupBy(d => d.type)
+                        .OrderBy(g => g.Key.ToString())
+                        .Select(g => $"{g.Key}: {g.Count()}");
+        dbgTypeCountSummary = string.Join("\n", byType);
 
         // 2) 대상 탐색 (씬에만 있으면 됨)
         dbgLauncher = FindAnyObjectByType<DiskLauncher>();
@@ -90,18 +109,18 @@ public class RiskInstaller : MonoBehaviour
         if (!dbgLauncher) Debug.LogWarning("[RiskInstaller] DiskLauncher를 못 찾음");
         if (!dbgMissile) Debug.LogWarning("[RiskInstaller] HomingMissile를 못 찾음");
         if (!dbgSurvivalDirector) Debug.LogWarning("[RiskInstaller] SurvivalDirector를 못 찾음");
-        if(!dbgCardManager)Debug.LogWarning("[RiskInstaller] CardManager를 못 찾음");
+        if (!dbgCardManager) Debug.LogWarning("[RiskInstaller] CardManager를 못 찾음");
         // 3) 누적값 초기화
         bool onDragCooldown = false;
         bool onMissileSpeed = false;
-        bool onMissileExplosion =false;
+        bool onMissileExplosion = false;
         bool onSpawnCycle = false;
-        bool onMissileCount =false;
+        bool onMissileCount = false;
         bool onZoneGaugeMul = false;
         bool onZoneReqHits = false;
-        bool onZoneComp =false;
+        bool onZoneComp = false;
         bool onCardCharge = false;
-        bool onCardDisable =false;
+        bool onCardDisable = false;
         bool onPollutionFriction = false;
 
 
@@ -127,7 +146,7 @@ public class RiskInstaller : MonoBehaviour
         int ZoneCountL = 0;
 
         int CardChargeAdd = 0;
-        
+
         bool Carddisable = false;
 
         bool pollutionfriction = false;
@@ -251,7 +270,7 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{explosionRadiusMul:0.##} 적용");
         }
         //missileCountUp
-        if (dbgMissile&&onMissileCount)
+        if (dbgMissile && onMissileCount)
         {
             var p = dbgMissile.GetComponent<Risk_MissileCountUp>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileCountUp>();
             p.homingMissile = dbgMissile;
@@ -290,15 +309,15 @@ public class RiskInstaller : MonoBehaviour
             p.Apply();
         }
         //ZoneCompositionChange
-        if (dbgSurvivalDirector&& onZoneComp)
-        {           
+        if (dbgSurvivalDirector && onZoneComp)
+        {
             var p = dbgSurvivalDirector.GetComponent<Risk_ZoneCompositionChange>() ?? dbgSurvivalDirector.gameObject.AddComponent<Risk_ZoneCompositionChange>();
             p.countL = ZoneCountL;
             p.countM = ZoneCountM;
             p.countS = ZoneCountS;
             p.applyOnStart = false;
             p.Apply();
-            
+
         }
         //CardChargeRequireAdd
         if (dbgCardManager && onCardCharge)
@@ -321,8 +340,10 @@ public class RiskInstaller : MonoBehaviour
         //pollution friction
         if (dbgLauncher && onPollutionFriction)
         {
-            var p = dbgCardManager.GetComponent<Risk_PollutionFrictionEnable>() ?? dbgLauncher.gameObject.AddComponent<Risk_PollutionFrictionEnable>();
-            p.enableFriction= pollutionfriction;
+            var p = dbgLauncher.GetComponent<Risk_PollutionFrictionEnable>()
+            ?? dbgLauncher.gameObject.AddComponent<Risk_PollutionFrictionEnable>();
+
+            p.enableFriction = pollutionfriction;
             p.dampingPerSec = -Mathf.Log(Mathf.Clamp(damping, 0.01f, 0.999f)); // 지수형태의감속 0.1 이면 90퍼 감속
             p.applyOnStart = false;
             p.Apply();
@@ -338,15 +359,50 @@ public class RiskInstaller : MonoBehaviour
     // 인스톨러 중복 방지
     public static RiskInstaller EnsureSingleton(string applyOnSceneName = "")
     {
-    #if UNITY_2023_1_OR_NEWER
-            var exist = UnityEngine.Object.FindFirstObjectByType<RiskInstaller>(FindObjectsInactive.Include);
-    #else
+#if UNITY_2023_1_OR_NEWER
+        var exist = UnityEngine.Object.FindFirstObjectByType<RiskInstaller>(FindObjectsInactive.Include);
+#else
             var exist = Object.FindObjectOfType<RiskInstaller>();
-    #endif
-            return exist ? exist : Spawn(applyOnSceneName);
+#endif
+        return exist ? exist : Spawn(applyOnSceneName);
     }
 
-    
+    string FormatRiskLine(RiskDef d)
+    {
+        if (!d) return "(null)";
+        // 필요하면 파라미터도 간단히 표시
+        // ex) f1=..., f2=..., b=...
+        string extra = "";
+        // 대표 파라미터만 가볍게 노출 (있을 때만)
+        if (Mathf.Abs(d.float_parameter1) > 1e-6f) extra += $" f1:{d.float_parameter1:0.###}";
+        if (Mathf.Abs(d.float_parameter2) > 1e-6f) extra += $" f2:{d.float_parameter2:0.###}";
+        if (Mathf.Abs(d.float_parameter3) > 1e-6f) extra += $" f3:{d.float_parameter3:0.###}";
+        if (d.bool_parameter) extra += " b:true";
+
+        return $"[{Mathf.Max(0, d.points)}pt] {d.type} - {d.title}{(string.IsNullOrEmpty(extra) ? "" : " |" + extra)}";
+    }
+
+    // 인스펙터 메뉴로 수동 갱신
+    [ContextMenu("Refresh Debug From Session")]
+    void RefreshDebugFromSession()
+    {
+        // 세션 기준으로 디버그 필드만 갱신 (적용은 하지 않음)
+        dbgSet = RiskSession.Set;
+        dbgSelected = RiskSession.Selected?.Where(x => x).ToList() ?? new List<RiskDef>();
+        dbgSelectedTitles = dbgSelected.Select(d => d.title).ToArray();
+
+        dbgTotalPoints = dbgSelected.Sum(d => Mathf.Max(0, d.points));
+        dbgSelectedSummary = string.Join("\n", dbgSelected.Select(FormatRiskLine));
+
+        // 타입별 개수 집계
+        var byType = dbgSelected.GroupBy(d => d.type)
+                                .OrderBy(g => g.Key.ToString())
+                                .Select(g => $"{g.Key}: {g.Count()}");
+        dbgTypeCountSummary = string.Join("\n", byType);
+    }
+
+
+
 
 
 }

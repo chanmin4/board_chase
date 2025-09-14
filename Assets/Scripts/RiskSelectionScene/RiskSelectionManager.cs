@@ -85,6 +85,7 @@ readonly Dictionary<Toggle, ToggleAlpha> _alphaByToggle = new();
   public void OnClickStart()
     {
         RiskSession.SetSelection(currentSet, picked); 
+        RiskInstaller.EnsureSingleton(GameSceneName);
         SceneManager.LoadScene(GameSceneName);
     }
 
