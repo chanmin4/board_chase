@@ -18,11 +18,6 @@ public class AudioMaster : MonoBehaviour
     public AudioMixerGroup BGMGroup;
     public AudioMixerGroup sfxGroup;
 
-    [Header("BGM Clips (fallback)")]
-    [Tooltip("카탈로그에 bgm.main / bgm.gameplay 키가 없을 때 사용하는 기본 BGM")]
-    public AudioClip mainMenuBGM;
-    public AudioClip gameplayBGM;
-
     [Header("BGM Options")]
     public float bgmFade = 0.8f;
     [Tooltip("씬 로드시 이름 규칙으로 BGM 자동 전환")]
