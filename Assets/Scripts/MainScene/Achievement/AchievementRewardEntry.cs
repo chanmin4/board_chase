@@ -5,22 +5,23 @@ using TMPro;
 
 public class AchievementRewardEntry : MonoBehaviour
 {
-    public Image icon;            // (없어도 됨)
+    public Image icon;            // (없어도 동작)
     public TMP_Text titleText;
     public TMP_Text descText;
     public TMP_Text statusText;
     public Button claimButton;
 
-    Achievement data;
+    RewardSO so;
     ProgressManager pm;
 
-    public void Bind(Achievement a, ProgressManager manager)
+    public void Bind(RewardSO reward, ProgressManager manager)
     {
-        data = a;
+        so = reward;
         pm = manager;
 
-        if (titleText) titleText.text = string.IsNullOrEmpty(a.title) ? $"{a.requiredBestScore}pt reward" : a.title;
-        if (descText)  descText.text  = a.description ?? "";
+        if (icon)      icon.sprite = reward.icon;
+        if (titleText) titleText.text = string.IsNullOrEmpty(reward.title) ? $"{reward.requiredBestScore}pt reward" : reward.title;
+        if (descText)  descText.text  = reward.description ?? "";
 
         RefreshState();
 
@@ -29,19 +30,23 @@ public class AchievementRewardEntry : MonoBehaviour
             claimButton.onClick.RemoveAllListeners();
             claimButton.onClick.AddListener(() =>
             {
-                if (pm.TryClaim(a.id))
+                if (pm.ClaimAchievement(so.id))
+                {
+                    RewardDB.GrantVisualOrRuntime(so.id, pm); // 필요 시 후처리
                     RefreshState();
+                }
             });
         }
     }
 
     void RefreshState()
     {
-        bool eligible = pm.IsAchievementEligible(data.id);
-        bool claimed  = pm.IsAchievementClaimed(data.id);
+        bool eligible = pm.Data.bestScore >= so.requiredBestScore;
+        bool claimed  = pm.IsAchievementClaimed(so.id);
 
         if (statusText)
-            statusText.text = !eligible ? "Not achieved" : (claimed ? "Received" : "achieved");
+            statusText.text = !eligible ? "Not achieved"
+                              : (claimed ? "Received" : "Achieved");
 
         if (claimButton)
         {

@@ -11,13 +11,11 @@ public class SkinGridItem : MonoBehaviour
     public string _id;
     Action<string, bool> _onToggle;
     bool _unlocked;
-
     void Reset()
     {
         if (toggle && icon) toggle.targetGraphic = icon;
         if (lockOverlay) lockOverlay.raycastTarget = false; // 잠금은 표시만
     }
-
     public void Bind(string id, Sprite sprite, bool unlocked, bool isEquipped,
                      ToggleGroup group, Action<string, bool> onToggle,
                      Sprite lockSprite = null)
@@ -51,13 +49,11 @@ public class SkinGridItem : MonoBehaviour
             // 포커스 이동/키보드 네비게이션 방지
             var nav = new Navigation { mode = Navigation.Mode.None };
             toggle.navigation = nav;
-
             toggle.onValueChanged.AddListener(on =>
             {
                 if (on) _onToggle?.Invoke(_id, true);
             });
         }
-
     }
     public void SetEquippedVisual(bool isEquipped)
     {
@@ -65,5 +61,4 @@ public class SkinGridItem : MonoBehaviour
         toggle.SetIsOnWithoutNotify(isEquipped);
         toggle.interactable = _unlocked && !isEquipped;
     }
-
 }

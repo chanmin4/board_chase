@@ -1127,6 +1127,7 @@ MonoBehaviour:
   catalog:
   - {fileID: 11400000, guid: 4c15f0eb4defbd340a682c5d93ba7457, type: 2}
   - {fileID: 11400000, guid: ddcfc82a4b462ca40b6619dea60cd81a, type: 2}
+  - {fileID: 11400000, guid: 63592921eac6ba44b8d9f981cee48ebb, type: 2}
 --- !u!114 &302727757
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3464,8 +3465,8 @@ MonoBehaviour:
   AchievementPanel: {fileID: 701074979}
   achievemanager: {fileID: 701074983}
   skin_inventory_manager: {fileID: 302727756}
-  resetSaveWhenStarting: 0
-  allowShiftToReset: 0
+  resetSaveWhenStarting: 1
+  allowShiftToReset: 1
   resetModifier: 304
 --- !u!4 &1072355605
 Transform:

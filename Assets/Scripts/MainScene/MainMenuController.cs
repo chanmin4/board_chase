@@ -24,6 +24,7 @@ public class MainMenuController : MonoBehaviour
 
     void Start()
     {
+        RewardDB.EnsureLoaded();
         if (!ProgressManager.Instance)
         {
             var go = new GameObject("ProgressManager");

@@ -1,37 +1,41 @@
-// Achievements.cs
 using System;
-
+using System.Linq;
+//기존코드 호환용 이제 reward DB all로 전환가능 여기사용 X
 public enum UnlockType { Skin, Ability }
 
 [Serializable]
 public struct Achievement
 {
-    public string id;               // 고유키 (예: "pt_1")
-    public int requiredBestScore;   // 요구 포인트
-    public UnlockType unlockType;   // 보상 타입
-    public string payloadId;        // 보상 ID (예: "skin_gold" / "Cards/Cleaner")
-    public string title;            // UI 텍스트
-    public string description;      // UI 텍스트
-
-    public Achievement(string id, int req, UnlockType type, string payload, string title, string desc)
-    {
-        this.id = id;
-        this.requiredBestScore = req;
-        this.unlockType = type;
-        this.payloadId = payload;
-        this.title = title;
-        this.description = desc;
-    }
+    public string id;
+    public int requiredBestScore;
+    public UnlockType unlockType;
+    public string payloadId;
+    public string title;
+    public string description;
 }
 
 public static class Achievements
 {
-    // 필요 개수대로 마음껏 편집하세요
-    public static readonly Achievement[] Table = new Achievement[]
+    public static Achievement[] Table
     {
-        new Achievement("pt_0", 0, UnlockType.Skin, "skin_bottlecap", "0pt achieve", "wow"),
-        new Achievement("pt_1", 1, UnlockType.Ability, "Cards/Cleaner", "1pt achieve", "wow"),
-        new Achievement("pt_2", 2, UnlockType.Skin,    "skin_silver",   "2pt achieve", "wow"),
-        new Achievement("pt_3", 3, UnlockType.Skin,    "skin_gold",     "3pt achieve", "wow"),
-    };
+        get
+        {
+            RewardDB.EnsureLoaded();
+            return RewardDB.All
+                .Select(r => new Achievement
+                {
+                    id = r.id,
+                    requiredBestScore = r.requiredBestScore,
+                    // 카드 = Ability로 매핑(레거시 호환용)
+                    unlockType = (r.type == RewardType.Skin) ? UnlockType.Skin : UnlockType.Ability,
+                    // 예전 코드가 payloadId로 Reward를 찾았다면 id와 동일하게 둬도 동작
+                    payloadId = r.id,
+                    title = r.title,
+                    description = r.description
+                })
+                .OrderBy(a => a.requiredBestScore)
+                .ThenBy(a => a.id)
+                .ToArray();
+        }
+    }
 }

@@ -5,9 +5,16 @@ using UnityEngine.UI;
 public class AchievementPopupPrefab : MonoBehaviour
 {
     [Header("Bind in Prefab")]
-    public GameObject root;                 // 팝업 루트(비우면 프리팹 GO 자체를 root로 사용)
-    public TMP_Text titleText;              // 제목 TMP
-    public TMP_Text descText;               // 설명 TMP
-    public Image achieveImage;
-    public Button clickAnywhereButton;      // 전체 클릭 영역(없으면 ShowOnce 클릭 기능만 비활성)
+    public GameObject root;                 // 비우면 이 GO 자체 사용
+    public TMP_Text titleText;
+    public TMP_Text descText;
+    public Image achieveImage;              // 선택 (없어도 됨)
+    public Button clickAnywhereButton;      // 전체 클릭 영역(없으면 패널 버튼으로 대체)
+
+    void Reset()
+    {
+        if (!root) root = gameObject;
+        if (!titleText) titleText = GetComponentInChildren<TMP_Text>(true);
+        if (!clickAnywhereButton) clickAnywhereButton = GetComponentInChildren<Button>(true);
+    }
 }
