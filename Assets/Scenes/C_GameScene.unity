@@ -612,7 +612,6 @@ GameObject:
   - component: {fileID: 96221482}
   - component: {fileID: 96221481}
   - component: {fileID: 96221483}
-  - component: {fileID: 96221484}
   m_Layer: 5
   m_Name: GameOverPanel
   m_TagString: Untagged
@@ -706,30 +705,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &96221484
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 96221479}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a176095c61b541144b8e5af9d578cf69, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  panel: {fileID: 96221479}
-  timeText: {fileID: 82055471}
-  pointText: {fileID: 743656631}
-  retryButton: {fileID: 1726370804}
-  MainMenuButton: {fileID: 700534081}
-  liveTimer: {fileID: 1443057745}
-  gauge: {fileID: 1445786933}
-  mainMenuSceneName: A_MainScene
-  toDisableOnGameOver:
-  - {fileID: 2093660876}
-  toSleepBodies:
-  - {fileID: 2113993635}
 --- !u!1 &181859213
 GameObject:
   m_ObjectHideFlags: 0
@@ -5503,8 +5478,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1840212751}
+  - component: {fileID: 1840212752}
   m_Layer: 0
-  m_Name: GameOverUI
+  m_Name: GameOverManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5525,6 +5501,30 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1840212752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1840212749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a176095c61b541144b8e5af9d578cf69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panel: {fileID: 96221479}
+  timeText: {fileID: 82055471}
+  pointText: {fileID: 743656631}
+  retryButton: {fileID: 1726370804}
+  MainMenuButton: {fileID: 700534081}
+  liveTimer: {fileID: 1443057745}
+  gauge: {fileID: 1445786933}
+  mainMenuSceneName: A_MainScene
+  toDisableOnGameOver:
+  - {fileID: 2093660876}
+  toSleepBodies:
+  - {fileID: 2113993635}
 --- !u!1 &1883550921
 GameObject:
   m_ObjectHideFlags: 0

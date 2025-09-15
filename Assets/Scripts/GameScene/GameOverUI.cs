@@ -31,11 +31,24 @@ public class GameOverUI : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("[GameOverUI] Start called");
         if (retryButton) retryButton.onClick.AddListener(OnClickRetry);
         if (MainMenuButton) MainMenuButton.onClick.AddListener(OnClickMainMenu);
 
         // ★ 인스펙터 이벤트를 안 걸어도 안전하게 작동하도록 자동 구독
-        if (gauge) gauge.onDepleted.AddListener(ShowGameOver);
+        if (gauge)
+        {
+
+            Debug.Log("[GameOverUI] gauge found, adding onDepleted listener");
+            gauge.onDepleted.AddListener(ShowGameOver);
+
+
+        }
+        else
+        {
+            Debug.LogWarning("[GameOverUI] gauge is null!");
+        }
+    
     }
     void Log(string msg) { Debug.Log($"[GameOverUI] {msg}"); }
 
