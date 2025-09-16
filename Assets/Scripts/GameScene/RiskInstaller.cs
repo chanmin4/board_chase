@@ -280,6 +280,7 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{missileCountAdd:0.##} 적용");
         }
         //missilespawneverycycle
+        /*
         if (dbgMissile && onSpawnCycle)
         {
             var p = dbgMissile.GetComponent<Risk_MissileSpawnEveryCycle>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpawnEveryCycle>();
@@ -289,6 +290,7 @@ public class RiskInstaller : MonoBehaviour
             p.Apply();
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{spawnCycle:0.##} 적용");
         }
+        */
         //ZoneGaugeGainDown
         if (dbgSurvivalDirector && onZoneGaugeMul)
         {

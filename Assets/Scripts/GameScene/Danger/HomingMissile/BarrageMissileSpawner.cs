@@ -16,8 +16,9 @@ public class BarrageMissileSpawner : MonoBehaviour
     public Transform[] anchors;
     public bool randomPickAnchor = true;
 
-    [Header("Spawn Rule")]
-    public int  spawncycle = 2;              // 0이면 미사용, N주기마다 스폰
+    [Header("Time-Based Spawn")]
+    public bool useTimeRate = true;          // ★ true면 초당 스폰 모드 사용
+    [Min(0.01f)] public float spawnInterval = 5f; // ★ N초 간격
 
     [Header("Spawn Geometry (fallback when no anchors)")]
     [Tooltip("보드 중앙으로부터의 스폰 반경(월드 단위). 0 이면 자동(보드의 1/4)")]
@@ -31,9 +32,10 @@ public class BarrageMissileSpawner : MonoBehaviour
     public float gaugePenaltyOnHit = 1.2f;
     public int missileCount = 1;
     public bool uniqueAnchorsPerBurst = true;       // true면 한 번의 발사에서 서로 다른 앵커를 우선 사용
-
-    int seq = 0;
-    // 내부
+                                                    // 내부
+    public float missileLifetime = 5f;
+    float spawnTimer = 0f; //내부 타이머
+    public float lastFireTime { get; private set; } = -1f;
     Vector3 boardCenter;
 
     void Awake()
@@ -43,23 +45,27 @@ public class BarrageMissileSpawner : MonoBehaviour
         if (!gauge)    gauge    = FindAnyObjectByType<SurvivalGauge>();
         RecalcCenter();
     }
-
     void OnEnable()
     {
-        if (director)
-        {
-            director.OnZonesResetSeq += HandleResetSeq;
-            director.OnZonesReset    += RecalcCenter;
-        }
+        lastFireTime = Time.time - spawnTimer; // ★ HUD가 즉시 맞게 돌도록 기준 세팅
     }
-    void OnDisable()
+
+    void Update()
     {
-        if (director)
+        if (!useTimeRate) return;                 // ★ 사이클 모드면 여기선 안 함
+        if (spawnInterval <= 0f) return;              // ★ 방어
+
+        spawnTimer += Time.deltaTime;
+        while (spawnTimer >= spawnInterval)          // ★ 프레임 드랍 보정
         {
-            director.OnZonesResetSeq -= HandleResetSeq;
-            director.OnZonesReset    -= RecalcCenter;
+            spawnTimer -= spawnInterval;
+            FireMissile();                    // ★ 공통 발사 루틴 호출
+            lastFireTime = Time.time - spawnTimer;
         }
+        
     }
+
+
 
     void RecalcCenter()
     {
@@ -71,17 +77,15 @@ public class BarrageMissileSpawner : MonoBehaviour
         else boardCenter = Vector3.zero;
     }
 
-    void HandleResetSeq(int seq)
+    void FireMissile()
     {
-        if (spawncycle <= 0) return;
-        if ((seq % spawncycle) != 0) return;
         if (!missilePrefab || !director) return;
         int count = Mathf.Max(1, missileCount);
         // 1) 앵커가 있으면 거기서 랜덤 선택
         if (anchors != null && anchors.Length > 0)
         {
             int anchorL = anchors.Length;
-            int idx = randomPickAnchor ? Random.Range(0, anchorL) : (seq % anchorL);
+            int idx = Random.Range(0, anchorL);
             if (uniqueAnchorsPerBurst)
             {
                 //일단 최대한 서로다른앵커 발사
@@ -116,15 +120,14 @@ public class BarrageMissileSpawner : MonoBehaviour
     void SpawnOne(Vector3 pos)
     {
         var m = Instantiate(missilePrefab, pos, Quaternion.identity, transform);
-
-
-        float life = director.SetDuration; // 이 사이클 동안만 유효
-
+        var hm = m.GetComponent<SmallHomingMissile>();
         Transform player = director.player
             ? director.player
             : GameObject.FindGameObjectWithTag("Player")?.transform;
 
-        m.Setup(director, player, life, missileSpeed, hitRadiusWorld, timeoutRadiusWorld, gauge, spawnY);
-        m.gaugePenaltyOnHit = gaugePenaltyOnHit;
+        var g = gauge ? gauge : director ? director.gauge : null;
+
+        if (hm) hm.Setup(director, player, missileLifetime, missileSpeed, hitRadiusWorld,timeoutRadiusWorld, g, spawnY);
+        hm.gaugePenaltyOnHit = gaugePenaltyOnHit;
     }
 }

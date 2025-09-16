@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// 미사일 시각/로직 프리팹. Awake에서는 "아무것도 생성하지 않음".
@@ -23,7 +24,7 @@ public class HomingRocket : MonoBehaviour
     float totalLifetime = 7f;
 
     [Header("Optional Homing")]
-    public bool followTargetXZ = false; // 인스펙터 값은 무시되고 Setup에서 강제 설정됨
+    [NonSerialized]public bool followTargetXZ = true; // 인스펙터 값은 무시되고 Setup에서 강제 설정됨
     public Transform target;
     public float moveSpeed = 7.0f;
 

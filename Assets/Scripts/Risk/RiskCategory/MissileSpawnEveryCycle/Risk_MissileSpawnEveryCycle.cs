@@ -15,7 +15,7 @@ public class Risk_MissileSpawnEveryCycle : MonoBehaviour
     [Min(1)] public int MissileSpawnCycle= 1;
     int[] orig_missilespawncycle;
     bool captured; //원본 캡쳐여부
-
+/*
     void Awake()
     {
         if (spawners == null || spawners.Length == 0)
@@ -59,4 +59,5 @@ public class Risk_MissileSpawnEveryCycle : MonoBehaviour
             spawners[i].spawncycle     = orig_missilespawncycle[i];
         }
     }
+    */
 }

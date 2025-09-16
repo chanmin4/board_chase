@@ -102,8 +102,8 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
         if (riskDisableUse || delta <= 0 || !data) return;  
 
         int baseGain = Mathf.Max(1, data.gainPerWallBounce);
-        float mul = FeverManager.ChargeMul;      //피어중일경우 현재 적용x           
-        int gain = Mathf.RoundToInt(delta * baseGain * mul);
+        //float mul = FeverManager.ChargeMul;      //피어중일경우 현재 적용x           
+        int gain = Mathf.RoundToInt(delta * baseGain);
         AddCharge(gain);
     }
 

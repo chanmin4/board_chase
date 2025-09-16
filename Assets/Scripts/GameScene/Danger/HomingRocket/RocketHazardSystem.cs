@@ -6,63 +6,85 @@ public class RocketHazardSystem : MonoBehaviour
     public SurvivalDirector director;
     public BoardGrid board;
 
-    [Header("Missile Prefab")]
-    public HomingRocket missilePrefab;
+    [Header("Rocket Prefab")]
+    public HomingRocket RocketPrefab;
 
-    [Header("Timing")]
-    [Min(1)] public int triggerEveryN = 3; // 이후 간격 (3,6,9,…)
-    [Min(1)] public int firstSpawnAt = 3;  // 첫 스폰 리셋 번호 (정확히 3)
-
+    [Min(0.01f)] public float spawnInterval = 8f;   // N초마다
+    [Header("Rocket Lifetime (sec)")]
+    [Min(0.1f)] public float rocketLifetime = 5f; // 로켓 1발의 총 수명(초)
     public float spawnYOffset = 0f;
     public float homingSpeed = 7f;
+    float spawnTimer = 0f;
 
-    HomingRocket active;
-
+    HomingRocket active;  
+    public float lastFireTime { get; private set; } = -1f;
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
         if (!board)    board    = FindAnyObjectByType<BoardGrid>();
     }
-
     void OnEnable()
     {
-        if (director) director.OnZonesResetSeq += HandleResetSeq;
+        lastFireTime = Time.time - spawnTimer;             // ★
     }
-    void OnDisable()
+    void Update()
     {
-        if (director) director.OnZonesResetSeq -= HandleResetSeq;
-    }
+        if ( !board || !director) return;
 
-    void HandleResetSeq(int seq)
-    {
-        // 직전 사이클 미사일 폭발(오염 생성)
-        if (active)
+        spawnTimer += Time.deltaTime;
+
+        // ★ 프레임 드랍 보정: 누적된 만큼 여러 번 스폰
+        while (spawnTimer >= spawnInterval)
         {
-            active.Explode();
-            active = null;
+            spawnTimer -= spawnInterval;
+
+            // 단일 액티브 유지이면 이전 로켓 정리
+            if (active)
+            {
+                active.Explode();
+                active = null;
+            }
+
+            SpawnRocket();                            // 실제 발사
+
+            // ★ HUD 동기화용: 마지막 발사 시각 = 지금 - 타이머 잔여
+            lastFireTime = Time.time - spawnTimer;
         }
-
-        if (seq < firstSpawnAt) return;
-        if ((seq - firstSpawnAt) % Mathf.Max(1, triggerEveryN) != 0) return;
-
-        SpawnMissile();
+    
     }
-
-    void SpawnMissile()
+    void SpawnRocket()
     {
-        if (!missilePrefab || !board || !director) return;
+        if (!board || !director) return;                  // ★ 프리팹 체크 없음
 
         Vector3 center = board.origin + new Vector3(
-            board.width  * board.tileSize * 0.5f,
+            board.width * board.tileSize * 0.5f,
             0f,
             board.height * board.tileSize * 0.5f
         );
         center.y += spawnYOffset;
 
-        active = Instantiate(missilePrefab, center, Quaternion.identity, transform);
+        HomingRocket r;
+        if (RocketPrefab)
+        {
+            // ★ 부모 주지 말고 월드에 바로 생성 (UI 트리 영향 방지)
+            r = Instantiate(RocketPrefab, center, Quaternion.identity);
+        }
+        else
+        {
+            // ★ 프리팹이 없으면 런타임 생성 폴백
+            var go = new GameObject("HomingRocket");
+            go.transform.position = center;
+            r = go.AddComponent<HomingRocket>();
 
-        // 수명(=다음 리셋까지) + 타겟/속도까지 강제 지정
+            // (선택) 프리뷰 링은 HomingRocket이 알아서 Cylinder 생성하므로 건드릴 필요 없음
+            // r.previewRingPrefab = null;
+        }
+
+        active = r;
+
         var target = director ? director.player : null;
-        active.Setup(director, director.SetDuration, target, homingSpeed, true);
+        float life = Mathf.Max(0.1f, rocketLifetime);
+        r.Setup(director, life, target, homingSpeed, true);
     }
+
 }

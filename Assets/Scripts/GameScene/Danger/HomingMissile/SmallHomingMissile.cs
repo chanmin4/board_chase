@@ -1,4 +1,5 @@
 using System;
+using Mono.Cecil.Cil;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -15,12 +16,11 @@ public class SmallHomingMissile : MonoBehaviour
     public float groundY = 1.0f;            // ★ 바닥과 분리(회전벽 피함, 디폴트 1)
 
     [Header("Lifetime / Explosion")]
-    public float lifetime = 4f;              // 사이클 길이만큼 세팅됨
     public float hitRadiusWorld = 2.0f;  // 플레이어 맞췄을 때 오염(“크게”)
     public float timeoutRadiusWorld = 0.8f;  // 수명 만료 시 오염(“작게”)
     public float gaugePenaltyOnHit = 1.2f;  // 맞으면 게이지 감소량(프로젝트 단위에 맞춰 조절)
     public LayerMask playerMask;             // Player 레이어(또는 Tag) 충돌 체크
-
+    public float lifetime = 0;
     [Header("Hit Check")]
     [Tooltip("수평(XZ) 거리로만 플레이어 히트 판정(높이 무시). Y를 띄워도 맞으면 터집니다.")]
     public bool planarHitCheck = true;
@@ -33,6 +33,7 @@ public class SmallHomingMissile : MonoBehaviour
 
     SphereCollider trigger;                   // 보조용(있어도 되고 없어도 됨)
     float t;
+    BarrageMissileSpawner spawner;
 
     void Awake()
     {
@@ -45,14 +46,13 @@ public class SmallHomingMissile : MonoBehaviour
             trigger.radius = 0.35f;
         }
     }
-
     public void Setup(SurvivalDirector dir, Transform tgt, float lifeSeconds,
                       float speed, float hitR, float timeoutR,
                       SurvivalGauge gaugeRef = null, float yHeight = 1.0f)
     {
         director = dir;
         target = tgt;
-        lifetime = Mathf.Max(0.1f, lifeSeconds);
+        lifetime = lifeSeconds;
         moveSpeed = speed;
         hitRadiusWorld = hitR;
         timeoutRadiusWorld = timeoutR;

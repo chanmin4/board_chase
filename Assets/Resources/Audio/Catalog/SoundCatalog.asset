@@ -12,4 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 354bd51e40b1ec14abc115e49bc37559, type: 3}
   m_Name: SoundCatalog
   m_EditorClassIdentifier: 
-  items: []
+  items:
+  - key: sfx.new.entry
+    channel: 1
+    ev: {fileID: 0}
+  - key: bgm.new.entry
+    channel: 0
+    ev: {fileID: 0}

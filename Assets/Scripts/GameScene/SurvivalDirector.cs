@@ -1,3 +1,5 @@
+// === 이 파일은 원문 그대로이며, 추가/수정 지점만 주석으로 안내합니다 ===
+
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,18 +12,18 @@ public struct ZoneSnapshot
     public int profileIndex;         // 어떤 프로필에서 왔는지
     public Vector3 centerWorld;
     public float baseRadius;         // 돔 밑면 반지름(월드 단위)
-    public float lifetime;
-    public float remain;
+    public float remain;             // ★ TODO: (변경) 개별 TTL 남은 시간으로 업데이트
     public Material domeMat;         // 비주얼용 머티리얼 (없으면 VM에서 fallback)
     public Material ringMat;
 }
+
 public enum ZoneSize { Small, Medium, Large } 
+
 // ===== 인스펙터에서 편집할 존 설정(프로필) =====
 [System.Serializable]
 public class ZoneProfile
 {
     public string name = "LifeZone";
-    [Tooltip("타일 발자국(지름을 타일 개수로). 2x2, 3x3, 4x4 등")]
     public Vector2Int footprint = new Vector2Int(3, 3);
 
     [Header("Size")]                
@@ -29,116 +31,108 @@ public class ZoneProfile
 
     [Header("진입 요구(벽 튕김 스택)")]
     public int requiredWallHits = 1;
-
     [Header("게이지 이득/보너스")]
-    [Tooltip("존 진입/소비 시 즉시 보너스")]
     public float enterBonus = 30f;
-    [Tooltip("존 안에 있을 때 초당 회복량(옵션)")]
     public float gainPerSec = 0f;
 
     [Header("비주얼(선택)")]
-    public Material domeMat;     // 반구 머티리얼
-    public Material ringMat;     // 링 머티리얼
+    public Material domeMat;
+    public Material ringMat;
+    [Header("Lifetime (per-zone)")]
+    public float time_to_live_profile = 15f;
 }
 
 public class SurvivalDirector : MonoBehaviour
 {
     [Header("Refs")]
     public BoardGrid board;
-    public Transform player;               // 디스크 Transform
-    public Rigidbody playerRb;             // 디스크 Rigidbody
+    public Transform player;
+    public Rigidbody playerRb;
     public SurvivalGauge gauge;
     public DragAimController dragaimcontroller;
 
     [Header("Inspector-Driven Zones")]
-    public List<ZoneProfile> zoneProfiles = new List<ZoneProfile>(); // ★ 인스펙터에서 관리: 항목 수 = 존 수
+    public List<ZoneProfile> zoneProfiles = new List<ZoneProfile>(); // ★ 인스펙터에서 관리
 
-    [Header("Zone Lifetime")]
-    [Tooltip("세트(현재 리스트 분량의 존 묶음)의 지속 시간. 시간이 끝나면 소비 안 된 존들을 오염 처리하고 세트 재생성")]
-    public float zoneLifetime = 8f;
+    //[Header("Zone Lifetime")]
+    //public float zoneLifetime = 8f; // ★ TODO: (변경) 세트 타이머가 아니라 "기본 TTL"로만 사용하거나, 프로필 lifeTimeRange 없을 때의 default로 사용
 
     [Header("Spawn Rules")]
-    [Tooltip("서로 다른 존들 사이 최소 간격(타일 기준, 원 반지름 합 + 이 값 이상)")]
     public float minZoneSeparationTiles = 0.35f;
-    [Tooltip("플레이어 주변 제외 반경(타일)")]
     public int excludeRadius = 1;
-    [Tooltip("플레이어로부터 최소 스폰 거리(타일 중심-중심)")]
     public int minSpawnTileDistance = 6;
-    [Tooltip("존 크기만큼 반경을 추가로 고려해 패딩할지")]
     public bool padByHalfFootprint = true;
 
     [Header("Clean Ratio 검사(유효면적 비율)")]
-    public float baseAlpha = 0.50f;     // 50%
-    public float minAlpha = 0.10f;     // 10%
-    public float relaxStep = 0.05f;     // 5%p씩 완화
+    public float baseAlpha = 0.50f;
+    public float minAlpha = 0.10f;
+    public float relaxStep = 0.05f;
 
     [Header("Zone Entry 판정")]
-    [Tooltip("플레이어-돔 접촉 판정 여유(타일 단위)")]
     public float zoneTouchToleranceTiles = 0.35f;
 
+
+
     [Header("Zone Bounce Tuning")]
-    public float zoneRestitution = 0.98f;   // 1=속도 보존, 0.98~1.05 권장
+    public float zoneRestitution = 0.98f;
     public float reflectClampSpeed = 0f;
     public float zoneBounceCooldown = 0.08f;
-    [Tooltip("미충족 튕김 직후 소비 금지 시간")]
     public float consumeLockAfterBounce = 0.15f;
-    [Tooltip("미충족 후엔 한 번 존 밖으로 나갔다 재진입해야 소비 허용")]
     public bool requireExitReenterAfterBounce = true;
+    [Tooltip("미충족 후엔 한 번 존 밖으로 나갔다 재진입해야 소비 허용")]
     public int ResetSeq { get; private set; } = 0;
+
     [Header("Risk Tuning")]
-    [Tooltip("존 소비 시 enterBonus에 곱해지는 전역 배수(1=기본). 예: 0.75면 25% 감소")]
     public float zoneEnterBonusMul = 1f;
+
     [Header("Risk Tuning - Per Size")]
-    public int zoneReqHitsAdd_S = 0;    //  Small용 +N
-    public int zoneReqHitsAdd_M = 0;    //  Medium용 +N
-    public int zoneReqHitsAdd_L = 0;    //  Large용 +N
+    public int zoneReqHitsAdd_S = 0;
+    public int zoneReqHitsAdd_M = 0;
+    public int zoneReqHitsAdd_L = 0;
 
     [Header("Layout (Counts per Set)")]          // ★
-    public bool useLayoutCounts = true;         // ★ true면 아래 카운트대로 스폰
-    [Min(0)] public int layoutCountSmall  = 0;   // ★ Small 개수
-    [Min(0)] public int layoutCountMedium = 0;   // ★ Medium 개수
-    [Min(0)] public int layoutCountLarge  = 0;   // ★ Large 개수
+    public bool useLayoutCounts = true;
+    [Min(0)] public int layoutCountSmall = 0;
+    [Min(0)] public int layoutCountMedium = 0;
+    [Min(0)] public int layoutCountLarge = 0;
 
     // ===== 이벤트 =====
     public event System.Action<Vector3, float> OnClearedCircleWorld;
-    public event System.Action<int> OnZonesResetSeq;  // 리셋 순번 이벤트
+    public event System.Action<int> OnZonesResetSeq;
     public event Action<ZoneSnapshot> OnZoneSpawned;
     public event Action<int> OnZoneExpired;
     public event Action OnZonesReset;
-    public event Action<int, float> OnZoneProgress;                       // 0~1
-    public event Action<int, Vector3, float> OnZoneContaminatedCircle;    // (id, centerW, radiusW)
-    public event Action<int> OnZoneConsumed;                               // 성공 진입으로 소비
-    public event Action<int> OnWallHitsChanged;                            // 벽 튕김 수 UI
+    public event Action<int, float> OnZoneProgress;                    // 0~1
+    public event Action<int, Vector3, float> OnZoneContaminatedCircle;
+    public event Action<int> OnZoneConsumed;
+    public event Action<int> OnWallHitsChanged;
 
     public bool HasState =>
     board != null &&
     state != null &&
     state.Length == board.width * board.height;
 
-    //사이즈별 프로필을 “순서대로” 뽑아오는 헬퍼
-    System.Collections.Generic.List<int> TakeProfileIndicesBySize(ZoneSize s, int count) // ★
+    // 사이즈별 프로필을 “순서대로” 뽑아오는 헬퍼
+    System.Collections.Generic.List<int> TakeProfileIndicesBySize(ZoneSize s, int count)
     {
         var idxs = new System.Collections.Generic.List<int>();
         if (zoneProfiles == null || count <= 0) return idxs;
 
-        // 1) 해당 사이즈 프로필 인덱스를 **리스트 순서대로** 수집
         var pool = new System.Collections.Generic.List<int>();
         for (int i = 0; i < zoneProfiles.Count; i++)
             if (zoneProfiles[i] != null && zoneProfiles[i].size == s)
                 pool.Add(i);
 
-        if (pool.Count == 0) return idxs; // 없으면 빈 리스트
+        if (pool.Count == 0) return idxs;
 
-        // 2) 필요한 개수만큼 **앞에서부터 반복**해서 채운다(랜덤 X)
         int k = 0;
         while (idxs.Count < count)
         {
             idxs.Add(pool[k]);
-            k = (k + 1) % pool.Count; // 풀을 순환
+            k = (k + 1) % pool.Count;
         }
         return idxs;
     }
-
 
     // ===== 내부 상태 =====
     enum TileState { Clean, Contaminated }
@@ -147,14 +141,17 @@ public class SurvivalDirector : MonoBehaviour
     class Zone
     {
         public int id;
-        public int profileIndex;        // zoneProfiles의 인덱스
-        public Vector2Int center;       // 중심 타일
-        public List<Vector2Int> tiles;  // 사전 유효성 검사용 블록
-        public float remain;            // (미사용) 존별 카운트가 필요하면 사용
-        public int reqHits;          // 요구 튕김
-        public float enterBonus; //존 들어갈시 게이지획득량
-        public float gainPerSec; // 존에들어와있을때 게이지획득 현재 적용x
-        public Vector2Int footprint;    // 지름 타일 수(2x2/3x3/4x4)
+        public int profileIndex;
+        public Vector2Int center;
+        public List<Vector2Int> tiles;
+
+        public float remaintime;
+        public float time_to_live;     
+
+        public int reqHits;             // 요구 튕김(종류별 고정)
+        public float enterBonus;
+        public float gainPerSec;
+        public Vector2Int footprint;
         public Vector3 centerWorld;
         public float radiusWorld;
         public Material domeMat;
@@ -167,12 +164,6 @@ public class SurvivalDirector : MonoBehaviour
     List<Zone> zones = new List<Zone>();
     int nextZoneId = 1;
     int wallHits = 0;
-
-    float setRemain; // 세트 남은 시간(전체 존 묶음의 타이머)
-    public float SetRemain => Mathf.Max(0f, setRemain);
-    public float SetDuration => Mathf.Max(0.0001f, zoneLifetime);
-    public float SetProgress01 => 1f - Mathf.Clamp01(setRemain / Mathf.Max(0.0001f, zoneLifetime));
-
     // 쿨다운 관리
     int lastBounceZoneId = -1;
     float lastBounceZoneTime = -999f;
@@ -195,45 +186,33 @@ public class SurvivalDirector : MonoBehaviour
 
     void Start()
     {
-        RegenerateAllZones(); // ★ Awake에서가 아니라 Start에서 호출(이벤트 구독 이후 보장)
+        RegenerateAllZones(); // ★ 유지: 초기 스폰
     }
 
     void Update()
     {
         if (!board || !player) return;
         float dt = Time.deltaTime;
-
-        // 플레이어 위치/오염 HUD 업데이트
         if (board.WorldToIndex(player.position, out int px, out int py))
             gauge?.SetContaminated(IsContaminated(px, py));
-
-        // 세트 타이머
-        setRemain -= dt;
-
-        // 진행도 브로드캐스트(모든 존 동일 진행도 사용)
-        float setProgress = 1f - Mathf.Clamp01(setRemain / Mathf.Max(0.0001f, zoneLifetime));
-        for (int i = 0; i < zones.Count; i++)
-            OnZoneProgress?.Invoke(zones[i].id, setProgress);
-
-        // 세트 종료 → 미소비 존 전부 오염 디스크 생성 후 세트 재생성
-        if (setRemain <= 0f)
-        {
-            for (int i = 0; i < zones.Count; i++)
-                MarkContaminationCircle(zones[i]);
-
-            ResetWallHits();
-            RegenerateAllZones();
-            return;
+        for (int i = zones.Count - 1; i >= 0; --i) {
+            var z = zones[i];
+            z.remaintime -= dt;
+            float time_decrease_ratio = 1f - Mathf.Clamp01(z.remaintime / Mathf.Max(0.0001f,z.time_to_live));
+            OnZoneProgress?.Invoke(z.id, time_decrease_ratio); // ← 링/타이머 UI는 이 값으로
+            if (z.remaintime <= 0f) {
+                MarkContaminationCircle(z);
+                zones.RemoveAt(i);
+                StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
+                continue;
+            }
         }
-
-        // 플레이어-존 상호작용
         var pWorld = player.position;
         for (int i = zones.Count - 1; i >= 0; i--)
         {
             var z = zones[i];
             bool inside = PlayerInsideZoneWorld(z, pWorld);
 
-            // 미충족으로 튕겼다면, 한 번 존 밖으로 나가야 재진입 허용
             if (requireExitReenterAfterBounce && z.mustExitFirst && !inside)
                 z.mustExitFirst = false;
 
@@ -241,16 +220,16 @@ public class SurvivalDirector : MonoBehaviour
 
             if (wallHits >= z.reqHits)
             {
-                // 잠금/재진입 검사
                 if (Time.time < z.consumeUnlockTime) continue;
                 if (requireExitReenterAfterBounce && z.mustExitFirst) continue;
 
                 // 소비 성공
                 ConsumeZone(z);
+                //소비 후에도 5개 유지
+                StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
             }
             else
             {
-                // 조건 미달 → 벽처럼 튕김(쿨다운 포함) + 스택 증가
                 if (!(lastBounceZoneId == z.id && Time.time - lastBounceZoneTime < zoneBounceCooldown))
                 {
                     BounceFromZone(z);
@@ -264,27 +243,29 @@ public class SurvivalDirector : MonoBehaviour
             }
         }
 
-        // (옵션) 존 내부 체류 회복이 필요하면 여기에서 gainPerSec 적용
+        // (옵션) 체류 회복
         // foreach (var z in zones) if (PlayerInsideZoneWorld(z, pWorld)) gauge?.Add(z.gainPerSec * dt);
     }
+    System.Collections.IEnumerator RespawnAfterDelay(int profileIndex, float delaySec)
+    {
+        yield return new WaitForSeconds(delaySec);
+        var nz = TrySpawnZoneByProfile(profileIndex);
+        if (nz != null) SpawnAndNotify(nz);
+    }
+
 
     // ===== 존 재생성(리스트 기반) =====
     void RegenerateAllZones()
     {
-
         ResetSeq++;
         OnZonesResetSeq?.Invoke(ResetSeq);
         zones.Clear();
         OnZonesReset?.Invoke();
-
-        setRemain = zoneLifetime;
-        // ★ 추가: 인스펙터 개수 모드
-        if (useLayoutCounts) // ★
+        if (useLayoutCounts)
         {
-            // 로컬 함수: 주어진 사이즈/개수만큼 **리스트 순서대로** 스폰
-            void SpawnByCount(ZoneSize s, int cnt) // ★
+            void SpawnByCount(ZoneSize s, int cnt)
             {
-                var idxs = TakeProfileIndicesBySize(s, cnt); // ★
+                var idxs = TakeProfileIndicesBySize(s, cnt);
                 for (int i = 0; i < idxs.Count; i++)
                 {
                     var z = TrySpawnZoneByProfile(idxs[i]);
@@ -292,29 +273,25 @@ public class SurvivalDirector : MonoBehaviour
                 }
             }
 
-            SpawnByCount(ZoneSize.Small, layoutCountSmall);   // ★
-            SpawnByCount(ZoneSize.Medium, layoutCountMedium);  // ★
-            SpawnByCount(ZoneSize.Large, layoutCountLarge);   // ★
+            SpawnByCount(ZoneSize.Small, layoutCountSmall);
+            SpawnByCount(ZoneSize.Medium, layoutCountMedium);
+            SpawnByCount(ZoneSize.Large, layoutCountLarge);
         }
         else
         {
-            // zoneProfiles의 "항목 개수 = 생성 개수"로 1:1 생성
             for (int i = 0; i < zoneProfiles.Count; i++)
             {
                 var z = TrySpawnZoneByProfile(i);
                 if (z != null) SpawnAndNotify(z);
             }
-
-
         }
-        // ★ 변경: 기대 개수(target) 분기별 계산
+
         int expectedCount = useLayoutCounts
-            ? (layoutCountSmall + layoutCountMedium + layoutCountLarge)  // ★ S+M+L 합계
+            ? (layoutCountSmall + layoutCountMedium + layoutCountLarge)
             : zoneProfiles.Count;
 
-        // 안전망: 부족하면 아무 프로필로 재시도
         int guard = 200;
-        while (zones.Count < expectedCount && guard-- > 0)  // ★ zoneProfiles.Count → expectedCount
+        while (zones.Count < expectedCount && guard-- > 0)
         {
             int pick = UnityEngine.Random.Range(0, zoneProfiles.Count);
             var extra = TrySpawnZoneByProfile(pick);
@@ -322,6 +299,8 @@ public class SurvivalDirector : MonoBehaviour
             else break;
         }
 
+        // ★ 참고: 이후부터는 "개별 TTL 루프"가 존을 만료/보충하므로,
+        //         여기서는 "초기 5개 채우기" 역할만 담당.
     }
 
     Zone TrySpawnZoneByProfile(int profileIndex)
@@ -336,12 +315,14 @@ public class SurvivalDirector : MonoBehaviour
             if (cand.HasValue)
             {
                 var (c, tiles) = cand.Value;
+
                 return new Zone
                 {
                     profileIndex = profileIndex,
                     center = c,
                     tiles = tiles,
-                    remain = zoneLifetime,
+                    remaintime = p.time_to_live_profile, // ★ TODO: (변경) 위 ttl 변수로 교체 (개별 TTL)
+                    time_to_live = p.time_to_live_profile,
                     reqHits = GetEffectiveRequiredHits(p),
                     enterBonus = Mathf.Max(0, p.enterBonus),
                     gainPerSec = Mathf.Max(0, p.gainPerSec),
@@ -376,8 +357,8 @@ public class SurvivalDirector : MonoBehaviour
             profileIndex = z.profileIndex,
             centerWorld = z.centerWorld,
             baseRadius = z.radiusWorld,
-            lifetime = zoneLifetime,
-            remain = z.remain,
+            time_to_live = z.time_to_live,
+            remain = z.remaintime,       
             domeMat = z.domeMat,
             ringMat = z.ringMat
         };
@@ -395,19 +376,14 @@ public class SurvivalDirector : MonoBehaviour
             if (!board.InBounds(cx, cy)) continue;
             if (state[Idx(cx, cy)] == TileState.Contaminated) continue;
 
-            // 플레이어 근처 제외 + 최소 거리
             if (!PlayerFarEnough(c, footprint)) continue;
 
-            // 블록 타일 모음
             var tiles = CollectBlock(c, footprint);
             if (tiles == null || tiles.Count == 0) continue;
 
-            // (타일) 겹침 금지
             if (zones.Any(z => Intersects(z.tiles, tiles))) continue;
-            // (원형) 겹침/간격 검사
             if (CirclesOverlapExisting(c, footprint)) continue;
 
-            // 유효면적 검사
             int clean = tiles.Count(t => state[Idx(t.x, t.y)] == TileState.Clean);
             float ratio = (float)clean / tiles.Count;
             if (ratio >= alpha) return (c, tiles);
@@ -446,7 +422,7 @@ public class SurvivalDirector : MonoBehaviour
             float sum = rC + e.radiusWorld + sepW;
             float dx = cW.x - e.centerWorld.x;
             float dz = cW.z - e.centerWorld.z;
-            if ((dx * dx + dz * dz) < sum * sum) return true; // 겹침/간격 미달
+            if ((dx * dx + dz * dz) < sum * sum) return true;
         }
         return false;
     }
@@ -479,8 +455,9 @@ public class SurvivalDirector : MonoBehaviour
         OnZoneConsumed?.Invoke(z.id);
         zones.Remove(z);
 
-        // 소비해도 "세트"는 계속 유효. 개별 재스폰 없이 진행 → 세트 타이머가 끝나면 재생성
-        // (원한다면 여기서 즉시 새 존을 같은 프로필로 다시 뽑아 넣을 수도 있음)
+        // ★ TODO: (변경) "세트 기반"이 아니라 "상시 5개 유지"로 바꿀 경우
+        //         여기서 동일 profileIndex로 바로 보충(코루틴으로 1.0~1.5s 지연 추천)
+        // StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
     }
 
     void BounceFromZone(Zone z)
@@ -495,8 +472,8 @@ public class SurvivalDirector : MonoBehaviour
         Vector3 n = (player.position - zoneCenterW).normalized;
         Vector3 rDir = Vector3.Reflect(v, n).normalized;
 
-        float speed = v.magnitude * zoneRestitution;  // 속도 보존/미세 증감
-        if (reflectClampSpeed > 0f)                   // 0이면 캡 해제
+        float speed = v.magnitude * zoneRestitution;
+        if (reflectClampSpeed > 0f)
             speed = Mathf.Min(speed, reflectClampSpeed);
 
         playerRb.linearVelocity = rDir * speed;
@@ -518,18 +495,6 @@ public class SurvivalDirector : MonoBehaviour
             }
     }
 
-    void MarkContaminationCircle(Zone z)
-    {
-        float radiusTiles = z.footprint.x * 0.5f;
-
-        foreach (var t in CollectCircleTiles(z.center, radiusTiles))
-            state[Idx(t.x, t.y)] = TileState.Contaminated;
-
-        Vector3 cW = z.centerWorld;
-        float rWorld = radiusTiles * board.tileSize;
-        OnZoneContaminatedCircle?.Invoke(z.id, cW, rWorld);
-        OnZoneExpired?.Invoke(z.id);
-    }
 
     public void ClearContamination(int x, int y)
     {
@@ -537,10 +502,9 @@ public class SurvivalDirector : MonoBehaviour
         int idx = Idx(x, y);
         if (state[idx] == TileState.Contaminated)
             state[idx] = TileState.Clean;
-        // (원한다면 여기서 오염 비주얼을 즉시 업데이트하는 이벤트도 추가 가능)
     }
 
-    // ===== 벽 튕김 카운트 (카드 충전 등에서 구독) =====
+    // ===== 벽 튕김 카운트
     public void AddWallHit(int amount = 1)
     {
         wallHits = Mathf.Max(0, wallHits + amount);
@@ -552,7 +516,6 @@ public class SurvivalDirector : MonoBehaviour
         wallHits = 0;
         OnWallHitsChanged?.Invoke(wallHits);
         dragaimcontroller.DragCount = 0;
-
     }
 
     // 외부 조회
@@ -567,16 +530,14 @@ public class SurvivalDirector : MonoBehaviour
         return state[idx] == TileState.Contaminated;
     }
 
-
-
     static bool Intersects(List<Vector2Int> a, List<Vector2Int> b)
     {
         var set = new HashSet<Vector2Int>(a);
         foreach (var t in b) if (set.Contains(t)) return true;
         return false;
     }
+
     // === 외부에서 월드 좌표/반경으로 오염 지대 생성 ===
-    // === 외부에서 '월드 좌표 + 월드 반경'으로 원형 오염 생성 ===
     public void ContaminateCircleWorld(Vector3 centerWorld, float radiusWorld)
     {
         if (!board) return;
@@ -598,30 +559,46 @@ public class SurvivalDirector : MonoBehaviour
         float rTiles = radiusWorld / Mathf.Max(0.0001f, board.tileSize);
 
         foreach (var t in CollectCircleTiles(new Vector2Int(cx, cy), rTiles))
-            ClearContamination(t.x, t.y); // ← 기존 타일 청소 유틸 사용 :contentReference[oaicite:5]{index=5}
+            ClearContamination(t.x, t.y);
 
         OnClearedCircleWorld?.Invoke(centerWorld, radiusWorld);
     }
 
-    // Instancing 렌더러에서 쓰기 위한 래퍼(내부 이터레이터 노출)
     public IEnumerable<Vector2Int> CollectCircleTilesPublic(Vector2Int center, float radiusTiles)
     {
-        return CollectCircleTiles(center, radiusTiles); // 기존 구현 재사용 :contentReference[oaicite:6]{index=6}
+        return CollectCircleTiles(center, radiusTiles);
     }
+
     int GetReqAddBySize(ZoneSize s)
     {
         switch (s)
         {
-            case ZoneSize.Small:  return zoneReqHitsAdd_S;
+            case ZoneSize.Small: return zoneReqHitsAdd_S;
             case ZoneSize.Medium: return zoneReqHitsAdd_M;
-            case ZoneSize.Large:  return zoneReqHitsAdd_L;
-            default:              return 0;
+            case ZoneSize.Large: return zoneReqHitsAdd_L;
+            default: return 0;
         }
     }
+
     public int GetEffectiveRequiredHits(ZoneProfile p)
     {
         return Mathf.Max(0, p.requiredWallHits + GetReqAddBySize(p.size));
     }
+    
 
+     
+    void MarkContaminationCircle(Zone z)
+    {
+        float radiusTiles = z.footprint.x * 0.5f;
 
+        foreach (var t in CollectCircleTiles(z.center, radiusTiles))
+            state[Idx(t.x, t.y)] = TileState.Contaminated;
+
+        Vector3 cW = z.centerWorld;
+        float rWorld = radiusTiles * board.tileSize;
+        OnZoneContaminatedCircle?.Invoke(z.id, cW, rWorld);
+        OnZoneExpired?.Invoke(z.id);
+    }
+    
 }
+
