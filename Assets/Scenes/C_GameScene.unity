@@ -1936,7 +1936,6 @@ MonoBehaviour:
   missileCount: 1
   uniqueAnchorsPerBurst: 1
   missileLifetime: 5
-  fireImmediately: 1
 --- !u!4 &405202902
 Transform:
   m_ObjectHideFlags: 0
@@ -5367,7 +5366,7 @@ MonoBehaviour:
   - name: Large
     footprint: {x: 4, y: 4}
     size: 2
-    requiredWallHits: 0
+    requiredWallHits: 4
     enterBonus: 15
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
@@ -5376,7 +5375,7 @@ MonoBehaviour:
   - name: Medium
     footprint: {x: 3, y: 3}
     size: 1
-    requiredWallHits: 2
+    requiredWallHits: 3
     enterBonus: 25
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 968663742a0fcac4b8df869c2634773e, type: 2}
@@ -5385,7 +5384,7 @@ MonoBehaviour:
   - name: Small
     footprint: {x: 2, y: 2}
     size: 0
-    requiredWallHits: 3
+    requiredWallHits: 2
     enterBonus: 40
     gainPerSec: 0
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
@@ -5409,9 +5408,9 @@ MonoBehaviour:
   zoneReqHitsAdd_M: 0
   zoneReqHitsAdd_L: 0
   useLayoutCounts: 1
-  layoutCountSmall: 1
+  layoutCountSmall: 2
   layoutCountMedium: 2
-  layoutCountLarge: 2
+  layoutCountLarge: 1
 --- !u!4 &1606759578
 Transform:
   m_ObjectHideFlags: 0
@@ -6596,7 +6595,6 @@ MonoBehaviour:
   rocketLifetime: 5
   spawnYOffset: 0
   homingSpeed: 7
-  fireImmediately: 1
 --- !u!114 &1985554759
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6643,7 +6641,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  followTargetXZ: 0
   target: {fileID: 2113993634}
   moveSpeed: 7
 --- !u!4 &1985554760
