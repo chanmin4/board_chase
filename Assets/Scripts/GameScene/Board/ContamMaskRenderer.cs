@@ -16,7 +16,6 @@ public class ContamMaskRenderer : MonoBehaviour
     Texture2D _mask;
     Color32[] _buf;
     int _w, _h;                          // 텍스처 크기(픽셀)
-    bool _dirty;
 
     void OnEnable()
     {
@@ -150,7 +149,7 @@ public class ContamMaskRenderer : MonoBehaviour
         }
         _mask.SetPixels32(_buf);
         _mask.Apply(false, false);
-        _dirty = true;
+        //_dirty = true;
     }
 
     public bool IsContaminatedWorld(Vector3 worldPos)

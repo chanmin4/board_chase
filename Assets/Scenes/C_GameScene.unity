@@ -5398,6 +5398,11 @@ MonoBehaviour:
   minAlpha: 0.1
   relaxStep: 0.05
   zoneTouchToleranceTiles: 0.35
+  enableBonusSector: 1
+  bonusArcDeg: 180
+  normalHitAward: 1
+  bonusHitAward: 2
+  bonusRefreshDelay: 0.2
   zoneRestitution: 0.98
   reflectClampSpeed: 0
   zoneBounceCooldown: 0.08
@@ -5911,6 +5916,15 @@ MonoBehaviour:
   makeContamDiscsTriggers: 1
   pollutionTag: Pollution
   pollutionLayer: Pollution
+  bonusArcMaterial: {fileID: 0}
+  bonusArcColor: {r: 1, g: 0, b: 0, a: 1}
+  arcSegments: 32
+  widthPerRadius: 0.08
+  minWidth: 0.3
+  maxWidth: 0.5
+  offsetPerRadius: 0.04
+  yLiftPerRadius: 0.08
+  minYLift: 0.1
   useLegacyContamDiscs: 0
 --- !u!4 &1796449637
 Transform:
@@ -7214,8 +7228,8 @@ SceneRoots:
   - {fileID: 1315171589}
   - {fileID: 2113993634}
   - {fileID: 1290663342}
-  - {fileID: 1606759578}
   - {fileID: 311061713}
+  - {fileID: 1606759578}
   - {fileID: 412291445}
   - {fileID: 1796449637}
   - {fileID: 1698701776}

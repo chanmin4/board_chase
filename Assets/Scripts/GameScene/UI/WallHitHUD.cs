@@ -34,7 +34,7 @@ public class WallHitHUD : MonoBehaviour
         }
 
         // 초기 표시
-        UpdateView(director ? director.CurrentWallHits : 0);
+        //UpdateView(director ? director.CurrentWallHits : 0);
     }
 
     void OnDisable()
@@ -47,7 +47,7 @@ public class WallHitHUD : MonoBehaviour
 
     void HandleResetOrSpawnChange()
     {
-        UpdateView(director ? director.CurrentWallHits : 0);
+        //UpdateView(director ? director.CurrentWallHits : 0);
     }
 
     public void UpdateView(int wallHits)

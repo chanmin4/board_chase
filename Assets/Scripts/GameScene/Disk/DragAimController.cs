@@ -128,7 +128,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
             {
                 if (DragCount >=resetDragNum)
                 {
-                    director?.ResetWallHits();
+                    //director?.ResetWallHits();
                 }
                 else
                 {

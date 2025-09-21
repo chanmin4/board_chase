@@ -28,7 +28,7 @@ public class WallHitReporter : MonoBehaviour
         if (speed < minSpeed) return;
         if (Time.time - lastTime < cooldown) return;
         if (AudioMaster.I) AudioMaster.I.PlayKey("sfx.wallhit");
-        director?.AddWallHit(1);
+        //director?.AddWallHit(1);
         lastTime = Time.time;
 
         var c = col.GetContact(0);
