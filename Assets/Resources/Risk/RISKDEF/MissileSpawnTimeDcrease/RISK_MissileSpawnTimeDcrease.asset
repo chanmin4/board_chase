@@ -10,20 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: db75b0e16d0673847ad55c86eefc830b, type: 3}
-  m_Name: RISK_MissileSpawnEveryCycle
+  m_Name: RISK_MissileSpawnTimeDcrease
   m_EditorClassIdentifier: 
-  riskId: MissileSpawnEveryCycle
-  title: spawn every cycle
-  desc: spawn every cycle
+  riskId: MissileSpawnTimeDecrease
+  title: MissileSpawnTimeDecrease
+  desc: spawn time decrease -2 sec
   points: 3
   icon: {fileID: 21300000, guid: 68b6ebd00357fe6478e3f78d0d5699ad, type: 3}
   type: 3
-  float_parameter1: 1
+  float_parameter1: 2
   float_parameter2: 0
   float_parameter3: 0
   bool_parameter: 0
-  layout:
-    large: 2
-    medium: 2
-    small: 1
   excludes: []

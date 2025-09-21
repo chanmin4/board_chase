@@ -8,7 +8,7 @@ public enum RiskType
     // 미사일
     MissileSpeedUp,              // f0 = 추적(턴) 속도 배수
     MissileExplosionUp,          // f0 = 폭발 반경 배수
-    MissileSpawnEveryCycle,      // b0 = 매 사이클 1발
+    MissileSpawnTimeDecrease,      // b0 = 매 사이클 1발
     MissileCountUp,              // i0 = 동시 최대 수 (예: 2)
 
     // 존/게이지

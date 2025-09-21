@@ -4400,7 +4400,7 @@ MonoBehaviour:
   dbgDragCooldownExtra: 0
   dbgMissileSpeedMul: 1
   dbgExplosionRadiusMul: 1
-  dbgSpawnCycle: 1
+  dbgSpawnInterval_decrease: 1
   dbgMissileCountAdd: 0
   dbgZoneReqHitsUp_S: 0
   dbgZoneReqHitsUp_M: 0
@@ -5917,14 +5917,18 @@ MonoBehaviour:
   pollutionTag: Pollution
   pollutionLayer: Pollution
   bonusArcMaterial: {fileID: 0}
-  bonusArcColor: {r: 1, g: 0, b: 0, a: 1}
+  bonusArcColor: {r: 0.2460814, g: 0.13070129, b: 0.79622644, a: 1}
   arcSegments: 32
+  arcRadiusOffset: 0.02
+  widthScalesWithRadius: 1
   widthPerRadius: 0.08
   minWidth: 0.3
   maxWidth: 0.5
   offsetPerRadius: 0.04
   yLiftPerRadius: 0.08
   minYLift: 0.1
+  screenCanvas: {fileID: 311061716}
+  miniTimerPrefab: {fileID: 6098060398709968939, guid: 25d8eb12b14c3444c9ddfbdf8862f9b4, type: 3}
   useLegacyContamDiscs: 0
 --- !u!4 &1796449637
 Transform:

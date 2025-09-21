@@ -76,7 +76,7 @@ public class SurvivalDirector : MonoBehaviour
     [Range(1f, 180f)] public float bonusArcDeg = 10f; // 섹터 각도(전체)
     public int normalHitAward = 1;                 // 일반 접촉 시 +1
     public int bonusHitAward = 2;                 // 보너스 접촉 시 +2
-    public float bonusRefreshDelay = 0.2f;           // 보너스 히트 후 재배치 지연(초)
+    public float bonusRefreshDelay = 0.05f;           // 보너스 히트 후 재배치 지연(초)
 
     [Header("Zone Bounce Tuning")]
     public float zoneRestitution = 0.98f;

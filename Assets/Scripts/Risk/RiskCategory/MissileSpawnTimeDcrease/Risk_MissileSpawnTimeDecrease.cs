@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class Risk_MissileSpawnEveryCycle : MonoBehaviour
+public class Risk_MissileSpawnTimeDecrease : MonoBehaviour
 {
    [Header("Installer 호환용(사용되진 않음)")]
     public MonoBehaviour homingMissile;
@@ -12,10 +12,10 @@ public class Risk_MissileSpawnEveryCycle : MonoBehaviour
     public BarrageMissileSpawner[] spawners;
 
     [Header("Param")]
-    [Min(1)] public int MissileSpawnCycle= 1;
-    int[] orig_missilespawncycle;
+    [Min(1)] public float MissileSpawnInterval_Decrease = 1;
+    float[] orig_missilespawninterval;
     bool captured; //원본 캡쳐여부
-/*
+
     void Awake()
     {
         if (spawners == null || spawners.Length == 0)
@@ -26,10 +26,10 @@ public class Risk_MissileSpawnEveryCycle : MonoBehaviour
 
         if (spawners != null && spawners.Length > 0)
         {
-            orig_missilespawncycle = new int[spawners.Length];
+            orig_missilespawninterval = new float[spawners.Length];
             for (int i = 0; i < spawners.Length; i++)
             {
-                orig_missilespawncycle[i]     = spawners[i].spawncycle;
+                orig_missilespawninterval[i]     = spawners[i].spawnInterval;
             }
             captured = true;
         }
@@ -42,11 +42,10 @@ public class Risk_MissileSpawnEveryCycle : MonoBehaviour
     public void Apply()
     {
         if (!captured) return;
-        int cycle = Math.Max(1, MissileSpawnCycle);
         for (int i = 0; i < spawners.Length; i++)
         {
             if (!spawners[i]) continue;
-            spawners[i].spawncycle = MissileSpawnCycle;
+            spawners[i].spawnInterval -= MissileSpawnInterval_Decrease;
         }
     }
 
@@ -56,8 +55,7 @@ public class Risk_MissileSpawnEveryCycle : MonoBehaviour
         for (int i = 0; i < spawners.Length; i++)
         {
             if (!spawners[i]) continue;
-            spawners[i].spawncycle     = orig_missilespawncycle[i];
+            spawners[i].spawnInterval     = orig_missilespawninterval[i];
         }
     }
-    */
 }

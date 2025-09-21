@@ -29,7 +29,7 @@ public class RiskInstaller : MonoBehaviour
     public float dbgDragCooldownExtra = 0f;
     public float dbgMissileSpeedMul = 1f;
     public float dbgExplosionRadiusMul = 1f;
-    public int dbgSpawnCycle = 1;
+    public int dbgSpawnInterval_decrease = 1;
     public int dbgMissileCountAdd = 0;
     public int dbgZoneReqHitsUp_S = 0;
     public int dbgZoneReqHitsUp_M = 0;
@@ -114,7 +114,7 @@ public class RiskInstaller : MonoBehaviour
         bool onDragCooldown = false;
         bool onMissileSpeed = false;
         bool onMissileExplosion = false;
-        bool onSpawnCycle = false;
+        bool onSpawninterval_decrease = false;
         bool onMissileCount = false;
         bool onZoneGaugeMul = false;
         bool onZoneReqHits = false;
@@ -131,7 +131,7 @@ public class RiskInstaller : MonoBehaviour
 
         float explosionRadiusMul = 1f;
 
-        int spawnCycle = 0;
+        int spawnInterval_decrease = 0;
 
         int missileCountAdd = 0;
 
@@ -173,9 +173,9 @@ public class RiskInstaller : MonoBehaviour
                     onMissileExplosion = !Mathf.Approximately(explosionRadiusMul, 1f);
                     break;
 
-                case RiskType.MissileSpawnEveryCycle:
-                    spawnCycle = Mathf.RoundToInt(def.float_parameter1);
-                    onSpawnCycle = spawnCycle >= 1;
+                case RiskType.MissileSpawnTimeDecrease:
+                    spawnInterval_decrease = Mathf.RoundToInt(def.float_parameter1);
+                    onSpawninterval_decrease= spawnInterval_decrease>= 1;
                     break;
 
                 case RiskType.MissileCountUp:
@@ -226,7 +226,7 @@ public class RiskInstaller : MonoBehaviour
 
         dbgExplosionRadiusMul = explosionRadiusMul;
 
-        dbgSpawnCycle = spawnCycle;
+        dbgSpawnInterval_decrease = spawnInterval_decrease;
 
         dbgMissileCountAdd = missileCountAdd;
 
@@ -280,17 +280,15 @@ public class RiskInstaller : MonoBehaviour
             Debug.Log($"[RiskInstaller] MissileExplosionUp x{missileCountAdd:0.##} 적용");
         }
         //missilespawneverycycle
-        /*
-        if (dbgMissile && onSpawnCycle)
+        if (dbgMissile && onSpawninterval_decrease)
         {
-            var p = dbgMissile.GetComponent<Risk_MissileSpawnEveryCycle>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpawnEveryCycle>();
+            var p = dbgMissile.GetComponent<Risk_MissileSpawnTimeDecrease>() ?? dbgMissile.gameObject.AddComponent<Risk_MissileSpawnTimeDecrease>();
             p.homingMissile = dbgMissile;
-            p.MissileSpawnCycle = spawnCycle;
+            p.MissileSpawnInterval_Decrease = spawnInterval_decrease;
             p.applyOnStart = false;
             p.Apply();
-            Debug.Log($"[RiskInstaller] MissileExplosionUp x{spawnCycle:0.##} 적용");
+            Debug.Log($"[RiskInstaller] MissileExplosionUp x{spawnInterval_decrease:0.##} 적용");
         }
-        */
         //ZoneGaugeGainDown
         if (dbgSurvivalDirector && onZoneGaugeMul)
         {
