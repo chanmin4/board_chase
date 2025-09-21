@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEditor; // 에디터 전용 API
 #endif
 
-public enum AudioChannel { BGM, SFX }
+public enum AudioChannel { BGM,UI, SFX,VOICE,AMB,OTHERS }
 
 [CreateAssetMenu(menuName = "Audio/AudioCatalog")]
 public class AudioCatalog : ScriptableObject

@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: SoundCatalog
   m_EditorClassIdentifier: 
   items:
-  - key: sfx.new.entry
-    channel: 1
-    ev: {fileID: 0}
-  - key: bgm.new.entry
+  - key: bgm.mainscene
     channel: 0
-    ev: {fileID: 0}
+    ev: {fileID: 11400000, guid: 7291f20dd77094f429988e15ae9e55cb, type: 2}
+  - key: ui.buttonclick
+    channel: 1
+    ev: {fileID: 11400000, guid: f185c1d9db87183418b4643d3e5aaa12, type: 2}

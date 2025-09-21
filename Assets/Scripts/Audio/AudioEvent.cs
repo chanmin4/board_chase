@@ -6,7 +6,7 @@ public class AudioEvent : ScriptableObject
     public AudioClip[] clips;
 
     [Header("Mix")]
-    [Range(0f,1f)] public float volume = 1f;
+    [Range(0f,3f)] public float volume = 1f;
     public Vector2 volumeJitter = new(0f, 0f);
     public Vector2 pitchJitter  = new(-0.04f, 0.04f);
 
