@@ -9,7 +9,8 @@ public class CardData : ScriptableObject
 
     [Header("Charge")]
     public int maxCharge = 5;
-    public int gainPerWallBounce = 1;
+    public int gainPerZoneBounce = 1;
+    public int gainPerZoneCritBounce = 2;
 
     [Header("Activation")]
     public float duration = 6f;

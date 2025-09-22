@@ -101,8 +101,8 @@ public class SurvivalDirector : MonoBehaviour
     [Min(0)] public int layoutCountMedium = 0;
     [Min(0)] public int layoutCountLarge = 0;
 
-// 보너스 아크 리롤 코루틴(존별)
-readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine>();
+    // 보너스 아크 리롤 코루틴(존별)
+    readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine>();
 
 
 
@@ -115,8 +115,8 @@ readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine
     public event Action<int, float> OnZoneProgress;                    // 0~1
     public event Action<int, Vector3, float> OnZoneContaminatedCircle;
     public event Action<int> OnZoneConsumed;
-    public event Action<int> OnWallHitsChanged;
-    public event System.Action<int,int,int,bool> OnZoneHit;
+    // public event Action<int> OnZoneHitsChanged;
+    public event System.Action<int, int, int, bool> OnZoneHit;
     public event System.Action<int, float, float> OnZoneBonusSectorChanged;
 
     public bool HasState =>
@@ -279,11 +279,11 @@ readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine
                 {
                     BounceFromZone(z);
                     if (isBonus)
-{
-    // 기존 예약이 있으면 취소
-    if (_bonusReroll.TryGetValue(z.id, out var co)) { StopCoroutine(co); _bonusReroll.Remove(z.id); }
-    _bonusReroll[z.id] = StartCoroutine(RerollBonusSectorAfter(z.id, bonusRefreshDelay));
-}
+                    {
+                        // 기존 예약이 있으면 취소
+                        if (_bonusReroll.TryGetValue(z.id, out var co)) { StopCoroutine(co); _bonusReroll.Remove(z.id); }
+                        _bonusReroll[z.id] = StartCoroutine(RerollBonusSectorAfter(z.id, bonusRefreshDelay));
+                    }
                     z.curhit = nextHits; // ★ 존별 카운트 증가
                     OnZoneHit?.Invoke(z.id, z.curhit, z.reqHit, isBonus); // (선택) 크랙 연출
 
@@ -302,18 +302,18 @@ readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine
 
     }
     System.Collections.IEnumerator RerollBonusSectorAfter(int zoneId, float delay)
-{
-    yield return new WaitForSeconds(delay);
-
-    // 아직 살아있는 같은 id의 존만 갱신
-    var z = zones.Find(zz => zz.id == zoneId);
-    if (z != null)
     {
-        z.bonusAngleDeg = UnityEngine.Random.Range(0f, 360f);
-        OnZoneBonusSectorChanged?.Invoke(zoneId, z.bonusAngleDeg, bonusArcDeg);
+        yield return new WaitForSeconds(delay);
+
+        // 아직 살아있는 같은 id의 존만 갱신
+        var z = zones.Find(zz => zz.id == zoneId);
+        if (z != null)
+        {
+            z.bonusAngleDeg = UnityEngine.Random.Range(0f, 360f);
+            OnZoneBonusSectorChanged?.Invoke(zoneId, z.bonusAngleDeg, bonusArcDeg);
+        }
+        _bonusReroll.Remove(zoneId);
     }
-    _bonusReroll.Remove(zoneId);
-}
     System.Collections.IEnumerator RespawnAfterDelay(int profileIndex, float delaySec)
     {
         yield return new WaitForSeconds(delaySec);
@@ -439,7 +439,7 @@ readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine
         z.consumeUnlockTime = 0f;
         z.mustExitFirst = false;
         if (enableBonusSector)
-        OnZoneBonusSectorChanged?.Invoke(z.id, z.bonusAngleDeg, bonusArcDeg);
+            OnZoneBonusSectorChanged?.Invoke(z.id, z.bonusAngleDeg, bonusArcDeg);
 
     }
 
@@ -676,14 +676,13 @@ readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine
 
         foreach (var t in CollectCircleTiles(z.center, radiusTiles))
             state[Idx(t.x, t.y)] = TileState.Contaminated;
-        
+
         Vector3 cW = z.centerWorld;
         float rWorld = radiusTiles * board.tileSize;
         if (_bonusReroll.TryGetValue(z.id, out var co)) { StopCoroutine(co); _bonusReroll.Remove(z.id); }
         OnZoneContaminatedCircle?.Invoke(z.id, cW, rWorld);
         OnZoneExpired?.Invoke(z.id);
     }
-    
     
 // ===== 벽 튕김 카운트 (구기능)
     /*

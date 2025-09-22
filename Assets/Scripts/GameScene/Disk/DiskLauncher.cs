@@ -5,6 +5,9 @@ using System;
 [RequireComponent(typeof(Rigidbody))]
 public class DiskLauncher : MonoBehaviour
 {
+    [Header("First Spawn")]
+    [Min(0f)] public float firstSpawnDelay = 0f;
+    
     [Header("Launch / Stop")]
     public float powerScale   = 1.4f;
     //public float minStopSpeed = 0.25f;
@@ -59,7 +62,7 @@ public class DiskLauncher : MonoBehaviour
         {
             director.OnZonesReset += HandleSetReset;
             director.OnZoneConsumed += HandleZoneConsumed;
-            director.OnWallHitsChanged += HandleWallHitsChanged_Bonus;
+            //director.OnWallHitsChanged += HandleWallHitsChanged_Bonus;
         }
 
         UpdateCurrentTile(forceEvent:true);
@@ -75,7 +78,7 @@ public class DiskLauncher : MonoBehaviour
         {
             director.OnZonesReset -= HandleSetReset;
             director.OnZoneConsumed -= HandleZoneConsumed;
-            director.OnWallHitsChanged -= HandleWallHitsChanged_Bonus;
+            //director.OnWallHitsChanged -= HandleWallHitsChanged_Bonus;
         }
     }
 
@@ -152,6 +155,7 @@ public class DiskLauncher : MonoBehaviour
         if (useCooldown) StartCooldown();
     }
     // 벽 튕김수 변경 시 호출됨
+    /*
 void HandleWallHitsChanged_Bonus(int hitsNow)
 {
     if (!useCooldown) return;                  // 쿨타임 모드일 때만
@@ -163,6 +167,7 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
 
     ReduceCooldown(delta * cooldownReducePerBounce);
 }
+*/
 
 // 남은 쿨다운을 줄이는 유틸
 void ReduceCooldown(float seconds)

@@ -26,6 +26,8 @@ public class BarrageMissileSpawner : MonoBehaviour
     public float spawnY = 1.0f;            // ★ 회전벽 피하려고 기본 1
 
     [Header("Missile Tuning")]
+    [Min(0f)] public float firstSpawnDelay = 0f;
+
     public float missileSpeed = 6f;
     public float hitRadiusWorld = 2.0f;
     public float timeoutRadiusWorld = 0.8f;
@@ -47,7 +49,8 @@ public class BarrageMissileSpawner : MonoBehaviour
     }
     void OnEnable()
     {
-        lastFireTime = Time.time - spawnTimer; // ★ HUD가 즉시 맞게 돌도록 기준 세팅
+        spawnTimer = 0f;
+        lastFireTime = -1f; // 첫 스폰 전임을 나타내는 센티넬
     }
 
     void Update()
@@ -55,13 +58,28 @@ public class BarrageMissileSpawner : MonoBehaviour
         if (!useTimeRate) return;                 // ★ 사이클 모드면 여기선 안 함
         if (spawnInterval <= 0f) return;              // ★ 방어
 
+        // ★ 첫 스폰 지연 처리: lastFireTime < 0 이면 아직 한 번도 안 쏜 상태
+        if (lastFireTime < 0f)
+        {
+            spawnTimer += Time.deltaTime;
+            if (spawnTimer >= firstSpawnDelay)
+            {
+                spawnTimer = 0f;
+                FireMissile();
+                lastFireTime = Time.time;
+            }
+            return; // 첫 발사 전에는 아래 루프를 돌지 않음
+        }
+
+        // 이후부터는 기존 간격 루프 그대로
         spawnTimer += Time.deltaTime;
-        while (spawnTimer >= spawnInterval)          // ★ 프레임 드랍 보정
+        while (spawnTimer >= spawnInterval)
         {
             spawnTimer -= spawnInterval;
-            FireMissile();                    // ★ 공통 발사 루틴 호출
+            FireMissile();
             lastFireTime = Time.time - spawnTimer;
         }
+    
         
     }
 

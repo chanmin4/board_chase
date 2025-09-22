@@ -33,8 +33,6 @@ public class CardManager : MonoBehaviour
     int charge;
     bool onCooldown;
     CardAbility ability;
-
-    int lastWallHits;
     private Coroutine durationCo;
 
 public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRequiredCharge) : 0);
@@ -50,14 +48,14 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
          if (useButton) useButton.onClick.AddListener(OnUseButtonClicked);
 
         // ⬇⬇ 여기서 “벽 튕김 수 변경” 이벤트 직접 구독 → Δ만큼 충전
-        if (director) director.OnWallHitsChanged += HandleWallHitsChanged;
+        if (director) director.OnZoneHit += HandleZoneHit;
 
         ApplyUI();
     }
 
     void OnDestroy()
     {
-        if (director) director.OnWallHitsChanged -= HandleWallHitsChanged;
+        if (director) director.OnZoneHit -= HandleZoneHit;
         if (durationCo != null) StopCoroutine(durationCo);
     }
 
@@ -69,7 +67,9 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
             TryUse();
         }
     }
-    bool IsReady() => data && !riskDisableUse && !onCooldown && charge >= data.maxCharge;
+    bool IsReady() =>
+    data && !riskDisableUse && !onCooldown && charge >= EffectiveMaxCharge; // ✅
+
      void OnUseButtonClicked()
     {
         if (!IsReady()) return;
@@ -95,25 +95,21 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
             TryUse();
         }
     }
-    void HandleWallHitsChanged(int hitsNow)
+    void HandleZoneHit(int zoneId, int cur, int req, bool isBonus)
     {
-        int delta = Mathf.Max(0, hitsNow - lastWallHits);
-        lastWallHits = hitsNow;
-        if (riskDisableUse || delta <= 0 || !data) return;  
+        if (riskDisableUse || !data) return;  
 
-        int baseGain = Mathf.Max(1, data.gainPerWallBounce);
-        //float mul = FeverManager.ChargeMul;      //피어중일경우 현재 적용x           
-        int gain = Mathf.RoundToInt(delta * baseGain);
+        int gain = isBonus ? Mathf.Max(1, data.gainPerZoneCritBounce)
+            : Mathf.Max(1, data.gainPerZoneBounce);
         AddCharge(gain);
     }
 
     void AddCharge(int amount)
     {
-        if (riskDisableUse || onCooldown || data == null) return; 
-        charge = Mathf.Min(data.maxCharge, charge + amount);
+        if (riskDisableUse || onCooldown || data == null) return;
+        charge = Mathf.Min(EffectiveMaxCharge, charge + amount); 
         ApplyUI();
     }
-
     void ApplyUI()
     {
         if (!data) { if (useButton) useButton.interactable = false; return; }
