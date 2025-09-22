@@ -46,19 +46,15 @@ public class AchievementPopupManager : MonoBehaviour
         RewardDB.EnsureLoaded();
 
         var list = RewardDB.All
-            .Where(so => so && pm.Data.bestScore >= so.requiredBestScore && !pm.IsAchievementClaimed(so.id))
-            .OrderBy(so => so.requiredBestScore)
-            .ToList();
-
+        .Where(so => so && pm.IsAchievementClaimable(so.id)) // ← 여기만 바꿈
+        .OrderBy(so => so.requiredBestScore)
+        .ToList();
         if (list.Count == 0) yield break;
 
         EnsurePanel(true);
 
         foreach (var so in list)
         {
-            // ★ 즉시 수령 금지 — 수령대기만 등록
-            pm.MarkAchievementClaimable(so.id);
-
             string title = string.IsNullOrEmpty(so.title) ? "Achievement Unlocked!" : so.title;
             string desc  = so.description ?? "";
             yield return ShowOnce(title, desc, so.icon, requireClick, minShowSeconds);

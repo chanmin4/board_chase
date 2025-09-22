@@ -87,15 +87,15 @@ public class GameOverUI : MonoBehaviour
             {
                 if (ProgressManager.Instance != null)
                 {
-                    ProgressManager.Instance.ReportRunTimeMs(finalTimeMs);
-                    Log("Save OK");
+                    Log("ProgressManager exist");
                 }
                 else
                 {
                     var go = new GameObject("ProgressManager");
                     go.AddComponent<ProgressManager>(); // Awake에서 Instance 설정 + 로드됨
                 }
-                ProgressManager.Instance.ReportRunTimeMs(finalTimeMs);
+                ProgressManager.Instance.GameOverReportRunTimeMs(finalTimeMs);
+                ProgressManager.Instance.GameOverReportRunScore(finalPoints);
                 Log("Save OK");
             }
             catch (System.Exception e)

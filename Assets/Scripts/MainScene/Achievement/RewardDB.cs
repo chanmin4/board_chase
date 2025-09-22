@@ -26,7 +26,8 @@ public static class RewardDB
         {
             if (!r || string.IsNullOrEmpty(r.id)) continue;
             _map[r.id] = r;
-            _all.Add(r);
+            if (!r.hideFromListing)
+                _all.Add(r);
         }
 
         // 요구 포인트 오름차순 정렬(동일값이면 id로 안정 정렬)
@@ -67,7 +68,7 @@ public static class RewardDB
         {
             if (so == null || string.IsNullOrEmpty(so.id)) continue;
             _map[so.id] = so;
-            if (!_all.Contains(so)) _all.Add(so);
+            if (!so.hideFromListing && !_all.Contains(so)) _all.Add(so);
         }
         _all.Sort((a, b) =>
         {

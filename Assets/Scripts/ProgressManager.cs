@@ -17,7 +17,7 @@ public class ProgressManager : MonoBehaviour
         if (Data.bestScore != debugBestScore)
         {
             Data.bestScore = debugBestScore;
-            OnBestScoreChanged?.Invoke(Data.bestScore);
+            OnChallengeScoreChanged?.Invoke(Data.bestScore);
             if (debugAutoSave) Save();
             Debug.Log($"[DEBUG] bestScore = {Data.bestScore}");
         }
@@ -28,7 +28,7 @@ public class ProgressManager : MonoBehaviour
     {
         if (!Application.isPlaying || Data == null) return;
         Data.bestScore = debugBestScore;
-        OnBestScoreChanged?.Invoke(Data.bestScore);
+        OnChallengeScoreChanged?.Invoke(Data.bestScore);
         if (debugAutoSave) Save();
         Debug.Log($"[DEBUG] Applied bestScore = {Data.bestScore}");
     }
@@ -38,9 +38,11 @@ public class ProgressManager : MonoBehaviour
     public SaveData Data { get; private set; }
 
     // 외부 UI가 구독하는 이벤트
+    public System.Action<int> OnChallengeScoreChanged;
     public System.Action<int> OnBestScoreChanged;
     public System.Action OnUnlocksChanged;
-    public System.Action<int> OnBestTimeChangedMs;
+    public System.Action<int> OnChallengeTimeChangedMs;
+    
 
     [Header("Unlock Table (Resources/Achievements)")]
     public string achievementsFolder = "Achievements";
@@ -64,10 +66,9 @@ public class ProgressManager : MonoBehaviour
         Data = SaveSystem.Load() ?? new SaveData();
 
         // null-guard (구버전 세이브 호환)
-        Data.unlockedSkins           ??= new List<string>();
-        Data.unlockedAbilities       ??= new List<string>();
-        Data.claimedAchievements     ??= new List<string>();
-        Data.claimableAchievements   ??= new List<string>();
+        Data.unlockedSkins ??= new List<string>();
+        Data.unlockedAbilities ??= new List<string>();
+        Data.claimedAchievements ??= new List<string>();
         if (string.IsNullOrEmpty(Data.equippedSkinId))
             Data.equippedSkinId = "skin_default";
         if (!Data.unlockedSkins.Contains("skin_default"))
@@ -77,27 +78,37 @@ public class ProgressManager : MonoBehaviour
     public void Save() => SaveSystem.Save(Data);
 
     // 점수 보고
-    public void ReportRunScore(int score)
+    public void GameOverReportRunScore(int score)
+    {
+        if (score > Data.challengeScore)
+        {
+            Data.challengeScore= score;
+            OnChallengeScoreChanged?.Invoke(Data.challengeScore);
+            Save();
+        }
+    }
+
+    public void GameOverReportRunTimeMs(int timeMs)
+    {
+        if (timeMs > Data.challengeTimeMs)
+        {
+            Data.challengeTimeMs = timeMs;
+            OnChallengeTimeChangedMs?.Invoke(Data.challengeTimeMs);
+            Save();
+        }
+    }
+    public void GameSuccessReportRunScore(int score)
     {
         if (score > Data.bestScore)
         {
-            Data.bestScore = score;
+            Data.bestScore= score;
             OnBestScoreChanged?.Invoke(Data.bestScore);
             Save();
         }
     }
+    
 
-    public void ReportRunTimeMs(int timeMs)
-    {
-        if (timeMs > Data.bestTimeMs)
-        {
-            Data.bestTimeMs = timeMs;
-            OnBestTimeChangedMs?.Invoke(Data.bestTimeMs);
-            Save();
-        }
-    }
-
-    public bool HasSkin(string id)     => Data.unlockedSkins.Contains(id);
+    public bool HasSkin(string id) => Data.unlockedSkins.Contains(id);
     public bool HasAbility(string key) => Data.unlockedAbilities.Contains(key);
 
     public void EquipSkin(string id)
@@ -111,8 +122,8 @@ public class ProgressManager : MonoBehaviour
         if (!Data.unlockedSkins.Contains("skin_default"))
             Data.unlockedSkins.Add("skin_default");
 
-        OnBestScoreChanged?.Invoke(Data.bestScore);
-        OnBestTimeChangedMs?.Invoke(Data.bestTimeMs);
+        OnChallengeScoreChanged?.Invoke(Data.challengeScore);
+        OnChallengeTimeChangedMs?.Invoke(Data.challengeTimeMs);
         OnUnlocksChanged?.Invoke();
 
         if (saveFileAfter) Save();
@@ -128,26 +139,38 @@ public class ProgressManager : MonoBehaviour
                 return Data.bestScore >= a.requiredBestScore;
         return false;
     }
-
     public bool IsAchievementClaimed(string achievementId)
         => Data.claimedAchievements.Contains(achievementId);
 
-    public bool IsAchievementClaimable(string id)
-        => Data.claimableAchievements.Contains(id) && !IsAchievementClaimed(id);
-
-    // 팝업에서 호출: ‘해금 알림’만 하고 수령은 나중에
-    public void MarkAchievementClaimable(string id)
+    // 성취 패널 ‘수령’ 버튼에서 호출
+    public bool IsAchievementClaimable(string achievementId)
     {
-        if (IsAchievementClaimed(id)) return;
-        if (IsAchievementClaimable(id)) return;
-        if (!IsAchievementEligible(id)) return;
+        // 1) 이미 수령했으면 불가
+        if (IsAchievementClaimed(achievementId)) return false;  // claimedAchievements 기준
 
-        Data.claimableAchievements.Add(id);
-        Save();
-        OnUnlocksChanged?.Invoke();
+        // 2) 보상 메타 조회(타입/요구치 등)
+        var so = RewardDB.Get(achievementId);                   // RewardSO(id, type, requiredBestScore...)
+        if (so == null) return false;
+
+        // 3) 조건 달성 여부(지금은 점수 기준; 필요 시 시간 등 추가 가능)
+        bool eligible = Data.bestScore >= so.requiredBestScore;
+
+        // 4) 이미 소유(Unlocked)했는지 — 타입별로 분기
+        bool owned = false;
+        switch (so.type) // RewardType.Skin | RewardType.Card
+        {
+            case RewardType.Skin:
+                owned = Data.unlockedSkins != null && Data.unlockedSkins.Contains(so.id);
+                break;
+            case RewardType.Card:
+                owned = Data.unlockedAbilities != null && Data.unlockedAbilities.Contains(so.id);
+                break;
+        }
+
+        // 5) ‘달성했고(eligible) 아직 소유 안 했고(!owned)’ 이면 수령 가능
+        return eligible && !owned;
     }
 
-    // 성취 패널 ‘수령’ 버튼에서 호출
     public bool ClaimAchievement(string achievementId)
     {
         if (!IsAchievementClaimable(achievementId)) return false;
@@ -172,7 +195,6 @@ public class ProgressManager : MonoBehaviour
         }
 
         Data.claimedAchievements.Add(achievementId);
-        Data.claimableAchievements.Remove(achievementId);
 
         // 시각/런타임 후처리
         RewardDB.GrantVisualOrRuntime(ach.payloadId, this);

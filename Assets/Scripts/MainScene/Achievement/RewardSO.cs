@@ -22,6 +22,10 @@ public abstract class RewardSO : ScriptableObject
 
     [Header("Type")]
     public RewardType type;
+     [Header("DB/Listing")]
+    [Tooltip("체크하면 RewardDB.All(업적/목록)에는 제외됩니다. Get/Grant는 가능.")]
+    public bool hideFromListing = false;
+
 
     /// <summary>
     /// 실제 지급 훅(선택). ProgressManager.TryClaim에서 저장/중복처리는 끝났다고 가정.

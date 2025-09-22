@@ -1527,6 +1527,7 @@ GameObject:
   - component: {fileID: 443905205}
   - component: {fileID: 443905204}
   - component: {fileID: 443905203}
+  - component: {fileID: 443905206}
   m_Layer: 5
   m_Name: Achieve_CloseButton
   m_TagString: Untagged
@@ -1636,6 +1637,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 443905201}
   m_CullTransparentMesh: 1
+--- !u!114 &443905206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 443905201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18ba4a4b9ca0f5f4697cbe4c16b30f25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: ui.buttonclick
 --- !u!1 &443978223
 GameObject:
   m_ObjectHideFlags: 0
@@ -4126,6 +4140,58 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1523876898}
   m_CullTransparentMesh: 1
+--- !u!1 &1552832834
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1552832836}
+  - component: {fileID: 1552832835}
+  m_Layer: 0
+  m_Name: temp_savedatadebug
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1552832835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1552832834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6370f4216d4c02943a349ac2abcfa33e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 0
+  bestScore: 0
+  challengeScore: 0
+  challengeTimeMs: 0
+  equippedSkinId: 
+  unlockedSkins: []
+  unlockedAbilities: []
+  claimedAchievements: []
+--- !u!4 &1552832836
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1552832834}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 933.94086, y: 585.19434, z: -10.19893}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1600113825
 GameObject:
   m_ObjectHideFlags: 0
@@ -5516,3 +5582,4 @@ SceneRoots:
   - {fileID: 1072355605}
   - {fileID: 8424193541926596408}
   - {fileID: 1411879697}
+  - {fileID: 1552832836}

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class MainBGM : MonoBehaviour
+public class bgm_mainscene : MonoBehaviour
 {
     public string bgmKey = "bgm.mainscene";
 

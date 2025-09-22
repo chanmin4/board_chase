@@ -31,16 +31,13 @@ public class MainMenuController : MonoBehaviour
             go.AddComponent<ProgressManager>();
         }
         ProgressManager.Instance.OnBestScoreChanged += _ => Refresh(); // 점수형 해금 쓰면 유지
-        ProgressManager.Instance.OnBestTimeChangedMs += _ => Refresh(); // ← 추가!
-
-        ProgressManager.Instance.OnBestScoreChanged += _ => Refresh();
         StartButton.onClick.AddListener(OnClickStart);
         QuitButton.onClick.AddListener(OnClickQuit);
         SettingButton.onClick.AddListener(OnClickSetting);
         AchievementButton.onClick.AddListener(OnClickAchievement);
         if (SkinInventoryButton && skin_inventory_manager)
             SkinInventoryButton.onClick.AddListener(() => skin_inventory_manager.Open());
-        if (AudioMaster.I) AudioMaster.I.PlayBGMKey("bgm.main");
+        //if (AudioMaster.I) AudioMaster.I.PlayBGMKey("bgm.main");
         Refresh();
     }
 

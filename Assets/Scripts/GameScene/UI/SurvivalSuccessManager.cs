@@ -58,7 +58,7 @@ public class SurvivalSuccessManager : MonoBehaviour
         FreezeAndBlockEverythingExceptSuccess();
 
         lastRunPoints = CalcRunPoints();
-        ProgressManager.Instance?.ReportRunScore(lastRunPoints);
+        ProgressManager.Instance?.GameSuccessReportRunScore(lastRunPoints);
 
         StartCoroutine(ShowUnlocksSequence());
     }
@@ -82,12 +82,12 @@ public class SurvivalSuccessManager : MonoBehaviour
                 // 폴백: RewardDB 순회 → 수령대기만 등록
                 RewardDB.EnsureLoaded();
                 var list = RewardDB.All
-                    .Where(so => pm.Data.bestScore >= so.requiredBestScore && !pm.IsAchievementClaimed(so.id))
+                    .Where(so => so && pm.IsAchievementClaimable(so.id))
                     .OrderBy(so => so.requiredBestScore)
                     .ToList();
 
-                foreach (var so in list)
-                    pm.MarkAchievementClaimable(so.id);
+                if (list.Count > 0)
+                    Debug.Log($"[Achv] {list.Count} claimable unlock(s) available.");
             }
         }
         finally
@@ -104,7 +104,7 @@ public class SurvivalSuccessManager : MonoBehaviour
 
     void OnClickMainMenu()
     {
-        ProgressManager.Instance?.ReportRunScore(lastRunPoints);
+        ProgressManager.Instance?.GameSuccessReportRunScore(lastRunPoints);
         if (pauseAudio)  AudioListener.pause = false;
         if (stopTimeScale) Time.timeScale = 1f;
 
