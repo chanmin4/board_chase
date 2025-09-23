@@ -49,7 +49,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
 
     Plane ground;
     bool dragging;
-    bool canDrag = true;               // ← 발사 중엔 잠금
+    //bool canDrag = true;               // ← 발사 중엔 잠금
     Vector3 startPos, currPos, dragDir; // dragDir = start→current
     float pull;
     bool launchedThisDrag = false;

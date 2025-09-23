@@ -46,7 +46,7 @@ public class AchievementPopupManager : MonoBehaviour
         RewardDB.EnsureLoaded();
 
         var list = RewardDB.All
-        .Where(so => so && pm.IsAchievementClaimable(so.id)) // ← 여기만 바꿈
+        .Where(so => so && pm.IsUnlockable(so.id))
         .OrderBy(so => so.requiredBestScore)
         .ToList();
         if (list.Count == 0) yield break;
@@ -55,6 +55,7 @@ public class AchievementPopupManager : MonoBehaviour
 
         foreach (var so in list)
         {
+            pm.UnlockByAchievementId(so.id);
             string title = string.IsNullOrEmpty(so.title) ? "Achievement Unlocked!" : so.title;
             string desc  = so.description ?? "";
             yield return ShowOnce(title, desc, so.icon, requireClick, minShowSeconds);

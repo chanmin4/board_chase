@@ -1,3 +1,4 @@
+/*
 using System.Collections.Generic;
 using UnityEngine;
 public enum TileType {
@@ -28,3 +29,4 @@ public class TileCenter : MonoBehaviour
     }
     #endif
 }
+*/

@@ -38,7 +38,7 @@ public class DiskLauncher : MonoBehaviour
     public int Charges { get; private set; }
     
     // 내부 상태
-    int _lastWallHitsForBonus = 0;
+    //int _lastWallHitsForBonus = 0;
 
     // 이벤트
     public event Action<int, int> OnTileChanged;

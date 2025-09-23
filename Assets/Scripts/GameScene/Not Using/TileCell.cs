@@ -1,3 +1,4 @@
+/*
 // TileCell.cs
 using UnityEngine;
 using TMPro;
@@ -44,3 +45,5 @@ public class TileCell : MonoBehaviour
         }
     }
 }
+
+*/

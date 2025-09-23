@@ -19,6 +19,8 @@ public class SaveDataDebug : MonoBehaviour
 
     [SerializeField] List<string> unlockedSkins = new();
     [SerializeField] List<string> unlockedAbilities = new();
+    [SerializeField] List<string> ownedSkins       = new();
+    [SerializeField] List<string> ownedAbilities   = new();
     [SerializeField] List<string> claimedAchievements = new();
 
     void Awake()
@@ -36,18 +38,21 @@ public class SaveDataDebug : MonoBehaviour
         if (!Application.isPlaying) return;
 
         var pm = ProgressManager.Instance;
-        var d  = (pm != null) ? pm.Data : null;
+        var d = (pm != null) ? pm.Data : null;
         if (d == null) return;
 
-        version          = d.version;
-        bestScore        = d.bestScore;
-        challengeScore   = d.challengeScore;
-        challengeTimeMs  = d.challengeTimeMs;
-        equippedSkinId   = d.equippedSkinId;
+        version = d.version;
+        bestScore = d.bestScore;
+        challengeScore = d.challengeScore;
+        challengeTimeMs = d.challengeTimeMs;
+        equippedSkinId = d.equippedSkinId;
 
-        Mirror(d.unlockedSkins,       unlockedSkins);
-        Mirror(d.unlockedAbilities,   unlockedAbilities);
+        Mirror(d.unlockedSkins, unlockedSkins);
+        Mirror(d.unlockedAbilities, unlockedAbilities);
+        Mirror(d.ownedSkins, ownedSkins);
+        Mirror(d.ownedAbilities, ownedAbilities);
         Mirror(d.claimedAchievements, claimedAchievements);
+        
     }
 
     static void Mirror<T>(List<T> src, List<T> dst)

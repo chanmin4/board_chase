@@ -163,6 +163,7 @@ public class ZoneVisualManager : MonoBehaviour
         if (screenCanvas && miniTimerPrefab)
         {
             var ui = Instantiate(miniTimerPrefab, screenCanvas.transform);
+            ui.transform.SetAsFirstSibling();
             var follower = ui.GetComponent<ZoneMiniTimerFollower>();
             if (!follower) follower = ui.AddComponent<ZoneMiniTimerFollower>();
             follower.Setup(screenCanvas, snap.centerWorld, snap.baseRadius,

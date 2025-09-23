@@ -20,7 +20,7 @@ public class MainMenuController : MonoBehaviour
     [Header("Reset Options")]
     [SerializeField] bool resetSaveWhenStarting = false;    // ← 항상 초기화하고 시작
     [SerializeField] bool allowShiftToReset = false;         // ← Shift 누른 채 Start 시 초기화
-    [SerializeField] KeyCode resetModifier = KeyCode.LeftShift;
+    //[SerializeField] KeyCode resetModifier = KeyCode.LeftShift;
 
     void Start()
     {

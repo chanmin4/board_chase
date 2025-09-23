@@ -1,3 +1,5 @@
+/*
+
 #if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
@@ -215,3 +217,4 @@ public class SurvivalGizmo : MonoBehaviour
     }
 }
 #endif
+*/

@@ -132,7 +132,7 @@ public class ProgressManager : MonoBehaviour
 
     // ───────────────── 업적 판단/상태 ─────────────────
 
-    public bool IsAchievementEligible(string achievementId)
+    public bool IsAchievementEligible_Score(string achievementId)
     {
         foreach (var a in Achievements.Table)
             if (a.id == achievementId)
@@ -152,24 +152,71 @@ public class ProgressManager : MonoBehaviour
         var so = RewardDB.Get(achievementId);                   // RewardSO(id, type, requiredBestScore...)
         if (so == null) return false;
 
-        // 3) 조건 달성 여부(지금은 점수 기준; 필요 시 시간 등 추가 가능)
-        bool eligible = Data.bestScore >= so.requiredBestScore;
+        // 3) pt 조건 달성 여부(지금은 점수 기준; 필요 시 시간 등 추가 가능)
+        bool eligible = IsAchievementEligible_Score(achievementId);
 
-        // 4) 이미 소유(Unlocked)했는지 — 타입별로 분기
-        bool owned = false;
+        // 4)해금했는지 확인 — 타입별로 분기
+        bool unlocked = false;
         switch (so.type) // RewardType.Skin | RewardType.Card
         {
             case RewardType.Skin:
-                owned = Data.unlockedSkins != null && Data.unlockedSkins.Contains(so.id);
+                unlocked= Data.unlockedSkins != null && Data.unlockedSkins.Contains(so.id);
                 break;
             case RewardType.Card:
-                owned = Data.unlockedAbilities != null && Data.unlockedAbilities.Contains(so.id);
+                unlocked= Data.unlockedAbilities != null && Data.unlockedAbilities.Contains(so.id);
                 break;
         }
 
-        // 5) ‘달성했고(eligible) 아직 소유 안 했고(!owned)’ 이면 수령 가능
-        return eligible && !owned;
+        // 5) ‘달성했고(eligible) 해금된상태이면 (unlocked)’ 이면 수령 가능
+        return eligible && unlocked;
     }
+    public bool IsUnlockable(string achievementId)
+    {
+        // 이미 수령(Claimed)했으면 언락 대상 아님
+        if (IsAchievementClaimed(achievementId)) return false;
+
+        var so = RewardDB.Get(achievementId);
+        if (so == null) return false;
+
+        // 조건 달성(점수 등) 확인 — 필요시 시간 조건 추가
+        if (!IsAchievementEligible_Score(achievementId)) return false;
+
+        // 아직 언락되지 않았는지(타입별)
+        switch (so.type) // RewardType.Skin | RewardType.Card(=Ability)
+        {
+            case RewardType.Skin:
+                return Data.unlockedSkins == null || !Data.unlockedSkins.Contains(so.id);
+            case RewardType.Card:
+                return Data.unlockedAbilities == null || !Data.unlockedAbilities.Contains(so.id);
+            default:
+                return false;
+        }
+    }
+
+    public bool UnlockByAchievementId(string achievementId)
+    {
+        var so = RewardDB.Get(achievementId);
+        if (so == null) return false;
+
+        if (!IsUnlockable(achievementId)) return false; // 이미 언락/수령/조건미달이면 스킵
+
+        if (so.type == RewardType.Skin)
+        {
+            Data.unlockedSkins ??= new List<string>();
+            if (!Data.unlockedSkins.Contains(so.id)) Data.unlockedSkins.Add(so.id);
+        }
+        else // RewardType.Card
+        {
+            Data.unlockedAbilities ??= new List<string>();
+            if (!Data.unlockedAbilities.Contains(so.id)) Data.unlockedAbilities.Add(so.id);
+        }
+
+        Save();
+        OnUnlocksChanged?.Invoke(); // UI 리프레시
+        return true;
+    }
+
+
 
     public bool ClaimAchievement(string achievementId)
     {
@@ -184,54 +231,19 @@ public class ProgressManager : MonoBehaviour
         switch (ach.unlockType)
         {
             case UnlockType.Skin:
-                if (!Data.unlockedSkins.Contains(ach.payloadId))
-                    Data.unlockedSkins.Add(ach.payloadId);
+                if (Data.unlockedSkins.Contains(ach.payloadId))
+                    Data.ownedSkins.Add(ach.payloadId);
                 break;
 
             case UnlockType.Ability:
                 if (!Data.unlockedAbilities.Contains(ach.payloadId))
-                    Data.unlockedAbilities.Add(ach.payloadId);
+                    Data.ownedAbilities.Add(ach.payloadId);
                 break;
         }
 
         Data.claimedAchievements.Add(achievementId);
 
         // 시각/런타임 후처리
-        RewardDB.GrantVisualOrRuntime(ach.payloadId, this);
-
-        Save();
-        OnUnlocksChanged?.Invoke();
-        return true;
-    }
-
-    // ───────────────── 레거시 호환 (가능하면 사용 금지) ─────────────────
-    [System.Obsolete("TryClaim은 즉시 수령합니다. 새 플로우에선 MarkAchievementClaimable/ClaimAchievement를 사용하세요.")]
-    public bool TryClaim(string achievementId)
-    {
-        if (!IsAchievementEligible(achievementId)) return false;
-        if (IsAchievementClaimed(achievementId)) return false;
-
-        Achievement? found = null;
-        foreach (var a in Achievements.Table)
-            if (a.id == achievementId) { found = a; break; }
-        if (found == null) return false;
-
-        var ach = found.Value;
-
-        switch (ach.unlockType)
-        {
-            case UnlockType.Skin:
-                if (!Data.unlockedSkins.Contains(ach.payloadId))
-                    Data.unlockedSkins.Add(ach.payloadId);
-                break;
-
-            case UnlockType.Ability:
-                if (!Data.unlockedAbilities.Contains(ach.payloadId))
-                    Data.unlockedAbilities.Add(ach.payloadId);
-                break;
-        }
-
-        Data.claimedAchievements.Add(achievementId);
         RewardDB.GrantVisualOrRuntime(ach.payloadId, this);
 
         Save();
