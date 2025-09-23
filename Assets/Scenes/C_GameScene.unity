@@ -2200,59 +2200,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56c1598441cf4ae47b9a5593dd6643d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  board: {fileID: 1290663343}
-  director: {fileID: 1606759577}
-  player: {fileID: 2113993634}
-  gridLine:
-    r: 0
-    g: 0
-    b: 0
-    a: 0.25
-  border:
-    r: 0
-    g: 0
-    b: 0
-    a: 0.8
-  playerTileC:
-    r: 1
-    g: 1
-    b: 1
-    a: 0.35
-  contamTileC:
-    r: 0.6
-    g: 0.2
-    b: 0.8
-    a: 0.25
-  profileFill:
-  - r: 0.1
-    g: 0.8
-    b: 1
-    a: 0.2
-  - r: 0.1
-    g: 1
-    b: 0.4
-    a: 0.2
-  - r: 1
-    g: 0.9
-    b: 0.1
-    a: 0.2
-  - r: 1
-    g: 0.4
-    b: 0.2
-    a: 0.2
-  - r: 0.6
-    g: 0.5
-    b: 1
-    a: 0.2
-  - r: 0.2
-    g: 1
-    b: 0.8
-    a: 0.2
-  ringLine:
-    r: 0
-    g: 0
-    b: 0
-    a: 0.9
 --- !u!4 &412291445
 Transform:
   m_ObjectHideFlags: 0
@@ -7364,7 +7311,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -7414,9 +7361,9 @@ MonoBehaviour:
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
   m_ActiveFontFeatures: 6e72656b
-  m_enableExtraPadding: 0
+  m_enableExtraPadding: 1
   checkPaddingRequired: 0
-  m_isRichText: 1
+  m_isRichText: 0
   m_EmojiFallbackSupport: 1
   m_parseCtrlCharacters: 1
   m_isOrthographic: 1

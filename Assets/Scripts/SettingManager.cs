@@ -47,13 +47,13 @@ public class SettingManager : MonoBehaviour
         bgmMuteButton.onClick.AddListener(OnBGMMuteToggle);
         audioMixer.GetFloat("BGMVol", out float currentBgmDB);
         bgmSlider.value = Mathf.Pow(10, currentBgmDB / 20f);
-
+        bgmMuteIcon.sprite = bgm_muteOffSprite;
         // SFX
         sfxSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
         sfxMuteButton.onClick.AddListener(OnSFXMuteToggle);
         audioMixer.GetFloat("SFXVol", out float currentSfxDB);
         sfxSlider.value = Mathf.Pow(10, currentSfxDB / 20f);
-
+        sfxMuteIcon.sprite = sfx_muteOffSprite;
         fullscreenToggle.onValueChanged.AddListener(OnToggleFullscreen);
 
         resolutions = Screen.resolutions;
