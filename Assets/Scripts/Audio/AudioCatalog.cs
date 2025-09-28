@@ -39,6 +39,34 @@ public class AudioCatalog : ScriptableObject
     }
 
 #if UNITY_EDITOR
+ [MenuItem("CONTEXT/AudioCatalog/Reset", false, 0)]
+    static void ResetWithConfirm(MenuCommand cmd)
+    {
+        var cat = (AudioCatalog)cmd.context;
+        bool ok = EditorUtility.DisplayDialog(
+            "Reset Audio Catalog?",
+            "카탈로그를 초기화하시겠어요?\n(되돌리기: Ctrl+Z)",
+            "Reset", "Cancel"
+        );
+        if (!ok) return;
+
+        Undo.RecordObject(cat, "Reset Audio Catalog");
+        // ‘완전 초기화 금지’로 쓰고 싶으면 다음 두 줄 주석 처리
+        cat.items?.Clear();
+        cat.Build();
+
+        EditorUtility.SetDirty(cat);
+        AssetDatabase.SaveAssets();
+        UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    // 필요 시 조건부 비활성화(회색 처리)
+    [MenuItem("CONTEXT/AudioCatalog/Reset", true)]
+    static bool ValidateReset(MenuCommand cmd) => !EditorApplication.isPlaying;
+
+
+
     // ---------- 공통 유틸 ----------
     static AudioChannel ChannelForTop(string top)
         => string.Equals(top, "bgm", StringComparison.OrdinalIgnoreCase) ? AudioChannel.BGM : AudioChannel.SFX;
@@ -59,6 +87,8 @@ public class AudioCatalog : ScriptableObject
         cat.Build();
         EditorUtility.SetDirty(cat);
         AssetDatabase.SaveAssets();
+        UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+        EditorApplication.QueuePlayerLoopUpdate();
         Debug.Log($"[AudioCatalog] Added empty entry ({top})");
     }
 
@@ -106,6 +136,8 @@ public class AudioCatalog : ScriptableObject
         Build();
         EditorUtility.SetDirty(this);
         AssetDatabase.SaveAssets();
+        UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+        EditorApplication.QueuePlayerLoopUpdate();
         Debug.Log("[AudioCatalog] Sorted by namespace");
     }
 

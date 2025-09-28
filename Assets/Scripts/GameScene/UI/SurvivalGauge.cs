@@ -49,7 +49,7 @@ public class SurvivalGauge : MonoBehaviour
     public float Current        => current;
     public float Max            => max;
     public bool  IsContaminated => contaminated;
-
+    public event System.Action GaugeGet;
     void Reset()
     {
         slider = GetComponentInChildren<Slider>(true);
@@ -109,6 +109,7 @@ public class SurvivalGauge : MonoBehaviour
     public void Add(float delta)
     {
         current = Mathf.Clamp(current + delta, 0f, max);
+        GaugeGet?.Invoke();
     }
 
     // 오염 상태 토글(디렉터에서 호출)

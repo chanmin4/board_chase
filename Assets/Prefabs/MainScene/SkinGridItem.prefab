@@ -162,6 +162,7 @@ GameObject:
   - component: {fileID: 5629867767249372757}
   - component: {fileID: 1487795823844139481}
   - component: {fileID: 4784029041841176034}
+  - component: {fileID: 1345810627530738785}
   m_Layer: 5
   m_Name: SkinGridItem
   m_TagString: Untagged
@@ -262,3 +263,19 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_IsOn: 0
+--- !u!114 &1345810627530738785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8619771134617430901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b026d94c1bfa9a244b8d3f0b938933a1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  toggle: {fileID: 4784029041841176034}
+  keyOn: ui.skininventoryequip
+  keyOff: ui.skininventoryequip
+  playOnAwakeSync: 0

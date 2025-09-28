@@ -127,6 +127,7 @@ GameObject:
   - component: {fileID: 4743387325033375100}
   - component: {fileID: 1272567960006785179}
   - component: {fileID: 8232655261136145173}
+  - component: {fileID: 7752472589278380436}
   m_Layer: 5
   m_Name: Toggle_Image
   m_TagString: Untagged
@@ -239,6 +240,22 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_IsOn: 0
+--- !u!114 &7752472589278380436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5408374501841566247}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5031cfe0ca0542147bb112f5269d92af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  toggle: {fileID: 8232655261136145173}
+  keyOn: ui.risk.on
+  keyOff: ui.riskoff
+  playOnAwakeSync: 0
 --- !u!1 &7358737558502599400
 GameObject:
   m_ObjectHideFlags: 0

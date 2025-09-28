@@ -5406,11 +5406,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa7cb9d666e466c48b8bd25fb05035fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetAspect: {x: 16, y: 9}
-  referenceResolution: {x: 1920, y: 1080}
-  manageCameras: 1
+  autoManage: 1
   manageCanvases: 1
-  forceCameraSolidBlackBackground: 0
+  manageMainCamera: 0
+  referenceResolution: {x: 1920, y: 1080}
+  targetAspect: {x: 16, y: 9}
+  windowedDefaultW: 1600
+  windowedDefaultH: 900
+  preferBorderlessOnFullscreen: 1
 --- !u!4 &1997419725
 Transform:
   m_ObjectHideFlags: 0

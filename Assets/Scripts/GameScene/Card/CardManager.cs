@@ -27,8 +27,8 @@ public class CardManager : MonoBehaviour
 
     public int riskAddRequiredCharge = 0;   // 요구 충전 +N
     public bool riskDisableUse = false;     // 카드 사용 금지 ON/OFF
-    
 
+    public event System.Action CardUse;
     CardData data;
     int charge;
     bool onCooldown;
@@ -125,6 +125,7 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
     {
         if (!data || onCooldown || riskDisableUse || charge < EffectiveMaxCharge) return;
         EnsureAbility();
+        CardUse?.Invoke();
         ability.Activate(player, director, data);
 
         charge = 0;

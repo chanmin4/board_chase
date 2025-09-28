@@ -54,6 +54,10 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
     float pull;
     bool launchedThisDrag = false;
 
+    public event System.Action DragPush;
+    public event System.Action DragPull;
+
+
     void Start()
     {
         if (!cam) cam = Camera.main;
@@ -90,6 +94,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
             {
                 launchedThisDrag = false;
                 dragging = true; SetVis(true); InitAt(startPos);
+                DragPull?.Invoke(); 
             }
             // UI 위에서 누른 경우: 드래그 시작을 ‘무시’만 하고 그대로 종료
         }
@@ -135,6 +140,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
                     DragCount++;
                 }
                 dragging = false; SetVis(false);
+                DragPush?.Invoke();
                 if (!launchedThisDrag && pull >= minPull)
                 {
                     launchedThisDrag = true;

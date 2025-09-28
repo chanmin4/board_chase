@@ -36,6 +36,7 @@ public class DiskLauncher : MonoBehaviour
     public int baseCharges = 2;
     public int maxCharges  = 5; // 0 or less => unlimited cap
     public int Charges { get; private set; }
+    bool _readyPrev;
     
     // 내부 상태
     //int _lastWallHitsForBonus = 0;
@@ -44,6 +45,7 @@ public class DiskLauncher : MonoBehaviour
     public event Action<int, int> OnTileChanged;
     public event Action<int,int> OnStoppedOnTile;
     public event Action<int,int> OnChargesChanged;
+    public event System.Action DragChargeOn;
 
     Rigidbody rb;
     //bool launched;
@@ -51,9 +53,11 @@ public class DiskLauncher : MonoBehaviour
 
     SurvivalDirector director;
 
-    void Awake(){
+    void Awake()
+    {
         rb = GetComponent<Rigidbody>();
-        if (!board){
+        if (!board)
+        {
             board = FindAnyObjectByType<BoardGrid>();
             if (!board) Debug.LogError("[DiskLauncher] BoardGrid reference missing.");
         }
@@ -65,11 +69,12 @@ public class DiskLauncher : MonoBehaviour
             //director.OnWallHitsChanged += HandleWallHitsChanged_Bonus;
         }
 
-        UpdateCurrentTile(forceEvent:true);
+        UpdateCurrentTile(forceEvent: true);
 
         // 시작값
         if (!useCooldown) ResetChargesToBase();
         else NotifyCooldown(); // HUD 초기화
+        CheckReadyEdge(false);
     }
 
     void OnDestroy()
@@ -91,11 +96,21 @@ public class DiskLauncher : MonoBehaviour
             CooldownRemain = Mathf.Max(0f, CooldownRemain - Time.deltaTime);
             NotifyCooldown();
         }
+        CheckReadyEdge(true);
     }
+    void CheckReadyEdge(bool invokeEvent = true)
+    {
+        bool readyNow = useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
+        if (!_readyPrev && readyNow && invokeEvent)
+            DragChargeOn?.Invoke();  
+        _readyPrev = readyNow;
+    }
+
     void StartCooldown()
     {
         CooldownRemain = Mathf.Max(0.0001f, cooldownSeconds);
         NotifyCooldown();
+        CheckReadyEdge(false);
     }
     void NotifyCooldown() => OnCooldownChanged?.Invoke(CooldownRemain, cooldownSeconds);
 
@@ -169,13 +184,14 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
 }
 */
 
-// 남은 쿨다운을 줄이는 유틸
-void ReduceCooldown(float seconds)
-{
-    if (seconds <= 0f) return;
-    CooldownRemain = Mathf.Max(0f, CooldownRemain - seconds);
-    NotifyCooldown(); // HUD 갱신
-}
+    // 남은 쿨다운을 줄이는 유틸
+    void ReduceCooldown(float seconds)
+    {
+        if (seconds <= 0f) return;
+        CooldownRemain = Mathf.Max(0f, CooldownRemain - seconds);
+        NotifyCooldown(); // HUD 갱신
+        CheckReadyEdge(true);
+    }
 /*
         void FixedUpdate()
         {

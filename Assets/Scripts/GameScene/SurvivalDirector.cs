@@ -118,6 +118,7 @@ public class SurvivalDirector : MonoBehaviour
     // public event Action<int> OnZoneHitsChanged;
     public event System.Action<int, int, int, bool> OnZoneHit;
     public event System.Action<int, float, float> OnZoneBonusSectorChanged;
+    public event System.Action ContamSpawn;
 
     public bool HasState =>
     board != null &&
@@ -632,6 +633,7 @@ public class SurvivalDirector : MonoBehaviour
             state[Idx(t.x, t.y)] = TileState.Contaminated;
 
         OnZoneContaminatedCircle?.Invoke(-999, centerWorld, radiusWorld);
+        ContamSpawn?.Invoke();
     }
 
     public void ClearCircleWorld(Vector3 centerWorld, float radiusWorld)

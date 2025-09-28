@@ -16,6 +16,72 @@ MonoBehaviour:
   - key: bgm.mainscene
     channel: 0
     ev: {fileID: 11400000, guid: 7291f20dd77094f429988e15ae9e55cb, type: 2}
+  - key: bgm.riskselectionscene
+    channel: 0
+    ev: {fileID: 11400000, guid: 8cf241cdb7d5b704c8f4c085973bec59, type: 2}
+  - key: bgm.gamescene.playing
+    channel: 0
+    ev: {fileID: 11400000, guid: d84e25ddb66e6e849bd4343b55914fd1, type: 2}
+  - key: bgm.gamescene.success
+    channel: 0
+    ev: {fileID: 11400000, guid: 51898d99b38c21e46963f0ea44574ef2, type: 2}
+  - key: bgm.gamescene.gameover
+    channel: 0
+    ev: {fileID: 11400000, guid: 983bce3cee03883498537459dadce246, type: 2}
+  - key: ui.achievementpopupclick
+    channel: 1
+    ev: {fileID: 11400000, guid: 9f5aff3dfd5c7044da1d477d7374e1b6, type: 2}
+  - key: ui.achievementrewardclick
+    channel: 1
+    ev: {fileID: 11400000, guid: 01527e3a1d5fad646891e0695f230af5, type: 2}
   - key: ui.buttonclick
     channel: 1
     ev: {fileID: 11400000, guid: f185c1d9db87183418b4643d3e5aaa12, type: 2}
+  - key: ui.riskonoff
+    channel: 1
+    ev: {fileID: 11400000, guid: 8ffb42e1b45df96498f5690ac918c418, type: 2}
+  - key: sfx.carduse
+    channel: 2
+    ev: {fileID: 11400000, guid: ab8629c810ce1c340a4fe463e95009ad, type: 2}
+  - key: sfx.contamspawn
+    channel: 2
+    ev: {fileID: 11400000, guid: 2ff8869d713f18d4a9d9619279086982, type: 2}
+  - key: sfx.dragchargeon
+    channel: 2
+    ev: {fileID: 11400000, guid: b25ace91e65badc43af252f45337dc76, type: 2}
+  - key: sfx.dragpull
+    channel: 2
+    ev: {fileID: 11400000, guid: 1b028a70e5768794e8b3706c344a0341, type: 2}
+  - key: sfx.dragpush
+    channel: 2
+    ev: {fileID: 11400000, guid: 6c417ce0e956f8a42812e98d9e1bcfb8, type: 2}
+  - key: ui.skininventoryequip
+    channel: 1
+    ev: {fileID: 11400000, guid: 263e47298bb3fd9469351f0d4e51cb20, type: 2}
+  - key: sfx.gaugeget
+    channel: 2
+    ev: {fileID: 11400000, guid: 08ce3f089347c52438b91bb840b38557, type: 2}
+  - key: sfx.ghostpathcontam
+    channel: 2
+    ev: {fileID: 11400000, guid: 386ab78f1b127fd40b8113e35fd86657, type: 2}
+  - key: sfx.ghostspawn
+    channel: 2
+    ev: {fileID: 11400000, guid: b4df97a2635929e4b8ad20b186675f88, type: 2}
+  - key: sfx.missilelaunch
+    channel: 2
+    ev: {fileID: 11400000, guid: 3bed44dde8a24c04396539a889a3d2cc, type: 2}
+  - key: sfx.rocketlaunch
+    channel: 2
+    ev: {fileID: 11400000, guid: b2b72dc952560504baa2aeb9f28c9262, type: 2}
+  - key: sfx.wallhit
+    channel: 2
+    ev: {fileID: 11400000, guid: 44432780d864f0f4e9ac7cffa453e43c, type: 2}
+  - key: sfx.zonecrithit
+    channel: 2
+    ev: {fileID: 11400000, guid: e80ae11efa34b28449ee1f220582c1f1, type: 2}
+  - key: sfx.zonenormalhit
+    channel: 2
+    ev: {fileID: 11400000, guid: f1bd858e91b24a94cb618ea71f01e0af, type: 2}
+  - key: sfx.incontam
+    channel: 2
+    ev: {fileID: 11400000, guid: d18679695f106f545bb0fd1c5a260fdc, type: 2}
