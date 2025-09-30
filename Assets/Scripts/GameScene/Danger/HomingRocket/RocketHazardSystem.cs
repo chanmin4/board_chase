@@ -18,7 +18,11 @@ public class RocketHazardSystem : MonoBehaviour
     float spawnTimer = 0f;
 
     HomingRocket active;  
+
+    
     public float lastFireTime { get; private set; } = -1f;
+
+    public event System.Action RocketLaunch;
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
@@ -94,6 +98,7 @@ public class RocketHazardSystem : MonoBehaviour
         var target = director ? director.player : null;
         float life = Mathf.Max(0.1f, rocketLifetime);
         r.Setup(director, life, target, homingSpeed, true);
+        RocketLaunch?.Invoke();
     }
 
 }

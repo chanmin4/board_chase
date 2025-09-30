@@ -779,6 +779,7 @@ GameObject:
   - component: {fileID: 288021868066274624}
   - component: {fileID: 3996307581658714158}
   - component: {fileID: 64054173709481423}
+  - component: {fileID: 8524184719133947840}
   m_Layer: 0
   m_Name: ClaimButton
   m_TagString: Untagged
@@ -888,3 +889,16 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8524184719133947840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8623346208973583599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dacb3d442b3722a41932c7ed100fbcf5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: ui.achievementrewardclick

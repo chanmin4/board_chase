@@ -2,15 +2,19 @@ using UnityEngine;
 
 public class BGM_GameScene_GameOver : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public GameOverUI GameOver;
+    public string key = "sfx.rocketlaunch";
 
-    // Update is called once per frame
-    void Update()
+    void Reset()    =>GameOver ??= GetComponent<GameOverUI>();
+    void OnEnable()
     {
-        
+        GameOver??= GetComponent<GameOverUI>();
+        if (!GameOver) { enabled = false; return; }
+        GameOver.GameOver+= Trigger;
     }
+    void OnDisable()
+    {
+        if (GameOver) GameOver.GameOver -= Trigger;
+    }
+    void Trigger() => AudioMaster.I?.PlayKey(key);
 }

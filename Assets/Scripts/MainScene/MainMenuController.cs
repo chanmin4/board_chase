@@ -21,7 +21,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] bool resetSaveWhenStarting = false;    // ← 항상 초기화하고 시작
     [SerializeField] bool allowShiftToReset = false;         // ← Shift 누른 채 Start 시 초기화
     //[SerializeField] KeyCode resetModifier = KeyCode.LeftShift;
-
+    public event System.Action BGM_Mainscene;
     void Start()
     {
         RewardDB.EnsureLoaded();
@@ -37,8 +37,9 @@ public class MainMenuController : MonoBehaviour
         AchievementButton.onClick.AddListener(OnClickAchievement);
         if (SkinInventoryButton && skin_inventory_manager)
             SkinInventoryButton.onClick.AddListener(() => skin_inventory_manager.Open());
-        //if (AudioMaster.I) AudioMaster.I.PlayBGMKey("bgm.main");
+        BGM_Mainscene?.Invoke();
         Refresh();
+
     }
 
     void OnDestroy()

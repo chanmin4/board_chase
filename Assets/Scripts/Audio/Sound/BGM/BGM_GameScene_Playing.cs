@@ -1,16 +1,11 @@
 using UnityEngine;
 
-public class B : MonoBehaviour
+public class BGM_GameScene_Playing : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public string bgmKey = "bgm.gamescene.playing";
+
     void Start()
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        if (AudioMaster.I) AudioMaster.I.PlayBGMKey(bgmKey);
     }
 }

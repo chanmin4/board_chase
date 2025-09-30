@@ -26,7 +26,7 @@ public class AchievementPopupManager : MonoBehaviour
     readonly Queue<(string title, string desc, Sprite image)> q = new();
     bool playing;
     int activePopupCount = 0; // 현재 떠 있는 팝업 수
-
+    public event System.Action AchievePopup;
     void Awake()
     {
         if (achievePanel && achievePanel.activeSelf) achievePanel.SetActive(false);
@@ -64,11 +64,6 @@ public class AchievementPopupManager : MonoBehaviour
         MaybeClosePanel();
     }
 
-    public void Enqueue(string title, string desc, Sprite image = null)
-    {
-        q.Enqueue((title, desc, image));
-        if (!playing) StartCoroutine(PlayQueue());
-    }
 
     public IEnumerator ShowOnce(string title, string desc, Sprite image = null, bool requireClick = true, float minShowSeconds = 0f)
     {
@@ -95,7 +90,7 @@ public class AchievementPopupManager : MonoBehaviour
         }
 
         refs.root.SetActive(true);
-
+        AchievePopup?.Invoke();
         float t = 0f;
         while (true)
         {
@@ -113,38 +108,7 @@ public class AchievementPopupManager : MonoBehaviour
         MaybeClosePanel();
     }
 
-    // 구버전 호환 오버로드
-    public IEnumerator ShowOnce(string title, string desc, bool requireClick, float minShowSeconds)
-        => ShowOnce(title, desc, null, requireClick, minShowSeconds);
-
-    IEnumerator PlayQueue()
-    {
-        playing = true;
-        EnsurePanel(true);
-
-        while (q.Count > 0)
-        {
-            var (t, d, img) = q.Dequeue();
-            var refs = Spawn();
-            if (!refs) break;
-
-            if (refs.titleText)    refs.titleText.text = t;
-            if (refs.descText)     refs.descText.text  = d;
-            if (refs.achieveImage) refs.achieveImage.sprite = img;
-
-            refs.root.SetActive(true);
-            yield return new WaitForSecondsRealtime(showSeconds);
-            if (verboseLogs) Debug.Log($"[AchPopup] Destroy '{refs.gameObject.name}'");
-            Destroy(refs.gameObject);
-
-            activePopupCount = Mathf.Max(0, activePopupCount - 1);
-            yield return new WaitForSecondsRealtime(gapSeconds);
-        }
-
-        playing = false;
-        MaybeClosePanel();
-    }
-
+   
     AchievementPopupPrefab Spawn()
     {
         if (!popupPrefab)
@@ -215,6 +179,41 @@ public class AchievementPopupManager : MonoBehaviour
         }
     }
 
+/* 뜨고 자동 사라질때 (구버전 )
+    public void Enqueue(string title, string desc, Sprite image = null)
+    {
+        q.Enqueue((title, desc, image));
+        if (!playing) StartCoroutine(PlayQueue());
+    }
+     IEnumerator PlayQueue()
+    {
+        playing = true;
+        EnsurePanel(true);
+
+        while (q.Count > 0)
+        {
+            var (t, d, img) = q.Dequeue();
+            var refs = Spawn();
+            if (!refs) break;
+
+            if (refs.titleText)    refs.titleText.text = t;
+            if (refs.descText)     refs.descText.text  = d;
+            if (refs.achieveImage) refs.achieveImage.sprite = img;
+
+            refs.root.SetActive(true);
+            yield return new WaitForSecondsRealtime(showSeconds);
+            if (verboseLogs) Debug.Log($"[AchPopup] Destroy '{refs.gameObject.name}'");
+            Destroy(refs.gameObject);
+
+            activePopupCount = Mathf.Max(0, activePopupCount - 1);
+            yield return new WaitForSecondsRealtime(gapSeconds);
+        }
+
+        playing = false;
+        MaybeClosePanel();
+    }
+
+    */
     [ContextMenu("DEBUG_Spawn test popup")]
     void DEBUG_Spawn()
     {

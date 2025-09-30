@@ -2,15 +2,19 @@ using UnityEngine;
 
 public class SFX_InContam : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public SurvivalDirector Director;
+    public string key = "sfx.incontam";
 
-    // Update is called once per frame
-    void Update()
+    void Reset()    =>Director ??= GetComponent<SurvivalDirector>();
+    void OnEnable()
     {
-        
+        Director??= GetComponent<SurvivalDirector>();
+        if (!Director) { enabled = false; return; }
+        Director.OnEnterContam+= Trigger;
     }
+    void OnDisable()
+    {
+        if (Director) Director.OnEnterContam  -= Trigger;
+    }
+    void Trigger(Vector3 pos, int ix, int iy) => AudioMaster.I?.PlayKey(key);
 }

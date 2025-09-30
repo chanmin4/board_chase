@@ -1,16 +1,14 @@
 using UnityEngine;
-
+using UnityEngine.UI;
 public class UI_AchievementRewardClick : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public string key = "ui.achievementrewardclick";
+    void Awake()
     {
-        
+        GetComponent<Button>().onClick.AddListener(() =>
+        {
+            if (AudioMaster.I) AudioMaster.I.PlayKey(key);
+        });
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    
 }

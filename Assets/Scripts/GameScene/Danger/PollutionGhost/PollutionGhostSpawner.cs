@@ -28,6 +28,7 @@ public class PollutionGhostSpawner : MonoBehaviour
 
     float timer;
     bool firstDone;
+    public event System.Action GhostSpawn;
 
     void Awake()
     {
@@ -65,6 +66,7 @@ public class PollutionGhostSpawner : MonoBehaviour
     {
         int n = Mathf.Max(1, countPerSpawn);
         for (int i = 0; i < n; i++) SpawnOne();
+        GhostSpawn?.Invoke();
     }
 
     void SpawnOne()

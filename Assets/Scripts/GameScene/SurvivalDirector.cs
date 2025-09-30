@@ -31,7 +31,7 @@ public class ZoneProfile
     public ZoneSize size = ZoneSize.Small; 
 
     [Header("진입 요구(벽 튕김 스택)")]
-    public int requiredWallHits = 1;
+    public int requiredZoneHits = 1;
     [Header("게이지 이득/보너스")]
     public float enterBonus = 30f;
     public float gainPerSec = 0f;
@@ -113,12 +113,16 @@ public class SurvivalDirector : MonoBehaviour
     public event Action<int> OnZoneExpired;
     public event Action OnZonesReset;
     public event Action<int, float> OnZoneProgress;                    // 0~1
-    public event Action<int, Vector3, float> OnZoneContaminatedCircle;
+    public event Action<int, Vector3, float> OnZoneContaminatedCircle;//오염원생성
+    public event System.Action<Vector3,int,int> OnEnterContam; // (worldPos, ix, iy)
+public event System.Action<Vector3,int,int> OnExitContam;  // (worldPos, ix, iy)
     public event Action<int> OnZoneConsumed;
     // public event Action<int> OnZoneHitsChanged;
     public event System.Action<int, int, int, bool> OnZoneHit;
     public event System.Action<int, float, float> OnZoneBonusSectorChanged;
     public event System.Action ContamSpawn;
+    public event System.Action ZoneNormalHit_SFX;
+    public event System.Action ZoneCritHit_SFX;
 
     public bool HasState =>
     board != null &&
@@ -182,7 +186,7 @@ public class SurvivalDirector : MonoBehaviour
     int nextZoneId = 1;
     int lastBounceZoneId = -1;
     float lastBounceZoneTime = -999f;
-
+bool _prevInContam = false;
     // ===== 편의 Getter =====
     public int Width => board ? board.width : 0;
     public int Height => board ? board.height : 0;
@@ -209,21 +213,33 @@ public class SurvivalDirector : MonoBehaviour
         if (!board || !player) return;
         float dt = Time.deltaTime;
         if (board.WorldToIndex(player.position, out int px, out int py))
-            gauge?.SetContaminated(IsContaminated(px, py));
-        for (int i = zones.Count - 1; i >= 0; --i)
         {
-            var z = zones[i];
-            z.remaintime -= dt;
-            float time_decrease_ratio = 1f - Mathf.Clamp01(z.remaintime / Mathf.Max(0.0001f, z.time_to_live));
-            OnZoneProgress?.Invoke(z.id, time_decrease_ratio); // ← 링/타이머 UI는 이 값으로
-            if (z.remaintime <= 0f)
+            bool now = IsContaminated(px, py);
+            gauge?.SetContaminated(now);
+            if (now != _prevInContam)
             {
-                MarkContaminationCircle(z);
-                zones.RemoveAt(i);
-                StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
-                continue;
+
+                if (now) OnEnterContam?.Invoke(player.position, px, py);
+                else OnExitContam?.Invoke(player.position, px, py);
+                _prevInContam = now;
+
             }
+
         }
+        for (int i = zones.Count - 1; i >= 0; --i)
+            {
+                var z = zones[i];
+                z.remaintime -= dt;
+                float time_decrease_ratio = 1f - Mathf.Clamp01(z.remaintime / Mathf.Max(0.0001f, z.time_to_live));
+                OnZoneProgress?.Invoke(z.id, time_decrease_ratio); // ← 링/타이머 UI는 이 값으로
+                if (z.remaintime <= 0f)
+                {
+                    MarkContaminationCircle(z);
+                    zones.RemoveAt(i);
+                    StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
+                    continue;
+                }
+            }
 
         var pWorld = player.position;
         for (int i = zones.Count - 1; i >= 0; i--)
@@ -289,7 +305,15 @@ public class SurvivalDirector : MonoBehaviour
                     OnZoneHit?.Invoke(z.id, z.curhit, z.reqHit, isBonus); // (선택) 크랙 연출
 
                     // 보너스면 0.2s 뒤 섹터 리롤
-                    if (isBonus) z.bonusNextRefreshAt = Time.time + bonusRefreshDelay;
+                    if (isBonus)
+                    {
+                        z.bonusNextRefreshAt = Time.time + bonusRefreshDelay;
+                        ZoneCritHit_SFX?.Invoke();
+                    }
+                    else
+                    {
+                        ZoneNormalHit_SFX?.Invoke();
+                    }
 
                     lastBounceZoneId = z.id;
                     lastBounceZoneTime = Time.time;
@@ -667,7 +691,7 @@ public class SurvivalDirector : MonoBehaviour
 
     public int GetEffectiveRequiredHits(ZoneProfile p)
     {
-        return Mathf.Max(0, p.requiredWallHits + GetReqAddBySize(p.size));
+        return Mathf.Max(0, p.requiredZoneHits + GetReqAddBySize(p.size));
     }
 
 
@@ -685,21 +709,5 @@ public class SurvivalDirector : MonoBehaviour
         OnZoneContaminatedCircle?.Invoke(z.id, cW, rWorld);
         OnZoneExpired?.Invoke(z.id);
     }
-    
-// ===== 벽 튕김 카운트 (구기능)
-    /*
-    public void AddWallHit(int amount = 1)
-    {
-        //wallHits = Mathf.Max(0, wallHits + amount);
-        //OnWallHitsChanged?.Invoke(wallHits);
-    }
-
-    public void ResetWallHits()
-    {
-        //wallHits = 0;
-        //OnWallHitsChanged?.Invoke(wallHits);
-        //dragaimcontroller.DragCount = 0;
-    }
-    */
 }
 

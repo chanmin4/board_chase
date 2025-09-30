@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Linq;
+using NUnit.Framework;
 
 public class SurvivalSuccessManager : MonoBehaviour
 {
@@ -24,7 +25,7 @@ public class SurvivalSuccessManager : MonoBehaviour
     public bool pauseAudio = true;
     public bool showCursor = true;
     public bool autoBlockOtherUI = true;
-
+    public event System.Action Success;
     public GameObject[] dontBlockUIRoots;
     public Behaviour[] disableOnSuccess;
 
@@ -59,7 +60,7 @@ public class SurvivalSuccessManager : MonoBehaviour
 
         lastRunPoints = CalcRunPoints();
         ProgressManager.Instance?.GameSuccessReportRunScore(lastRunPoints);
-
+        Success?.Invoke();
         StartCoroutine(ShowUnlocksSequence());
     }
 

@@ -39,7 +39,7 @@ public class BarrageMissileSpawner : MonoBehaviour
     float spawnTimer = 0f; //내부 타이머
     public float lastFireTime { get; private set; } = -1f;
     Vector3 boardCenter;
-
+    public event System.Action MissileLaunch;
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
@@ -133,6 +133,7 @@ public class BarrageMissileSpawner : MonoBehaviour
                 for (int k = 0; k < count; k++) SpawnOne(p);
             }
         }
+        MissileLaunch.Invoke();
     }
 
     void SpawnOne(Vector3 pos)

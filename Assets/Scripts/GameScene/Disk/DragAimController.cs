@@ -104,6 +104,8 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
         {
             dragging = false; SetVis(false);
             pull = 0f;
+            if (launcher) launcher.AddCooldown(1f);
+            DragPush?.Invoke();
             return;
         }
 

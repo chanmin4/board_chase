@@ -23,6 +23,7 @@ public class GameOverUI : MonoBehaviour
     public Rigidbody[] toSleepBodies;
 
     bool gameOver;
+    public event System.Action GameOver;
 
     void Awake()
     {
@@ -57,12 +58,12 @@ public class GameOverUI : MonoBehaviour
     public void ShowGameOver()
     {
         if (gameOver) return;
-        gameOver = true;
+
 
         try
         {
             Log("BEGIN");
-
+            
             // 1) 최종 표시 문자열 & 저장용 시간(밀리초) 계산 — 정지 전에 확보
             string clock = null;
             if (liveTimer && liveTimer.timeText) clock = liveTimer.timeText.text;
@@ -125,7 +126,8 @@ public class GameOverUI : MonoBehaviour
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
             Time.timeScale = 0f;
-
+            GameOver?.Invoke();
+            gameOver = true;
             Log("END (panel shown)");
         }
         catch (System.Exception e)

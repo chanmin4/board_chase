@@ -37,15 +37,20 @@ public class DiskLauncher : MonoBehaviour
     public int maxCharges  = 5; // 0 or less => unlimited cap
     public int Charges { get; private set; }
     bool _readyPrev;
-    
+
     // 내부 상태
     //int _lastWallHitsForBonus = 0;
+    [Header("Wall Hit")]
+    public LayerMask wallMask;
+    public event System.Action WallHit; 
+
 
     // 이벤트
     public event Action<int, int> OnTileChanged;
     public event Action<int,int> OnStoppedOnTile;
     public event Action<int,int> OnChargesChanged;
     public event System.Action DragChargeOn;
+
 
     Rigidbody rb;
     //bool launched;
@@ -104,6 +109,15 @@ public class DiskLauncher : MonoBehaviour
         if (!_readyPrev && readyNow && invokeEvent)
             DragChargeOn?.Invoke();  
         _readyPrev = readyNow;
+    }
+    void OnCollisionEnter(Collision c)
+    {
+        // 벽 레이어만 필터
+        if (((1 << c.collider.gameObject.layer) & wallMask) == 0) return;
+
+        var contact = c.GetContact(0);
+        // 구독자(SFX 등)에게 알림
+        WallHit?.Invoke();
     }
 
     void StartCooldown()
@@ -192,19 +206,29 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
         NotifyCooldown(); // HUD 갱신
         CheckReadyEdge(true);
     }
-/*
-        void FixedUpdate()
-        {
-            UpdateCurrentTile(forceEvent:false);
-
-            if (launched && rb.linearVelocity.magnitude < minStopSpeed)
+    /*
+            void FixedUpdate()
             {
-                launched = false;
-                rb.linearVelocity = Vector3.zero;
-                SnapToTileCenterAndReport();
+                UpdateCurrentTile(forceEvent:false);
+
+                if (launched && rb.linearVelocity.magnitude < minStopSpeed)
+                {
+                    launched = false;
+                    rb.linearVelocity = Vector3.zero;
+                    SnapToTileCenterAndReport();
+                }
             }
-        }
-    */
+        */
+    public void AddCooldown(float seconds)
+    {
+        if (!useCooldown) return;
+        if (seconds <= 0f) return;
+
+        CooldownRemain = Mathf.Max(0f, CooldownRemain) + seconds; // 누적
+        NotifyCooldown();
+        CheckReadyEdge(true);
+    }
+
     // === 내부 유틸 ===
     void UpdateCurrentTile(bool forceEvent)
     {
