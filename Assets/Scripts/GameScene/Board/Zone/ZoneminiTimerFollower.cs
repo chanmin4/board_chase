@@ -1,201 +1,140 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 public class ZoneMiniTimerFollower : MonoBehaviour
 {
-    [Header("Refs")]
-    [NonSerialized]public Canvas canvas;      //null이면 런타임에 World Space Canvas를 생성
-    [NonSerialized]public Camera cam;          // null이면 Camera.main
-    public RectTransform uiRoot;          // 이 오브젝트의 RectTransform
-    public Image bgImage;                 // 선택: 배경 링(회색 등)
-    public Image fillImage;               // 진행 링(초록→빨강 등)
-    [Range(0.3f, 0.9f)] public float innerHoleRatio = 0.60f; // 도넛 구멍 비율
-    [Header("Placement")]
-    [Range(0f, 360f)] public float angleDeg = 45f;   // 존의 우상단: 45°
-    public float pixelMargin = 30f;                 // 원 바깥 여백(px)
+    // 기존 필드들(타이머 비주얼 등)은 그대로 두세요.
+    public RectTransform uiRoot;
+    public Image bgImage;
+    public Image fillImage;
 
-    // 기존 [Header("Placement")] 아래에 붙이기
-    [Tooltip("존 중심→타이머까지의 거리에서 '반지름'에 곱해지는 배수. 1=원둘레 위, 1.1=조금 바깥, 0.9=조금 안쪽")]
-    [Range(0f, 2f)] public float radialDistanceMul = 1.0f;
+    // ====== 고정 월드 기준(스크린 캔버스용) ======
+    Vector3 worldCenter;           // 이 좌표만 따라감 (디스크 무시)
+    float   worldRadius;
+    float   ttlInit;
+    float   remain;
 
-    [Tooltip("위 배수로 정해진 거리에서 추가로 더/덜 띄우는 픽셀 값(+바깥, -안쪽)")]
-    public float radialExtraPixels = 0f;
-
-    Sprite _fallbackWhite;                // 스프라이트 없을 때 런타임 생성
-    RectTransform _fillHoleRT;            // 진행 링 안쪽 구멍
-    RectTransform _bgHoleRT;              // 배경 링 안쪽 구멍
+    // ====== 카메라/캔버스 캐시 ======
+    Canvas canvas;
+    Camera uiCam;                  // Overlay면 null
     RectTransform canvasRT;
-    Canvas _cachedCanvas;
-    // ---- 내부 상태 ----
-    Vector3 worldCenter;
-    float worldRadius;
-    float ttlInit = 1f;
-    float remain = 1f;
 
-    public float TtlInit => ttlInit; // ZoneVisualManager가 읽기용으로 사용
-    void CacheCanvasRefs()
+    // ====== 월드 부착 모드(선택) ======
+    // [MOD] 존 밑(월드)로 붙이고 싶을 때만 사용
+    public bool followInWorldSpace = true;                  // [MOD]
+    public Transform zoneTransform;                          // [MOD]
+    public float angleDeg = 45f, yLift = 0.6f;               // [MOD]
+    public float radialDistanceMul = 1.1f, radialExtraPx=30f; // [MOD]
+
+    // ---------- 외부에서 호출 ----------
+    // (1) 화면 캔버스에 붙이는 기본 방식 (디스크와 무관)
+    public void Setup(Canvas screenCanvas, Vector3 centerWorld, float radiusWorld, float ttlSeconds)
     {
-        if (canvas)
-        {
-            canvasRT = canvas.transform as RectTransform;
-            _cachedCanvas = canvas;
-            return;
-        }
+        followInWorldSpace = false;                                  // [MOD]
+        canvas  = screenCanvas;
+        uiCam   = (canvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : canvas.worldCamera;
+        canvasRT= canvas.transform as RectTransform;
+        uiRoot  = uiRoot ? uiRoot : (RectTransform)transform;
 
-        var any = FindFirstObjectByType<Canvas>();   // 씬의 HUD Canvas
-        if (!any) return;                            // ← 못 찾으면 그냥 대기(Setup에서 주입됨)
+        worldCenter = centerWorld;   // ★ 디스크 말고 '존' 좌표만 저장
+        worldRadius = Mathf.Max(0.001f, radiusWorld);
+        ttlInit     = Mathf.Max(0.001f, ttlSeconds);
+        remain      = ttlInit;
 
-        canvas = any;
-        canvasRT = canvas.transform as RectTransform;
-        _cachedCanvas = canvas;
-    } 
-public void Setup(Canvas screenCanvas, Vector3 centerW, float radiusW, float ttlSeconds)
-{
-    canvas = screenCanvas;               // ★ 외부 주입만 사용
-    uiRoot  = uiRoot  ? uiRoot  : GetComponent<RectTransform>();
-    fillImage = fillImage ? fillImage : GetComponentInChildren<Image>(true);
-
-    if (fillImage)
-    {
-        fillImage.type = Image.Type.Filled;
-        fillImage.fillMethod = Image.FillMethod.Radial360;
-        fillImage.fillOrigin = (int)Image.Origin360.Top; // 12시 시작
-        fillImage.fillClockwise = true;                  // 시계방향 감소
+        UpdateScreenPos(); // 1회 갱신
+        UpdateFill();
     }
 
-    worldCenter = centerW;
-    worldRadius = Mathf.Max(0.001f, radiusW);
-    ttlInit = Mathf.Max(0.001f, ttlSeconds);
-    remain  = ttlInit;
-
-    EnsureSprites();
-    EnsureDonutHoles();
-}
-
-    public void SetRemain(float remainSeconds)
+    // (2) 화면 캔버스 안 쓰고, 존 밑(월드)에 직부착하는 옵션
+    public void SetupWorld(Transform zone, float radiusWorld, float ttlSeconds, float angleDegForWorld = 45f) // [MOD]
     {
-        remain = Mathf.Clamp(remainSeconds, 0f, ttlInit);
-        if (fillImage)
-        {
-            // 남은비율(1→0)에 맞춰 도넛 채우기 감소
-            float p01 = Mathf.Clamp01(remain / ttlInit);
-            fillImage.fillAmount = p01;
-        }
+        followInWorldSpace = true;     // [MOD]
+        zoneTransform = zone;          // [MOD]
+        worldRadius = Mathf.Max(0.001f, radiusWorld);
+        ttlInit     = Mathf.Max(0.001f, ttlSeconds);
+        remain      = ttlInit;
+        angleDeg    = angleDegForWorld;
+
+        // WorldSpace Canvas 보장(프리팹에 이미 있으면 그대로 사용)
+        var c = GetComponentInParent<Canvas>();
+        if (!c) c = gameObject.AddComponent<Canvas>();
+        c.renderMode = RenderMode.WorldSpace;
+        if (!c.worldCamera) c.worldCamera = Camera.main;
+        canvas = c;
+        uiRoot = uiRoot ? uiRoot : (RectTransform)transform;
+        uiRoot.sizeDelta   = new Vector2(0.4f, 0.4f);   // 20cm x 20cm
+        uiRoot.localScale  = Vector3.one * 0.03f;      // or 원하는 비율
+        uiRoot.localRotation = Quaternion.Euler(90f, 0f, 0f); // [FIX] 월드 모드 초기 회전: 바닥에 눕힘
+
+        UpdateWorldPos(); // [MOD]
+        UpdateFill();
     }
 
-   void LateUpdate()
-{
-    if (!uiRoot) uiRoot = (RectTransform)transform;
-    if (!cam)    cam    = Camera.main;
+    // 필요 시 남은 시간 외부 갱신
+    public void SetRemain(float s) { remain = Mathf.Clamp(s, 0, ttlInit); UpdateFill(); }
+    public float TtlInit => ttlInit;  // 기존 코드 호환용 읽기
 
-    // 캔버스 캐시가 없거나 바뀌었으면 다시 잡기
-    if (!canvasRT || canvas != _cachedCanvas) CacheCanvasRefs();
-    if (!canvasRT || !cam) return;
-
-    // 캔버스 타입별 카메라 파라미터 (Overlay는 null)
-    Camera canvasCam = (canvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : canvas.worldCamera;
-
-    // 1) 존 중심 → HUD 캔버스 로컬 좌표
-    Vector2 c;
-    RectTransformUtility.ScreenPointToLocalPointInRectangle(
-        canvasRT,
-        cam.WorldToScreenPoint(worldCenter),   // ← 존 월드 중심
-        canvasCam,
-        out c
-    );
-
-    // 2) 반지름을 '픽셀'로 추정 : 카메라 right 방향으로 worldRadius 만큼 떨어진 지점
-    Vector3 edgeW = worldCenter + cam.transform.right * worldRadius;
-    Vector2 e;
-    RectTransformUtility.ScreenPointToLocalPointInRectangle(
-        canvasRT,
-        cam.WorldToScreenPoint(edgeW),
-        canvasCam,
-        out e
-    );
-    float rPx = Vector2.Distance(c, e);
-
-    // 3) 우상단(angleDeg) 방향으로 (반지름 픽셀 + pixelMargin)만큼 이동
-    float a   = angleDeg * Mathf.Deg2Rad;               // 0°=우측, 시계+ (HUD 기준)
-    Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-    float distancePx = rPx * Mathf.Max(0f, radialDistanceMul) + pixelMargin + radialExtraPixels;
-    Vector2 hudPos = c + d * distancePx;
-
-    uiRoot.anchoredPosition = hudPos;
-
-    // 4) 화면 밖/뒤면 숨기기(옵션)
-    Vector3 sp = cam.WorldToScreenPoint(worldCenter);
-    bool visible = sp.z > 0f && sp.x >= 0 && sp.x <= Screen.width && sp.y >= 0 && sp.y <= Screen.height;
-    if (uiRoot.gameObject.activeSelf != visible) uiRoot.gameObject.SetActive(visible);
-}
-    void EnsureSprites()
-{
-    if (!_fallbackWhite)
+    // ---------- 내부 ----------
+    void LateUpdate()
     {
-        var tex = new Texture2D(1,1, TextureFormat.RGBA32, false);
-        tex.SetPixel(0,0, Color.white); tex.Apply();
-        _fallbackWhite = Sprite.Create(tex, new Rect(0,0,1,1), new Vector2(0.5f,0.5f), 1f);
-        _fallbackWhite.name = "MiniTimer_White1x1_Runtime";
+        if (followInWorldSpace) { UpdateWorldPos(); return; } // [MOD]
+        UpdateScreenPos();
     }
-    if (fillImage && !fillImage.sprite) fillImage.sprite = _fallbackWhite;
-    if (bgImage   && !bgImage.sprite)   bgImage.sprite   = _fallbackWhite;
 
-    // 도넛(라디얼) 설정 보장
-    if (fillImage)
+    void UpdateScreenPos()
     {
+        if (!canvas || !uiRoot) return;
+
+        var cam = uiCam ? uiCam : Camera.main;
+        if (!cam) return;
+
+        // 월드→스크린
+        var sp = cam.WorldToScreenPoint(worldCenter);
+
+        // 반지름을 '픽셀'로 근사
+        var spEdge = cam.WorldToScreenPoint(worldCenter + cam.transform.right * worldRadius);
+        float rPx = Vector2.Distance((Vector2)sp, (Vector2)spEdge);
+
+        // 위치 계산(각도/여백 등은 네가 쓰던 값 유지 가능)
+        const float pixelMargin = 30f;
+        float a = Mathf.Deg2Rad * angleDeg;
+        Vector2 dir = new(Mathf.Cos(a), Mathf.Sin(a));
+        Vector2 scr = (Vector2)sp + dir * (rPx * Mathf.Max(0f, radialDistanceMul) + pixelMargin + radialExtraPx);
+
+        // 스크린→캔버스 로컬
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, scr, uiCam, out var local))
+            uiRoot.anchoredPosition = local;
+
+        // 화면 밖이면 숨김(원하면 유지)
+        bool visible = sp.z > 0f && sp.x >= 0 && sp.x <= Screen.width && sp.y >= 0 && sp.y <= Screen.height;
+        if (uiRoot.gameObject.activeSelf != visible) uiRoot.gameObject.SetActive(visible);
+    }
+
+    // [MOD] 월드 부착 위치 갱신
+    void UpdateWorldPos()
+    {
+        if (!zoneTransform) return;
+        float a = Mathf.Deg2Rad * angleDeg;
+        Vector3 dir = new(Mathf.Cos(a), 0, Mathf.Sin(a));
+        float extraWorld = radialExtraPx * 0.01f; // 픽셀→월드 대충 환산
+        float dist = worldRadius * Mathf.Max(0f, radialDistanceMul) + extraWorld;
+
+        transform.position = zoneTransform.position + dir * dist + Vector3.up * yLift;
+
+        // [FIX] 매 프레임 카메라 쪽으로 세우던 회전 제거하고, 바닥에 눕힌 각도로 고정
+        // if (Camera.main) transform.rotation =
+        //     Quaternion.LookRotation(transform.position - Camera.main.transform.position, Vector3.up);
+        transform.rotation = Quaternion.Euler(90f, 0f, 0f); // [FIX]
+    }
+
+    void UpdateFill()
+    {
+        if (!fillImage) return;
         fillImage.type = Image.Type.Filled;
         fillImage.fillMethod = Image.FillMethod.Radial360;
         fillImage.fillOrigin = (int)Image.Origin360.Top;
         fillImage.fillClockwise = true;
-        fillImage.preserveAspect = true;
+        fillImage.fillAmount = ttlInit <= 0 ? 0 : Mathf.Clamp01(remain / ttlInit);
     }
-    if (bgImage)
-    {
-        bgImage.type = Image.Type.Filled;
-        bgImage.fillMethod = Image.FillMethod.Radial360;
-        bgImage.fillOrigin = (int)Image.Origin360.Top;
-        bgImage.fillClockwise = true;
-        bgImage.fillAmount = 1f; // 항상 가득
-        bgImage.preserveAspect = true;
-    }
-}
-
-void EnsureDonutHoles()
-{
-    // 진행 링 구멍
-    if (fillImage && !_fillHoleRT)
-    {
-        var go = new GameObject("FillHole", typeof(RectTransform), typeof(Image));
-        _fillHoleRT = go.GetComponent<RectTransform>();
-        _fillHoleRT.SetParent(fillImage.transform, false);
-        _fillHoleRT.anchorMin = _fillHoleRT.anchorMax = new Vector2(0.5f, 0.5f);
-        _fillHoleRT.sizeDelta = Vector2.zero;
-        _fillHoleRT.localScale = Vector3.one * innerHoleRatio;
-
-        var img = go.GetComponent<Image>();
-        img.sprite = _fallbackWhite;
-        img.type = Image.Type.Simple;
-        img.color = Color.black * 0f; // 완전 투명(배경 뚫린 듯 보이게)
-        img.raycastTarget = false;
-    }
-
-    // 배경 링 구멍(선택)
-    if (bgImage && !_bgHoleRT)
-    {
-        var go = new GameObject("BgHole", typeof(RectTransform), typeof(Image));
-        _bgHoleRT = go.GetComponent<RectTransform>();
-        _bgHoleRT.SetParent(bgImage.transform, false);
-        _bgHoleRT.anchorMin = _bgHoleRT.anchorMax = new Vector2(0.5f, 0.5f);
-        _bgHoleRT.sizeDelta = Vector2.zero;
-        _bgHoleRT.localScale = Vector3.one * innerHoleRatio;
-
-        var img = go.GetComponent<Image>();
-        img.sprite = _fallbackWhite;
-        img.type = Image.Type.Simple;
-        img.color = Color.black * 0f;
-        img.raycastTarget = false;
-    }
-}
 }

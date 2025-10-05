@@ -44,6 +44,10 @@ public class ZoneVisualManager : MonoBehaviour
     public Canvas screenCanvas;              // Screen Space Overlay/Camera
     public GameObject miniTimerPrefab;       // ZoneMiniTimerFollower가 붙은/붙을 프리팹
 
+    // [MOD] ---------- Mini Timer (World-Attached) ----------
+    [Header("Mini Timer Attach Mode")] // [MOD]
+    public bool attachTimersToZone = true;  // [MOD] true면 Zone 밑(월드)에 부착, false면 기존처럼 화면 캔버스에 생성
+
     [Header("Legacy Contam Discs (off when using ContamTileRenderer)")]
     public bool useLegacyContamDiscs = false;
 
@@ -62,7 +66,7 @@ public class ZoneVisualManager : MonoBehaviour
     readonly Dictionary<int, LineRenderer> bonusArcs = new();
     static Material _fallbackArcMat;
 
-    // Mini Timers (screen UI)
+    // Mini Timers
     readonly Dictionary<int, ZoneMiniTimerFollower> miniTimers = new();
 
     void Awake()
@@ -82,9 +86,8 @@ public class ZoneVisualManager : MonoBehaviour
         director.OnZoneProgress   += HandleProgress;
         director.OnZoneBonusSectorChanged += HandleBonusSectorChanged;
 
-
-    if (!screenCanvas)
-        screenCanvas = FindFirstObjectByType<Canvas>();
+        if (!screenCanvas)
+            screenCanvas = FindFirstObjectByType<Canvas>();
 
         if (useLegacyContamDiscs)
         {
@@ -137,7 +140,7 @@ public class ZoneVisualManager : MonoBehaviour
         // 돔
         GameObject dome = Instantiate(hemispherePrefab, root.transform);
         dome.transform.localPosition = Vector3.zero;
-        dome.transform.localScale    = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
+        dome.transform.localScale = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
         StripAllColliders(dome);
         var dRend = dome.GetComponentInChildren<Renderer>();
         if (dRend) dRend.sharedMaterial = snap.domeMat ? snap.domeMat : defaultDomeMat;
@@ -147,6 +150,7 @@ public class ZoneVisualManager : MonoBehaviour
             dome = dome.transform,
             baseRadius = snap.baseRadius
         };
+
         if (ringPrefab)
         {
             // 링(초기 0 → 진행도에 따라 확장)
@@ -160,18 +164,38 @@ public class ZoneVisualManager : MonoBehaviour
             map[snap.id].ring = ring.transform;
         }
 
-        // 미니 타이머(HUD)
-            if (screenCanvas && miniTimerPrefab)
+        // ---- 미니 타이머 ----
+        if (miniTimerPrefab)
+        {
+            if (!attachTimersToZone && screenCanvas) // 화면 캔버스에 생성(디스크 무시)
             {
                 var ui = Instantiate(miniTimerPrefab, screenCanvas.transform);
                 ui.transform.SetAsFirstSibling();
-                var follower = ui.GetComponent<ZoneMiniTimerFollower>();
-                if (!follower) follower = ui.AddComponent<ZoneMiniTimerFollower>();
-                follower.Setup(screenCanvas, snap.centerWorld, snap.baseRadius,
-                               Mathf.Max(0.01f, snap.time_to_live));
-                follower.SetRemain(snap.remain);
-                miniTimers[snap.id] = follower;
+
+                var f = ui.GetComponent<ZoneMiniTimerFollower>();
+                if (!f) f = ui.AddComponent<ZoneMiniTimerFollower>();
+
+                // ★ 존 좌표로 고정(디스크 참조 없음)
+                f.Setup(screenCanvas, snap.centerWorld, snap.baseRadius,
+                        Mathf.Max(0.01f, snap.time_to_live));
+                f.SetRemain(snap.remain);
+
+                miniTimers[snap.id] = f;
             }
+            else // [MOD] Zone 밑(월드)에 직부착
+            {
+                var ui = Instantiate(miniTimerPrefab, root.transform);
+                ui.transform.localPosition = Vector3.zero;
+
+                var f = ui.GetComponent<ZoneMiniTimerFollower>() ?? ui.AddComponent<ZoneMiniTimerFollower>();
+                f.SetupWorld(root.transform, snap.baseRadius,
+                             Mathf.Max(0.01f, snap.time_to_live), 45f);
+                f.SetRemain(snap.remain);
+
+                miniTimers[snap.id] = f;
+            }
+        }
+    
     }
 
     // ---- 만료/소멸 ----
@@ -197,7 +221,7 @@ public class ZoneVisualManager : MonoBehaviour
         if (map.TryGetValue(id, out var v))
         {
             float r = Mathf.Lerp(0f, v.baseRadius, Mathf.Clamp01(progress01));
-            if(v.ring!=null)v.ring.localScale = new Vector3(r * 2f, v.ring.localScale.y, r * 2f);
+            if (v.ring) v.ring.localScale = new Vector3(r * 2f, v.ring.localScale.y, r * 2f);
         }
 
         // HUD 도넛: 남은 시간 갱신
