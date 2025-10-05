@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7366842504093124488}
   - component: {fileID: 2326740487371791449}
   - component: {fileID: 5632147889976500960}
+  - component: {fileID: 6155033780341849239}
   m_Layer: 0
   m_Name: Domezone
   m_TagString: Untagged
@@ -108,3 +109,26 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &6155033780341849239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4175801190772229611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 169e6946a381a024d8b81b269e4f8519, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetRenderer: {fileID: 2326740487371791449}
+  texturePropertyName: _BaseMap
+  baseTexture: {fileID: 2800000, guid: 32ff3a5ac801f8b44a5f96dcc6e9f73f, type: 3}
+  bands:
+  - minPercent: 0
+    maxPercent: 0.49
+    texture: {fileID: 2800000, guid: 8f014a64f56cec649a540da244f21fb1, type: 3}
+  - minPercent: 0.5
+    maxPercent: 0.99
+    texture: {fileID: 2800000, guid: 2d50e873f0a994d4788b655149aa9224, type: 3}
+  disableWholeObjectOnRemove: 0

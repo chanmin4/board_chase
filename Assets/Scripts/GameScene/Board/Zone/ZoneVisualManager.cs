@@ -141,36 +141,37 @@ public class ZoneVisualManager : MonoBehaviour
         StripAllColliders(dome);
         var dRend = dome.GetComponentInChildren<Renderer>();
         if (dRend) dRend.sharedMaterial = snap.domeMat ? snap.domeMat : defaultDomeMat;
-
-        // 링(초기 0 → 진행도에 따라 확장)
-        GameObject ring = Instantiate(ringPrefab, root.transform);
-        ring.transform.localPosition = Vector3.zero;
-        ring.transform.localRotation = Quaternion.identity;
-        ring.transform.localScale    = new Vector3(0.0001f, 0.02f, 0.0001f);
-        StripAllColliders(ring);
-        var rRend = ring.GetComponentInChildren<Renderer>();
-        if (rRend) rRend.sharedMaterial = snap.ringMat ? snap.ringMat : defaultRingMat;
-
         map[snap.id] = new Visual
         {
             root = root,
             dome = dome.transform,
-            ring = ring.transform,
             baseRadius = snap.baseRadius
         };
+        if (ringPrefab)
+        {
+            // 링(초기 0 → 진행도에 따라 확장)
+            GameObject ring = Instantiate(ringPrefab, root.transform);
+            ring.transform.localPosition = Vector3.zero;
+            ring.transform.localRotation = Quaternion.identity;
+            ring.transform.localScale = new Vector3(0.0001f, 0.02f, 0.0001f);
+            StripAllColliders(ring);
+            var rRend = ring.GetComponentInChildren<Renderer>();
+            if (rRend) rRend.sharedMaterial = snap.ringMat ? snap.ringMat : defaultRingMat;
+            map[snap.id].ring = ring.transform;
+        }
 
         // 미니 타이머(HUD)
-        if (screenCanvas && miniTimerPrefab)
-        {
-            var ui = Instantiate(miniTimerPrefab, screenCanvas.transform);
-            ui.transform.SetAsFirstSibling();
-            var follower = ui.GetComponent<ZoneMiniTimerFollower>();
-            if (!follower) follower = ui.AddComponent<ZoneMiniTimerFollower>();
-            follower.Setup(screenCanvas, snap.centerWorld, snap.baseRadius,
-                           Mathf.Max(0.01f, snap.time_to_live));
-            follower.SetRemain(snap.remain);
-            miniTimers[snap.id] = follower;
-        }
+            if (screenCanvas && miniTimerPrefab)
+            {
+                var ui = Instantiate(miniTimerPrefab, screenCanvas.transform);
+                ui.transform.SetAsFirstSibling();
+                var follower = ui.GetComponent<ZoneMiniTimerFollower>();
+                if (!follower) follower = ui.AddComponent<ZoneMiniTimerFollower>();
+                follower.Setup(screenCanvas, snap.centerWorld, snap.baseRadius,
+                               Mathf.Max(0.01f, snap.time_to_live));
+                follower.SetRemain(snap.remain);
+                miniTimers[snap.id] = follower;
+            }
     }
 
     // ---- 만료/소멸 ----
@@ -196,7 +197,7 @@ public class ZoneVisualManager : MonoBehaviour
         if (map.TryGetValue(id, out var v))
         {
             float r = Mathf.Lerp(0f, v.baseRadius, Mathf.Clamp01(progress01));
-            v.ring.localScale = new Vector3(r * 2f, v.ring.localScale.y, r * 2f);
+            if(v.ring!=null)v.ring.localScale = new Vector3(r * 2f, v.ring.localScale.y, r * 2f);
         }
 
         // HUD 도넛: 남은 시간 갱신
