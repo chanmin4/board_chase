@@ -12,7 +12,7 @@ public interface IPlayerSurvivalDamage
 [RequireComponent(typeof(SphereCollider))]
 public class PollutionSniper : MonoBehaviour
 {
-    // ───────── 주입되는 씬 레퍼런스(프리팹 저장 X) ─────────
+    // ───────── 주입(프리팹 저장 X) ─────────
     BoardGrid _board;
     Transform _player;
     SurvivalDirector _director;
@@ -20,31 +20,47 @@ public class PollutionSniper : MonoBehaviour
     // ───────── HP / 히트 ─────────
     [Header("HP / Hit")]
     public int maxHP = 3;
-    public int damagePerHit = 1;                  // 디스크 등 충돌 시 깎이는 양
-    public LayerMask hitByLayers;                 // 보스에 데미지 주는 레이어
-    public float bossRadius = 0.5f;
+    public int damagePerHit = 1;               // 디스크 등 충돌 시 깎이는 양
+    public LayerMask hitByLayers;              // 스나이퍼에 데미지 주는 레이어
+    public float bodyRadius = 0.5f;
     public float groundY = 0.2f;
 
-    // ───────── 공격 파라미터 ─────────
-    [Header("Attack")]
-    public float aimPreviewTime = 2.0f;           // 미리보기 시간(초)
-    public float cooldown = 4.0f;                 // 다음 조준까지 대기
-    public int   maxBounces = 3;                  // 튕김 횟수(최대 3 요청, 원하면 늘려도 됨)
-    public float beamLength = 100f;               // 충분히 큰 직선 길이
-    public float playerDamage = 1f;               // 맞으면 생존 게이지 깎는 양(양수면 감소)
-    public LayerMask playerLayers;                // 플레이어 레이어
+    // ───────── 조준(속도 제한) ─────────
+    [Header("Aim (speed-limited tracking)")]
+    [Tooltip("조준선이 따라갈 목표 위치의 관성(지연) 정도(초당) — 높일수록 타깃을 빨리 따라감")]
+    public float aimTargetFollowSpeed = 6f;
+    [Tooltip("조준선 자체의 최대 회전 속도(도/초) — 낮을수록 더 쉽게 빗나감")]
+    public float aimAngularSpeedDeg = 180f;
 
-    [Tooltip("미리보기에서 '첫 튕김 전 구간만' 표시할지")]
-    public bool previewOnlyFirstSegment = false;
+    // ───────── 공격 타이밍 ─────────
+    [Header("Attack Timing")]
+    [Tooltip("조준(미리보기) 시간")]
+    public float aimPreviewTime = 3.0f;        // 요구사항: 3초
+    [Tooltip("레이저 표시 시간(순간 발사 느낌이면 0.15~0.3 추천)")]
+    public float fireShowDuration = 0.25f;
+    [Tooltip("발사 후 대기")]
+    public float cooldown = 3.0f;
 
-    // ───────── 라인 렌더링(경로 표시) ─────────
-    [Header("Line Preview")]
-    public LineRenderer line;                     // 비워두면 런타임 생성
-    public float lineWidth = 0.035f;
-    public Color previewColor = new Color(0.2f, 1f, 0.6f, 0.9f);
+    // ───────── 레이저/오염 파라미터 ─────────
+    [Header("Laser / Contamination")]
+    [Tooltip("레이저 최대 길이(보드 밖으로 뻗지 않음)")]
+    public float beamLength = 100f;
+    [Tooltip("플레이어 히트 시 생존게이지 감소량(한 번 발사마다)")]
+    public float survivalDamageOnHit = 4f;
+    [Tooltip("오염 살포 간격(미터)")]
+    public float contamStepMeters = 0.6f;
+    [Tooltip("오염 살포 반경(미터)")]
+    public float contamRadiusMeters = 0.7f;
+    [Tooltip("플레이어/환경 히트 판정 레이어(플레이어 포함)")]
+    public LayerMask hitLayers;
+
+    // ───────── 라인(조준/레이저 표시) ─────────
+    [Header("Line (Preview/Laser)")]
+    public LineRenderer line;                  // 비우면 자동 생성
+    public float previewLineWidth = 0.08f;     // 굵은 프리뷰
+    public float fireLineWidth = 0.10f;        // 굵은 레이저
+    public Color previewColor = new Color(0.2f, 1f, 0.6f, 0.95f);
     public Color fireColor    = new Color(1f, 0.2f, 0.2f, 1f);
-    public GameObject bounceMarkerPrefab;         // 선택(없으면 안 그림)
-    public float bounceMarkerScale = 0.1f;
 
     // ───────── HP UI (막대형) ─────────
     public enum HpUiMode { ScreenTopRight, WorldBillboard, WorldFlat }
@@ -67,13 +83,17 @@ public class PollutionSniper : MonoBehaviour
 
     // ───────── 내부 상태 ─────────
     int _hp;
-    enum State { IdleCooldown, Aiming, Firing }
+
+    enum State { Aiming, Firing, Cooldown }
     State _state;
     float _timer;
 
-    // 경로 캐시
-    readonly List<Vector3> _points = new();
-    readonly List<Transform> _tempMarkers = new();
+    // 조준 상태
+    Vector3 _smoothedTarget;     // 플레이어를 지연 추적하는 타깃 위치
+    Vector3 _aimDir = Vector3.forward; // 현재 조준 방향(정규화)
+
+    // 라인 캐시(일직선)
+    readonly List<Vector3> _line = new();
 
     // UI refs
     Transform _uiRoot;
@@ -83,15 +103,14 @@ public class PollutionSniper : MonoBehaviour
     // ───────── 외부에서 호출 ─────────
     public void Setup(BoardGrid board, Transform player, SurvivalDirector director)
     {
-        _board = board;
-        _player = player;
-        _director = director;
+        _board = board; _player = player; _director = director;
+        if (_director == null) _director = FindAnyObjectByType<SurvivalDirector>();
 
         var p = transform.position; p.y = groundY; transform.position = p;
 
         var col = GetComponent<SphereCollider>();
         col.isTrigger = true;
-        col.radius = Mathf.Max(0.05f, bossRadius);
+        col.radius = Mathf.Max(0.05f, bodyRadius);
 
         _hp = Mathf.Max(1, maxHP);
         EnsureHPUI();
@@ -100,236 +119,252 @@ public class PollutionSniper : MonoBehaviour
         EnsureLine();
         SetLineActive(false);
 
-        _state = State.Aiming; // 첫 상태: 조준 시작
+        // 초기 조준 타깃
+        _smoothedTarget = _player ? _player.position : transform.position + transform.forward;
+        _smoothedTarget.y = groundY;
+
+        // 초기 에임 방향
+        Vector3 initDir = (_smoothedTarget - transform.position); initDir.y = 0f;
+        _aimDir = initDir.sqrMagnitude > 1e-6f ? initDir.normalized : Vector3.forward;
+
+        _state = State.Aiming;
         _timer = 0f;
     }
 
     void Update()
     {
-        _timer += Time.deltaTime;
+        float dt = Time.deltaTime;
 
-        switch (_state)
+        // 타깃 위치 ‘관성’ 추적(속도 조절형 조준 핵심 ①)
+        if (_player)
         {
-            case State.Aiming:
-                // 경로 갱신(미리보기)
-                BuildPathPreview();
+            Vector3 desired = _player.position; desired.y = groundY;
+            float follow = 1f - Mathf.Exp(-Mathf.Max(0.001f, aimTargetFollowSpeed) * dt);
+            _smoothedTarget = Vector3.Lerp(_smoothedTarget, desired, follow);
+        }
 
-                if (_timer >= aimPreviewTime)
-                {
-                    _timer = 0f;
-                    SetLineColor(fireColor);
-                    Fire(); // 데미지 판정도 즉시 수행
-                    _state = State.IdleCooldown;
-                }
-                break;
+        // 에임 방향 ‘최대 회전 속도’ 제한(속도 조절형 조준 핵심 ②)
+        {
+            Vector3 toTgt = _smoothedTarget - transform.position; toTgt.y = 0f;
+            if (toTgt.sqrMagnitude > 1e-6f)
+            {
+                var curRot = Quaternion.LookRotation(_aimDir.sqrMagnitude < 1e-6f ? Vector3.forward : _aimDir, Vector3.up);
+                var dstRot = Quaternion.LookRotation(toTgt.normalized, Vector3.up);
+                float maxStep = Mathf.Max(1f, aimAngularSpeedDeg) * dt;
+                var next = Quaternion.RotateTowards(curRot, dstRot, maxStep);
+                _aimDir = next * Vector3.forward;
+            }
+        }
 
-            case State.IdleCooldown:
-                // 라인 끄고 쿨다운
+        _timer += dt;
+
+        if (_state == State.Aiming)
+        {
+            // 조준선(프리뷰) 갱신/표시
+            BuildStraightLine(_line, preview: true);
+            ApplyLine(_line);
+            SetLineColor(previewColor);
+            SetLineWidth(previewLineWidth);
+            SetLineActive(true);
+
+            if (_timer >= aimPreviewTime)
+            {
+                StartFire();
+            }
+        }
+        else if (_state == State.Firing)
+        {
+            // 발사 표시 유지
+            if (_timer >= fireShowDuration)
+            {
                 SetLineActive(false);
-                if (_timer >= cooldown)
-                {
-                    _timer = 0f;
-                    _state = State.Aiming;
-                }
-                break;
-
-            case State.Firing:
-                // (만약 발사 연출을 길게 주면 여기에 유지 로직)
-                _state = State.IdleCooldown;
-                break;
+                _state = State.Cooldown;
+                _timer = 0f;
+            }
+        }
+        else // Cooldown
+        {
+            if (_timer >= cooldown)
+            {
+                _state = State.Aiming;
+                _timer = 0f;
+            }
         }
 
         UpdateHPUIPose();
     }
 
-    // ───────── 경로 계산(사각 보드에서 반사) ─────────
-    void BuildPathPreview()
+    // ───────── 발사 시작(오염 살포 + 히트 판정) ─────────
+    void StartFire()
     {
-        if (!_board) return;
+        _timer = 0f;
+        _state = State.Firing;
 
-        _points.Clear();
-        Vector3 start = transform.position;
-        Vector3 dir = GetInitialDir();
-        if (dir.sqrMagnitude < 1e-6f) dir = Vector3.right;
-        dir.y = 0f; dir.Normalize();
+        // 최종 조준선 계산(현재 _aimDir 기준 일직선)
+        BuildStraightLine(_line, preview: false);
 
-        _points.Add(start);
+        // 오염 퍼뜨리기(경로 따라 일정 간격 원형 살포)
+        SpreadContaminationAlong(_line);
 
-        Rect r = new Rect(_board.origin.x, _board.origin.z,
-                          _board.width * _board.tileSize, _board.height * _board.tileSize);
+        // 플레이어 히트 판정 → 생존게이지 감소
+        TryHitPlayerAlong(_line);
 
-        Vector3 curPos = start;
-        Vector3 curDir = dir;
-
-        int bounces = Mathf.Max(0, maxBounces);
-        float remaining = beamLength;
-
-        for (int i = 0; i <= bounces; i++)
-        {
-            // 세그먼트마다 보드 외곽과의 교차점 계산
-            if (!RayIntersectRect(curPos, curDir, r, remaining, out var hitPoint, out var reflected, out float dist))
-            {
-                // 더 이상 보드 벽에 닿지 않으면 straight
-                _points.Add(curPos + curDir * remaining);
-                break;
-            }
-
-            _points.Add(hitPoint);
-
-            remaining -= dist;
-            if (i == bounces) break;
-
-            // 반사 시작점 약간 안쪽으로 밀기(부동소수 재교차 방지)
-            curPos = hitPoint + reflected * 0.001f;
-            curDir = reflected;
-        }
-
-        // 프리뷰 표시 범위: 전체 or 첫 튕김 전까지
-        int countToShow = _points.Count;
-        if (previewOnlyFirstSegment && _points.Count >= 2) countToShow = 2;
-
+        // 발사 라인 표시
+        ApplyLine(_line);
+        SetLineColor(fireColor);
+        SetLineWidth(fireLineWidth);
         SetLineActive(true);
-        SetLineColor(previewColor);
-        ApplyLine(_points, countToShow);
-
-        // 바운스 마커
-        RefreshMarkers(countToShow);
     }
 
-    // 초기 방향: 플레이어 쪽으로(수평)
-    Vector3 GetInitialDir()
+    // ───────── 직선 경로 구성 ─────────
+    void BuildStraightLine(List<Vector3> outPts, bool preview)
     {
-        if (_player)
+        outPts.Clear();
+
+        Vector3 start = transform.position; start.y = groundY + 0.02f;
+        Vector3 dir = _aimDir.sqrMagnitude > 1e-6f ? _aimDir.normalized : Vector3.forward;
+
+        // 보드 외곽 사각형에 부딪히거나, 최대 길이에서 종료
+        Vector3 end = start + dir * Mathf.Max(1f, beamLength);
+
+        if (_board)
         {
-            Vector3 v = _player.position - transform.position;
-            v.y = 0f;
-            if (v.sqrMagnitude > 1e-6f) return v.normalized;
+            Rect r = new Rect(_board.origin.x, _board.origin.z,
+                              _board.width * _board.tileSize, _board.height * _board.tileSize);
+            // 보드에 클램프
+            if (!RayIntersectRect(start, dir, r, beamLength, out var hit, out _, out _))
+                end = start + dir * Mathf.Max(1f, beamLength);
+            else
+                end = hit;
         }
-        return Vector3.right;
+
+        end.y = groundY + 0.02f;
+
+        outPts.Add(start);
+        outPts.Add(end);
     }
 
-    // 보드 사각형과 레이 교차 → 최근접 에지 hit 및 반사 방향
+    // 보드 사각형과 레이 교차(가장 가까운 에지 히트)
     bool RayIntersectRect(Vector3 p, Vector3 d, Rect rect, float maxDist,
                           out Vector3 hit, out Vector3 reflectDir, out float traveled)
     {
         hit = Vector3.zero; reflectDir = d; traveled = 0f;
-
-        // 수직선/수평선 네 면과의 t 구하기
         float tMin = float.PositiveInfinity;
-        Vector3 normal = Vector3.zero;
 
-        // X면
+        // X면들
         if (Mathf.Abs(d.x) > 1e-6f)
         {
-            // 좌
-            float tL = (rect.xMin - p.x) / d.x;
-            float zL = p.z + d.z * tL;
-            if (tL > 1e-6f && tL <= maxDist && zL >= rect.yMin && zL <= rect.yMax && tL < tMin)
-            { tMin = tL; normal = Vector3.left; }
-            // 우
-            float tR = (rect.xMax - p.x) / d.x;
-            float zR = p.z + d.z * tR;
-            if (tR > 1e-6f && tR <= maxDist && zR >= rect.yMin && zR <= rect.yMax && tR < tMin)
-            { tMin = tR; normal = Vector3.right; }
+            float tL = (rect.xMin - p.x) / d.x; float zL = p.z + d.z * tL;
+            if (tL > 1e-6f && tL <= maxDist && zL >= rect.yMin && zL <= rect.yMax && tL < tMin) { tMin = tL; }
+            float tR = (rect.xMax - p.x) / d.x; float zR = p.z + d.z * tR;
+            if (tR > 1e-6f && tR <= maxDist && zR >= rect.yMin && zR <= rect.yMax && tR < tMin) { tMin = tR; }
         }
-        // Z면
+        // Z면들
         if (Mathf.Abs(d.z) > 1e-6f)
         {
-            // 아래
-            float tB = (rect.yMin - p.z) / d.z;
-            float xB = p.x + d.x * tB;
-            if (tB > 1e-6f && tB <= maxDist && xB >= rect.xMin && xB <= rect.xMax && tB < tMin)
-            { tMin = tB; normal = Vector3.back; }
-            // 위
-            float tT = (rect.yMax - p.z) / d.z;
-            float xT = p.x + d.x * tT;
-            if (tT > 1e-6f && tT <= maxDist && xT >= rect.xMin && xT <= rect.xMax && tT < tMin)
-            { tMin = tT; normal = Vector3.forward; }
+            float tB = (rect.yMin - p.z) / d.z; float xB = p.x + d.x * tB;
+            if (tB > 1e-6f && tB <= maxDist && xB >= rect.xMin && xB <= rect.xMax && tB < tMin) { tMin = tB; }
+            float tT = (rect.yMax - p.z) / d.z; float xT = p.x + d.x * tT;
+            if (tT > 1e-6f && tT <= maxDist && xT >= rect.xMin && xT <= rect.xMax && tT < tMin) { tMin = tT; }
         }
 
-        if (float.IsPositiveInfinity(tMin))
-            return false;
+        if (float.IsPositiveInfinity(tMin)) return false;
 
         traveled = tMin;
-        hit = p + d * tMin;
-        reflectDir = Vector3.Reflect(d, normal);
-        reflectDir.y = 0f; reflectDir.Normalize();
-        hit.y = groundY;
+        hit = p + d * tMin; hit.y = groundY + 0.02f;
+        reflectDir = d;
         return true;
-        }
-
-    // ───────── 발사(데미지 판정) ─────────
-    void Fire()
-    {
-        // 발사 순간엔 전체 경로를 그려주고(색상 바꿈), 라인 킵(연출 원하면 유지시간 추가 가능)
-        BuildPathPreview();
-        SetLineColor(fireColor);
-        SetLineActive(true);
-        ApplyDamageAlongPath();
     }
 
-    void ApplyDamageAlongPath()
+    // ───────── 오염 살포 ─────────
+    void SpreadContaminationAlong(List<Vector3> path)
     {
-        if (_points.Count < 2) return;
+        if (_director == null || path.Count < 2) return;
 
-        // 세그먼트마다 레이캐스트 진행
-        for (int i = 0; i < _points.Count - 1; i++)
+        Vector3 a = path[0]; a.y = groundY;
+        Vector3 b = path[1]; b.y = groundY;
+
+        float len = Vector3.Distance(a, b);
+        float step = Mathf.Max(0.05f, contamStepMeters);
+        float r = Mathf.Max(0.05f, contamRadiusMeters);
+
+        // 시작~끝 구간을 일정 간격으로 샘플링
+        int n = Mathf.Max(1, Mathf.CeilToInt(len / step));
+        for (int i = 0; i <= n; i++)
         {
-            Vector3 a = _points[i];
-            Vector3 b = _points[i + 1];
-            Vector3 dir = (b - a);
-            float dist = dir.magnitude;
-            if (dist <= 1e-4f) continue;
-            dir /= dist;
-
-            var hits = Physics.RaycastAll(a + Vector3.up * 0.01f, dir, dist, playerLayers, QueryTriggerInteraction.Ignore);
-            if (hits != null && hits.Length > 0)
-            {
-                foreach (var h in hits)
-                {
-                    // 플레이어 쪽으로 데미지 전달 시도
-                    TryDamagePlayer(h.collider);
-                }
-            }
+            float t = (n == 0) ? 0f : (float)i / n;
+            Vector3 p = Vector3.Lerp(a, b, t);
+            _director.ContaminateCircleWorld(p, r);
         }
     }
 
-    void TryDamagePlayer(Collider col)
+    // ───────── 플레이어 히트 판정 ─────────
+    void TryHitPlayerAlong(List<Vector3> path)
     {
-        // 1) SurvivalDirector가 있으면 감소 시도(메서드명이 다를 수 있으니 try/catch)
+        if (path.Count < 2) return;
+
+        Vector3 a = path[0];
+        Vector3 b = path[1];
+        Vector3 dir = (b - a);
+        float dist = dir.magnitude;
+        if (dist <= 1e-4f) return;
+        dir /= dist;
+
+        var hits = Physics.RaycastAll(a, dir, dist, hitLayers, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0) return;
+
+        foreach (var h in hits)
+        {
+            // 플레이어면 생존게이지 감소
+            ApplySurvivalDamageOnce(h.collider, Mathf.Abs(survivalDamageOnHit));
+            // 관통 여부에 따라 break할지 선택 가능; 여기선 관통 허용(여러 히트 가능)
+        }
+    }
+
+    void ApplySurvivalDamageOnce(Collider col, float amount)
+    {
+        // 1) SurvivalDirector에 전달
         try
         {
-            if (_director != null) {
-                // 프로젝트에 맞게 바꿔도 됨(예: director.ModifySurvival(-playerDamage))
+            if (_director != null)
+            {
                 var m = typeof(SurvivalDirector).GetMethod("ModifySurvival",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                if (m != null) m.Invoke(_director, new object[] { -Mathf.Abs(playerDamage) });
+                if (m != null) m.Invoke(_director, new object[] { -Mathf.Abs(amount) });
             }
         }
-        catch { /* 무시 */ }
+        catch { /* ignore */ }
 
-        // 2) 맞은 콜라이더 계층에서 인터페이스 찾기
+        // 2) 인터페이스 훅
         var d = col.GetComponentInParent<IPlayerSurvivalDamage>();
-        if (d != null) d.ApplySurvivalDamage(Mathf.Abs(playerDamage));
+        if (d != null) d.ApplySurvivalDamage(Mathf.Abs(amount));
     }
 
-    // ───────── 라인 표시 유틸 ─────────
+    // ───────── 라인 유틸 ─────────
     void EnsureLine()
     {
         if (line) return;
+
         var go = new GameObject("SniperLine");
         go.transform.SetParent(transform, false);
+
         line = go.AddComponent<LineRenderer>();
         line.positionCount = 0;
-        line.startWidth = line.endWidth = lineWidth;
-        line.material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        line.material.SetColor("_BaseColor", previewColor);
-        line.numCornerVertices = 2;
-        line.numCapVertices = 2;
+
+        // 파이프라인 무관 기본 쉐이더
+        var shader = Shader.Find("Sprites/Default");
+        var mat = new Material(shader);
+        line.material = mat;
+
+        line.startColor = line.endColor = previewColor;
+        line.numCornerVertices = 4;
+        line.numCapVertices = 4;
         line.useWorldSpace = true;
         line.alignment = LineAlignment.View;
         line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         line.receiveShadows = false;
+        line.textureMode = LineTextureMode.Stretch;
+        line.sortingOrder = 1000;
     }
 
     void SetLineActive(bool on)
@@ -343,51 +378,27 @@ public class PollutionSniper : MonoBehaviour
     {
         if (!line) return;
         line.startColor = line.endColor = c;
-        if (line.material && line.material.HasProperty("_BaseColor"))
-            line.material.SetColor("_BaseColor", c);
     }
 
-    void ApplyLine(List<Vector3> pts, int countToShow)
+    void SetLineWidth(float w)
     {
         if (!line) return;
-        int n = Mathf.Clamp(countToShow, 0, pts.Count);
-        line.positionCount = n;
-        for (int i = 0; i < n; i++)
-        {
-            var p = pts[i]; p.y = groundY + 0.02f;
-            line.SetPosition(i, p);
-        }
-        line.startWidth = line.endWidth = lineWidth;
+        line.startWidth = line.endWidth = w;
     }
 
-    void RefreshMarkers(int countToShow)
+    void ApplyLine(List<Vector3> pts)
     {
-        // 기존 마커 파괴
-        foreach (var t in _tempMarkers) if (t) Destroy(t.gameObject);
-        _tempMarkers.Clear();
-
-        if (!bounceMarkerPrefab) return;
-        // segment 끝점들 중 시작점 제외, 마지막 점 포함(튕김 지점 표시)
-        for (int i = 1; i < countToShow; i++)
-        {
-            var m = Instantiate(bounceMarkerPrefab, _points[i] + Vector3.up * 0.02f, Quaternion.identity, transform);
-            m.transform.localScale = Vector3.one * bounceMarkerScale;
-            _tempMarkers.Add(m.transform);
-        }
+        if (!line) return;
+        if (pts.Count < 2) { line.positionCount = 0; return; }
+        line.positionCount = pts.Count;
+        for (int i = 0; i < pts.Count; i++) line.SetPosition(i, pts[i]);
     }
 
     // ───────── HP / HIT / UI ─────────
     void OnTriggerEnter(Collider other)
     {
-        if (hitByLayers.value == 0)
-        {
-            Hit(damagePerHit); // 디버그 편의
-            return;
-        }
-        if ((hitByLayers.value & (1 << other.gameObject.layer)) != 0)
-        {
-            Hit(damagePerHit);
-        }
+        if (hitByLayers.value == 0) { Hit(damagePerHit); return; }
+        if ((hitByLayers.value & (1 << other.gameObject.layer)) != 0) Hit(damagePerHit);
     }
 
     void Hit(int dmg)
@@ -401,8 +412,6 @@ public class PollutionSniper : MonoBehaviour
     void Die()
     {
         SetLineActive(false);
-        foreach (var t in _tempMarkers) if (t) Destroy(t.gameObject);
-        _tempMarkers.Clear();
         if (_uiRoot) Destroy(_uiRoot.gameObject);
         Destroy(gameObject);
     }

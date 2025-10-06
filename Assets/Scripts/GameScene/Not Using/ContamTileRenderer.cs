@@ -1,4 +1,5 @@
 // ContamTileRenderer.cs
+/*
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -122,3 +123,4 @@ public class ContamTileRenderer : MonoBehaviour
         dirty = false;
     }
 }
+*/

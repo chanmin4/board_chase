@@ -126,23 +126,25 @@ MonoBehaviour:
   hitByLayers:
     serializedVersion: 2
     m_Bits: 64
-  bossRadius: 0.5
+  bodyRadius: 0.5
   groundY: 0.2
-  aimPreviewTime: 2
-  cooldown: 4
-  maxBounces: 3
+  aimTargetFollowSpeed: 6
+  aimAngularSpeedDeg: 180
+  aimPreviewTime: 3
+  fireShowDuration: 0.5
+  cooldown: 6
   beamLength: 100
-  playerDamage: 20
-  playerLayers:
+  survivalDamageOnHit: 20
+  contamStepMeters: 0.6
+  contamRadiusMeters: 0.7
+  hitLayers:
     serializedVersion: 2
-    m_Bits: 64
-  previewOnlyFirstSegment: 0
+    m_Bits: 0
   line: {fileID: 0}
-  lineWidth: 0.05
+  previewLineWidth: 0.2
+  fireLineWidth: 0.3
   previewColor: {r: 0.2, g: 1, b: 0.6, a: 0.9}
   fireColor: {r: 1, g: 0.2, b: 0.2, a: 1}
-  bounceMarkerPrefab: {fileID: 0}
-  bounceMarkerScale: 0.1
   hpUiMode: 1
   screenMarginTR: {x: 18, y: 18}
   hudBarSizePx: {x: 220, y: 18}
