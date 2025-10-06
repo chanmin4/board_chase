@@ -7,6 +7,8 @@ public class SkinRewardSO : RewardSO
     public Material diskMaterialPreset; 
     [Tooltip("디스크 스프라이트(선택)")]
     public Sprite diskSprite;   
+    
+    public GameObject skinPrefab;
         [Tooltip("장착 시 재생할 SFX(선택)")]
     public AudioClip equipSfx;
         [Tooltip("보상 수령 즉시 자동 장착할지 여부(기본: 꺼짐)")]

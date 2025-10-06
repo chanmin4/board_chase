@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6d320a362c63c194d8ca78a65181ce89, type: 3}
-  m_Name: Skin_default
+  m_Name: Skin_donut
   m_EditorClassIdentifier: 
-  id: skin_default
-  requiredBestScore: 0
-  title: skin_default
-  description: default disk
-  icon: {fileID: 21300000, guid: b25403ef7abad0c42a94d660d7cb087c, type: 3}
+  id: skin_donut
+  requiredBestScore: 5
+  title: donut
+  description: donut
+  icon: {fileID: 21300000, guid: b971b0cf5609a4c4a94416e6610768bd, type: 3}
   type: 0
-  hideFromListing: 1
-  diskMaterialPreset: {fileID: 2100000, guid: ab36323936a0d3a4494ac5e866b45851, type: 2}
-  diskSprite: {fileID: 21300000, guid: b25403ef7abad0c42a94d660d7cb087c, type: 3}
+  hideFromListing: 0
+  diskMaterialPreset: {fileID: 0}
+  diskSprite: {fileID: 21300000, guid: b971b0cf5609a4c4a94416e6610768bd, type: 3}
   skinPrefab: {fileID: 5869213248351403094, guid: c8c21689e419d46b08cd83b3f6f0af1c, type: 3}
   equipSfx: {fileID: 0}
   autoEquipOnGrant: 0
