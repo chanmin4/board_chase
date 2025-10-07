@@ -38,14 +38,12 @@ public class BarrageMissileSpawner : MonoBehaviour
     public float missileLifetime = 5f;
     float spawnTimer = 0f; //내부 타이머
     public float lastFireTime { get; private set; } = -1f;
-    Vector3 boardCenter;
     public event System.Action MissileLaunch;
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
         if (!board)    board    = FindAnyObjectByType<BoardGrid>();
         if (!gauge)    gauge    = FindAnyObjectByType<SurvivalGauge>();
-        RecalcCenter();
     }
     void OnEnable()
     {
@@ -84,20 +82,10 @@ public class BarrageMissileSpawner : MonoBehaviour
     }
 
 
-
-    void RecalcCenter()
-    {
-        if (board)
-        {
-            boardCenter = board.origin + new Vector3(board.width * board.tileSize * 0.5f, 0f,
-                                                     board.height * board.tileSize * 0.5f);
-        }
-        else boardCenter = Vector3.zero;
-    }
-
     void FireMissile()
     {
         if (!missilePrefab || !director) return;
+        float baseY = (board ? board.origin.y : 0f);
         int count = Mathf.Max(1, missileCount);
         // 1) 앵커가 있으면 거기서 랜덤 선택
         if (anchors != null && anchors.Length > 0)
@@ -112,7 +100,7 @@ public class BarrageMissileSpawner : MonoBehaviour
                 {
                     var a = anchors[(idx + k) % anchorL];
                     Vector3 p = a ? a.position : transform.position;
-                    p.y = spawnY;
+                    p.y = baseY + spawnY; 
                     SpawnOne(p);
                 }
                 // 남는 분량은 랜덤 앵커에서 추가 발사

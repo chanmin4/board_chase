@@ -82,7 +82,7 @@ public class PollutionGhostSpawner : MonoBehaviour
     {
         var r = board.GetWallOuterRectXZ();
         float pad = Mathf.Max(0f, edgePaddingTiles) * board.tileSize;
-
+float baseY = board ? board.origin.y : 0f;
         float minX = r.xMin + pad, maxX = r.xMax - pad;
         float minZ = r.yMin + pad, maxZ = r.yMax - pad;
 
@@ -92,7 +92,7 @@ public class PollutionGhostSpawner : MonoBehaviour
         {
             float x = Random.Range(minX, maxX);
             float z = Random.Range(minZ, maxZ);
-            var cand = new Vector3(x, spawnY, z);
+            var cand = new Vector3(x, baseY+spawnY, z);
             if ((new Vector2(cand.x - p.x, cand.z - p.z)).sqrMagnitude >= avoidPlayerRadius * avoidPlayerRadius)
                 return cand;
         }
@@ -100,6 +100,6 @@ public class PollutionGhostSpawner : MonoBehaviour
         // 실패 시: 플레이어와 반대쪽 가장자리 쪽으로 보정
         float xEdge = (p.x < (minX+maxX)*0.5f) ? maxX - 0.5f : minX + 0.5f;
         float zEdge = (p.z < (minZ+maxZ)*0.5f) ? maxZ - 0.5f : minZ + 0.5f;
-        return new Vector3(xEdge, spawnY, zEdge);
+        return new Vector3(xEdge, baseY+spawnY, zEdge);
     }
 }

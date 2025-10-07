@@ -62,6 +62,7 @@ public class PollutionBoss : MonoBehaviour
     float _timer;
     bool _firstDone;
     HomingRocket _activeRocket;
+    float BoardY => _board ? _board.origin.y : 0f;
 
     // UI refs
     Transform _uiRoot;
@@ -76,7 +77,9 @@ public class PollutionBoss : MonoBehaviour
         _director     = director;
         _rocketPrefab = rocketPrefab;
 
-        var p = transform.position; p.y = groundY; transform.position = p;
+        var p = transform.position;
+        p.y = BoardY + groundY;          // 기존: groundY
+        transform.position = p;
 
         var col = GetComponent<SphereCollider>();
         col.isTrigger = true;
@@ -190,11 +193,12 @@ public class PollutionBoss : MonoBehaviour
         float maxZ = rect.yMax - pad;
 
         Vector3 pos = new Vector3(
-            UnityEngine.Random.Range(minX, maxX),
-            groundY,
-            UnityEngine.Random.Range(minZ, maxZ)
-        );
+    UnityEngine.Random.Range(minX, maxX),
+    BoardY + groundY,             // 기존: groundY
+    UnityEngine.Random.Range(minZ, maxZ)
+);
         transform.position = pos;
+
 
         UpdateHPUIPose_Bar();
     }

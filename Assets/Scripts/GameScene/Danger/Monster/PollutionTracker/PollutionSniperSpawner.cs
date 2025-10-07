@@ -42,9 +42,12 @@ public class PollutionSniperSpawner : MonoBehaviour
 
         int idx = Random.Range(0, anchors.Length);
         var t = anchors[idx];
-        var inst = Instantiate(sniperPrefab, t.position, t.rotation);
 
-        // 씬 레퍼런스는 스포너가 주입
+        var pos = t.position;
+        if (board) pos.y = board.origin.y;   // ← 보드 기준
+
+        var inst = Instantiate(sniperPrefab, pos, t.rotation);
         inst.Setup(board, player, director);
     }
+
 }

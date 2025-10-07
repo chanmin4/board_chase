@@ -52,6 +52,7 @@ public class PollutionGhost : MonoBehaviour
     bool  pathStarted;
     float nextDropTimer;    // 다음 드롭까지 남은 시간
     int   droppedCount;
+    float BoardY => board ? board.origin.y : 0f;
 
     // ===== 초기화(스포너가 호출) =====
     public void Setup(SurvivalDirector dir, BoardGrid bd, Transform ply, float spd, float life, float contamR)
@@ -66,7 +67,9 @@ public class PollutionGhost : MonoBehaviour
         velocity = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * speed;
 
         // 높이 고정
-        var p = transform.position; p.y = groundY; transform.position = p;
+        var p = transform.position;
+p.y = BoardY + groundY;          // 기존: groundY
+transform.position = p;
 
         // 경로 오염 타이머 초기화
         lifeClock = 0f; pathClock = 0f; pathStarted = false;
@@ -87,7 +90,7 @@ public class PollutionGhost : MonoBehaviour
         // ===== 이동 =====
         Vector3 pos = transform.position;
         pos += velocity * Time.deltaTime;
-        pos.y = groundY;
+        pos.y = BoardY + groundY; 
 
         // 외벽 반사 (보드 외곽 Rect 기준)
         if (board)

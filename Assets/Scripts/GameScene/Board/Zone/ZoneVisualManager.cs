@@ -50,6 +50,15 @@ public class ZoneVisualManager : MonoBehaviour
 
     [Header("Legacy Contam Discs (off when using ContamTileRenderer)")]
     public bool useLegacyContamDiscs = false;
+    [Header("Auto Fit (match prefab size to world radius)")]
+public bool autoFitPrefabs = true;              // 프리팹 실제 치수에 맞춰 자동 스케일
+public float ringHeightWorld = 0.02f;           // 링 두께(월드)
+
+// === [추가] Visual 저장 구조에 필드 2개 추가 ===
+// class/struct Visual 안에 아래 두 줄 추가
+public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
+    public float ringScaleY;         // Y 두께 스케일(월드 두께 고정용)
+
 
     class Visual
     {
@@ -57,6 +66,8 @@ public class ZoneVisualManager : MonoBehaviour
         public Transform dome;
         public Transform ring;
         public float baseRadius;
+        public float ringScalePerRadius; // XZ: scaleXZ = radius * ringScalePerRadius
+        public float ringScaleY;       
     }
 
     Dictionary<int, Visual> map = new();
@@ -134,17 +145,32 @@ public class ZoneVisualManager : MonoBehaviour
     void HandleSpawn(ZoneSnapshot snap)
     {
         var root = new GameObject($"Zone_{snap.id}_P{snap.profileIndex}");
-        root.transform.SetParent(transform, false);
-        root.transform.position = snap.centerWorld;
+        root.transform.SetParent(transform,  worldPositionStays: true);
+       root.transform.position = new Vector3(snap.centerWorld.x, board.origin.y, snap.centerWorld.z);
 
         // 돔
-        GameObject dome = Instantiate(hemispherePrefab, root.transform);
-        dome.transform.localPosition = Vector3.zero;
-        dome.transform.localScale = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
+        GameObject dome = Instantiate(hemispherePrefab, root.transform, false);
         StripAllColliders(dome);
         var dRend = dome.GetComponentInChildren<Renderer>();
         if (dRend) dRend.sharedMaterial = snap.domeMat ? snap.domeMat : defaultDomeMat;
-        map[snap.id] = new Visual
+
+        if (autoFitPrefabs && CalcLocalBounds(dome.transform, out var dB))
+        {
+            float diaLocal = Mathf.Max(0.0001f, Mathf.Max(dB.size.x, dB.size.z));
+            float s = (snap.baseRadius * 2f) / diaLocal;           // 지름 맞추기
+            dome.transform.localScale = Vector3.one * s;
+
+            float bottomLocal = dB.center.y - dB.size.y * 0.5f;    // 바닥 붙이기
+            dome.transform.localPosition = new Vector3(0f, -bottomLocal * s, 0f);
+        }
+        else
+        {
+            // 프리팹이 단위 1이라 가정할 때의 기존 스케일(지름=2R, 높이=R)
+            dome.transform.localScale = new Vector3(snap.baseRadius * 2f, snap.baseRadius, snap.baseRadius * 2f);
+        }
+
+
+        var v = new Visual
         {
             root = root,
             dome = dome.transform,
@@ -153,16 +179,38 @@ public class ZoneVisualManager : MonoBehaviour
 
         if (ringPrefab)
         {
-            // 링(초기 0 → 진행도에 따라 확장)
-            GameObject ring = Instantiate(ringPrefab, root.transform);
-            ring.transform.localPosition = Vector3.zero;
-            ring.transform.localRotation = Quaternion.identity;
-            ring.transform.localScale = new Vector3(0.0001f, 0.02f, 0.0001f);
+            GameObject ring = Instantiate(ringPrefab, root.transform, false);
             StripAllColliders(ring);
+
             var rRend = ring.GetComponentInChildren<Renderer>();
             if (rRend) rRend.sharedMaterial = snap.ringMat ? snap.ringMat : defaultRingMat;
-            map[snap.id].ring = ring.transform;
+
+            float ringLocalY = 0f;
+            float scalePerRadius = 2f;                  // 단위 1 가정 기본값
+            float yScale = ringHeightWorld;             // 두께(월드)
+
+            if (autoFitPrefabs && CalcLocalBounds(ring.transform, out var rB))
+            {
+                float diaLocal = Mathf.Max(0.0001f, Mathf.Max(rB.size.x, rB.size.z));
+                scalePerRadius = 2f / diaLocal;                             // scaleXZ = radius * 이값
+                yScale = ringHeightWorld / Mathf.Max(0.0001f, rB.size.y);
+
+                float bottomLocal = rB.center.y - rB.size.y * 0.5f;         // 바닥 붙이기
+                ringLocalY = -bottomLocal * yScale;
+            }
+
+            // 초기(진행도 0) 상태 적용
+            ring.transform.localPosition = new Vector3(0f, ringLocalY, 0f);
+            ring.transform.localScale    = new Vector3(0.0001f, yScale, 0.0001f);
+
+            // 저장
+            v.ring = ring.transform;
+            v.ringScalePerRadius = scalePerRadius;
+            v.ringScaleY = yScale;
         }
+
+        // 여기서 한 번에 map에 넣기(중간에 덜 채워진 상태로 쓰지 않게)
+        map[snap.id] = v;
 
         // ---- 미니 타이머 ----
         if (miniTimerPrefab)
@@ -220,11 +268,14 @@ public class ZoneVisualManager : MonoBehaviour
     {
         if (map.TryGetValue(id, out var v))
         {
-            float r = Mathf.Lerp(0f, v.baseRadius, Mathf.Clamp01(progress01));
-            if (v.ring) v.ring.localScale = new Vector3(r * 2f, v.ring.localScale.y, r * 2f);
+            float r = Mathf.Lerp(0f, v.baseRadius, Mathf.Clamp01(progress01));  // 목표 반지름(월드)
+            if (v.ring)
+            {
+                float sxz = Mathf.Max(0f, r) * Mathf.Max(0.0001f, v.ringScalePerRadius);
+                v.ring.localScale = new Vector3(sxz, v.ring.localScale.y, sxz);
+            }
         }
 
-        // HUD 도넛: 남은 시간 갱신
         if (miniTimers.TryGetValue(id, out var mt) && mt)
         {
             float remain = Mathf.Max(0f, (1f - Mathf.Clamp01(progress01)) * mt.TtlInit);
@@ -284,6 +335,28 @@ public class ZoneVisualManager : MonoBehaviour
         return lr;
     }
 
+static bool CalcLocalBounds(Transform root, out Bounds b)
+{
+    b = new Bounds(Vector3.zero, Vector3.zero);
+    var rends = root.GetComponentsInChildren<Renderer>(true);
+    if (rends == null || rends.Length == 0) return false;
+
+    // 첫 렌더러로 초기화
+    var rb = rends[0].bounds;
+    var min = root.InverseTransformPoint(rb.min);
+    var max = root.InverseTransformPoint(rb.max);
+    b = new Bounds((min + max) * 0.5f, max - min);
+
+    for (int i = 1; i < rends.Length; i++)
+    {
+        rb = rends[i].bounds;
+        min = root.InverseTransformPoint(rb.min);
+        max = root.InverseTransformPoint(rb.max);
+        b.Encapsulate(min);
+        b.Encapsulate(max);
+    }
+    return true;
+}
     static Material GetFallbackArcMaterial()
     {
         if (_fallbackArcMat) return _fallbackArcMat;
@@ -303,7 +376,8 @@ public class ZoneVisualManager : MonoBehaviour
         {
             go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.transform.SetParent(contamRoot, false);
-            go.transform.position = centerWorld + Vector3.up * contamDiscY;
+           float yBase = board ? board.origin.y : centerWorld.y;
+           go.transform.position = new Vector3(centerWorld.x, yBase + contamDiscY, centerWorld.z);
             var col = go.GetComponent<Collider>(); if (!col) col = go.AddComponent<CapsuleCollider>();
             col.isTrigger = true;
         }

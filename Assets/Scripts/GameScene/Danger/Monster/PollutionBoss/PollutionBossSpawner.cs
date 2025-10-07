@@ -120,13 +120,13 @@ public class PollutionBossSpawner : MonoBehaviour
     {
         Vector3 center = board.origin + new Vector3(
             board.width * board.tileSize * 0.5f,
-            0f,
+           board ? board.origin.y : 0f,
             board.height * board.tileSize * 0.5f
         );
         return center;
     }
 
-    bool TryFindFreeSpawn(out Vector3 pos, float bossRadius)
+    bool TryFindFreeSpawn(out Vector3 pos, float bossRadius /*, float spawnYOffset = 0f*/)
     {
         // 보드 외곽 사각(XZ)
         Rect r = new Rect(
@@ -136,35 +136,31 @@ public class PollutionBossSpawner : MonoBehaviour
             board.height * board.tileSize
         );
 
-        float pad = bossRadius + spawnSearchPadding;
+        float pad = Mathf.Max(0f, bossRadius + spawnSearchPadding);
         float minX = r.xMin + pad;
         float maxX = r.xMax - pad;
         float minZ = r.yMin + pad;
         float maxZ = r.yMax - pad;
 
-        // 안전: 유효 공간이 없는 경우
+        // 유효 공간이 없으면 중앙 반환
         if (minX >= maxX || minZ >= maxZ)
         {
             pos = GetBoardCenter();
             return false;
         }
 
-        // 중앙 포함해서 총 maxPlacementTries회 시도
+        float yBase =  board ? board.origin.y : 0f; // + spawnYOffset;   // 필요하면 오프셋 더해 사용
+
+        // 첫 번째 시도=중앙, 이후 랜덤
         for (int i = 0; i < maxPlacementTries; i++)
         {
-            Vector3 p;
-            if (i == 0)
-            {
-                p = GetBoardCenter(); // 첫 시도는 중앙
-            }
-            else
-            {
-                p = new Vector3(
+            Vector3 p = (i == 0)
+                ? GetBoardCenter()
+                : new Vector3(
                     UnityEngine.Random.Range(minX, maxX),
-                    0f,
+                    yBase,
                     UnityEngine.Random.Range(minZ, maxZ)
-                );
-            }
+                  );
 
             if (IsSpawnPositionFree(p, bossRadius))
             {
@@ -173,9 +169,11 @@ public class PollutionBossSpawner : MonoBehaviour
             }
         }
 
+        // 실패 시 중앙
         pos = GetBoardCenter();
         return false;
     }
+
 
     bool IsSpawnPositionFree(Vector3 p, float bossRadius)
     {

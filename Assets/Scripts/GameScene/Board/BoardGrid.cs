@@ -119,18 +119,18 @@ public class BoardGrid : MonoBehaviour
 
         float th = Mathf.Max(0.0001f, windowWall.thickness);
         float hh = Mathf.Max(0.0001f, windowWall.height);
-
+        float centerY = origin.y + hh * 0.5f;
         // 좌/우 벽 (길이 = outerH, 두께 = th)
         if (windowWall.wallL)
         {
-            windowWall.wallL.position   = new Vector3(xMin, hh * 0.5f, midZ);
+            windowWall.wallL.position = new Vector3(xMin, centerY, midZ);
             windowWall.wallL.localScale = new Vector3(th, hh, outerH);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallL is null — skipped.");
 
         if (windowWall.wallR)
         {
-            windowWall.wallR.position   = new Vector3(xMax, hh * 0.5f, midZ);
+            windowWall.wallR.position = new Vector3(xMax, centerY, midZ);
             windowWall.wallR.localScale = new Vector3(th, hh, outerH);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallR is null — skipped.");
@@ -138,14 +138,14 @@ public class BoardGrid : MonoBehaviour
         // 앞/뒤 벽 (길이 = outerW, 두께 = th)
         if (windowWall.wallF)
         {
-            windowWall.wallF.position   = new Vector3(midX, hh * 0.5f, zMax);
+            windowWall.wallF.position = new Vector3(midX, centerY, zMax);
             windowWall.wallF.localScale = new Vector3(outerW, hh, th);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallF is null — skipped.");
 
         if (windowWall.wallB)
         {
-            windowWall.wallB.position   = new Vector3(midX, hh * 0.5f, zMin);
+            windowWall.wallB.position = new Vector3(midX, centerY, zMin);
             windowWall.wallB.localScale = new Vector3(outerW, hh, th);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallB is null — skipped.");
@@ -170,12 +170,12 @@ public class BoardGrid : MonoBehaviour
         if (spinnerA)
         {
             float xA = x0 + boardW * Mathf.Clamp01(spinnerA_XFrac);
-            spinnerA.position = new Vector3(xA, spinnerY, zPos);
+            spinnerA.position = new Vector3(xA, origin.y + spinnerY, zPos);
         }
         if (spinnerB)
         {
             float xB = x0 + boardW * Mathf.Clamp01(spinnerB_XFrac);
-            spinnerB.position = new Vector3(xB, spinnerY, zPos);
+            spinnerB.position = new Vector3(xB, origin.y + spinnerY, zPos);
         }
     }
 

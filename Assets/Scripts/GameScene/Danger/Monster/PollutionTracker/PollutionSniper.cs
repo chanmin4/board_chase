@@ -80,6 +80,7 @@ public class PollutionSniper : MonoBehaviour
     public float worldLift = 0.7f;
     public float worldScale = 1.0f;
     public float worldFlatAngleDeg = 0f; // 0=세움, 90=눕힘
+    float BoardY => _board ? _board.origin.y : 0f;
 
     // ───────── 내부 상태 ─────────
     int _hp;
@@ -106,7 +107,9 @@ public class PollutionSniper : MonoBehaviour
         _board = board; _player = player; _director = director;
         if (_director == null) _director = FindAnyObjectByType<SurvivalDirector>();
 
-        var p = transform.position; p.y = groundY; transform.position = p;
+        var p = transform.position;
+p.y = BoardY + groundY;          // 기존: groundY
+transform.position = p;
 
         var col = GetComponent<SphereCollider>();
         col.isTrigger = true;
@@ -121,7 +124,7 @@ public class PollutionSniper : MonoBehaviour
 
         // 초기 조준 타깃
         _smoothedTarget = _player ? _player.position : transform.position + transform.forward;
-        _smoothedTarget.y = groundY;
+_smoothedTarget.y = BoardY + groundY;  // 기존: groundY
 
         // 초기 에임 방향
         Vector3 initDir = (_smoothedTarget - transform.position); initDir.y = 0f;
@@ -138,7 +141,8 @@ public class PollutionSniper : MonoBehaviour
         // 타깃 위치 ‘관성’ 추적(속도 조절형 조준 핵심 ①)
         if (_player)
         {
-            Vector3 desired = _player.position; desired.y = groundY;
+           Vector3 desired = _player ? _player.position : _smoothedTarget;
+desired.y = BoardY + groundY;    // 기존: groundY
             float follow = 1f - Mathf.Exp(-Mathf.Max(0.001f, aimTargetFollowSpeed) * dt);
             _smoothedTarget = Vector3.Lerp(_smoothedTarget, desired, follow);
         }
@@ -221,7 +225,8 @@ public class PollutionSniper : MonoBehaviour
     {
         outPts.Clear();
 
-        Vector3 start = transform.position; start.y = groundY + 0.02f;
+        Vector3 start = transform.position;
+        start.y = BoardY + groundY + 0.02f;
         Vector3 dir = _aimDir.sqrMagnitude > 1e-6f ? _aimDir.normalized : Vector3.forward;
 
         // 보드 외곽 사각형에 부딪히거나, 최대 길이에서 종료
@@ -238,7 +243,7 @@ public class PollutionSniper : MonoBehaviour
                 end = hit;
         }
 
-        end.y = groundY + 0.02f;
+        end.y = BoardY + groundY + 0.02f; 
 
         outPts.Add(start);
         outPts.Add(end);
@@ -271,7 +276,8 @@ public class PollutionSniper : MonoBehaviour
         if (float.IsPositiveInfinity(tMin)) return false;
 
         traveled = tMin;
-        hit = p + d * tMin; hit.y = groundY + 0.02f;
+        hit = p + d * tMin;
+        hit.y = BoardY + groundY + 0.02f;
         reflectDir = d;
         return true;
     }
@@ -281,8 +287,8 @@ public class PollutionSniper : MonoBehaviour
     {
         if (_director == null || path.Count < 2) return;
 
-        Vector3 a = path[0]; a.y = groundY;
-        Vector3 b = path[1]; b.y = groundY;
+       Vector3 a = path[0]; a.y = BoardY + groundY; // 기존: groundY
+Vector3 b = path[1]; b.y = BoardY + groundY; // 기존: groundY
 
         float len = Vector3.Distance(a, b);
         float step = Mathf.Max(0.05f, contamStepMeters);
