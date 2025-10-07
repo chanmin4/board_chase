@@ -9,7 +9,7 @@ public interface IPlayerSurvivalDamage
 }
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(SphereCollider))]
+//[RequireComponent(typeof(SphereCollider))]
 public class PollutionSniper : MonoBehaviour
 {
     // ───────── 주입(프리팹 저장 X) ─────────
@@ -108,13 +108,13 @@ public class PollutionSniper : MonoBehaviour
         if (_director == null) _director = FindAnyObjectByType<SurvivalDirector>();
 
         var p = transform.position;
-p.y = BoardY + groundY;          // 기존: groundY
-transform.position = p;
+        p.y = BoardY + groundY;          // 기존: groundY
+        transform.position = p;
 
-        var col = GetComponent<SphereCollider>();
-        col.isTrigger = true;
-        col.radius = Mathf.Max(0.05f, bodyRadius);
-
+        foreach (var c in GetComponentsInChildren<Collider>(true)) {
+            if (c is MeshCollider mc) mc.convex = true;
+            c.isTrigger = true;
+        }
         _hp = Mathf.Max(1, maxHP);
         EnsureHPUI();
         UpdateHPUIFill();

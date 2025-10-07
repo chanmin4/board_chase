@@ -44,7 +44,7 @@ public class PollutionGhost : MonoBehaviour
     public ParticleSystem timeoutFx;
     public AudioSource killSfx;
 
-    SphereCollider trigger; // 내부 관통용: isTrigger = true
+    MeshCollider trigger; // 내부 관통용: isTrigger = true
     Vector3 velocity;       // 현재 이동 방향 * 속도
 
     float lifeClock;        // 생존 시간
@@ -79,10 +79,10 @@ transform.position = p;
 
     void Awake()
     {
-        trigger = GetComponent<SphereCollider>();
-        if (!trigger) trigger = gameObject.AddComponent<SphereCollider>();
+        trigger = GetComponentInChildren<MeshCollider>();
+        if (!trigger) trigger = gameObject.AddComponent<MeshCollider>();
         trigger.isTrigger = true;                                // 내부 오브젝트는 관통
-        trigger.radius = Mathf.Max(radiusWorld, planarHitRadius);
+        //trigger.radius = Mathf.Max(radiusWorld, planarHitRadius);
     }
 
     void Update()
