@@ -27,10 +27,20 @@ public class HomingRocket : MonoBehaviour
     [NonSerialized]public bool followTargetXZ = true; // 인스펙터 값은 무시되고 Setup에서 강제 설정됨
     public Transform target;
     public float moveSpeed = 7.0f;
-
+    [Header("Sync / Ground Anchor")]
+    public bool syncFallWithLifetime = true;   // fallDuration = totalLifetime 동기화
+    public bool anchorRingToGround   = true;   // 반경 링을 항상 groundY에 붙임
+    public bool explodeOnTouchesRing = true;
     // --- internal ---
     Transform _tf;
     Transform _ringTf;
+    public Transform visualRoot;            // 로켓 모델 Transform(없으면 자동 탐색)
+[Tooltip("visualRoot의 -up 방향으로 팁까지의 로컬 거리(미터).")]
+public float tipOffset = 0.5f;          // 팁까지 오프셋(로컬, -up 기준)
+[Tooltip("팁과 링의 XZ 접촉 허용 오차(미터).")]
+public float tipContactMargin = 0.02f;  // 접촉 판정 여유
+[Tooltip("팁이 바닥에 거의 닿았는지(Y) 허용 오차.")]
+public float tipGroundMargin = 0.05f;   // 수직 허용 오차
     float _elapsed, _fallElapsed;
     bool _configured = false; // Setup을 받았는지
 
@@ -62,7 +72,8 @@ public class HomingRocket : MonoBehaviour
 
             if (homingSpeed > 0f) moveSpeed = homingSpeed;
         }
-
+        if (syncFallWithLifetime) fallDuration = totalLifetime;
+         _tf.position = new Vector3(_tf.position.x, groundY + startHeight, _tf.position.z);
         _configured = true;
 
         // 비주얼 생성은 여기서만
@@ -77,32 +88,61 @@ public class HomingRocket : MonoBehaviour
 
     void Update()
     {
-        if (!_configured) return;  // Setup 전엔 아무것도 안 함
+        if (!_configured) return;
 
         float dt = Time.deltaTime;
-        _elapsed     += dt;
+        _elapsed += dt;
         _fallElapsed += dt;
 
-        // 하강
+        // ── 하강(0→1)
         float f = Mathf.Clamp01(_fallElapsed / Mathf.Max(0.0001f, fallDuration));
-        float y = Mathf.Lerp(startHeight, groundY, f);
+        float y = Mathf.Lerp(startHeight, 0f, f); // startHeight에서 ground까지 상대값
+        var pos = _tf.position;
+        pos.y = groundY + y;
 
-        // (옵션) XZ 추적
-        Vector3 pos = _tf.position;
-        if (followTargetXZ && (!target && director)) target = director.player; // 런타임 보정
+        // XZ 추적(기존)
+        if (followTargetXZ && (!target && director)) target = director.player;
         if (followTargetXZ && target)
         {
             Vector3 t = target.position; t.y = pos.y;
             pos = Vector3.MoveTowards(pos, t, moveSpeed * dt);
         }
-        _tf.position = new Vector3(pos.x, y, pos.z);
+        _tf.position = pos;
 
-        // 반경 성장
-        float t01   = Mathf.Clamp01(_elapsed / Mathf.Max(0.0001f, totalLifetime));
-        float k     = Mathf.Clamp01(growth.Evaluate(t01));
+        // 링은 항상 groundY에 고정
+        if (anchorRingToGround && previewParent)
+            previewParent.position = new Vector3(_tf.position.x, groundY + 0.001f, _tf.position.z);
+
+        // ── 반경 성장 (0→1)
+        float t01 = Mathf.Clamp01(_elapsed / Mathf.Max(0.0001f, totalLifetime));
+        float k = Mathf.Clamp01(growth.Evaluate(t01));
         float radius = Mathf.Lerp(minRadius, maxRadius, k);
         if (_ringTf) _ringTf.localScale = new Vector3(radius * 2f, 0.02f, radius * 2f);
+
+        // ── NEW: 팁 접촉 판정
+        if (explodeOnTouchesRing && visualRoot && previewParent)
+        {
+            // 팁의 월드 위치 (local -up 방향)
+            float yScale = Mathf.Abs(visualRoot.lossyScale.y);
+            Vector3 tip = visualRoot.position + (-visualRoot.up) * (tipOffset * yScale);
+
+            // 바닥에 거의 닿았는지(수직 허용 오차)
+            bool nearGround = Mathf.Abs(tip.y - groundY) <= tipGroundMargin;
+
+            // 링 중심과의 XZ 거리
+            Vector2 tipXZ = new Vector2(tip.x, tip.z);
+            Vector2 ctrXZ = new Vector2(previewParent.position.x, previewParent.position.z);
+            float dist = Vector2.Distance(tipXZ, ctrXZ);
+
+            if (nearGround && dist <= radius + tipContactMargin)
+            {
+                Explode();
+                return;
+            }
+        }
     }
+
+
 
     public void Explode()
     {

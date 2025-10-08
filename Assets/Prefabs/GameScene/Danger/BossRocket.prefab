@@ -50,9 +50,9 @@ MonoBehaviour:
   previewRingPrefab: {fileID: 0}
   previewRingMat: {fileID: 0}
   previewLayerName: Ignore Raycast
-  startHeight: 6
+  startHeight: 30
   groundY: 0.1
-  fallDuration: 2
+  fallDuration: 4
   minRadius: 0.6
   maxRadius: 2.4
   growth:
@@ -81,6 +81,13 @@ MonoBehaviour:
     m_RotationOrder: 4
   target: {fileID: 0}
   moveSpeed: 7
+  syncFallWithLifetime: 1
+  anchorRingToGround: 1
+  explodeOnTouchesRing: 1
+  visualRoot: {fileID: 3718010870338814873}
+  tipOffset: 0.5
+  tipContactMargin: 0.02
+  tipGroundMargin: 0.05
 --- !u!1 &8845182830767556867
 GameObject:
   m_ObjectHideFlags: 0
@@ -105,14 +112,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8845182830767556867}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0.5, y: 0.5, z: -0.5, w: 0.5}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3948708464079630486}
   m_Father: {fileID: 8770213412680816613}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: -90}
 --- !u!1001 &1032879100895326591
 PrefabInstance:
   m_ObjectHideFlags: 0

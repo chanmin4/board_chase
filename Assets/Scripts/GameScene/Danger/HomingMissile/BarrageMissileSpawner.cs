@@ -31,7 +31,7 @@ public class BarrageMissileSpawner : MonoBehaviour
     public float missileSpeed = 6f;
     public float hitRadiusWorld = 2.0f;
     public float timeoutRadiusWorld = 0.8f;
-    public float gaugePenaltyOnHit = 1.2f;
+    public float gaugePenaltyOnHit = 10f;
     public int missileCount = 1;
     public bool uniqueAnchorsPerBurst = true;       // true면 한 번의 발사에서 서로 다른 앵커를 우선 사용
                                                     // 내부
@@ -85,7 +85,7 @@ public class BarrageMissileSpawner : MonoBehaviour
     void FireMissile()
     {
         if (!missilePrefab || !director) return;
-        float baseY = (board ? board.origin.y : 0f);
+        float baseY = board ? board.origin.y : 0f;
         int count = Mathf.Max(1, missileCount);
         // 1) 앵커가 있으면 거기서 랜덤 선택
         if (anchors != null && anchors.Length > 0)
@@ -100,7 +100,7 @@ public class BarrageMissileSpawner : MonoBehaviour
                 {
                     var a = anchors[(idx + k) % anchorL];
                     Vector3 p = a ? a.position : transform.position;
-                    p.y = baseY + spawnY; 
+                     p = new Vector3(p.x, baseY + spawnY, p.z);   // [FIX] XZ=앵커, Y=보드origin+오프셋 
                     SpawnOne(p);
                 }
                 // 남는 분량은 랜덤 앵커에서 추가 발사
@@ -108,7 +108,7 @@ public class BarrageMissileSpawner : MonoBehaviour
                 {
                     var a = anchors[Random.Range(0, anchorL)];
                     Vector3 p = a ? a.position : transform.position;
-                    p.y = spawnY;
+                     p = new Vector3(p.x, baseY + spawnY, p.z);   // [FIX]
                     SpawnOne(p);
                 }
             }
@@ -117,7 +117,7 @@ public class BarrageMissileSpawner : MonoBehaviour
                 // 같은 앵커에서 count개 발사
                 var a = anchors[idx];
                 Vector3 p = a ? a.position : transform.position;
-                p.y = spawnY;
+                 p = new Vector3(p.x, baseY + spawnY, p.z);  
                 for (int k = 0; k < count; k++) SpawnOne(p);
             }
         }
@@ -134,7 +134,10 @@ public class BarrageMissileSpawner : MonoBehaviour
 
         var g = gauge ? gauge : director ? director.gauge : null;
 
-        if (hm) hm.Setup(director, player, missileLifetime, missileSpeed, hitRadiusWorld,timeoutRadiusWorld, g, spawnY);
+        if (hm) hm.Setup(director, player, missileLifetime, missileSpeed,
+                     hitRadiusWorld, timeoutRadiusWorld, g, pos.y);
+
+        
         hm.gaugePenaltyOnHit = gaugePenaltyOnHit;
     }
 }

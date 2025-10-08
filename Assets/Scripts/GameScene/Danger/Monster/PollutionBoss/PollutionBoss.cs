@@ -127,29 +127,28 @@ public class PollutionBoss : MonoBehaviour
     // ───────── Rocket ─────────
     void FireRocket()
     {
-        // 보스 '정중앙'에서 바로 출발
-        Vector3 p = transform.position;
-        p.y += rocketSpawnYOffset;
+        // 보스 중심에서 발사하되, 바닥 y를 보드 기준으로 맞춤
+        Vector3 center = transform.position;
+        float ground = BoardY + groundY;                 // 바닥 기준(보드)
+        float startY = ground + rocketSpawnYOffset + /*로켓 시작 높이*/ 6f; // 필요 시 공개 필드로
 
-        var r = Instantiate(_rocketPrefab, p, Quaternion.identity);
+        // 스폰 위치는 y 아무거나 OK (Setup/Init에서 startHeight로 올림)
+        var r = Instantiate(_rocketPrefab, new Vector3(center.x, ground, center.z), Quaternion.identity);
         _activeRocket = r;
 
-        // 낙하 제거: 현재 높이 고정
-        r.startHeight  = p.y;
-        r.groundY      = p.y;
-        r.fallDuration = 0f;
-
-        // 타깃/유도 설정
+        // Homing 설정(기존)
         Transform tgt = _player ? _player : (_director ? _director.player : null);
+        r.Setup(_director, Mathf.Max(0.1f, rocketLifetime), tgt, homingSpeed, true);
 
-        try
-        {
-            r.Setup(_director, Mathf.Max(0.1f, rocketLifetime), tgt, homingSpeed, true);
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"[PollutionBoss] HomingRocket.Setup 실패: {e.Message}");
-        }
+        // ▼ 추가 동기화: 낙하/바닥/앵커
+        r.startHeight = startY;                     // 위에서 시작
+        r.groundY = ground;                     // 바닥 y
+        r.syncFallWithLifetime = true;                       // fall = lifetime
+        r.anchorRingToGround = true; 
+                              // 링은 항상 바닥
+        //r.explodeWhenBothDone   = true;                       // 동시 만족 시 폭발
+        // 필요하면 시각 곡선/반경도 프리팹 대신 여기서 오버라이드 가능:
+        // r.minRadius = 0.6f; r.maxRadius = 2.0f; r.growth = AnimationCurve.EaseInOut(0,0, 1,1);
     }
 
     // ───────── Damage / Hit ─────────

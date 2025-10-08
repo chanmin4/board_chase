@@ -36,13 +36,11 @@ public class SmallHomingMissile : MonoBehaviour
 
     void Awake()
     {
-        // 보조용 트리거(없으면 생성). 회전벽과 겹쳐도 OnTriggerEnter는 Player만 처리.
-        trigger = GetComponent<SphereCollider>();
-        if (!trigger)
+        var meshCol = GetComponentInChildren<MeshCollider>(true);
+        if (meshCol)
         {
-            trigger = gameObject.AddComponent<SphereCollider>();
-            trigger.isTrigger = true;
-            trigger.radius = 0.35f;
+            meshCol.convex = true;      // 트리거/동적 충돌용
+            meshCol.isTrigger = true;
         }
     }
     public void Setup(SurvivalDirector dir, Transform tgt, float lifeSeconds,
@@ -56,8 +54,12 @@ public class SmallHomingMissile : MonoBehaviour
         hitRadiusWorld = hitR;
         timeoutRadiusWorld = timeoutR;
         gauge = gaugeRef;
-        groundY = yHeight;
-        var p = transform.position; p.y = groundY; transform.position = p;
+
+        
+        groundY = yHeight;            // [FIX] 이후 Update에서 이 높이를 유지
+        var p = transform.position;   //     (이전엔 무시되어 Y가 튀었습니다)
+        p.y = groundY;
+        transform.position = p;
     }
 
     void Update()
@@ -68,9 +70,10 @@ public class SmallHomingMissile : MonoBehaviour
         if (target)
         {
             Vector3 here = transform.position;
-            Vector3 want = target.position; want.y = here.y;
+            Vector3 want = target.position;
+            want.y = here.y;
 
-            Vector3 dir = (want - here);
+            Vector3 dir = want - here;
             float d2 = dir.sqrMagnitude;
             if (d2 > 0.0001f)
             {
