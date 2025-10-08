@@ -51,6 +51,8 @@ public class PollutionBoss : MonoBehaviour
     [Tooltip("WorldSpace 캔버스 전체 배율(1 = 그대로)")] public float worldCanvasScale = 1.0f;
     [Tooltip("WorldFlat일 때 X축 회전 (90=바닥에 눕힘)")] public float worldFlatAngleDeg = 90f;
 
+    
+
     // ───────── 주입(스포너가 Setup으로만 넣음) ─────────
     BoardGrid _board;
     Transform _player;

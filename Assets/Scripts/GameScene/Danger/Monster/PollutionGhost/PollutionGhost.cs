@@ -39,6 +39,11 @@ public class PollutionGhost : MonoBehaviour
     public bool planarHitCheck = false;    // 수평거리로도 판정하고 싶으면 켜기
     public float planarHitRadius = 0.45f;
 
+    [SerializeField] string animSpeedParam = "Speed";
+    Animator anim;
+    int animSpeedHash;
+    Vector3 prevPos; // 이동속도 계산용 (수평)
+
     [Header("Fx (optional)")]
     public ParticleSystem killFx;
     public ParticleSystem timeoutFx;
@@ -68,9 +73,11 @@ public class PollutionGhost : MonoBehaviour
 
         // 높이 고정
         var p = transform.position;
-p.y = BoardY + groundY;          // 기존: groundY
-transform.position = p;
-
+        p.y = BoardY + groundY;          // 기존: groundY
+        transform.position = p;
+        
+        prevPos = transform.position;
+        if (anim) anim.SetFloat(animSpeedHash, 0f);
         // 경로 오염 타이머 초기화
         lifeClock = 0f; pathClock = 0f; pathStarted = false;
         nextDropTimer = pathContamInterval;
@@ -82,7 +89,9 @@ transform.position = p;
         trigger = GetComponentInChildren<MeshCollider>();
         if (!trigger) trigger = gameObject.AddComponent<MeshCollider>();
         trigger.isTrigger = true;                                // 내부 오브젝트는 관통
-        //trigger.radius = Mathf.Max(radiusWorld, planarHitRadius);
+
+        anim = GetComponentInChildren<Animator>(true);
+        if (anim) animSpeedHash = Animator.StringToHash(animSpeedParam);
     }
 
     void Update()
@@ -115,7 +124,15 @@ transform.position = p;
             transform.forward = new Vector3(velocity.x, 0f, velocity.z).normalized;
 
         transform.position = pos;
-
+        if (anim)
+        {
+            Vector3 delta = transform.position - prevPos;
+            delta.y = 0f;
+            float dt = Mathf.Max(Time.deltaTime, 1e-6f);
+            float planarSpeed = delta.magnitude / dt;     // m/s
+            anim.SetFloat(animSpeedHash, planarSpeed);  // 0.1 임계로 Idle/Move 전환
+        }
+        prevPos = transform.position;
         // ===== 경로 오염 생성 로직 =====
         if (enablePathContam && director)
         {

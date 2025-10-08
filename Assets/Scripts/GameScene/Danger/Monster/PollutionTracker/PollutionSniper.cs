@@ -73,6 +73,14 @@ public class PollutionSniper : MonoBehaviour
     public Vector2 hudBarSizePx = new Vector2(220f, 18f);
     public float hudInnerPadPx = 2f;
     public int hudSortingOrder = 1000;
+     [Header("Animation)")]
+    [SerializeField] string animSpeedParam = "Speed";
+    [SerializeField] string animAttackParam = "Attack";
+    Animator anim;
+    int animSpeedHash;
+    int animAttackHash;
+    Vector3 prevPos; // 이동속도 계산용 (수평)
+    
 
     [Header("World Bar")]
     public Vector2 worldBarSizeM = new Vector2(0.7f, 0.1f);
@@ -110,8 +118,17 @@ public class PollutionSniper : MonoBehaviour
         var p = transform.position;
         p.y = BoardY + groundY;          // 기존: groundY
         transform.position = p;
+        prevPos = transform.position;
+        if (anim)
+        {
+            anim.SetFloat(animSpeedHash, 0f);
+            anim.SetBool(animAttackHash, false);
+        }
 
-        foreach (var c in GetComponentsInChildren<Collider>(true)) {
+        
+
+        foreach (var c in GetComponentsInChildren<Collider>(true))
+        {
             if (c is MeshCollider mc) mc.convex = true;
             c.isTrigger = true;
         }
@@ -134,10 +151,28 @@ _smoothedTarget.y = BoardY + groundY;  // 기존: groundY
         _timer = 0f;
     }
 
+    void Awake()
+    {
+        anim = GetComponentInChildren<Animator>(true);
+        if (anim)
+        {
+            animSpeedHash = Animator.StringToHash(animSpeedParam);
+            animAttackHash = Animator.StringToHash(animAttackParam);
+        }
+        
+    }
     void Update()
     {
         float dt = Time.deltaTime;
-
+        if (anim)
+        {
+            Vector3 delta = transform.position - prevPos;
+            delta.y = 0f;
+            float dtani = Mathf.Max(Time.deltaTime, 1e-6f);
+            float planarSpeed = delta.magnitude / dtani;     // m/s
+            anim.SetFloat(animSpeedHash, planarSpeed);  // 0.1 임계로 Idle/Move 전환
+        }
+        prevPos = transform.position;
         // 타깃 위치 ‘관성’ 추적(속도 조절형 조준 핵심 ①)
         if (_player)
         {
@@ -162,6 +197,8 @@ desired.y = BoardY + groundY;    // 기존: groundY
 
         _timer += dt;
 
+
+
         if (_state == State.Aiming)
         {
             // 조준선(프리뷰) 갱신/표시
@@ -173,7 +210,9 @@ desired.y = BoardY + groundY;    // 기존: groundY
 
             if (_timer >= aimPreviewTime)
             {
+                if (anim) anim.SetBool(animAttackHash, true);
                 StartFire();
+                
             }
         }
         else if (_state == State.Firing)
@@ -182,8 +221,10 @@ desired.y = BoardY + groundY;    // 기존: groundY
             if (_timer >= fireShowDuration)
             {
                 SetLineActive(false);
+                if(anim)anim.SetBool(animAttackHash, false);
                 _state = State.Cooldown;
                 _timer = 0f;
+
             }
         }
         else // Cooldown
