@@ -4,79 +4,98 @@ using UnityEditor;
 #endif
 
 [DisallowMultipleComponent]
-[AddComponentMenu("Board/Wall Fence By Scale")]
-public class WallFenceByScale : MonoBehaviour
+[AddComponentMenu("Board/Fence Strip (10-step, simple)")]
+public class FenceStripEvery10 : MonoBehaviour
 {
-    [Header("Prefab & Spacing")]
-    public GameObject fencePrefab;
-    [Min(0.01f)] public float spacing = 5f; // “5마다 1개”
-    public float endMargin = 0f;            // 양 끝에서 조금 물리기
-    public float yOffsetWorld = 0f;         // 벽의 중심 Y에서 높이 보정
-    public float yawOffsetLocal = 0f;       // 울타리 정면 보정(도)
+    [Header("Refs")]
+    public BoardGrid grid;        // origin/크기
+    public Transform wall;        // 이 벽 기준(Left/Right/Front/Back 중 하나)
 
-    [Header("Axis")]
-    public AxisMode axisMode = AxisMode.AutoLongestXZ; // 벽이 X/Z 중 어떤 축으로 길게 늘어났는지
-    public enum AxisMode { AutoLongestXZ, ForceX, ForceZ }
+    [Header("Fence")]
+    public GameObject fencePrefab;
+
+    //[Header("Side Mode (필수 선택)")]
+    public enum SideGroup { LeftRight, FrontBack }
+    public SideGroup sideGroup = SideGroup.LeftRight;
+
+    [Header("Params")]
+    public float unit = 10f;      // 간격
+    public float fenceScaleX = 5f; // 인스턴스 scale.x
 
     [Header("Group")]
     public string groupName = "_Fences";
 
-    // ---- 수동 실행 ----
-    [ContextMenu("Build On This Wall")]
-    public void BuildOnThisWall()
+    [ContextMenu("Build Fences")]
+    public void BuildFences()
     {
-        if (!fencePrefab) return;
+        if (!grid || !fencePrefab || !wall) return;
 
-        // 1) parent/visual 가져온 다음, 축 기준도 visual로 통일
-    Transform parent = transform;
-    var vis = transform.Find("visual");
-    if (vis) parent = vis;
+        // 보드 내부 사각형 (월드 좌표)
+        Rect br = grid.GetBoardRectXZ();
+        float y  = grid.origin.y;
 
-    ClearInternal(parent);
-    var group = new GameObject(groupName).transform;
-    group.SetParent(parent, false);
+        // 어느 쪽 가장자리(X or Z)로 붙일지 결정
+        float xMin = br.xMin, xMax = br.xMax;
+        float zMin = br.yMin, zMax = br.yMax;
 
-    // [NEW] === 축/길이 계산 기준을 axisRef(= visual 있으면 그쪽)로 ===
-    Transform axisRef = vis ? vis : transform;      // ★ 변경 포인트
-    Vector3 ls = axisRef.lossyScale;
+        Transform parent = wall;
+        ClearGroup(parent);
+        var group = new GameObject(groupName).transform;
+        group.SetParent(parent, false);
 
-    // 2) 어느 축으로 늘어났는지 판단 + 진행 방향/길이 계산
-    bool alongX =
-        axisMode == AxisMode.ForceX ||
-        (axisMode == AxisMode.AutoLongestXZ && Mathf.Abs(ls.x) >= Mathf.Abs(ls.z));
+        if (sideGroup == SideGroup.LeftRight)
+        {
+            // X를 가장 가까운 xMin/xMax로 고정, Z축으로 10..max 포함
+            float fixedX = (Mathf.Abs(wall.position.x - xMin) < Mathf.Abs(wall.position.x - xMax)) ? xMin : xMax;
 
-    Vector3 dir   = (alongX ? axisRef.right   : axisRef.forward).normalized;  // ★ 변경
-    float   length=  alongX ? Mathf.Abs(ls.x) : Mathf.Abs(ls.z);               // ★ 변경
+            // 회전/스케일
+            Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
 
-    float half  = 0.5f * length;
-    float start = -half + endMargin;
-    float end   =  half - endMargin;
-
-    // 3) 회전도 축 기준으로
-    Quaternion rot = Quaternion.AngleAxis(yawOffsetLocal, Vector3.up)
-                * Quaternion.LookRotation(dir, Vector3.up);
-
-    // 4) 위치도 axisRef 중심 기준으로
-    float step = Mathf.Max(0.01f, spacing);
-            for (float d = start; d <= end + 1e-4f; d += step)
+            for (float z = zMin + unit; z <= zMax + 1e-4f; z += unit)
             {
-                Vector3 pos = axisRef.position + dir * d;   // ★ 변경
-                pos.y = axisRef.position.y + yOffsetWorld;  // ★ 변경
-                Instantiate(fencePrefab, pos, rot, group);
+                Vector3 pos = new Vector3(fixedX, y, z);
+#if UNITY_EDITOR
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(fencePrefab, group);
+                go.transform.SetPositionAndRotation(pos, rot);
+#else
+                var go = Instantiate(fencePrefab, pos, rot, group);
+#endif
+                var s = go.transform.localScale;
+                s.x = fenceScaleX;
+                go.transform.localScale = s;
             }
+        }
+        else // FrontBack
+        {
+            // Z를 가장 가까운 zMin/zMax로 고정, X축으로 min..max-10 (최대 미포함)
+            float fixedZ = (Mathf.Abs(wall.position.z - zMin) < Mathf.Abs(wall.position.z - zMax)) ? zMin : zMax;
 
+            Quaternion rot = Quaternion.Euler(0f, 0f, 0f);
+
+            for (float x = xMin; x <= xMax - unit + 1e-4f; x += unit)
+            {
+                Vector3 pos = new Vector3(x, y, fixedZ);
+#if UNITY_EDITOR
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(fencePrefab, group);
+                go.transform.SetPositionAndRotation(pos, rot);
+#else
+                var go = Instantiate(fencePrefab, pos, rot, group);
+#endif
+                var s = go.transform.localScale;
+                s.x = fenceScaleX;
+                go.transform.localScale = s;
+            }
+        }
     }
 
-    [ContextMenu("Clear On This Wall")]
-    public void ClearOnThisWall()
+    [ContextMenu("Clear Fences")]
+    public void ClearFences()
     {
-        Transform parent = transform;
-        var vis = transform.Find("visual");
-        if (vis) parent = vis;
-        ClearInternal(parent);
+        if (!wall) return;
+        ClearGroup(wall);
     }
 
-    void ClearInternal(Transform parent)
+    void ClearGroup(Transform parent)
     {
         if (!parent || string.IsNullOrEmpty(groupName)) return;
         var g = parent.Find(groupName);

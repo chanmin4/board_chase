@@ -124,14 +124,14 @@ public class BoardGrid : MonoBehaviour
         if (windowWall.wallL)
         {
             windowWall.wallL.position = new Vector3(xMin, centerY, midZ);
-            windowWall.wallL.localScale = new Vector3(th, hh, outerH);
+            //windowWall.wallL.localScale = new Vector3(th, hh, outerH);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallL is null — skipped.");
 
         if (windowWall.wallR)
         {
             windowWall.wallR.position = new Vector3(xMax, centerY, midZ);
-            windowWall.wallR.localScale = new Vector3(th, hh, outerH);
+            //windowWall.wallR.localScale = new Vector3(th, hh, outerH);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallR is null — skipped.");
 
@@ -139,14 +139,14 @@ public class BoardGrid : MonoBehaviour
         if (windowWall.wallF)
         {
             windowWall.wallF.position = new Vector3(midX, centerY, zMax);
-            windowWall.wallF.localScale = new Vector3(outerW, hh, th);
+            //windowWall.wallF.localScale = new Vector3(outerW, hh, th);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallF is null — skipped.");
 
         if (windowWall.wallB)
         {
             windowWall.wallB.position = new Vector3(midX, centerY, zMin);
-            windowWall.wallB.localScale = new Vector3(outerW, hh, th);
+            //windowWall.wallB.localScale = new Vector3(outerW, hh, th);
         }
         else Debug.LogWarning("[BoardGrid] WindowWall.wallB is null — skipped.");
     }
