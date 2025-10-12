@@ -369,18 +369,21 @@ static bool CalcLocalBounds(Transform root, out Bounds b)
     // ---- 오염 디스크(보라) ----
     void HandleContamCircle(int id, Vector3 centerWorld, float radiusWorld)
     {
+        float yBase = board ? board.origin.y : centerWorld.y;
+        Vector3 pos = new Vector3(centerWorld.x, yBase + contamDiscY, centerWorld.z);
+
         GameObject go;
         if (contamDiscPrefab)
-            go = Instantiate(contamDiscPrefab, centerWorld + Vector3.up * contamDiscY, Quaternion.identity, contamRoot);
+            go = Instantiate(contamDiscPrefab, pos, Quaternion.identity, contamRoot);
         else
         {
             go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.transform.SetParent(contamRoot, false);
-           float yBase = board ? board.origin.y : centerWorld.y;
-           go.transform.position = new Vector3(centerWorld.x, yBase + contamDiscY, centerWorld.z);
+            go.transform.position = pos;
             var col = go.GetComponent<Collider>(); if (!col) col = go.AddComponent<CapsuleCollider>();
             col.isTrigger = true;
         }
+
         go.transform.localScale = new Vector3(radiusWorld * 2f, 0.02f, radiusWorld * 2f);
 
         if (contamMat)

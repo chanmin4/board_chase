@@ -30,7 +30,7 @@ public class CardManager : MonoBehaviour
 
     public event System.Action CardUse;
     CardData data;
-    int charge;
+    [SerializeField]int charge=0;
     bool onCooldown;
     CardAbility ability;
     private Coroutine durationCo;

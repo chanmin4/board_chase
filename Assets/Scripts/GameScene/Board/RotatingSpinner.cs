@@ -4,7 +4,7 @@ using UnityEngine;
 /// 얇은 회전 막대(벽). Rigidbody(kinematic) + BoxCollider.
 /// Layer를 "Wall" 로 맞추면 플레이어가 부딪힐 때 기존 벽과 동일하게 처리됨.
 /// </summary>
-[RequireComponent(typeof(BoxCollider))]
+//[RequireComponent(typeof(Collider))]
 [DisallowMultipleComponent]
 public class RotatingSpinner : MonoBehaviour
 {
@@ -25,13 +25,12 @@ public class RotatingSpinner : MonoBehaviour
     public PhysicsMaterial bounceMaterial; // bounciness=1, friction=0, combine=Max 권장
     public bool addKinematicRigidbody = true;
 
-    BoxCollider col;
+    Collider col;
   const string kArmName = "Arm90";
     void Awake()
     {
-        col = GetComponent<BoxCollider>();
-        col.size = new Vector3(length, height, thickness);
-        col.center = Vector3.zero;
+        col = GetComponentInChildren<Collider>();
+       transform.localScale = new Vector3(length, height, thickness);
         if (bounceMaterial) col.material = bounceMaterial;
 
         if (addKinematicRigidbody && !TryGetComponent<Rigidbody>(out var rb))
@@ -51,15 +50,14 @@ public class RotatingSpinner : MonoBehaviour
         {
             if (!armTf)
             {
-                var arm = new GameObject(kArmName).AddComponent<BoxCollider>();
+                var arm = new GameObject(kArmName).AddComponent<MeshCollider>();
                 arm.transform.SetParent(transform, false);
-                arm.size = new Vector3(thickness, height, length);
                 if (bounceMaterial) arm.material = bounceMaterial;
             }
             else
             {
-                var armCol = armTf.GetComponent<BoxCollider>();
-                if (armCol) armCol.size = new Vector3(thickness, height, length);
+                var armCol = armTf.GetComponent<Collider>();
+                if (armCol) armCol.transform.localScale = new Vector3(thickness, height, length);
                 if (bounceMaterial && armCol) armCol.material = bounceMaterial;
             }
         }
@@ -82,12 +80,14 @@ public class RotatingSpinner : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
-        if (!col) col = GetComponent<BoxCollider>();
+        if (!col) col = GetComponent<Collider>();
         if (col)
         {
-            col.size = new Vector3(Mathf.Max(0.01f, length),
-                                   Mathf.Max(0.01f, height),
-                                   Mathf.Max(0.01f, thickness));
+            transform.localScale = new Vector3(
+               Mathf.Max(0.01f, length),
+               Mathf.Max(0.01f, height),
+               Mathf.Max(0.01f, thickness)
+            );
         }
         SetupCrossArm();
     }
