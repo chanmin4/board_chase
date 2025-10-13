@@ -17,26 +17,26 @@ public class ZoneVisualManager : MonoBehaviour
     public GameObject contamDiscPrefab;      // 없으면 Cylinder 생성
     public Material contamMat;
     public float contamDiscY = 0.01f;
-    public bool  makeContamDiscsTriggers = true;
-    public string pollutionTag   = "Pollution";
+    public bool makeContamDiscsTriggers = true;
+    public string pollutionTag = "Pollution";
     public string pollutionLayer = "Pollution";
 
     // ---------- Bonus Arc (debug) ----------
     [Header("Bonus Arc (debug)")]
     public Material bonusArcMaterial;              // 단색 머티리얼(없으면 내부 fallback)
-    public Color    bonusArcColor = Color.red;
-    [Range(8,128)] public int arcSegments = 32;    // 세그먼트 수
-    public float    arcRadiusOffset = 0.02f;       // 링 밖 오프셋
+    public Color bonusArcColor = Color.red;
+    [Range(8, 128)] public int arcSegments = 32;    // 세그먼트 수
+    public float arcRadiusOffset = 0.02f;       // 링 밖 오프셋
 
     [Header("Bonus Arc Sizing")]
-    public bool  widthScalesWithRadius = true;     // 반지름 비례 굵기
-    [Range(0f,0.3f)] public float widthPerRadius = 0.06f; // 굵기 = baseRadius * 값
+    public bool widthScalesWithRadius = true;     // 반지름 비례 굵기
+    [Range(0f, 0.3f)] public float widthPerRadius = 0.06f; // 굵기 = baseRadius * 값
     public float minWidth = 0.04f;
     public float maxWidth = 0.25f;
     [Tooltip("아크를 링 밖으로 띄우는 양(반지름 비례). 최종 오프셋은 max(offsetPerRadius*r, arcRadiusOffset) + 굵기/2")]
-    [Range(0f,0.2f)] public float offsetPerRadius = 0.04f;
+    [Range(0f, 0.2f)] public float offsetPerRadius = 0.04f;
     [Tooltip("아크를 위로 띄우는 높이(반지름 비례 + 최소값)")]
-    [Range(0f,0.5f)] public float yLiftPerRadius = 0.08f;
+    [Range(0f, 0.5f)] public float yLiftPerRadius = 0.08f;
     public float minYLift = 0.10f;
 
     // ---------- Mini Timer (Screen UI) ----------
@@ -49,14 +49,14 @@ public class ZoneVisualManager : MonoBehaviour
     public bool attachTimersToZone = true;  // [MOD] true면 Zone 밑(월드)에 부착, false면 기존처럼 화면 캔버스에 생성
 
     [Header("Legacy Contam Discs (off when using ContamTileRenderer)")]
-    public bool useLegacyContamDiscs = false;
+    //public bool useLegacyContamDiscs = false;
     [Header("Auto Fit (match prefab size to world radius)")]
-public bool autoFitPrefabs = true;              // 프리팹 실제 치수에 맞춰 자동 스케일
-public float ringHeightWorld = 0.02f;           // 링 두께(월드)
+    public bool autoFitPrefabs = true;              // 프리팹 실제 치수에 맞춰 자동 스케일
+    public float ringHeightWorld = 0.02f;           // 링 두께(월드)
 
-// === [추가] Visual 저장 구조에 필드 2개 추가 ===
-// class/struct Visual 안에 아래 두 줄 추가
-public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
+    // === [추가] Visual 저장 구조에 필드 2개 추가 ===
+    // class/struct Visual 안에 아래 두 줄 추가
+    public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
     public float ringScaleY;         // Y 두께 스케일(월드 두께 고정용)
 
 
@@ -67,7 +67,7 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
         public Transform ring;
         public float baseRadius;
         public float ringScalePerRadius; // XZ: scaleXZ = radius * ringScalePerRadius
-        public float ringScaleY;       
+        public float ringScaleY;
     }
 
     Dictionary<int, Visual> map = new();
@@ -82,7 +82,7 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
 
     void Awake()
     {
-        if (!board)    board    = FindAnyObjectByType<BoardGrid>();
+        if (!board) board = FindAnyObjectByType<BoardGrid>();
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
 
         contamRoot = new GameObject("ContaminatedDiscs").transform;
@@ -90,20 +90,20 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
 
         if (!director) return;
 
-        director.OnZonesReset     += HandleReset;
-        director.OnZoneSpawned    += HandleSpawn;
-        director.OnZoneExpired    += HandleExpired;
-        director.OnZoneConsumed   += HandleConsumed;
-        director.OnZoneProgress   += HandleProgress;
+        director.OnZonesReset += HandleReset;
+        director.OnZoneSpawned += HandleSpawn;
+        director.OnZoneExpired += HandleExpired;
+        director.OnZoneConsumed += HandleConsumed;
+        director.OnZoneProgress += HandleProgress;
         director.OnZoneBonusSectorChanged += HandleBonusSectorChanged;
 
         if (!screenCanvas)
             screenCanvas = FindFirstObjectByType<Canvas>();
 
-        if (useLegacyContamDiscs)
+        //if (useLegacyContamDiscs)
         {
-            director.OnZoneContaminatedCircle += HandleContamCircle;
-            director.OnClearedCircleWorld += HandleClearedCircleWorld;
+            //director.OnZoneContaminatedCircle += HandleContamCircle;
+            //irector.OnClearedCircleWorld += HandleClearedCircleWorld;
         }
     }
 
@@ -111,22 +111,37 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
     {
         if (!director) return;
 
-        director.OnZonesReset     -= HandleReset;
-        director.OnZoneSpawned    -= HandleSpawn;
-        director.OnZoneExpired    -= HandleExpired;
-        director.OnZoneConsumed   -= HandleConsumed;
-        director.OnZoneProgress   -= HandleProgress;
+        director.OnZonesReset -= HandleReset;
+        director.OnZoneSpawned -= HandleSpawn;
+        director.OnZoneExpired -= HandleExpired;
+        director.OnZoneConsumed -= HandleConsumed;
+        director.OnZoneProgress -= HandleProgress;
         director.OnZoneBonusSectorChanged -= HandleBonusSectorChanged;
 
-        if (useLegacyContamDiscs)
+        // if (useLegacyContamDiscs)
         {
-            director.OnZoneContaminatedCircle -= HandleContamCircle;
-            director.OnClearedCircleWorld     -= HandleClearedCircleWorld;
+            // director.OnZoneContaminatedCircle -= HandleContamCircle;
+            //director.OnClearedCircleWorld     -= HandleClearedCircleWorld;
         }
     }
 
     // ---- 소비 = 시각물 제거 동일 처리 ----
-    void HandleConsumed(int id) => HandleExpired(id);
+    void HandleConsumed(int id)
+    {
+        if (map.TryGetValue(id, out var v))
+        {
+            if (v.root) Destroy(v.root);
+            map.Remove(id);
+        }
+        if (bonusArcs.TryGetValue(id, out var lr) && lr)
+            Destroy(lr.gameObject);
+        bonusArcs.Remove(id);
+
+        if (miniTimers.TryGetValue(id, out var mt) && mt)
+            Destroy(mt.gameObject);
+        miniTimers.Remove(id);
+    }
+
 
     // ---- 전체 리셋 ----
     void HandleReset()
@@ -145,8 +160,8 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
     void HandleSpawn(ZoneSnapshot snap)
     {
         var root = new GameObject($"Zone_{snap.id}_P{snap.profileIndex}");
-        root.transform.SetParent(transform,  worldPositionStays: true);
-       root.transform.position = new Vector3(snap.centerWorld.x, board.origin.y, snap.centerWorld.z);
+        root.transform.SetParent(transform, worldPositionStays: true);
+        root.transform.position = new Vector3(snap.centerWorld.x, board.origin.y, snap.centerWorld.z);
 
         // 돔
         GameObject dome = Instantiate(hemispherePrefab, root.transform, false);
@@ -201,7 +216,7 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
 
             // 초기(진행도 0) 상태 적용
             ring.transform.localPosition = new Vector3(0f, ringLocalY, 0f);
-            ring.transform.localScale    = new Vector3(0.0001f, yScale, 0.0001f);
+            ring.transform.localScale = new Vector3(0.0001f, yScale, 0.0001f);
 
             // 저장
             v.ring = ring.transform;
@@ -243,7 +258,7 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
                 miniTimers[snap.id] = f;
             }
         }
-    
+
     }
 
     // ---- 만료/소멸 ----
@@ -335,28 +350,28 @@ public float ringScalePerRadius; // XZ: scale = radius * ringScalePerRadius
         return lr;
     }
 
-static bool CalcLocalBounds(Transform root, out Bounds b)
-{
-    b = new Bounds(Vector3.zero, Vector3.zero);
-    var rends = root.GetComponentsInChildren<Renderer>(true);
-    if (rends == null || rends.Length == 0) return false;
-
-    // 첫 렌더러로 초기화
-    var rb = rends[0].bounds;
-    var min = root.InverseTransformPoint(rb.min);
-    var max = root.InverseTransformPoint(rb.max);
-    b = new Bounds((min + max) * 0.5f, max - min);
-
-    for (int i = 1; i < rends.Length; i++)
+    static bool CalcLocalBounds(Transform root, out Bounds b)
     {
-        rb = rends[i].bounds;
-        min = root.InverseTransformPoint(rb.min);
-        max = root.InverseTransformPoint(rb.max);
-        b.Encapsulate(min);
-        b.Encapsulate(max);
+        b = new Bounds(Vector3.zero, Vector3.zero);
+        var rends = root.GetComponentsInChildren<Renderer>(true);
+        if (rends == null || rends.Length == 0) return false;
+
+        // 첫 렌더러로 초기화
+        var rb = rends[0].bounds;
+        var min = root.InverseTransformPoint(rb.min);
+        var max = root.InverseTransformPoint(rb.max);
+        b = new Bounds((min + max) * 0.5f, max - min);
+
+        for (int i = 1; i < rends.Length; i++)
+        {
+            rb = rends[i].bounds;
+            min = root.InverseTransformPoint(rb.min);
+            max = root.InverseTransformPoint(rb.max);
+            b.Encapsulate(min);
+            b.Encapsulate(max);
+        }
+        return true;
     }
-    return true;
-}
     static Material GetFallbackArcMaterial()
     {
         if (_fallbackArcMat) return _fallbackArcMat;
@@ -367,6 +382,7 @@ static bool CalcLocalBounds(Transform root, out Bounds b)
     }
 
     // ---- 오염 디스크(보라) ----
+    /*
     void HandleContamCircle(int id, Vector3 centerWorld, float radiusWorld)
     {
         float yBase = board ? board.origin.y : centerWorld.y;
@@ -412,14 +428,14 @@ static bool CalcLocalBounds(Transform root, out Bounds b)
         }
         foreach (var t in toRemove) Destroy(t.gameObject);
     }
-
+*/
     // ---- 공용 유틸 ----
     void StripAllColliders(GameObject go)
     {
         if (!go) return;
         foreach (var c in go.GetComponentsInChildren<Collider>(true)) Destroy(c);
     }
-
+/*
     static void SetTagLayerAndTriggerRecursively(GameObject go, string tag, int layer, bool makeTrigger)
     {
         if (!go) return;
@@ -435,4 +451,5 @@ static bool CalcLocalBounds(Transform root, out Bounds b)
             }
         }
     }
+    */
 }

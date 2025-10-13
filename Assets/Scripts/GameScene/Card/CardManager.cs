@@ -11,11 +11,12 @@ public class CardManager : MonoBehaviour
     public TextMeshProUGUI chargeText; // “현재/최대”
     public Button useButton;
     public TextMeshProUGUI durationText;
-        [Header("Input")]
+
+    [Header("Input")]
     public bool enableSpacebarUse = true;
     public KeyCode useKey = KeyCode.Space;
     public bool enableDoubleClick = true;
-    [Range(0.15f, 0.5f)] public float doubleClickWindow = 0.3f; // 초
+    [Range(0.15f, 0.5f)] public float doubleClickWindow = 0.3f;
     float lastClickTime = -999f;
 
     [Header("Resource Key")]
@@ -29,13 +30,18 @@ public class CardManager : MonoBehaviour
     public bool riskDisableUse = false;     // 카드 사용 금지 ON/OFF
 
     public event System.Action CardUse;
+
     CardData data;
-    [SerializeField]int charge=0;
+    [SerializeField] int charge = 0;
     bool onCooldown;
     CardAbility ability;
-    private Coroutine durationCo;
+    Coroutine durationCo;
 
-public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRequiredCharge) : 0);
+    // === 여기만 추가 (능력 사용 중 충전 잠금) ===
+    [SerializeField] bool chargingLocked = false;    // true면 충전 불가
+    // ===========================================
+
+    public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRequiredCharge) : 0);
 
     void Awake()
     {
@@ -45,9 +51,8 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
         data = Resources.Load<CardData>(cardResourceName);
         if (!data) Debug.LogError($"[CardManager] CardData not found: {cardResourceName}");
 
-         if (useButton) useButton.onClick.AddListener(OnUseButtonClicked);
+        if (useButton) useButton.onClick.AddListener(OnUseButtonClicked);
 
-        // ⬇⬇ 여기서 “벽 튕김 수 변경” 이벤트 직접 구독 → Δ만큼 충전
         if (director) director.OnZoneHit += HandleZoneHit;
 
         ApplyUI();
@@ -61,16 +66,16 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
 
     void Update()
     {
-        // 스페이스바(혹은 지정 키)로 사용
         if (enableSpacebarUse && Input.GetKeyDown(useKey) && IsReady())
         {
             TryUse();
         }
     }
-    bool IsReady() =>
-    data && !riskDisableUse && !onCooldown && charge >= EffectiveMaxCharge; // ✅
 
-     void OnUseButtonClicked()
+    bool IsReady() =>
+        data && !riskDisableUse && !onCooldown && charge >= EffectiveMaxCharge;
+
+    void OnUseButtonClicked()
     {
         if (!IsReady()) return;
 
@@ -79,73 +84,83 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
             float now = Time.unscaledTime;
             if (now - lastClickTime <= doubleClickWindow)
             {
-                // 더블클릭으로 인정
                 lastClickTime = -999f;
                 TryUse();
             }
             else
             {
-                // 첫 클릭만 기록 (싱글클릭 발동은 하지 않음)
                 lastClickTime = now;
             }
         }
         else
         {
-            // 옵션으로 싱글클릭 허용하고 싶을 때 사용
             TryUse();
         }
     }
+
     void HandleZoneHit(int zoneId, int cur, int req, bool isBonus)
     {
-        if (riskDisableUse || !data) return;  
+        // === 잠금 상태면 충전 무시 ===
+        if (riskDisableUse || !data || chargingLocked) return;
 
         int gain = isBonus ? Mathf.Max(1, data.gainPerZoneCritBounce)
-            : Mathf.Max(1, data.gainPerZoneBounce);
+                           : Mathf.Max(1, data.gainPerZoneBounce);
         AddCharge(gain);
     }
 
     void AddCharge(int amount)
     {
-        if (riskDisableUse || onCooldown || data == null) return;
-        charge = Mathf.Min(EffectiveMaxCharge, charge + amount); 
+        // === 잠금 상태면 충전 무시 ===
+        if (riskDisableUse || onCooldown || data == null || chargingLocked) return;
+
+        charge = Mathf.Min(EffectiveMaxCharge, charge + amount);
         ApplyUI();
     }
+
     void ApplyUI()
     {
         if (!data) { if (useButton) useButton.interactable = false; return; }
+
         if (icon)     icon.sprite = data.icon;
         if (nameText) nameText.text = data.cardName;
-        chargeText.text = $"{charge}/{EffectiveMaxCharge}";
-         if (durationText) durationText.text = $"{data.duration:0.0}s";
-        bool ready = !riskDisableUse && !onCooldown && charge >= data.maxCharge;
+        if (chargeText) chargeText.text = $"{charge}/{EffectiveMaxCharge}";
+        if (durationText) durationText.text = $"{data.duration:0.0}s";
+
         useButton.interactable = !onCooldown && !riskDisableUse && charge >= EffectiveMaxCharge;
     }
 
     void TryUse()
     {
         if (!data || onCooldown || riskDisableUse || charge < EffectiveMaxCharge) return;
+
         EnsureAbility();
         CardUse?.Invoke();
         ability.Activate(player, director, data);
 
+        // 사용과 동시에 충전 잠금
+        chargingLocked = true;
+
         charge = 0;
         ApplyUI();
+
         if (durationCo != null) StopCoroutine(durationCo);
         durationCo = StartCoroutine(DurationCountdownCo(data.duration));
 
         if (data.cooldown > 0f) StartCoroutine(CooldownCo(data.cooldown));
     }
 
-    System.Collections.IEnumerator CooldownCo(float sec)
+    IEnumerator CooldownCo(float sec)
     {
         onCooldown = true; ApplyUI();
         yield return new WaitForSeconds(sec);
         onCooldown = false; ApplyUI();
     }
-  System.Collections.IEnumerator DurationCountdownCo(float sec)
+
+    IEnumerator DurationCountdownCo(float sec)
     {
         float t = Mathf.Max(0f, sec);
-        // 시작 프레임에 즉시 반영
+
+        // 시작 프레임: 표시 갱신 + 충전 잠금 유지
         if (durationText) durationText.text = $"{t:0.0}s";
 
         var wait = new WaitForEndOfFrame();
@@ -155,7 +170,11 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
             if (durationText) durationText.text = $"{Mathf.Max(0f, t):0.0}s";
             yield return wait;
         }
-        // 종료 후 기본 표시(리소스 값)로 복귀
+
+        // 종료: 잠금 해제
+        chargingLocked = false;
+
+        // 기본 표시(리소스 값)로 복귀
         if (durationText) durationText.text = $"{data.duration:0.0}s";
         durationCo = null;
     }
@@ -170,7 +189,7 @@ public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRe
         {
             case "CleanTrail":
             default:
-                ability = host.AddComponent<CleanTrailAbility>(); // 통합본
+                ability = host.AddComponent<CleanTrailAbility>();
                 break;
         }
     }

@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Cleaner
   icon: {fileID: 21300000, guid: aa3513bf7a5a31f4784e50543ea3de9b, type: 3}
-  maxCharge: 30
-  gainPerWallBounce: 1
-  duration: 5
+  maxCharge: 5
+  gainPerZoneBounce: 1
+  gainPerZoneCritBounce: 2
+  duration: 10
   radiusTiles: 1
   cooldown: 0
   abilityType: CleanTrail

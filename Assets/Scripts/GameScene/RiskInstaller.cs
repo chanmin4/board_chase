@@ -337,6 +337,7 @@ public class RiskInstaller : MonoBehaviour
             p.applyOnStart = false;
             p.Apply();
         }
+        /*
         //pollution friction
         if (dbgLauncher && onPollutionFriction)
         {
@@ -348,7 +349,7 @@ public class RiskInstaller : MonoBehaviour
             p.applyOnStart = false;
             p.Apply();
         }
-
+*/
 
         // TODO: spawnEachCycle / missileCountAdd도 필요해지면 같은 패턴으로
 

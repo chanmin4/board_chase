@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -88,3 +89,4 @@ public class Risk_PollutionFrictionEnable : MonoBehaviour
         }
     }
 }
+*/

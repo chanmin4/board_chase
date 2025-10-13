@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -9,7 +10,7 @@ public class PollutionDampingOnDisk : MonoBehaviour
     public bool  affectAngular = false;
 
     [Header("Refs (비워두면 자동 검색)")]
-    public ContamMaskRenderer mask;                // ★ 오염 마스크
+    public PaintOwner mask;                // ★ 오염 마스크
 
     Rigidbody rb;
 
@@ -19,7 +20,7 @@ public class PollutionDampingOnDisk : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        if (!mask) mask = FindAnyObjectByType<ContamMaskRenderer>();
+        if (!mask) mask = FindAnyObjectByType<PaintMaskRenderer>();
     }
 
     void FixedUpdate()
@@ -35,3 +36,4 @@ public class PollutionDampingOnDisk : MonoBehaviour
         if (affectAngular) rb.angularVelocity *= k;
     }
 }
+*/

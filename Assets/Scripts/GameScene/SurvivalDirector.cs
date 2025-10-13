@@ -120,6 +120,7 @@ public event System.Action<Vector3,int,int> OnExitContam;  // (worldPos, ix, iy)
     // public event Action<int> OnZoneHitsChanged;
     public event System.Action<int, int, int, bool> OnZoneHit;
     public event System.Action<int, float, float> OnZoneBonusSectorChanged;
+    public event System.Action<Vector3, float, bool> OnPlayerPaintCircleWorld;
     public event System.Action ContamSpawn;
     public event System.Action ZoneNormalHit_SFX;
     public event System.Action ZoneCritHit_SFX;
@@ -566,17 +567,43 @@ bool _prevInContam = false;
         float tol = zoneTouchToleranceTiles * board.tileSize;
         return Vector2.SqrMagnitude(a - b) <= (z.radiusWorld + tol) * (z.radiusWorld + tol);
     }
+    public void PaintPlayerCircleWorld(Vector3 centerWorld, float radiusWorld,
+                                   bool applyBoardClean, bool clearPollutionMask)
+    {
+        // --- 보드 상태(점유율) ---
+        if (applyBoardClean)
+        {
+            // 기존 파이프라인 재사용: 내부에서 타일/카운트/이벤트 처리
+            ClearCircleWorld(centerWorld, radiusWorld);
+        }
+
+        // --- 플레이어 페인트 비주얼(별도 레이어에 칠하기) ---
+        OnPlayerPaintCircleWorld?.Invoke(centerWorld, radiusWorld, clearPollutionMask);
+
+        // --- 오염 비주얼 덮어쓰기(렌더 마스크 0으로) ---
+        if (clearPollutionMask)
+        {
+            // 기존 렌더 파이프 유지: 오염 마스크 지우는 이벤트
+            OnClearedCircleWorld?.Invoke(centerWorld, radiusWorld);
+        }
+    }
+
 
     void ConsumeZone(Zone z)
     {
         if (z.enterBonus > 0f) gauge?.Add(z.enterBonus * Mathf.Max(0f, zoneEnterBonusMul));
 
+        // ★ 추가: 성공 소비 시 해당 존 영역을 플레이어 색으로 덮고, 오염 마스크는 0으로 지움
+        PaintPlayerCircleWorld(z.centerWorld, z.radiusWorld,
+                               applyBoardClean: false,
+                               clearPollutionMask: true);
+
         OnZoneConsumed?.Invoke(z.id);
+
         if (_bonusReroll.TryGetValue(z.id, out var co)) { StopCoroutine(co); _bonusReroll.Remove(z.id); }
         zones.Remove(z);
 
-        // ★ TODO: (변경) "세트 기반"이 아니라 "상시 5개 유지"로 바꿀 경우
-        //         여기서 동일 profileIndex로 바로 보충(코루틴으로 1.0~1.5s 지연 추천)
+        // (필요시) 보충 스폰은 기존 주석대로 사용
         // StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
     }
 

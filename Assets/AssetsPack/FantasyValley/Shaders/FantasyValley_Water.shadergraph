@@ -1221,20 +1221,6 @@
         {
             "m_OutputSlot": {
                 "m_Node": {
-                    "m_Id": "9868dae609a65985aa2ff00d8559d388"
-                },
-                "m_SlotId": 4
-            },
-            "m_InputSlot": {
-                "m_Node": {
-                    "m_Id": "d0cf6b2e9e6d4667b36f038d4d09f4ab"
-                },
-                "m_SlotId": 0
-            }
-        },
-        {
-            "m_OutputSlot": {
-                "m_Node": {
                     "m_Id": "98c539708823b381b73c14e1797bcd75"
                 },
                 "m_SlotId": 0
@@ -1342,6 +1328,20 @@
                     "m_Id": "aa52c625ccf0918a81a42b505d2a7169"
                 },
                 "m_SlotId": 2
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "b0ae6df502bf44958741adbe5ac1e83c"
+                },
+                "m_SlotId": 2
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "d0cf6b2e9e6d4667b36f038d4d09f4ab"
+                },
+                "m_SlotId": 0
             }
         },
         {
@@ -5133,8 +5133,8 @@
     "m_ObjectId": "4fc5bdcaabc94e7f99d6b6705883f554",
     "m_Title": "Wave Movement",
     "m_Position": {
-        "x": -1315.9998779296875,
-        "y": -1915.9998779296875
+        "x": -1316.0001220703125,
+        "y": -1915.999755859375
     }
 }
 
@@ -9398,7 +9398,7 @@
     "m_Title": "Normal",
     "m_Position": {
         "x": -3649.60009765625,
-        "y": -1447.9998779296875
+        "y": -1447.999755859375
     }
 }
 
@@ -11239,7 +11239,7 @@
     "m_AllowMaterialOverride": false,
     "m_SurfaceType": 1,
     "m_ZTestMode": 4,
-    "m_ZWriteControl": 2,
+    "m_ZWriteControl": 0,
     "m_AlphaMode": 0,
     "m_RenderFace": 2,
     "m_AlphaClip": false,

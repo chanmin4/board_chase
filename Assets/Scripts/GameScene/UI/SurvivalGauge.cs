@@ -13,23 +13,38 @@ public class SurvivalGauge : MonoBehaviour
 
     [Header("UI")]
     public Slider slider;   // Slider (Min 0, Max 1)
-    public Image  fill;     // slider.Fill Area/Fill 의 Image
+    public Image fill;     // slider.Fill Area/Fill 의 Image
 
     [Header("Colors")]
-    public Color colorGreen  = new Color(0.2f, 1f, 0.4f, 1f); // >50%
+    public Color colorGreen = new Color(0.2f, 1f, 0.4f, 1f); // >50%
     public Color colorYellow = new Color(1f, 0.9f, 0.2f, 1f); // 20~50%
-    public Color colorRed    = new Color(1f, 0.3f, 0.3f, 1f); // <20%
+    public Color colorRed = new Color(1f, 0.3f, 0.3f, 1f); // <20%
     public Color colorContam = new Color(0.7f, 0.3f, 1f, 1f); // 오염(보라)
 
     [Header("Thresholds")]
-    [Range(0f,1f)] public float yellowThreshold = 0.50f;
-    [Range(0f,1f)] public float redThreshold    = 0.20f;
+    [Range(0f, 1f)] public float yellowThreshold = 0.50f;
+    [Range(0f, 1f)] public float redThreshold = 0.20f;
 
     [Header("Smoothing")]
     public float lerpSpeed = 8f; // 값/색 보간 속도
-       // ★ 게임오버 트리거용
+                                 // ★ 게임오버 트리거용
     [Header("Events")]
     public UnityEvent onDepleted;
+
+    [Header("Stun/Recovery")]
+    [Tooltip("게이지가 0이 되면 이 시간(초) 동안 0→100으로 서서히 회복")]
+    public float recoverDuration = 5f;
+
+    [Tooltip("기절 중 디스크 이동속도 배수 (1=변화 없음, 0.6=40% 감소 등)")]
+    [Range(0.1f, 1.0f)] public float stunMoveSpeedMul = 0.4f;
+
+    [Tooltip("기절 중 발사 쿨타임에 더해지는 초(가산)")]
+    public float stunCooldownAddSeconds = 1.5f;
+
+    [Header("Refs · (선택) 디버프 적용 대상")]
+    public DiskLauncher disk;   // 인스펙터에서 디스크(Launcher) 연결
+
+
     [ContextMenu("DEBUG_ForceDeplete")]
     public void DEBUG_ForceDeplete()
     {
@@ -38,17 +53,18 @@ public class SurvivalGauge : MonoBehaviour
         Debug.Log("[SG] DEBUG_ForceDeplete()");
         onDepleted?.Invoke();
     }
-
+    bool recovering = false;    // 기절(회복) 중인지
+    float recoverT = 0f;       // 0~1 회복 진행률
     bool invoked; // 중복 호출 방지
     // 상태
     bool contaminated;
     float display01 = 1f;
 
     // 다른 스크립트용 프로퍼티
-    public float Value01        => Mathf.Clamp01(current / Mathf.Max(0.0001f, max));
-    public float Current        => current;
-    public float Max            => max;
-    public bool  IsContaminated => contaminated;
+    public float Value01 => Mathf.Clamp01(current / Mathf.Max(0.0001f, max));
+    public float Current => current;
+    public float Max => max;
+    public bool IsContaminated => contaminated;
     public event System.Action GaugeGet;
     void Reset()
     {
@@ -73,36 +89,59 @@ public class SurvivalGauge : MonoBehaviour
 
     void Update()
     {
-        // 1) 감소 처리
-        float drain = baseDrain + (contaminated ? contaminatedExtra : 0f);
-        if (drain > 0f)
+        if (recovering)
         {
-            current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
+            // 0→1까지 선형 진행
+            recoverT += (recoverDuration > 0f ? Time.deltaTime / recoverDuration : 1f);
+            recoverT = Mathf.Clamp01(recoverT);
 
+            // 자연 회복량
+            float natural = Mathf.Lerp(0f, max, recoverT);
+
+            // 외부 회복(존 보상 등)으로 current가 더 커졌다면 그 값을 우선시
+            current = Mathf.Max(current, natural);
+
+            // 꽉 찼으면 즉시 기절 해제
+            if (current >= max - 0.0001f)
+            {
+                current = max;
+                EndStun();
+            }
         }
 
+        else
+        {
+            // ─ 기존 감소 로직 그대로 ─
+            float drain = baseDrain + (contaminated ? contaminatedExtra : 0f);
+            if (drain > 0f)
+                current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
 
-        // 2) 슬라이더 값 보간
+            // 0이 되었을 때 한 번만 트리거 → 기절 시작
+            if (!invoked && current <= 0f)
+            {
+                invoked = true;
+                Debug.Log($"[SG] Depleted at t={Time.time:0.00}");
+                onDepleted?.Invoke();
+                BeginStun();   // ★ 여기서 기절 상태 진입
+            }
+        }
+
+        // ─ 공통: 슬라이더/색상 보간 ─
         float v01 = Value01;
         display01 = Mathf.Lerp(display01, v01, Time.deltaTime * lerpSpeed);
         if (slider) slider.value = display01;
 
-        // 3) 색상 (오염 우선)
         if (fill)
         {
             Color target =
                 contaminated ? colorContam :
                 (display01 > yellowThreshold ? colorGreen :
                  display01 > redThreshold ? colorYellow :
-                                               colorRed);
+                                            colorRed);
             fill.color = Color.Lerp(fill.color, target, Time.deltaTime * lerpSpeed);
         }
-        if (!invoked && current <= 0f)
-        {
-            invoked = true;
-            Debug.Log($"[SG] Depleted at t={Time.time:0.00}");  // ★ 로그
-            onDepleted?.Invoke();
-        }
+
+
     }
 
     // 값 올리기(존 보상 등)
@@ -110,11 +149,48 @@ public class SurvivalGauge : MonoBehaviour
     {
         current = Mathf.Clamp(current + delta, 0f, max);
         GaugeGet?.Invoke();
+
+        // 회복 중 외부 회복으로 풀로 찼다면 즉시 해제
+        if (recovering && current >= max - 0.0001f)
+        {
+            current = max;
+            EndStun();
+        }
     }
+
 
     // 오염 상태 토글(디렉터에서 호출)
     public void SetContaminated(bool v)
     {
         contaminated = v;
+    }
+      void BeginStun()
+    {
+        
+        recovering = true;
+        recoverT   = 0f;
+        current    = 0f;
+
+        // 디버프 적용(선택)
+        if (disk)
+        {
+            Debug.Log("begin stun&debuff");
+            disk.externalSpeedMul?.Invoke(Mathf.Clamp(stunMoveSpeedMul, 0.1f, 1.0f));
+        disk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
+        }
+    }
+
+    void EndStun()
+    {
+        recovering = false;
+        current    = max;   // 안전하게 꽉 채움
+        invoked    = false; // 다음 사이클에서 다시 0 트리거 가능
+
+        // 디버프 해제
+        if (disk)
+        {
+            disk.externalSpeedMul?.Invoke(1f);
+            disk.externalCooldownAdd?.Invoke(0f);
+        }
     }
 }

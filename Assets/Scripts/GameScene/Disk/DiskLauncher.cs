@@ -1,7 +1,7 @@
 // DiskLauncher.cs (기존 파일 수정)
 using UnityEngine;
 using System;
-
+using UnityEngine.Events;
 [RequireComponent(typeof(Rigidbody))]
 public class DiskLauncher : MonoBehaviour
 {
@@ -43,7 +43,9 @@ public class DiskLauncher : MonoBehaviour
     [Header("Wall Hit")]
     public LayerMask wallMask;
     public event System.Action WallHit; 
-
+  [Header("External Modifiers (Events)")]
+public UnityEvent<float> externalSpeedMul;     // (1=기본, 0.6=감소 등)
+public UnityEvent<float> externalCooldownAdd;  // (초 가산)
 
     // 이벤트
     public event Action<int, int> OnTileChanged;
@@ -51,13 +53,15 @@ public class DiskLauncher : MonoBehaviour
     public event Action<int,int> OnChargesChanged;
     public event System.Action DragChargeOn;
 
-
+float _extSpeedMul = 1f;
+float _extCooldownAdd = 0f;
     Rigidbody rb;
     //bool launched;
     Vector2Int _lastTile = new Vector2Int(-1,-1);
 
     SurvivalDirector director;
-
+public void SetExternalSpeedMul(float v)      => _extSpeedMul    = Mathf.Clamp(v, 0.1f, 1f);
+public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f, sec);
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -80,6 +84,11 @@ public class DiskLauncher : MonoBehaviour
         if (!useCooldown) ResetChargesToBase();
         else NotifyCooldown(); // HUD 초기화
         CheckReadyEdge(false);
+        externalSpeedMul ??= new UnityEvent<float>();
+        externalCooldownAdd ??= new UnityEvent<float>();
+
+        externalSpeedMul.AddListener(SetExternalSpeedMul);
+        externalCooldownAdd.AddListener(SetExternalCooldownAdd);
     }
 
     void OnDestroy()
@@ -122,11 +131,17 @@ public class DiskLauncher : MonoBehaviour
 
     void StartCooldown()
     {
-        CooldownRemain = Mathf.Max(0.0001f, cooldownSeconds);
+        float effCooldown = Mathf.Max(0.0001f, cooldownSeconds + Mathf.Max(0f, _extCooldownAdd));
+        CooldownRemain = effCooldown;
         NotifyCooldown();
         CheckReadyEdge(false);
     }
-    void NotifyCooldown() => OnCooldownChanged?.Invoke(CooldownRemain, cooldownSeconds);
+    void NotifyCooldown()
+    {
+        // (선택) HUD에 ‘실제’ 쿨다운 전달
+        float effCooldown = Mathf.Max(0.0001f, cooldownSeconds + Mathf.Max(0f, _extCooldownAdd));
+        OnCooldownChanged?.Invoke(CooldownRemain, effCooldown);
+    }
 
     // === 충전(횟수) 제어 (쿨타임 모드에선 비활성) ===
     void ResetChargesToBase()
@@ -176,9 +191,8 @@ public class DiskLauncher : MonoBehaviour
         }
 
         // ② 실제 발사
-        dir.y = 0f; dir.Normalize();
-        rb.linearVelocity = dir * (pull * powerScale);
-        //launched = true;
+        float effPower = pull * powerScale * Mathf.Max(0.1f, _extSpeedMul);
+        rb.linearVelocity = dir * effPower;
 
         // ③ 쿨타임 시작
         if (useCooldown) StartCooldown();
@@ -219,7 +233,7 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
                 }
             }
         */
-    public void AddCooldown(float seconds)
+    public void CancelAddCooldown(float seconds)
     {
         if (!useCooldown) return;
         if (seconds <= 0f) return;

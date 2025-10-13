@@ -41,7 +41,7 @@ public class GameOverUI : MonoBehaviour
         {
 
             Debug.Log("[GameOverUI] gauge found, adding onDepleted listener");
-            gauge.onDepleted.AddListener(ShowGameOver);
+           // gauge.onDepleted.AddListener(ShowGameOver);
 
 
         }
