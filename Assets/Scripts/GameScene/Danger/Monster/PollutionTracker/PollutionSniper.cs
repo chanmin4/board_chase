@@ -16,6 +16,7 @@ public class PollutionSniper : MonoBehaviour
     BoardGrid _board;
     Transform _player;
     SurvivalDirector _director;
+    BoardPaintSystem _paint;
 
     // ───────── HP / 히트 ─────────
     [Header("HP / Hit")]
@@ -114,7 +115,8 @@ public class PollutionSniper : MonoBehaviour
     {
         _board = board; _player = player; _director = director;
         if (_director == null) _director = FindAnyObjectByType<SurvivalDirector>();
-
+        _paint = FindAnyObjectByType<BoardPaintSystem>();
+        if (!_paint) Debug.LogWarning("[Sniper] BoardPaintSystem not found.");
         var p = transform.position;
         p.y = BoardY + groundY;          // 기존: groundY
         transform.position = p;
@@ -326,24 +328,26 @@ desired.y = BoardY + groundY;    // 기존: groundY
     // ───────── 오염 살포 ─────────
     void SpreadContaminationAlong(List<Vector3> path)
     {
-        if (_director == null || path.Count < 2) return;
+        if (path.Count < 2) return;
 
-       Vector3 a = path[0]; a.y = BoardY + groundY; // 기존: groundY
-Vector3 b = path[1]; b.y = BoardY + groundY; // 기존: groundY
+        Vector3 a = path[0]; a.y = BoardY + groundY;
+        Vector3 b = path[1]; b.y = BoardY + groundY;
 
         float len = Vector3.Distance(a, b);
         float step = Mathf.Max(0.05f, contamStepMeters);
         float r = Mathf.Max(0.05f, contamRadiusMeters);
 
-        // 시작~끝 구간을 일정 간격으로 샘플링
         int n = Mathf.Max(1, Mathf.CeilToInt(len / step));
         for (int i = 0; i <= n; i++)
         {
             float t = (n == 0) ? 0f : (float)i / n;
             Vector3 p = Vector3.Lerp(a, b, t);
-            _director.ContaminateCircleWorld(p, r);
+
+            if (_paint) _paint.EnqueueCircle(BoardPaintSystem.PaintChannel.Enemy, p, r);
+            else if (_director) _director.ContaminateCircleWorld(p, r); // 폴백
         }
     }
+
 
     // ───────── 플레이어 히트 판정 ─────────
     void TryHitPlayerAlong(List<Vector3> path)

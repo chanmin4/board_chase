@@ -51,6 +51,7 @@ public class SurvivalDirector : MonoBehaviour
     public Rigidbody playerRb;
     public SurvivalGauge gauge;
     public DragAimController dragaimcontroller;
+    public BoardMaskRenderer maskRenderer;
 
     [Header("Inspector-Driven Zones")]
     public List<ZoneProfile> zoneProfiles = new List<ZoneProfile>(); // ★ 인스펙터에서 관리
@@ -114,8 +115,8 @@ public class SurvivalDirector : MonoBehaviour
     public event Action OnZonesReset;
     public event Action<int, float> OnZoneProgress;                    // 0~1
     public event Action<int, Vector3, float> OnZoneContaminatedCircle;//오염원생성
-    public event System.Action<Vector3,int,int> OnEnterContam; // (worldPos, ix, iy)
-public event System.Action<Vector3,int,int> OnExitContam;  // (worldPos, ix, iy)
+    public event System.Action<Vector3, int, int> OnEnterContam; // (worldPos, ix, iy)
+    public event System.Action<Vector3, int, int> OnExitContam;  // (worldPos, ix, iy)
     public event Action<int> OnZoneConsumed;
     // public event Action<int> OnZoneHitsChanged;
     public event System.Action<int, int, int, bool> OnZoneHit;
@@ -187,7 +188,7 @@ public event System.Action<Vector3,int,int> OnExitContam;  // (worldPos, ix, iy)
     int nextZoneId = 1;
     int lastBounceZoneId = -1;
     float lastBounceZoneTime = -999f;
-bool _prevInContam = false;
+    bool _prevInContam = false;
     // ===== 편의 Getter =====
     public int Width => board ? board.width : 0;
     public int Height => board ? board.height : 0;
@@ -228,19 +229,19 @@ bool _prevInContam = false;
 
         }
         for (int i = zones.Count - 1; i >= 0; --i)
+        {
+            var z = zones[i];
+            z.remaintime -= dt;
+            float time_decrease_ratio = 1f - Mathf.Clamp01(z.remaintime / Mathf.Max(0.0001f, z.time_to_live));
+            OnZoneProgress?.Invoke(z.id, time_decrease_ratio); // ← 링/타이머 UI는 이 값으로
+            if (z.remaintime <= 0f)
             {
-                var z = zones[i];
-                z.remaintime -= dt;
-                float time_decrease_ratio = 1f - Mathf.Clamp01(z.remaintime / Mathf.Max(0.0001f, z.time_to_live));
-                OnZoneProgress?.Invoke(z.id, time_decrease_ratio); // ← 링/타이머 UI는 이 값으로
-                if (z.remaintime <= 0f)
-                {
-                    MarkContaminationCircle(z);
-                    zones.RemoveAt(i);
-                    StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
-                    continue;
-                }
+                MarkContaminationCircle(z);
+                zones.RemoveAt(i);
+                StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
+                continue;
             }
+        }
 
         var pWorld = player.position;
         for (int i = zones.Count - 1; i >= 0; i--)
@@ -736,5 +737,13 @@ bool _prevInContam = false;
         OnZoneContaminatedCircle?.Invoke(z.id, cW, rWorld);
         OnZoneExpired?.Invoke(z.id);
     }
+    public int maskRendererPlayerPixelsPerTile()
+{
+    if (!maskRenderer)
+        maskRenderer = FindAnyObjectByType<BoardMaskRenderer>(); // PaintMaskRenderer 쓰면 타입 교체
+
+    // 위에서 1)에서 만든 게터를 사용
+    return maskRenderer ? Mathf.Max(1, maskRenderer.PlayerPixelsPerTile) : 15;
+}
 }
 

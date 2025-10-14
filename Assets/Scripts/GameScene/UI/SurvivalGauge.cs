@@ -30,6 +30,8 @@ public class SurvivalGauge : MonoBehaviour
                                  // ★ 게임오버 트리거용
     [Header("Events")]
     public UnityEvent onDepleted;
+    public UnityEvent onStunBegin;
+    public UnityEvent onStunEnd;
 
     [Header("Stun/Recovery")]
     [Tooltip("게이지가 0이 되면 이 시간(초) 동안 0→100으로 서서히 회복")]
@@ -100,7 +102,7 @@ public class SurvivalGauge : MonoBehaviour
 
             // 외부 회복(존 보상 등)으로 current가 더 커졌다면 그 값을 우선시
             current = Mathf.Max(current, natural);
-
+            recoverT = Mathf.Max(recoverT, current / Mathf.Max(0.0001f, max));
             // 꽉 찼으면 즉시 기절 해제
             if (current >= max - 0.0001f)
             {
@@ -150,12 +152,15 @@ public class SurvivalGauge : MonoBehaviour
         current = Mathf.Clamp(current + delta, 0f, max);
         GaugeGet?.Invoke();
 
-        // 회복 중 외부 회복으로 풀로 찼다면 즉시 해제
+        if (recovering)
+            recoverT = Mathf.Max(recoverT, current / Mathf.Max(0.0001f, max));
+
         if (recovering && current >= max - 0.0001f)
         {
             current = max;
             EndStun();
         }
+    
     }
 
 
@@ -164,27 +169,28 @@ public class SurvivalGauge : MonoBehaviour
     {
         contaminated = v;
     }
-      void BeginStun()
+    void BeginStun()
     {
-        
+
         recovering = true;
-        recoverT   = 0f;
-        current    = 0f;
+        recoverT = 0f;
+        current = 0f;
 
         // 디버프 적용(선택)
         if (disk)
         {
             Debug.Log("begin stun&debuff");
             disk.externalSpeedMul?.Invoke(Mathf.Clamp(stunMoveSpeedMul, 0.1f, 1.0f));
-        disk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
+            disk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
         }
+        onStunBegin?.Invoke();
     }
 
     void EndStun()
     {
         recovering = false;
-        current    = max;   // 안전하게 꽉 채움
-        invoked    = false; // 다음 사이클에서 다시 0 트리거 가능
+        current = max;   // 안전하게 꽉 채움
+        invoked = false; // 다음 사이클에서 다시 0 트리거 가능
 
         // 디버프 해제
         if (disk)
@@ -192,5 +198,6 @@ public class SurvivalGauge : MonoBehaviour
             disk.externalSpeedMul?.Invoke(1f);
             disk.externalCooldownAdd?.Invoke(0f);
         }
+        onStunEnd?.Invoke();
     }
 }

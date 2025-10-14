@@ -2,7 +2,8 @@ using UnityEngine;
 using System.Collections;
 
 /// 디스크가 지나간 경로를 청소하고(오염0) 같은/다른 반지름으로 플레이어 색을 칠함.
-/// r(반지름) 튜닝을 위해 청소/페인트 반지름에 각각 Mul/Add 노브 제공.
+/// - 거리 기반 스탬핑 (프레임 드랍에도 빈틈 최소화)
+/// - 프레임 예산으로 스파이크 방지
 public class CleanTrailAbility : CardAbility
 {
     [Header("Radius Tuning (meters)")]
@@ -20,12 +21,26 @@ public class CleanTrailAbility : CardAbility
     [Tooltip("카드 데이터 추가 반지름(타일 단위)")]
     public float extraRadiusTilesOverride = -1f; // <0 이면 CardData.radiusTiles 사용
 
-    SurvivalDirector director;
-    Transform player;
+    [Header("Trail Sampling")]
+    [Tooltip("스탬프 간 간격 = min( rPaint * spacingByRadius , pixelWorld * spacingByPixel )")]
+    public float spacingByRadius = 0.7f;
+    public float spacingByPixel  = 0.9f;
+    [Tooltip("최소 간격(미터) – 너무 조밀해지는 것 방지")]
+    public float minSpacingWorld = 0.02f;
+    [Tooltip("한 프레임에 최대 몇 번 찍을지(버벅임 방지). 부족분은 다음 프레임으로 이월")]
+    [Range(8, 256)] public int maxStampsPerFrame = 64;
 
+    SurvivalDirector director;
+    BoardPaintSystem paintSystem;
+    Transform player;
     Collider diskCol;
-    float extraRadiusTiles;         // 실제 사용값
+    float extraRadiusTiles;
     Coroutine co;
+
+    // 거리 기반 누적자
+    bool   _haveLast;
+    Vector3 _lastCenter;
+    float   _carryDist; // 이월된 잔여거리
 
     public override void Activate(Transform playerTf, SurvivalDirector dir, CardData data)
     {
@@ -34,15 +49,23 @@ public class CleanTrailAbility : CardAbility
         player   = playerTf;
         director = dir;
 
-        extraRadiusTiles = (extraRadiusTilesOverride >= 0f) ? extraRadiusTilesOverride : Mathf.Max(0f, data.radiusTiles);
+        extraRadiusTiles = (extraRadiusTilesOverride >= 0f)
+            ? extraRadiusTilesOverride
+            : Mathf.Max(0f, data.radiusTiles);
 
         if (!player || !director)
         {
             Debug.LogWarning("[CleanTrail] refs missing");
             return;
         }
-
+        paintSystem = FindAnyObjectByType<BoardPaintSystem>();
+        if (!paintSystem)
+        {
+            Debug.LogWarning("[CleanTrail] BoardPaintSystem not found in scene.");
+        }
         diskCol = player.GetComponent<Collider>();
+        _haveLast  = false;
+        _carryDist = 0f;
 
         IsRunning = true;
         co = StartCoroutine(CleanLoop(data.duration));
@@ -50,68 +73,101 @@ public class CleanTrailAbility : CardAbility
 
     IEnumerator CleanLoop(float duration)
     {
-        float t = 0f;
-        var wait = new WaitForSeconds(0.02f);
+        // 스케일된 시간 기준 → 일시정지 시 멈춤
+        float endAt = Time.time + Mathf.Max(0f, duration);
 
-        while (t < duration && IsRunning)
+        while (IsRunning && Time.time < endAt)
         {
             if (director && player)
             {
                 float addWorld = director.board ? director.board.tileSize * extraRadiusTiles : extraRadiusTiles;
 
+                // 1) 이번 프레임의 ‘중심점’과 ‘기본 반지름’ 산출
+                Vector3 centerNow;
+                float   rBase;
+
                 if (diskCol is CapsuleCollider cap)
                 {
                     GetCapsuleWorld(cap, out Vector3 a, out Vector3 b, out float rad);
-                    float rBase = rad + addWorld;
-
-                    // 구간을 따라 연속 스탬프
-                    float len  = Vector3.Distance(a, b);
-                    float step = Mathf.Max(rBase * 0.6f, 0.01f);
-                    int   n    = Mathf.Max(1, Mathf.CeilToInt(len / step));
-
-                    for (int i = 0; i <= n; i++)
-                    {
-                        float u = (n == 0) ? 0f : (i / (float)n);
-                        Vector3 p = Vector3.Lerp(a, b, u);
-
-                        float rClear = Mathf.Max(0.01f, rBase * clearRadiusMul + clearRadiusAddWorld);
-                        float rPaint = Mathf.Max(0.01f, rBase * paintRadiusMul + paintRadiusAddWorld);
-
-                        // 1) 청소(오염 0)
-                        director.ClearCircleWorld(p, rClear);
-
-                        // 2) 플레이어 색 덮어쓰기(해당 영역 오염 0 유지)
-                        director.PaintPlayerCircleWorld(p, rPaint, applyBoardClean: false, clearPollutionMask: true);
-                    }
+                    centerNow = (a + b) * 0.5f;
+                    rBase     = rad + addWorld;
                 }
                 else if (diskCol is SphereCollider sph)
                 {
-                    float rBase = GetSphereRadiusWorld(sph) + addWorld;
-                    float rClear = Mathf.Max(0.01f, rBase * clearRadiusMul + clearRadiusAddWorld);
-                    float rPaint = Mathf.Max(0.01f, rBase * paintRadiusMul + paintRadiusAddWorld);
-
-                    director.ClearCircleWorld(player.position, rClear);
-                    director.PaintPlayerCircleWorld(player.position, rPaint, false, true);
+                    centerNow = player.position;
+                    rBase     = GetSphereRadiusWorld(sph) + addWorld;
                 }
                 else if (diskCol is BoxCollider box)
                 {
+                    centerNow = player.position;
                     Vector3 e = Vector3.Scale(box.size * 0.5f, player.lossyScale);
-                    float rBase = Mathf.Sqrt(e.x * e.x + e.z * e.z) + addWorld;
-                    float rClear = Mathf.Max(0.01f, rBase * clearRadiusMul + clearRadiusAddWorld);
-                    float rPaint = Mathf.Max(0.01f, rBase * paintRadiusMul + paintRadiusAddWorld);
-
-                    director.ClearCircleWorld(player.position, rClear);
-                    director.PaintPlayerCircleWorld(player.position, rPaint, false, true);
+                    rBase     = Mathf.Sqrt(e.x * e.x + e.z * e.z) + addWorld;
                 }
+                else
+                {
+                    centerNow = player.position;
+                    rBase     = addWorld;
+                }
+
+                float rClear = Mathf.Max(0.01f, rBase * clearRadiusMul + clearRadiusAddWorld);
+                float rPaint = Mathf.Max(0.01f, rBase * paintRadiusMul + paintRadiusAddWorld);
+
+                // 2) 월드 픽셀 크기(플레이어 마스크 해상도) 추정 → spacing 계산
+                float pixelWorld = director.board
+                    ? (director.board.tileSize / Mathf.Max(1, director.maskRendererPlayerPixelsPerTile()))
+                    : 0.05f; // 대충 안전값
+                float spacing = Mathf.Max(minSpacingWorld, Mathf.Min(rPaint * spacingByRadius, pixelWorld * spacingByPixel));
+
+                // 3) 지난 프레임 중심에서 지금 중심까지 ‘거리 기반’으로 등간격 스탬핑
+                if (!_haveLast)
+                {
+                    // 첫 프레임: 한 번만 찍고 기준점 세팅
+                    Stamp(centerNow, rClear, rPaint);
+                    _lastCenter = centerNow;
+                    _haveLast   = true;
+                }
+                else
+                {
+                    // 지난 프레임 → 현재 프레임까지를 Trail로 한 번에 배치
+                    if (paintSystem)
+                    {
+                        paintSystem.EnqueueTrail(BoardPaintSystem.PaintChannel.Player,
+                                                _lastCenter, centerNow,
+                                                rPaint,
+                                                spacingMeters: -1f,
+                                                clearOtherChannel: true);
+                    }
+                    else
+                    {
+                        // 혹시 시스템이 없으면 최소한 점 도장으로 대체
+                        Stamp(centerNow, rClear, rPaint);
+                    }
+                    _lastCenter = centerNow;
+                }
+
             }
 
-            t += 0.02f;
-            yield return wait;
+            yield return null; // 스케일 적용 → 일시정지 시 멈춤
         }
 
         StopNow();
     }
 
+    void Stamp(Vector3 p, float rClear, float rPaint)
+    {
+        // “색 덮어쓰기 + 적 마스크 지우기”를 한 번에
+        if (paintSystem)
+        {
+            paintSystem.EnqueueCircle(BoardPaintSystem.PaintChannel.Player,
+                                    p, rPaint,
+                                    clearOtherChannel: true);
+        }
+        else if (director) // 폴백: 기존 디렉터 호출
+        {
+            director.ClearCircleWorld(p, rClear);
+            director.PaintPlayerCircleWorld(p, rPaint, applyBoardClean:false, clearPollutionMask:true);
+        }
+    }
     public override void StopNow()
     {
         if (!IsRunning) return;
@@ -132,7 +188,6 @@ public class CleanTrailAbility : CardAbility
 
         Vector3 s = cap.transform.lossyScale;
 
-        // 프로젝트 기존 방식 그대로 유지(최대 축)
         float radiusScale = Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.z));
         worldRadius = cap.radius * radiusScale;
 

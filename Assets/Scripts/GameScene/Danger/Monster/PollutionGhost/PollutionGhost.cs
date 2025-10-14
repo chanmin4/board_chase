@@ -8,6 +8,7 @@ public class PollutionGhost : MonoBehaviour
     [NonSerialized] public SurvivalDirector director;
     [NonSerialized] public BoardGrid board;
     [NonSerialized] public Transform player; // 주로 PlayerDisk
+    [NonSerialized]BoardPaintSystem _paint;
 
     [Header("Movement")]
     public float speed = 3.5f;             // 이동 속도 (유닛/초)
@@ -66,7 +67,8 @@ public class PollutionGhost : MonoBehaviour
         speed = randomizeSpeed ? UnityEngine.Random.Range(speedRange.x, speedRange.y) : spd;
         lifetime = life;
         contamRadiusWorld = contamR; // (타임아웃 전용 기본값으로 재활용 가능)
-
+        _paint = FindAnyObjectByType<BoardPaintSystem>();
+        if (!_paint) Debug.LogWarning("[Ghost] BoardPaintSystem not found.");
         // 랜덤 방향으로 시작
         float ang = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
         velocity = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * speed;
@@ -148,11 +150,20 @@ public class PollutionGhost : MonoBehaviour
                 nextDropTimer -= Time.deltaTime;
                 if (nextDropTimer <= 0f)
                 {
-                    director.ContaminateCircleWorld(transform.position, Mathf.Max(0.01f, pathContamRadius));
+                    Vector3 dropPos = transform.position;
+                    dropPos.y = BoardY + groundY;
+                    float r = Mathf.Max(0.01f, pathContamRadius);
+
+                    if (_paint)
+                        _paint.EnqueueCircle(BoardPaintSystem.PaintChannel.Enemy, dropPos, r);
+                    else if (director)
+                        director.ContaminateCircleWorld(dropPos, r); // 폴백
+
                     droppedCount++;
                     nextDropTimer = pathContamInterval;
                 }
             }
+
         }
         else
         {
@@ -197,15 +208,17 @@ public class PollutionGhost : MonoBehaviour
 
     void Timeout()
     {
-        if (dropOnTimeout && director)
+        if (dropOnTimeout)
         {
-            // 타임아웃 시 마지막으로 한 번 더 드롭(옵션)
-            float r = (pathContamRadius > 0f) ? pathContamRadius : contamRadiusWorld;
-            director.ContaminateCircleWorld(transform.position, Mathf.Max(0.01f, r));
+            Vector3 pos = transform.position; pos.y = BoardY + groundY;
+            float r = Mathf.Max(0.01f, (pathContamRadius > 0f ? pathContamRadius : contamRadiusWorld));
+            if (_paint) _paint.EnqueueCircle(BoardPaintSystem.PaintChannel.Enemy, pos, r);
+            else if (director) director.ContaminateCircleWorld(pos, r);
         }
         if (timeoutFx) Instantiate(timeoutFx, transform.position, Quaternion.identity);
         Destroy(gameObject);
     }
+
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()

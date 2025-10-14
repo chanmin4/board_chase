@@ -25,6 +25,7 @@ public class CardManager : MonoBehaviour
     [Header("Refs")]
     public SurvivalDirector director;
     public Transform player; // 디스크 Transform
+     public SurvivalGauge gauge;
 
     public int riskAddRequiredCharge = 0;   // 요구 충전 +N
     public bool riskDisableUse = false;     // 카드 사용 금지 ON/OFF
@@ -47,6 +48,13 @@ public class CardManager : MonoBehaviour
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
         if (!player)   player   = GameObject.FindGameObjectWithTag("Player")?.transform;
+        if (!gauge) gauge = FindAnyObjectByType<SurvivalGauge>();
+        if (gauge)
+        {
+            gauge.onStunBegin?.AddListener(() => chargingLocked = true);
+            gauge.onStunEnd  ?.AddListener(() => chargingLocked = false);
+        }
+
 
         data = Resources.Load<CardData>(cardResourceName);
         if (!data) Debug.LogError($"[CardManager] CardData not found: {cardResourceName}");
@@ -61,6 +69,11 @@ public class CardManager : MonoBehaviour
     void OnDestroy()
     {
         if (director) director.OnZoneHit -= HandleZoneHit;
+        if (gauge)
+        {
+            gauge.onStunBegin?.RemoveListener(() => chargingLocked = true);
+            gauge.onStunEnd  ?.RemoveListener(() => chargingLocked = false);
+        }
         if (durationCo != null) StopCoroutine(durationCo);
     }
 

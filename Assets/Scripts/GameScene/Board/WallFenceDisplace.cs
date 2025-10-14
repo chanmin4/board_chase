@@ -62,6 +62,7 @@ public class FenceStripEvery10 : MonoBehaviour
 #endif
                 var s = go.transform.localScale;
                 s.x = fenceScaleX;
+                s.y = 0.4f;
                 go.transform.localScale = s;
             }
         }
@@ -83,6 +84,7 @@ public class FenceStripEvery10 : MonoBehaviour
 #endif
                 var s = go.transform.localScale;
                 s.x = fenceScaleX;
+                s.y = 0.4f;
                 go.transform.localScale = s;
             }
         }
