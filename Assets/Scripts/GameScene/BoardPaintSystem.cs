@@ -58,7 +58,7 @@ public class BoardPaintSystem : MonoBehaviour
 
     // ========== 외부 API ==========
     public void EnqueueCircle(PaintChannel ch, Vector3 worldPos, float radiusWorld,
-                              bool clearOtherChannel = false, int priority = 0)
+                              bool clearOtherChannel = true, int priority = 0)
     {
         _circleQueue.Add(new CircleCmd {
             ch = ch, worldPos = worldPos, radiusWorld = Mathf.Max(0.001f, radiusWorld),
@@ -68,7 +68,7 @@ public class BoardPaintSystem : MonoBehaviour
 
     /// prev→now 구간을 등간격으로 분해하여 도장(거리 기반, 프레임 드랍에도 빈틈 최소)
     public void EnqueueTrail(PaintChannel ch, Vector3 prev, Vector3 now, float baseRadiusWorld,
-                             float spacingMeters = -1f, bool clearOtherChannel = false, int priority = 0)
+                             float spacingMeters = -1f, bool clearOtherChannel = true, int priority = 0)
     {
         _trailQueue.Add(new TrailCmd {
             ch = ch, prev = prev, now = now,

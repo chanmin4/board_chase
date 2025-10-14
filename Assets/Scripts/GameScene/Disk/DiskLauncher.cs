@@ -125,7 +125,12 @@ public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f,
         if (((1 << c.collider.gameObject.layer) & wallMask) == 0) return;
 
         var contact = c.GetContact(0);
+        rb.position += contact.normal * 0.005f;
+        Vector3 v = rb.linearVelocity;
+        float into = Vector3.Dot(v, -contact.normal);
+        if (into > 0f) rb.linearVelocity = v + contact.normal * into;
         // 구독자(SFX 등)에게 알림
+
         WallHit?.Invoke();
     }
 

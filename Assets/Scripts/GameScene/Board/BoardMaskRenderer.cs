@@ -261,12 +261,10 @@ public class BoardMaskRenderer : MonoBehaviour
         if (_contamMask == null || _contamBuf == null) return;
         StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 255);
         _dirtyContam = true;
-
-        // 라스트터치 룰: 같은 영역의 플레이어는 0으로 눌러버리고 싶다면 주석 해제
-        // if (_playerMask != null && _playerBuf != null) {
-        //     StampCircle(_playerMask, _playerBuf, playerPixelsPerTile, centerW, radiusW, 0);
-        //     _dirtyPlayer = true;
-        // }
+        if (_playerMask != null && _playerBuf != null) {
+             StampCircle(_playerMask, _playerBuf, playerPixelsPerTile, centerW, radiusW, 0);
+             _dirtyPlayer = true;
+        }
     }
     public void PaintPlayerCircleWorld_Batched(Vector3 centerW, float radiusW, bool clearPollutionMask)
     {
