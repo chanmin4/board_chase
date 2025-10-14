@@ -11,6 +11,7 @@ public class BoardPaintSystem : MonoBehaviour
     [Header("Refs")]
     public BoardGrid board;
     public BoardMaskRenderer maskRenderer;     // Board 위 오염/플레이어 마스크를 그리는 기존 렌더러
+    public SurvivalGauge survivalgauge;
 
     [Header("Trail Sampling")]
     [Tooltip("스탬프 간격 = min( r * spacingByRadius , worldPixel * spacingByPixel )")]
@@ -30,6 +31,8 @@ public class BoardPaintSystem : MonoBehaviour
         public float radiusWorld;
         public bool clearOther; // Player가 Enemy 지울지 여부
         public int priority;    // 나중 확장용
+        public float stampMeters; // 이 도장을 1개 찍을 때 ‘이동한 길이’로 간주할 값
+        public float widthMul;    // 굵기 가중치(필요 없으면 1)
     }
 
     struct TrailCmd
@@ -45,8 +48,8 @@ public class BoardPaintSystem : MonoBehaviour
         public float carryDist;
     }
 
-    readonly List<CircleCmd> _circleQueue = new();
-    readonly List<TrailCmd>  _trailQueue  = new();
+    readonly List<CircleCmd> _circleQueue = new();//최종적으로 찍는 큐
+    readonly List<TrailCmd>  _trailQueue  = new();//circle로 변환하기위한큐
 
     void Awake()
     {
@@ -60,9 +63,25 @@ public class BoardPaintSystem : MonoBehaviour
     public void EnqueueCircle(PaintChannel ch, Vector3 worldPos, float radiusWorld,
                               bool clearOtherChannel = true, int priority = 0)
     {
-        _circleQueue.Add(new CircleCmd {
-            ch = ch, worldPos = worldPos, radiusWorld = Mathf.Max(0.001f, radiusWorld),
-            clearOther = clearOtherChannel, priority = priority
+        float widthMul = 1f; 
+        float rW = Mathf.Max(0.001f, radiusWorld);
+        float worldPixel = (board && maskRenderer)
+        ? board.tileSize / Mathf.Max(1, maskRenderer.PlayerPixelsPerTile)
+        : minSpacingWorld;
+        float spacing = Mathf.Max(
+        minSpacingWorld,
+        Mathf.Min(rW * spacingByRadius, worldPixel * spacingByPixel)
+        );
+        _circleQueue.Add(new CircleCmd
+        {
+
+            ch = ch,
+            worldPos = worldPos,
+            radiusWorld = Mathf.Max(0.001f, radiusWorld),
+            clearOther = clearOtherChannel,
+            priority = priority,
+            stampMeters = spacing,   // ★
+            widthMul = widthMul      // ★
         });
     }
 
@@ -147,6 +166,12 @@ public class BoardPaintSystem : MonoBehaviour
 
                 case PaintChannel.Player:
                     // 플레이어 칠하기 (옵션: 적 마스크 지우기)
+                    bool isContam = maskRenderer.IsContaminatedWorld(c.worldPos);
+                    if (survivalgauge != null)
+                    {
+                        if (!survivalgauge.TryConsumeByPaint(c.stampMeters, isContam, c.widthMul))
+                            break; // 잉크 부족 → 이번 도장 스킵
+                    }
                     maskRenderer.PaintPlayerCircleWorld_Batched(c.worldPos, c.radiusWorld, c.clearOther);
                     break;
             }

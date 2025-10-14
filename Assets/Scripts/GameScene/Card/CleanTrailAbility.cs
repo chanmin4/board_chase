@@ -162,11 +162,6 @@ public class CleanTrailAbility : CardAbility
                                     p, rPaint,
                                     clearOtherChannel: true);
         }
-        else if (director) // 폴백: 기존 디렉터 호출
-        {
-            director.ClearCircleWorld(p, rClear);
-            director.PaintPlayerCircleWorld(p, rPaint, applyBoardClean:false, clearPollutionMask:true);
-        }
     }
     public override void StopNow()
     {

@@ -8,8 +8,8 @@ public class SurvivalGauge : MonoBehaviour
     public float current = 100f;
 
     [Header("Drain (per sec)")]
-    public float baseDrain = 5f;          // 기본 감소
-    public float contaminatedExtra = 20f; // 오염 시 추가 감소
+    //public float baseDrain = 0f;          // 기본 감소
+    //public float contaminatedExtra = 0f; // 오염 시 추가 감소
 
     [Header("UI")]
     public Slider slider;   // Slider (Min 0, Max 1)
@@ -46,6 +46,12 @@ public class SurvivalGauge : MonoBehaviour
     [Header("Refs · (선택) 디버프 적용 대상")]
     public DiskLauncher disk;   // 인스펙터에서 디스크(Launcher) 연결
 
+    [Header("Ink Painting Cost")]
+    [Tooltip("내 영역을 1m 칠할 때 드는 기본 잉크 소모량")]
+    public float baseCostPerMeter = 1.0f;
+
+    [Tooltip("적 영역(오염)을 덧칠할 때 곱해지는 배수 (예: 1.5)")]
+    public float contamExtraMul = 1.5f;
 
     [ContextMenu("DEBUG_ForceDeplete")]
     public void DEBUG_ForceDeplete()
@@ -55,12 +61,14 @@ public class SurvivalGauge : MonoBehaviour
         Debug.Log("[SG] DEBUG_ForceDeplete()");
         onDepleted?.Invoke();
     }
+
     bool recovering = false;    // 기절(회복) 중인지
     float recoverT = 0f;       // 0~1 회복 진행률
     bool invoked; // 중복 호출 방지
     // 상태
     bool contaminated;
     float display01 = 1f;
+    public bool CanPaint => !recovering && current > 0f;
 
     // 다른 스크립트용 프로퍼티
     public float Value01 => Mathf.Clamp01(current / Mathf.Max(0.0001f, max));
@@ -114,9 +122,9 @@ public class SurvivalGauge : MonoBehaviour
         else
         {
             // ─ 기존 감소 로직 그대로 ─
-            float drain = baseDrain + (contaminated ? contaminatedExtra : 0f);
-            if (drain > 0f)
-                current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
+            //float drain = baseDrain + (contaminated ? contaminatedExtra : 0f);
+            //if (drain > 0f)
+               // current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
 
             // 0이 되었을 때 한 번만 트리거 → 기절 시작
             if (!invoked && current <= 0f)
@@ -160,7 +168,7 @@ public class SurvivalGauge : MonoBehaviour
             current = max;
             EndStun();
         }
-    
+
     }
 
 
@@ -200,4 +208,22 @@ public class SurvivalGauge : MonoBehaviour
         }
         onStunEnd?.Invoke();
     }
+    public bool TryConsumeByPaint(float meters, bool isContam, float widthMul = 1f)   // ★ ADDED
+    {
+        if (meters <= 0f || baseCostPerMeter <= 0f || widthMul <= 0f)
+            return true; // 비용 없음 → 성공 처리
+
+        float mul = isContam ? contamExtraMul : 1f;
+        float cost = meters * baseCostPerMeter * mul * widthMul;
+
+        if (current <= 0f || cost <= 0f)
+            return false;
+
+        if (current < cost)
+            return false; // 부분 칠 로직이 없다면 실패 반환
+
+        Add(-cost);       // 기존 Add()을 통해 감소(이벤트/슬라이더 반영)
+        return true;
+    }
+
 }
