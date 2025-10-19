@@ -77,7 +77,7 @@ public class SurvivalDirector : MonoBehaviour
     public float zoneTouchToleranceTiles = 0.35f;
     [Header("Bonus Sector (directional hit)")]
     public bool enableBonusSector = true;
-    [Range(1f, 180f)] public float bonusArcDeg = 10f; // 섹터 각도(전체)
+    [Range(1f, 360f)] public float bonusArcDeg = 10f; // 섹터 각도(전체)
     public int normalHitAward = 1;                 // 일반 접촉 시 +1
     public int bonusHitAward = 2;                 // 보너스 접촉 시 +2
     public float bonusRefreshDelay = 0.05f;           // 보너스 히트 후 재배치 지연(초)
@@ -419,7 +419,7 @@ public class SurvivalDirector : MonoBehaviour
                     profileIndex = profileIndex,
                     center = c,
                     tiles = tiles,
-                    xp=p.xp,
+                    xp = p.xp,
                     remaintime = p.time_to_live_profile, // ★ TODO: (변경) 위 ttl 변수로 교체 (개별 TTL)
                     time_to_live = p.time_to_live_profile,
                     curhit = 0,
@@ -742,12 +742,24 @@ public class SurvivalDirector : MonoBehaviour
         OnZoneExpired?.Invoke(z.id);
     }
     public int maskRendererPlayerPixelsPerTile()
-{
-    if (!maskRenderer)
-        maskRenderer = FindAnyObjectByType<BoardMaskRenderer>(); // PaintMaskRenderer 쓰면 타입 교체
+    {
+        if (!maskRenderer)
+            maskRenderer = FindAnyObjectByType<BoardMaskRenderer>(); // PaintMaskRenderer 쓰면 타입 교체
 
-    // 위에서 1)에서 만든 게터를 사용
-    return maskRenderer ? Mathf.Max(1, maskRenderer.PlayerPixelsPerTile) : 15;
-}
+        // 위에서 1)에서 만든 게터를 사용
+        return maskRenderer ? Mathf.Max(1, maskRenderer.PlayerPixelsPerTile) : 15;
+    }
+
+    // 모든 활성 존의 보너스 섹터 각도를 'arcDeg'로 즉시 갱신(새로 생성될 존도 이 값 사용)
+    public void SetBonusArcForAll(float arcDeg)
+    {
+        bonusArcDeg = Mathf.Clamp(arcDeg, 1f, 360f);
+         for (int i = 0; i < zones.Count; i++)
+        {
+            var z = zones[i];
+            OnZoneBonusSectorChanged?.Invoke(z.id, z.bonusAngleDeg, bonusArcDeg);
+        }
+    }
+
 }
 

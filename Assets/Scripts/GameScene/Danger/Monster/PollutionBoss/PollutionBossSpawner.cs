@@ -59,14 +59,14 @@ public class PollutionBossSpawner : MonoBehaviour
             if (old) Destroy(old.gameObject);
         }
 
-        if (spawnAtStart) Invoke(nameof(SpawnNow), Mathf.Max(0f, spawnDelay));
+        if (spawnAtStart) Invoke(nameof(SpawnOne), Mathf.Max(0f, spawnDelay));
     }
 
     [ContextMenu("Spawn Now")]
-    public void SpawnNow()
+    public bool SpawnOne()
     {
-        if (!board)        { Debug.LogError("[BossSpawner] BoardGrid 없음"); return; }
-        if (!rocketPrefab) { Debug.LogError("[BossSpawner] HomingRocket '로켓 프리팹' 필요"); return; }
+        if (!board) { Debug.LogError("[BossSpawner] BoardGrid 없음"); return false; }
+        if (!rocketPrefab) { Debug.LogError("[BossSpawner] HomingRocket '로켓 프리팹' 필요"); return false; }
 
         // 보스 반지름 추정(프리팹 있으면 그 값 사용)
         float bossRadius =
@@ -113,7 +113,9 @@ public class PollutionBossSpawner : MonoBehaviour
             director: director,
             rocketPrefab: rocketPrefab
         );
+        return bossInstance!=null;
     }
+
 
     // ───────── 위치 유틸 ─────────
     Vector3 GetBoardCenter()

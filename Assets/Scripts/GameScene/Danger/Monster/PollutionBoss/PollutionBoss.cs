@@ -208,6 +208,7 @@ public class PollutionBoss : MonoBehaviour
     {
         if (_activeRocket) { _activeRocket.Explode(); _activeRocket = null; }
         if (_uiRoot) Destroy(_uiRoot.gameObject);
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.Boss);
         Destroy(gameObject);
     }
 

@@ -1212,7 +1212,7 @@ Transform:
   m_GameObject: {fileID: 226236809}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 5, y: 1, z: 55}
+  m_LocalPosition: {x: 5, y: 1, z: 95}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1696,7 +1696,7 @@ MonoBehaviour:
   maxPlacementTries: 30
   blockLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 320
 --- !u!135 &277300317
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -2413,7 +2413,6 @@ MonoBehaviour:
   firstDelay: 5
   interval: 20
   countPerSpawn: 2
-  autoSpawn: 1
   edgePaddingTiles: 1
   avoidPlayerRadius: 3
   spawnY: 0.2
@@ -4455,7 +4454,7 @@ Transform:
   m_GameObject: {fileID: 714337925}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 30}
+  m_LocalPosition: {x: 0, y: 0, z: 50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5111,7 +5110,7 @@ Transform:
   m_GameObject: {fileID: 798172895}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30, y: 1, z: 60}
+  m_LocalPosition: {x: 50, y: 1, z: 100}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5147,7 +5146,7 @@ Transform:
   m_GameObject: {fileID: 816608727}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30, y: 0, z: 0}
+  m_LocalPosition: {x: 50, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6133,6 +6132,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 989779208}
+  - component: {fileID: 989779209}
   m_Layer: 0
   m_Name: MonsterSpawner
   m_TagString: Untagged
@@ -6158,6 +6158,40 @@ Transform:
   - {fileID: 277282743}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &989779209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 989779207}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5829ff6f17a0ca64490e152df7a7aaeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetLeveler: {fileID: 2113993645}
+  manageGhost: 1
+  manageSniper: 1
+  manageBoss: 1
+  ghostSpawner: {fileID: 356726099}
+  ghostFirstDelay: 0
+  ghostInterval: 10
+  ghostMaxAlive: 2
+  ghostBatch: 2
+  ghostKillXP: 15
+  sniperSpawner: {fileID: 277282744}
+  sniperFirstDelay: 3
+  sniperInterval: 30
+  sniperMaxAlive: 1
+  sniperBatch: 1
+  sniperKillXP: 15
+  bossSpawner: {fileID: 277300316}
+  bossFirstDelay: 6
+  bossInterval: 120
+  bossMaxAlive: 1
+  bossBatch: 1
+  bossKillXP: 50
 --- !u!4 &998065887 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4811773899302328925, guid: d3fa53b0d9d96504eae1bca1f6143514, type: 3}
@@ -7170,7 +7204,7 @@ Transform:
   m_GameObject: {fileID: 1162049248}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 60, y: 0, z: 30}
+  m_LocalPosition: {x: 100, y: 0, z: 50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7339,7 +7373,7 @@ Transform:
   m_GameObject: {fileID: 1246680109}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 55, y: 1, z: 5}
+  m_LocalPosition: {x: 95, y: 1, z: 5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7413,13 +7447,13 @@ MonoBehaviour:
   useKey: 32
   enableDoubleClick: 1
   doubleClickWindow: 0.3
-  cardResourceName: Cards/Cleaner
+  cardResourceName: Cards/ZoneCrit
   director: {fileID: 1606759577}
   player: {fileID: 2113993634}
   gauge: {fileID: 1445786933}
   riskAddRequiredCharge: 0
   riskDisableUse: 0
-  charge: 30
+  charge: 10
   chargingLocked: 0
 --- !u!114 &1260950211
 MonoBehaviour:
@@ -7897,7 +7931,7 @@ Transform:
   m_GameObject: {fileID: 1330122554}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 55, y: 1, z: 55}
+  m_LocalPosition: {x: 95, y: 1, z: 95}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8394,8 +8428,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d7c449593aa2894299b8c0ea0e2f4e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  max: 100
-  current: 100
+  max: 200
+  current: 200
   slider: {fileID: 1919896537}
   fill: {fileID: 780712386}
   colorGreen: {r: 0.2, g: 1, b: 0.4, a: 1}
@@ -8418,7 +8452,7 @@ MonoBehaviour:
   stunMoveSpeedMul: 0.5
   stunCooldownAddSeconds: 1.5
   disk: {fileID: 2113993636}
-  baseCostPerMeter: 0.3
+  baseCostPerMeter: 0.4
   contamExtraMul: 1.5
 --- !u!222 &1445786935
 CanvasRenderer:
@@ -9235,28 +9269,28 @@ MonoBehaviour:
   - name: Large
     footprint: {x: 18, y: 18}
     size: 2
-    requiredZoneHits: 6
-    enterBonus: 40
+    requiredZoneHits: 8
+    enterBonus: 90
     gainPerSec: 0
-    xp: 30
+    xp: 70
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
     ringMat: {fileID: 2100000, guid: 8f5f1f77a10050041ba717e441e543b2, type: 2}
-    time_to_live_profile: 25
+    time_to_live_profile: 45
   - name: Medium
     footprint: {x: 12, y: 12}
     size: 1
     requiredZoneHits: 4
-    enterBonus: 25
+    enterBonus: 50
     gainPerSec: 0
-    xp: 20
+    xp: 30
     domeMat: {fileID: 2100000, guid: 968663742a0fcac4b8df869c2634773e, type: 2}
     ringMat: {fileID: 2100000, guid: a9b7d61bd5ac1b940bc5621595e4ccef, type: 2}
-    time_to_live_profile: 20
+    time_to_live_profile: 25
   - name: Small
-    footprint: {x: 7, y: 7}
+    footprint: {x: 5, y: 5}
     size: 0
     requiredZoneHits: 2
-    enterBonus: 40
+    enterBonus: 30
     gainPerSec: 0
     xp: 10
     domeMat: {fileID: 2100000, guid: 8ec46af884d9c424986652876d1f247d, type: 2}
@@ -9271,7 +9305,7 @@ MonoBehaviour:
   relaxStep: 0.05
   zoneTouchToleranceTiles: 0.35
   enableBonusSector: 1
-  bonusArcDeg: 180
+  bonusArcDeg: 30
   normalHitAward: 1
   bonusHitAward: 2
   bonusRefreshDelay: 0.2
@@ -12890,12 +12924,12 @@ MonoBehaviour:
   useCooldown: 1
   cooldownSeconds: 1.5
   cooldownBonusOnBounce: 0
-  cooldownReducePerBounce: 0.5
+  cooldownReducePerBounce: 0
   baseCharges: 2
   maxCharges: 5
   wallMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   externalSpeedMul:
     m_PersistentCalls:
       m_Calls: []

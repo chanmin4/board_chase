@@ -31,14 +31,14 @@ public class PollutionSniperSpawner : MonoBehaviour
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
         if (!player && director) player = director.player;
 
-        if (spawnAtStart) Invoke(nameof(SpawnNow), Mathf.Max(0f, spawnDelay));
+        if (spawnAtStart) Invoke(nameof(SpawnOne), Mathf.Max(0f, spawnDelay));
     }
 
     [ContextMenu("Spawn Now")]
-    public void SpawnNow()
+    public bool SpawnOne()
     {
-        if (!sniperPrefab) { Debug.LogError("[SniperSpawner] sniperPrefab 없음"); return; }
-        if (anchors == null || anchors.Length == 0) { Debug.LogError("[SniperSpawner] anchors 비어있음"); return; }
+        if (!sniperPrefab) { Debug.LogError("[SniperSpawner] sniperPrefab 없음"); return false; }
+        if (anchors == null || anchors.Length == 0) { Debug.LogError("[SniperSpawner] anchors 비어있음"); return false; }
 
         int idx = Random.Range(0, anchors.Length);
         var t = anchors[idx];
@@ -48,6 +48,7 @@ public class PollutionSniperSpawner : MonoBehaviour
 
         var inst = Instantiate(sniperPrefab, pos, t.rotation);
         inst.Setup(board, player, director);
+        return inst != null;
     }
 
 }

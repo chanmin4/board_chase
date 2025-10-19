@@ -13,7 +13,7 @@ public class PollutionGhostSpawner : MonoBehaviour
     public float firstDelay = 3f;
     [Min(0.2f)] public float interval = 6f;
     public int countPerSpawn = 1;
-    public bool autoSpawn = true;
+    //public bool autoSpawn = true;
 
     [Header("Spawn Area")]
     public float edgePaddingTiles = 1f;     // 외벽과의 여유(타일)
@@ -44,7 +44,7 @@ public class PollutionGhostSpawner : MonoBehaviour
 
     void Update()
     {
-        if (!autoSpawn || !mobPrefab || !board) return;
+        if ( !mobPrefab || !board) return;
 
         if (!firstDone)
         {
@@ -69,13 +69,14 @@ public class PollutionGhostSpawner : MonoBehaviour
         GhostSpawn?.Invoke();
     }
 
-    void SpawnOne()
+    public bool SpawnOne()
     {
-        if (!mobPrefab || !board) return;
+        if (!mobPrefab || !board) return false;
 
         Vector3 pos = PickSpawnPos();
         var m = Instantiate(mobPrefab, pos, Quaternion.identity, transform);
         m.Setup(director, board, player, mobSpeed, mobLifetime, contamRadiusWorld);
+        return m != null;
     }
 
     Vector3 PickSpawnPos()

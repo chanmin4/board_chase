@@ -266,6 +266,18 @@ public class BoardMaskRenderer : MonoBehaviour
              _dirtyPlayer = true;
         }
     }
+       public void ClearPlayerCircleWorld_Batched(Vector3 centerW, float radiusW) // ★ ADD
+    {
+        if (_playerMask == null || _playerBuf == null) return;
+        StampCircle(_playerMask, _playerBuf, playerPixelsPerTile, centerW, radiusW, 0);
+        _dirtyPlayer = true;
+    }
+        public void ClearCircleWorld_Batched(Vector3 centerW, float radiusW)
+    {
+        if (_contamMask == null || _contamBuf == null) return;
+        StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
+        _dirtyContam = true;
+    }
     public void PaintPlayerCircleWorld_Batched(Vector3 centerW, float radiusW, bool clearPollutionMask)
     {
         if (_playerMask != null && _playerBuf != null)
@@ -281,12 +293,20 @@ public class BoardMaskRenderer : MonoBehaviour
             _dirtyContam = true;
         }
     }
-    public void ClearCircleWorld_Batched(Vector3 centerW, float radiusW)
+
+
+    public bool IsPlayerPaintedWorld(Vector3 worldPos)
     {
-        if (_contamMask == null || _contamBuf == null) return;
-        StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
-        _dirtyContam = true;
+        if (_playerBuf == null || _playerMask == null) return false;
+        int px, py;
+        if (!WorldToPixel(worldPos, _playerMask.width, _playerMask.height, out px, out py)) return false;
+        return _playerBuf[py * _playerMask.width + px].a > 0;
     }
+
+
+ 
+
+
     void LateUpdate()
     {
         if (_dirtyContam && _contamMask != null && _contamBuf != null)

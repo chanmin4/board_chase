@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using TMPro;
+using System;
 
 public class CardManager : MonoBehaviour
 {
@@ -33,7 +34,7 @@ public class CardManager : MonoBehaviour
     public event System.Action CardUse;
 
     CardData data;
-    [SerializeField] int charge = 0;
+    [SerializeField] int charge = 10;
     bool onCooldown;
     CardAbility ability;
     Coroutine durationCo;
@@ -201,9 +202,16 @@ public class CardManager : MonoBehaviour
         switch (data.abilityType)
         {
             case "CleanTrail":
-            default:
                 ability = host.AddComponent<CleanTrailAbility_Card>();
                 break;
+            case "ZoneCrit":
+                ability = host.AddComponent<ZoneCriticalArc>();
+                break;
+            default:
+                break;
+                
+            
+
         }
     }
 }

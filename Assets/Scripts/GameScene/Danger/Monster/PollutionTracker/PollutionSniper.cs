@@ -464,6 +464,7 @@ desired.y = BoardY + groundY;    // 기존: groundY
     {
         SetLineActive(false);
         if (_uiRoot) Destroy(_uiRoot.gameObject);
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.Sniper); 
         Destroy(gameObject);
     }
 

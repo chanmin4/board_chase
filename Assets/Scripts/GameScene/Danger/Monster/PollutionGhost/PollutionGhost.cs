@@ -177,7 +177,7 @@ public class PollutionGhost : MonoBehaviour
             Vector2 b = new Vector2(player.position.x,   player.position.z);
             if ((a - b).sqrMagnitude <= planarHitRadius * planarHitRadius)
             {
-                KillByPlayer();
+                Die();
                 return;
             }
         }
@@ -193,16 +193,17 @@ public class PollutionGhost : MonoBehaviour
     {
         if (killByLayers.value != 0 && ((killByLayers.value & (1 << other.gameObject.layer)) != 0))
         {
-            KillByPlayer();
+            Die();
             return;
         }
         // 내부 오브젝트는 관통: 아무 것도 하지 않음
     }
 
-    void KillByPlayer()
+    void Die()
     {
         if (killFx) Instantiate(killFx, transform.position, Quaternion.identity);
         if (killSfx) killSfx.Play();
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.Ghost);
         Destroy(gameObject);
     }
 
@@ -216,6 +217,7 @@ public class PollutionGhost : MonoBehaviour
             else if (director) director.ContaminateCircleWorld(pos, r);
         }
         if (timeoutFx) Instantiate(timeoutFx, transform.position, Quaternion.identity);
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.Ghost);
         Destroy(gameObject);
     }
 
