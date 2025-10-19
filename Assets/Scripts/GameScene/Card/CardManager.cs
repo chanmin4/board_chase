@@ -202,7 +202,7 @@ public class CardManager : MonoBehaviour
         {
             case "CleanTrail":
             default:
-                ability = host.AddComponent<CleanTrailAbility>();
+                ability = host.AddComponent<CleanTrailAbility_Card>();
                 break;
         }
     }

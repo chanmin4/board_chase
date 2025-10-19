@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
+using System;
 /// 모든 "원 도장" 요청을 프레임 단위로 배치 처리하는 공용 시스템.
 /// - 주체(플레이어/적)는 EnqueueCircle / EnqueueTrail 만 호출
 /// - 실제 텍스처 쓰기는 BoardMaskRenderer의 배치 API를 통해 1프레임 1회 Apply
@@ -22,7 +22,7 @@ public class BoardPaintSystem : MonoBehaviour
 
     [Header("Frame Budget")]
     [Range(8, 512)] public int maxStampsPerFrame = 128;   // 프레임 스파이크 방지용 상한
-
+public static event Action<float, bool, Vector3, float> OnPlayerPaintStamp; 
     // ===== 내부 큐 =====
     struct CircleCmd
     {
@@ -53,21 +53,23 @@ public class BoardPaintSystem : MonoBehaviour
 
     void Awake()
     {
-        if (!board)       board       = FindAnyObjectByType<BoardGrid>();
+        if (!board) board = FindAnyObjectByType<BoardGrid>();
         if (!maskRenderer) maskRenderer = FindAnyObjectByType<BoardMaskRenderer>();
         if (!board || !maskRenderer)
             Debug.LogWarning("[BoardPaintSystem] Board or MaskRenderer missing. Please assign.");
+        if (!survivalgauge) survivalgauge = FindAnyObjectByType<SurvivalGauge>(); 
     }
 
     // ========== 외부 API ==========
     public void EnqueueCircle(PaintChannel ch, Vector3 worldPos, float radiusWorld,
                               bool clearOtherChannel = true, int priority = 0)
     {
-        float widthMul = 1f; 
+        
         float rW = Mathf.Max(0.001f, radiusWorld);
         float worldPixel = (board && maskRenderer)
         ? board.tileSize / Mathf.Max(1, maskRenderer.PlayerPixelsPerTile)
         : minSpacingWorld;
+        float widthMul = 1f; 
         float spacing = Mathf.Max(
         minSpacingWorld,
         Mathf.Min(rW * spacingByRadius, worldPixel * spacingByPixel)
@@ -80,8 +82,8 @@ public class BoardPaintSystem : MonoBehaviour
             radiusWorld = Mathf.Max(0.001f, radiusWorld),
             clearOther = clearOtherChannel,
             priority = priority,
-            stampMeters = spacing,   // ★
-            widthMul = widthMul      // ★
+            stampMeters = spacing,
+            widthMul = widthMul   
         });
     }
 
@@ -131,9 +133,16 @@ public class BoardPaintSystem : MonoBehaviour
                 while (d <= dist && budget > 0)
                 {
                     Vector3 p = t.prev + dir * d;
-                    _circleQueue.Add(new CircleCmd {
-                        ch = t.ch, worldPos = p, radiusWorld = t.baseRadiusWorld,
-                        clearOther = t.clearOther, priority = t.priority
+                    _circleQueue.Add(new CircleCmd
+                    {
+                        ch = t.ch,
+                        worldPos = p,
+                        radiusWorld = t.baseRadiusWorld,
+                        clearOther = t.clearOther,
+                        priority = t.priority,
+                        stampMeters = spacing, 
+                        widthMul    = 1f       
+
                     });
                     placed++; budget--;
                     d += spacing;
@@ -173,6 +182,7 @@ public class BoardPaintSystem : MonoBehaviour
                             break; // 잉크 부족 → 이번 도장 스킵
                     }
                     maskRenderer.PaintPlayerCircleWorld_Batched(c.worldPos, c.radiusWorld, c.clearOther);
+                    OnPlayerPaintStamp?.Invoke(c.stampMeters, isContam, c.worldPos, c.radiusWorld);
                     break;
             }
         }

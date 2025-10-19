@@ -4,7 +4,7 @@ using System.Collections;
 /// 디스크가 지나간 경로를 청소하고(오염0) 같은/다른 반지름으로 플레이어 색을 칠함.
 /// - 거리 기반 스탬핑 (프레임 드랍에도 빈틈 최소화)
 /// - 프레임 예산으로 스파이크 방지
-public class CleanTrailAbility : CardAbility
+public class CleanTrailAbility_Card : CardAbility
 {
     [Header("Radius Tuning (meters)")]
     [Tooltip("청소 반지름 배수 (1=원래 r)")]

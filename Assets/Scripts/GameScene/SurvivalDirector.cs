@@ -35,6 +35,8 @@ public class ZoneProfile
     [Header("게이지 이득/보너스")]
     public float enterBonus = 30f;
     public float gainPerSec = 0f;
+    [Header("존 소모시 xp획득량")]
+    public float xp;
 
     [Header("비주얼(선택)")]
     public Material domeMat;
@@ -52,6 +54,7 @@ public class SurvivalDirector : MonoBehaviour
     public SurvivalGauge gauge;
     public DragAimController dragaimcontroller;
     public BoardMaskRenderer maskRenderer;
+    public DiskInkLeveler diskleveler;
 
     [Header("Inspector-Driven Zones")]
     public List<ZoneProfile> zoneProfiles = new List<ZoneProfile>(); // ★ 인스펙터에서 관리
@@ -163,7 +166,7 @@ public class SurvivalDirector : MonoBehaviour
         public int profileIndex;
         public Vector2Int center;
         public List<Vector2Int> tiles;
-
+        public float xp;
         public float remaintime;
         public float time_to_live;
         public int curhit;                 // ★ 누적 히트(존별)
@@ -416,6 +419,7 @@ public class SurvivalDirector : MonoBehaviour
                     profileIndex = profileIndex,
                     center = c,
                     tiles = tiles,
+                    xp=p.xp,
                     remaintime = p.time_to_live_profile, // ★ TODO: (변경) 위 ttl 변수로 교체 (개별 TTL)
                     time_to_live = p.time_to_live_profile,
                     curhit = 0,
@@ -600,7 +604,7 @@ public class SurvivalDirector : MonoBehaviour
                                clearPollutionMask: true);
 
         OnZoneConsumed?.Invoke(z.id);
-
+        diskleveler.GrantXP(50f, "zone");
         if (_bonusReroll.TryGetValue(z.id, out var co)) { StopCoroutine(co); _bonusReroll.Remove(z.id); }
         zones.Remove(z);
 

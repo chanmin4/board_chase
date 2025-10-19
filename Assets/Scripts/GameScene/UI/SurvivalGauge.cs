@@ -48,7 +48,7 @@ public class SurvivalGauge : MonoBehaviour
 
     [Header("Ink Painting Cost")]
     [Tooltip("내 영역을 1m 칠할 때 드는 기본 잉크 소모량")]
-    public float baseCostPerMeter = 1.0f;
+    public float baseCostPerMeter = 0.25f;
 
     [Tooltip("적 영역(오염)을 덧칠할 때 곱해지는 배수 (예: 1.5)")]
     public float contamExtraMul = 1.5f;
@@ -67,6 +67,7 @@ public class SurvivalGauge : MonoBehaviour
     bool invoked; // 중복 호출 방지
     // 상태
     bool contaminated;
+    bool isstun = false;
     float display01 = 1f;
     public bool CanPaint => !recovering && current > 0f;
 
@@ -124,7 +125,7 @@ public class SurvivalGauge : MonoBehaviour
             // ─ 기존 감소 로직 그대로 ─
             //float drain = baseDrain + (contaminated ? contaminatedExtra : 0f);
             //if (drain > 0f)
-               // current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
+            // current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
 
             // 0이 되었을 때 한 번만 트리거 → 기절 시작
             if (!invoked && current <= 0f)
@@ -183,7 +184,7 @@ public class SurvivalGauge : MonoBehaviour
         recovering = true;
         recoverT = 0f;
         current = 0f;
-
+        isstun = true;
         // 디버프 적용(선택)
         if (disk)
         {
@@ -199,7 +200,7 @@ public class SurvivalGauge : MonoBehaviour
         recovering = false;
         current = max;   // 안전하게 꽉 채움
         invoked = false; // 다음 사이클에서 다시 0 트리거 가능
-
+        isstun = false;
         // 디버프 해제
         if (disk)
         {
@@ -210,20 +211,23 @@ public class SurvivalGauge : MonoBehaviour
     }
     public bool TryConsumeByPaint(float meters, bool isContam, float widthMul = 1f)   // ★ ADDED
     {
+        if (isstun) return false;
         if (meters <= 0f || baseCostPerMeter <= 0f || widthMul <= 0f)
             return true; // 비용 없음 → 성공 처리
-
         float mul = isContam ? contamExtraMul : 1f;
         float cost = meters * baseCostPerMeter * mul * widthMul;
 
         if (current <= 0f || cost <= 0f)
             return false;
 
-        if (current < cost)
-            return false; // 부분 칠 로직이 없다면 실패 반환
+        // ★ 부분 소모 허용: 잔여 잉크만큼은 깎아서 0 도달 가능하게
+        float consume = Mathf.Min(current, cost);
+        if (consume > 0f) Add(-consume);
 
-        Add(-cost);       // 기존 Add()을 통해 감소(이벤트/슬라이더 반영)
-        return true;
+        // 전액 지불 여부로 이번 도장 성공/실패 반환
+        return (consume >= cost);
     }
+    
+    
 
 }
