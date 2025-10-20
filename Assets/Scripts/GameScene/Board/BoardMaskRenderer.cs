@@ -1,7 +1,14 @@
 using UnityEngine;
-
+namespace Game.Masks
+{
+    public interface IMaskProvider
+    {
+        Texture2D EnemyMaskTex { get; }   // 적/오염 마스크
+        Texture2D PlayerMaskTex { get; }  // 플레이어 마스크
+    }
+}
 [RequireComponent(typeof(MeshRenderer), typeof(MeshFilter))]
-public class BoardMaskRenderer : MonoBehaviour
+public class BoardMaskRenderer : MonoBehaviour,Game.Masks.IMaskProvider
 {
     [Header("Refs")]
     public SurvivalDirector director;
@@ -22,13 +29,16 @@ public class BoardMaskRenderer : MonoBehaviour
     MeshRenderer _mr;
     Material _contamMatInst;   // 인스턴스
     Material _playerMatInst;   // 인스턴스
-
-    Texture2D _contamMask;     // 적(오염) 마스크
+[SerializeField] Texture2D _EnemyMask;        // 적/오염 마스크 소스 텍스처
+    [SerializeField] Texture2D _playerMask;  // 플레이어 마스크 소스 텍스처
     Color32[] _contamBuf;
 
-    Texture2D _playerMask;     // 플레이어 마스크
     Color32[] _playerBuf;
     public int PlayerPixelsPerTile => Mathf.Max(1, playerPixelsPerTile);
+
+    // ========== Debug/Query (옵션) ==========
+    public Texture2D EnemyMaskTex => _EnemyMask;
+    public Texture2D PlayerMaskTex => _playerMask;
     void OnEnable()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
@@ -72,7 +82,7 @@ public class BoardMaskRenderer : MonoBehaviour
     void HandleContamCircle(int _, Vector3 centerW, float radiusW)
     {
         // 적(오염) 찍기
-        StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 255);
+        StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 255);
         _dirtyContam = true;
 
         // 라스트터치: 같은 영역에서 플레이어는 0으로
@@ -86,7 +96,7 @@ public class BoardMaskRenderer : MonoBehaviour
     void HandleClearedCircle(Vector3 centerW, float radiusW)
     {
         // ‘청소’ 이벤트는 오염만 0 — 플레이어 색은 유지
-        StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
+        StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
         _dirtyContam = true;
     }
 
@@ -100,9 +110,9 @@ public class BoardMaskRenderer : MonoBehaviour
         }
 
         // 옵션: 같은 영역의 오염 0으로 (라스트터치)
-        if (clearPollutionMask && _contamMask)
+        if (clearPollutionMask && _EnemyMask)
         {
-            StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
+            StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
            _dirtyPlayer = true;
         }
     }
@@ -150,7 +160,7 @@ public class BoardMaskRenderer : MonoBehaviour
 
     void BuildContamMaskTexture()
     {
-        BuildMaskFor(_contamMatInst, pixelsPerTile, out _contamMask, out _contamBuf, "_MaskTex");
+        BuildMaskFor(_contamMatInst, pixelsPerTile, out _EnemyMask, out _contamBuf, "_MaskTex");
     }
 
     void BuildPlayerMaskTexture()
@@ -226,16 +236,14 @@ public class BoardMaskRenderer : MonoBehaviour
         }
     }
 
-    // ========== Debug/Query (옵션) ==========
-    public Texture2D ContamMaskTex => _contamMask;
-    public Texture2D PlayerMaskTex => _playerMask;
+
 
     public bool IsContaminatedWorld(Vector3 worldPos)
     {
-        if (_contamBuf == null || _contamMask == null) return false;
+        if (_contamBuf == null || _EnemyMask == null) return false;
         int px, py;
-        if (!WorldToPixel(worldPos, _contamMask.width, _contamMask.height, out px, out py)) return false;
-        return _contamBuf[py * _contamMask.width + px].a > 0;
+        if (!WorldToPixel(worldPos, _EnemyMask.width, _EnemyMask.height, out px, out py)) return false;
+        return _contamBuf[py * _EnemyMask.width + px].a > 0;
     }
 
     bool WorldToPixel(Vector3 wpos, int TW, int TH, out int px, out int py)
@@ -258,8 +266,8 @@ public class BoardMaskRenderer : MonoBehaviour
     }
     public void ContaminateCircleWorld_Batched(Vector3 centerW, float radiusW)
     {
-        if (_contamMask == null || _contamBuf == null) return;
-        StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 255);
+        if (_EnemyMask == null || _contamBuf == null) return;
+        StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 255);
         _dirtyContam = true;
         if (_playerMask != null && _playerBuf != null) {
              StampCircle(_playerMask, _playerBuf, playerPixelsPerTile, centerW, radiusW, 0);
@@ -274,8 +282,8 @@ public class BoardMaskRenderer : MonoBehaviour
     }
         public void ClearCircleWorld_Batched(Vector3 centerW, float radiusW)
     {
-        if (_contamMask == null || _contamBuf == null) return;
-        StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
+        if (_EnemyMask == null || _contamBuf == null) return;
+        StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
         _dirtyContam = true;
     }
     public void PaintPlayerCircleWorld_Batched(Vector3 centerW, float radiusW, bool clearPollutionMask)
@@ -286,10 +294,10 @@ public class BoardMaskRenderer : MonoBehaviour
             StampCircle(_playerMask, _playerBuf, playerPixelsPerTile, centerW, radiusW, 255);
             _dirtyPlayer = true;
         }
-        if (clearPollutionMask && _contamMask != null && _contamBuf != null)
+        if (clearPollutionMask && _EnemyMask != null && _contamBuf != null)
         {
             // 같은 영역의 오염은 0으로 지움(덮어쓰기)
-            StampCircle(_contamMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
+            StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 0);
             _dirtyContam = true;
         }
     }
@@ -304,15 +312,66 @@ public class BoardMaskRenderer : MonoBehaviour
     }
 
 
- 
+    //inkeater
+    public int ClearPlayerCircleWorld_Count(Vector3 centerW, float radiusW, out float clearedAreaWorld)
+    {
+        clearedAreaWorld = 0f;
+        if (_playerMask == null || _playerBuf == null || radiusW <= 0f) return 0;
+
+        // 월드→픽셀 변환
+        int w = _playerMask.width;
+        int h = _playerMask.height;
+
+        // 중심/반지름(픽셀단위)
+        if (!WorldToPixel(centerW, w, h, out int cx, out int cy)) return 0;
+        float pxPerMeter = PlayerPixelsPerTile / Mathf.Max(0.0001f, board.tileSize);
+        int rPx = Mathf.Max(1, Mathf.RoundToInt(radiusW * pxPerMeter));
+
+        // 바운딩 박스
+        int x0 = Mathf.Max(0, cx - rPx);
+        int x1 = Mathf.Min(w - 1, cx + rPx);
+        int y0 = Mathf.Max(0, cy - rPx);
+        int y1 = Mathf.Min(h - 1, cy + rPx);
+
+        int cleared = 0;
+        int rr = rPx * rPx;
+
+        // 원 내부만 검사하며 알파>0 픽셀을 0으로
+        for (int y = y0; y <= y1; y++)
+        {
+            int dy = y - cy; int dy2 = dy * dy;
+            int row = y * w;
+            for (int x = x0; x <= x1; x++)
+            {
+                int dx = x - cx;
+                if (dx * dx + dy2 > rr) continue;
+
+                int idx = row + x;
+                var c = _playerBuf[idx];
+                if (c.a > 0)
+                {
+                    c.a = 0;                // 지움
+                    _playerBuf[idx] = c;
+                    cleared++;
+                }
+            }
+        }
+
+        if (cleared > 0) _dirtyPlayer = true;
+
+        // 픽셀 1개의 월드 면적 = (tileSize/PlayerPixelsPerTile)^2
+        float meterPerPixel = board.tileSize / Mathf.Max(1, PlayerPixelsPerTile);
+        clearedAreaWorld = cleared * meterPerPixel * meterPerPixel;
+        return cleared;
+    }
 
 
     void LateUpdate()
     {
-        if (_dirtyContam && _contamMask != null && _contamBuf != null)
+        if (_dirtyContam && _EnemyMask != null && _contamBuf != null)
         {
-            _contamMask.SetPixels32(_contamBuf);
-            _contamMask.Apply(false, false);
+            _EnemyMask.SetPixels32(_contamBuf);
+            _EnemyMask.Apply(false, false);
             _dirtyContam = false;
         }
         if (_dirtyPlayer && _playerMask != null && _playerBuf != null)

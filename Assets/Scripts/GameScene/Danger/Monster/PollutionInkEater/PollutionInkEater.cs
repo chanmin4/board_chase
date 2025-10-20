@@ -5,8 +5,30 @@ using UnityEngine;
 /// - 이동: 가장 가까운/진한 플레이어 잉크 방향으로 유도(샘플 기반)
 /// - '먹기': 반경 eatRadius로 ClearPlayerCircleWorld_Batched 호출 + 양 누적
 /// - '폭발(토해내기)': 누적량 ≥ threshold → ContaminateCircleWorld_Batched
+
+
 public class PollutionInkEater : MonoBehaviour
 {
+    [System.Serializable]
+    public struct Settings
+    {
+        // Movement
+        public float moveSpeed;
+        public float turnSpeed;
+
+        // Eating
+        public float eatRadius;
+        public float eatTick;
+        public float eatUnit;
+        public float burstThreshold;
+        public float burstRadius;
+        public float burstCooldown;
+        public LayerMask killByLayers; // 이 레이어에 맞으면 히트
+        public int hitsToKill;
+    }
+
+
+
     [Header("Refs")]
     public BoardMaskRenderer maskRenderer;
     public BoardGrid board;
@@ -15,21 +37,38 @@ public class PollutionInkEater : MonoBehaviour
     [Header("Movement")]
     public float moveSpeed = 3.5f;
     public float turnSpeed = 360f;
-    public float seekRadius = 6f;        // 주변 탐색 반경
-    public int   seekSamples = 16;       // 샘플 갯수(원주 분할)
+    public int seekSamples = 16;       // 샘플 갯수(원주 분할)
 
     [Header("Eating")]
     public float eatRadius = 1.2f;       // 실제로 지울 반경
     public float eatTick = 0.15f;        // 지우기 주기(초)
-    public float eatUnit = 3.14f;        // 1틱 섭취량(대략 면적: πr^2에 계수 곱 등 튜닝)
     public float burstThreshold = 100f;  // 임계치(누적 섭취량)
     public float burstRadius = 4.5f;     // 오염 반경
     public float burstCooldown = 1.0f;   // 폭발 후 딜레이
+
+
 
     [Header("InkEater State (debug)")]
     [SerializeField] float eaten = 0f;
     [SerializeField] float eatTimer = 0f;
     [SerializeField] float burstCd = 0f;
+    public bool useBoardWideSeek = true;
+
+    int _hp;
+    LayerMask _killByLayers;
+    public void ApplySettings(Settings s)
+    {
+        moveSpeed = s.moveSpeed;
+        turnSpeed = s.turnSpeed;
+
+        eatRadius = Mathf.Max(0.01f, s.eatRadius);
+        eatTick = Mathf.Max(0.02f, s.eatTick);
+        burstThreshold = Mathf.Max(0f, s.burstThreshold);
+        burstRadius = Mathf.Max(0.01f, s.burstRadius);
+        burstCooldown = Mathf.Max(0f, s.burstCooldown);
+        _killByLayers = s.killByLayers;
+        _hp = Mathf.Max(1, s.hitsToKill);
+    }
 
     void Awake()
     {
@@ -57,14 +96,18 @@ public class PollutionInkEater : MonoBehaviour
         if (eatTimer <= 0f)
         {
             eatTimer = eatTick;
-            // 현재 위치 주변에 플레이어 잉크가 있으면 지우고 섭취량 누적
-            bool hasPlayerInk = maskRenderer.IsPlayerPaintedWorld(transform.position);
-            if (hasPlayerInk)
+
+            // 실제 지워진 면적만큼 섭취
+            float clearedArea;
+            int clearedPx = maskRenderer.ClearPlayerCircleWorld_Count(transform.position, eatRadius, out clearedArea);
+
+            if (clearedPx > 0)
             {
-                maskRenderer.ClearPlayerCircleWorld_Batched(transform.position, eatRadius);
-                eaten += eatUnit; // 단순 누적(필요하면 면적 기반으로: Mathf.PI*eatRadius*eatRadius*k)
+                eaten += clearedArea; // ← 정확한 월드 m^2 누적
+                                      // 필요하면 계수 곱: eaten += clearedArea * eatAreaToUnitMul;
             }
         }
+
 
         // 3) 폭발(토해내기)
         if (burstCd > 0f) burstCd -= Time.deltaTime;
@@ -79,35 +122,94 @@ public class PollutionInkEater : MonoBehaviour
     // 주변 플레이어 잉크 밀도를 샘플링해서 '가장 유리한 방향'을 반환
     Vector3 SampleInkGradient()
     {
-        float bestScore = 0f;
-        Vector3 bestDir = Vector3.zero;
+        // 탐색 최대 거리 결정: 전역 탐색이면 보드 반대각선/2, 아니면 기존 반경
+        float maxR = BoardHalfDiagonal();
+
+        int rays = Mathf.Max(8, seekSamples); // 방향 샘플 수
+        int steps = 24;                        // 각 방향으로 몇 번 전진하며 확인할지
+        float step = maxR / steps;
 
         Vector3 pos = transform.position;
-        for (int i = 0; i < Mathf.Max(4, seekSamples); i++)
+        Vector3 bestDir = Vector3.zero;
+        float bestScore = 0f;
+
+        for (int i = 0; i < rays; i++)
         {
-            float ang = (Mathf.PI * 2f) * (i / (float)seekSamples);
-            Vector3 d = new Vector3(Mathf.Cos(ang), 0, Mathf.Sin(ang));
-            Vector3 p = pos + d * seekRadius * 0.8f; // 약간 안쪽을 본다
+            float ang = (Mathf.PI * 2f) * (i / (float)rays);
+            Vector3 dir = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang));
 
-            // '플레이어 잉크 존재 여부'를 단순 스코어로
-            float score = maskRenderer.IsPlayerPaintedWorld(p) ? 1f : 0f;
+            // 이 방향으로 레이-마치: 가장 가까운 "플레이어 잉크"를 찾으면 점수 = 가까울수록 높게
+            float score = 0f;
+            for (int s = 1; s <= steps; s++)
+            {
+                float dist = s * step;
+                Vector3 p = pos + dir * dist;
 
-            // 가까운 쪽에 보너스(선택)
-            score += 0.2f * (1f - (p - pos).magnitude / seekRadius);
+                if (maskRenderer.IsPlayerPaintedWorld(p))
+                {
+                    // 가까울수록 점수↑ (0~1 범위)
+                    score = 1f - (dist / maxR);
+                    break; // 첫 발견 지점에서 멈춤
+                }
+            }
 
             if (score > bestScore)
             {
                 bestScore = score;
-                bestDir = d;
+                bestDir = dir;
             }
         }
 
-        // 샘플 전부 0이면 랜덤 워크(혹은 플레이어 반대 등)
         if (bestScore <= 0f)
-            bestDir = (targetPlayer ? (targetPlayer.position - pos).normalized : Random.insideUnitSphere).WithY0();
-
+        {
+            // 잉크를 못 찾으면 플레이어 쪽으로 느슨히 이동(혹은 랜덤 워크)
+            if (targetPlayer)
+            {
+                Vector3 d = targetPlayer.position - pos;
+                d.y = 0f;
+                if (d.sqrMagnitude > 0.001f) return d.normalized;
+            }
+            return Random.insideUnitSphere * 0.5f; // 완전 무정보면 약한 랜덤
+        }
         return bestDir.normalized;
     }
+    float BoardHalfDiagonal()
+    {
+        if (!board) return 0;
+        float w = board.width * board.tileSize;
+        float h = board.height * board.tileSize;
+        return 0.5f * Mathf.Sqrt(w * w + h * h);
+    }
+    void OnTriggerEnter(Collider other)
+    {
+        // 지정 레이어와 충돌 시 히트
+        if (_killByLayers.value != 0 &&
+            ((_killByLayers.value & (1 << other.gameObject.layer)) != 0))
+        {
+            TakeHit();
+        }
+    }
+
+
+    void TakeHit()
+    {
+        _hp--;
+        if (_hp <= 0)
+        {
+            Die();
+        }
+    }
+
+
+    void Die()
+    {
+        // 필요하면 이펙트/사운드 추가
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.InkEater);
+        Destroy(gameObject);
+    }
+
+
+
 }
 
 static class V3Ext

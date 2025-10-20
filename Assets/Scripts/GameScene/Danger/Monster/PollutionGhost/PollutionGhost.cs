@@ -4,6 +4,33 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class PollutionGhost : MonoBehaviour
 {
+    [System.Serializable]
+    public struct GhostSettings
+    {
+        // Movement / Bounds
+        public float speed;
+        public bool randomizeSpeed;
+        public Vector2 speedRange;
+        public float radiusWorld;
+        public float groundY;
+
+        // Lifetime / Timeout
+        public float lifetime;
+        public bool dropOnTimeout;
+        public float contamRadiusWorld;
+
+        // Path Contam
+        public bool enablePathContam;
+        public float pathContamStartDelay;
+        public float pathContamInterval;
+        public float pathContamRadius;
+        public int maxPathContamDrops;
+
+        // Hit
+        public LayerMask killByLayers;
+         public int hitsToKill;
+    }
+
     [Header("Refs")]
     [NonSerialized] public SurvivalDirector director;
     [NonSerialized] public BoardGrid board;
@@ -37,9 +64,8 @@ public class PollutionGhost : MonoBehaviour
 
     [Header("Hit Rule")]
     public LayerMask killByLayers;         // 여기에 닿으면 즉사(예: Player, Disk, Projectile)
-    public bool planarHitCheck = false;    // 수평거리로도 판정하고 싶으면 켜기
-    public float planarHitRadius = 0.45f;
-
+    public int hitsToKill = 1;   // 스포너에서 주입
+    
     [SerializeField] string animSpeedParam = "Speed";
     Animator anim;
     int animSpeedHash;
@@ -59,6 +85,19 @@ public class PollutionGhost : MonoBehaviour
     float nextDropTimer;    // 다음 드롭까지 남은 시간
     int   droppedCount;
     float BoardY => board ? board.origin.y : 0f;
+    int _hp;                     // 런타임 현재 HP
+    public void ApplySettings(GhostSettings s)
+    {
+        speed = s.speed; randomizeSpeed = s.randomizeSpeed; speedRange = s.speedRange;
+        radiusWorld = s.radiusWorld; groundY = s.groundY;
+        lifetime = s.lifetime; dropOnTimeout = s.dropOnTimeout; contamRadiusWorld = s.contamRadiusWorld;
+        enablePathContam = s.enablePathContam;
+        pathContamStartDelay = s.pathContamStartDelay; pathContamInterval = s.pathContamInterval;
+        pathContamRadius = s.pathContamRadius; maxPathContamDrops = s.maxPathContamDrops;
+        killByLayers = s.killByLayers;
+        hitsToKill = Mathf.Max(1, s.hitsToKill);  
+    }
+
 
     // ===== 초기화(스포너가 호출) =====
     public void Setup(SurvivalDirector dir, BoardGrid bd, Transform ply, float spd, float life, float contamR)
@@ -77,13 +116,14 @@ public class PollutionGhost : MonoBehaviour
         var p = transform.position;
         p.y = BoardY + groundY;          // 기존: groundY
         transform.position = p;
-        
+
         prevPos = transform.position;
         if (anim) anim.SetFloat(animSpeedHash, 0f);
         // 경로 오염 타이머 초기화
         lifeClock = 0f; pathClock = 0f; pathStarted = false;
         nextDropTimer = pathContamInterval;
         droppedCount = 0;
+        _hp = Mathf.Max(1, hitsToKill); 
     }
 
     void Awake()
@@ -170,18 +210,6 @@ public class PollutionGhost : MonoBehaviour
             lifeClock += Time.deltaTime; // 경로오염 비활성이어도 수명은 흐름
         }
 
-        // ===== 수평 거리 히트(선택) =====
-        if (planarHitCheck && player)
-        {
-            Vector2 a = new Vector2(transform.position.x, transform.position.z);
-            Vector2 b = new Vector2(player.position.x,   player.position.z);
-            if ((a - b).sqrMagnitude <= planarHitRadius * planarHitRadius)
-            {
-                Die();
-                return;
-            }
-        }
-
         // ===== 수명 만료 처리 =====
         if (lifeClock >= lifetime)
         {
@@ -193,10 +221,18 @@ public class PollutionGhost : MonoBehaviour
     {
         if (killByLayers.value != 0 && ((killByLayers.value & (1 << other.gameObject.layer)) != 0))
         {
-            Die();
+            TakeHit();  
             return;
         }
-        // 내부 오브젝트는 관통: 아무 것도 하지 않음
+    }
+
+    void TakeHit()
+    {
+        _hp--;
+        if (_hp <= 0)
+        {
+            Die();
+        }
     }
 
     void Die()
@@ -220,6 +256,8 @@ public class PollutionGhost : MonoBehaviour
         MobSpawnManager.Instance?.ReportMobKilled(MobType.Ghost);
         Destroy(gameObject);
     }
+
+
 
 
 #if UNITY_EDITOR

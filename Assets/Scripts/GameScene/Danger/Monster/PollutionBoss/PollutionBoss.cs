@@ -3,9 +3,31 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(SphereCollider))]
 public class PollutionBoss : MonoBehaviour
 {
+    [System.Serializable]
+    public struct BossSettings
+    {
+        // Bounds/Spawn
+        public float groundY;
+        public float bossRadius;
+        public float wallPaddingWorld;
+
+        // HP
+        public int maxHP;
+        public int damagePerHit;
+        public LayerMask damageByLayers;
+
+        // Rocket
+        public float firstSpawnDelay;
+        public float spawnInterval;
+        public float rocketLifetime;
+        public float homingSpeed;
+        public float rocketSpawnYOffset;
+
+        // (UI/World 배치 관련은 필요 시 추가)
+    }
+
     // ───────── Bounds/Spawn ─────────
     [Header("Bounds/Spawn")]
     public float groundY = 0.2f;
@@ -50,6 +72,13 @@ public class PollutionBoss : MonoBehaviour
     [Tooltip("월드 막대 내부 패딩 (미터)")] public float worldBarInnerPadM = 0.01f;
     [Tooltip("WorldSpace 캔버스 전체 배율(1 = 그대로)")] public float worldCanvasScale = 1.0f;
     [Tooltip("WorldFlat일 때 X축 회전 (90=바닥에 눕힘)")] public float worldFlatAngleDeg = 90f;
+    public void ApplySettings(BossSettings s)
+    {
+        groundY = s.groundY; bossRadius = s.bossRadius; wallPaddingWorld = s.wallPaddingWorld;
+        maxHP = s.maxHP; damagePerHit = s.damagePerHit; damageByLayers = s.damageByLayers;
+        firstSpawnDelay = s.firstSpawnDelay; spawnInterval = s.spawnInterval;
+        rocketLifetime = s.rocketLifetime; homingSpeed = s.homingSpeed; rocketSpawnYOffset = s.rocketSpawnYOffset;
+    }
 
     
 
@@ -83,7 +112,7 @@ public class PollutionBoss : MonoBehaviour
         p.y = BoardY + groundY;          // 기존: groundY
         transform.position = p;
 
-        var col = GetComponent<SphereCollider>();
+        var col = GetComponentInChildren<SphereCollider>();
         col.isTrigger = true;
         col.radius = Mathf.Max(bossRadius, 0.1f);
 
@@ -133,7 +162,7 @@ public class PollutionBoss : MonoBehaviour
         float startY = ground + rocketSpawnYOffset + /*로켓 시작 높이*/ 6f; // 필요 시 공개 필드로
 
         // 스폰 위치는 y 아무거나 OK (Setup/Init에서 startHeight로 올림)
-        var r = Instantiate(_rocketPrefab, new Vector3(center.x, ground, center.z), Quaternion.identity);
+        var r = Instantiate(_rocketPrefab, new Vector3(center.x, ground, center.z), Quaternion.identity,transform);
         _activeRocket = r;
 
         // Homing 설정(기존)

@@ -1,8 +1,29 @@
+using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 public class PollutionGhostSpawner : MonoBehaviour
 {
+    [Header("Ghost Settings (Spawner controls)")]
+    public PollutionGhost.GhostSettings settings = new PollutionGhost.GhostSettings
+    {
+        speed = 3.5f,
+        randomizeSpeed = false,
+        speedRange = new Vector2(2f, 5f),
+        radiusWorld = 0.35f,
+        groundY = 0.2f,
+        lifetime = 8f,
+        dropOnTimeout = false,
+        contamRadiusWorld = 1.4f,
+        enablePathContam = true,
+        pathContamStartDelay = 2f,
+        pathContamInterval = 1f,
+        pathContamRadius = 1.0f,
+        maxPathContamDrops = 0,
+        killByLayers = ~0,
+        hitsToKill = 1
+    };
+
     [Header("Refs")]
     public SurvivalDirector director;
     public BoardGrid board;
@@ -10,8 +31,8 @@ public class PollutionGhostSpawner : MonoBehaviour
     public PollutionGhost mobPrefab;
 
     [Header("Timing")]
-    public float firstDelay = 3f;
-    [Min(0.2f)] public float interval = 6f;
+    [NonSerialized]public float firstDelay = 3f;
+    [NonSerialized][Min(0.2f)] public float interval = 6f;
     public int countPerSpawn = 1;
     //public bool autoSpawn = true;
 
@@ -44,37 +65,14 @@ public class PollutionGhostSpawner : MonoBehaviour
 
     void Update()
     {
-        if ( !mobPrefab || !board) return;
-
-        if (!firstDone)
-        {
-            timer += Time.deltaTime;
-            if (timer >= firstDelay) { timer = 0f; firstDone = true; SpawnBurst(); }
-            return;
-        }
-
-        timer += Time.deltaTime;
-        while (timer >= interval)
-        {
-            timer -= interval;
-            SpawnBurst();
-        }
     }
-
-    [ContextMenu("Spawn Burst")]
-    public void SpawnBurst()
-    {
-        int n = Mathf.Max(1, countPerSpawn);
-        for (int i = 0; i < n; i++) SpawnOne();
-        GhostSpawn?.Invoke();
-    }
-
     public bool SpawnOne()
     {
         if (!mobPrefab || !board) return false;
 
         Vector3 pos = PickSpawnPos();
         var m = Instantiate(mobPrefab, pos, Quaternion.identity, transform);
+        m.ApplySettings(settings);
         m.Setup(director, board, player, mobSpeed, mobLifetime, contamRadiusWorld);
         return m != null;
     }
@@ -91,8 +89,8 @@ float baseY = board ? board.origin.y : 0f;
 
         for (int i = 0; i < pickMaxTries; i++)
         {
-            float x = Random.Range(minX, maxX);
-            float z = Random.Range(minZ, maxZ);
+            float x = UnityEngine.Random.Range(minX, maxX);
+            float z = UnityEngine.Random.Range(minZ, maxZ);
             var cand = new Vector3(x, baseY+spawnY, z);
             if ((new Vector2(cand.x - p.x, cand.z - p.z)).sqrMagnitude >= avoidPlayerRadius * avoidPlayerRadius)
                 return cand;

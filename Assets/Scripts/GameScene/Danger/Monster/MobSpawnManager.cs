@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public enum MobType { Ghost, Sniper, Boss, InkEater }
+public enum MobType { Ghost, Sniper,InkEater ,Gunner, Boss, }
 
 [DisallowMultipleComponent]
 public class MobSpawnManager : MonoBehaviour
@@ -15,6 +15,7 @@ public class MobSpawnManager : MonoBehaviour
     public bool manageGhost  = true;
     public bool manageSniper = true;
     public bool manageInkEater = true;
+    public bool manageGunner = true;
     public bool manageBoss = true;
 
     [Header("Ghost Spawn")]
@@ -39,7 +40,13 @@ public class MobSpawnManager : MonoBehaviour
     public int   inkEaterMaxAlive   = 2;             // ★
     public int   inkEaterBatch      = 1;             // ★
     public float inkEaterKillXP     = 25f;           // ★ (킬 가능 시)
-    int aliveInkEater;                                // ★
+    [Header("Gunner Spawn")]
+    public PollutionGunnerSpawner gunnerSpawner;
+    public float gunnerFirstDelay = 6.0f;
+    public float gunnerInterval = 7.0f;          // ★
+    public int gunnerMaxAlive = 2;  
+    public int gunnerBatch = 1;
+    public float gunnerKillXP = 25f;
 
     [Header("Boss Spawn")]
     public PollutionBossSpawner bossSpawner;
@@ -51,7 +58,7 @@ public class MobSpawnManager : MonoBehaviour
 
 
     // 내부 카운트
-    int aliveGhost, aliveSniper, aliveBoss;
+    int aliveGhost, aliveSniper, aliveInkEater,aliveGunner,aliveBoss;
 
     void Awake()
     {
@@ -62,6 +69,7 @@ public class MobSpawnManager : MonoBehaviour
         if (!ghostSpawner)  ghostSpawner  = FindAnyObjectByType<PollutionGhostSpawner>();
         if (!sniperSpawner) sniperSpawner = FindAnyObjectByType<PollutionSniperSpawner>();
         if (!inkEaterSpawner) inkEaterSpawner = FindAnyObjectByType<PollutionInkEaterSpawner>(); // ★
+        if (!gunnerSpawner) gunnerSpawner = FindAnyObjectByType<PollutionGunnerSpawner>();
         if (!bossSpawner) bossSpawner = FindAnyObjectByType<PollutionBossSpawner>();
     }
 
@@ -70,6 +78,7 @@ public class MobSpawnManager : MonoBehaviour
         if (manageGhost && ghostSpawner) StartCoroutine(RunSpawner(MobType.Ghost));
         if (manageSniper && sniperSpawner) StartCoroutine(RunSpawner(MobType.Sniper));
         if (manageInkEater&&inkEaterSpawner) StartCoroutine(RunSpawner(MobType.InkEater));
+        if (manageGunner && gunnerSpawner) StartCoroutine(RunSpawner(MobType.Gunner));
         if (manageBoss && bossSpawner) StartCoroutine(RunSpawner(MobType.Boss));
 
     }
@@ -112,6 +121,7 @@ public class MobSpawnManager : MonoBehaviour
             case MobType.Ghost:  return ghostSpawner  && ghostSpawner.SpawnOne();
             case MobType.Sniper: return sniperSpawner && sniperSpawner.SpawnOne();
             case MobType.InkEater:return inkEaterSpawner && inkEaterSpawner.SpawnOne();
+            case MobType.Gunner:return gunnerSpawner && gunnerSpawner.SpawnOne();
             case MobType.Boss:   return bossSpawner   && bossSpawner.SpawnOne();
         }
         return false;
@@ -121,26 +131,31 @@ public class MobSpawnManager : MonoBehaviour
     t == MobType.Ghost ? aliveGhost :
     t == MobType.Sniper ? aliveSniper :
     t == MobType.InkEater ? aliveInkEater :
+    t == MobType.Gunner ? aliveGunner:
     aliveBoss;
     int  GetCap  (MobType t) =>
     t ==MobType.Ghost?ghostMaxAlive:
     t ==MobType.Sniper?sniperMaxAlive:
     t == MobType.InkEater ?inkEaterMaxAlive :
+    t == MobType.Gunner ? gunnerMaxAlive:
     bossMaxAlive;
     int  GetBatch(MobType t) =>
     t ==MobType.Ghost?ghostBatch :
     t ==MobType.Sniper?sniperBatch :
     t ==MobType.InkEater?inkEaterBatch :
+    t == MobType.Gunner ? gunnerBatch:
     bossBatch;
     float FirstDelay(MobType t)=>
     t ==MobType.Ghost?ghostFirstDelay:
     t ==MobType.Sniper?sniperFirstDelay:
     t == MobType.InkEater ? inkEaterFirstDelay :
+    t == MobType.Gunner ? gunnerFirstDelay:
     bossFirstDelay;
     float Interval  (MobType t)=>
     t ==MobType.Ghost?ghostInterval  :
     t ==MobType.Sniper?sniperInterval  :
     t == MobType.InkEater ?inkEaterInterval :
+    t == MobType.Gunner ? gunnerFirstDelay:
     bossInterval;
 
     void IncAlive(MobType t, int d)
@@ -148,6 +163,7 @@ public class MobSpawnManager : MonoBehaviour
         if (t==MobType.Ghost) aliveGhost  = Mathf.Max(0, aliveGhost+d);
         else if (t==MobType.Sniper) aliveSniper = Mathf.Max(0, aliveSniper+d);
         else if (t==MobType.InkEater)   aliveInkEater   = Mathf.Max(0, aliveInkEater+d);
+        else if (t==MobType.Gunner)   aliveGunner   = Mathf.Max(0, aliveGunner+d);
         else aliveBoss = Mathf.Max(0, aliveBoss + d);
     }
 
@@ -158,6 +174,7 @@ public class MobSpawnManager : MonoBehaviour
         float xp = (type==MobType.Ghost)?ghostKillXP:
         (type == MobType.Sniper) ?sniperKillXP:
         (type == MobType.InkEater) ?inkEaterKillXP:
+        (type==MobType.Gunner)?gunnerKillXP:
         bossKillXP;
         AwardXP(xp, "kill-"+type.ToString());
     }

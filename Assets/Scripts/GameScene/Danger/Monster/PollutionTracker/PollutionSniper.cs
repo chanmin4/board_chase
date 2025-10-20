@@ -12,6 +12,36 @@ public interface IPlayerSurvivalDamage
 //[RequireComponent(typeof(SphereCollider))]
 public class PollutionSniper : MonoBehaviour
 {
+    [System.Serializable]
+    public struct SniperSettings
+    {
+        // HP/Hit
+        public int maxHP;
+        public int damagePerHit;
+        public LayerMask hitByLayers;
+        public float bodyRadius;
+        public float groundY;
+
+        // Aim
+        public float aimTargetFollowSpeed;
+        public float aimAngularSpeedDeg;
+
+        // Attack Timing
+        public float aimPreviewTime;
+        public float fireShowDuration;
+        public float cooldown;
+
+        // Laser/Contam
+        public float beamLength;
+        public float survivalDamageOnHit;
+        public float contamStepMeters;
+        public float contamRadiusMeters;
+
+        // Line viz
+        public float previewLineWidth, fireLineWidth;
+        public Color previewColor, fireColor;
+    }
+
     // ───────── 주입(프리팹 저장 X) ─────────
     BoardGrid _board;
     Transform _player;
@@ -109,6 +139,18 @@ public class PollutionSniper : MonoBehaviour
     Transform _uiRoot;
     RectTransform _uiRT;
     Image _uiFill;
+    public void ApplySettings(SniperSettings s)
+    {
+        maxHP = s.maxHP; damagePerHit = s.damagePerHit; hitByLayers = s.hitByLayers;
+        bodyRadius = s.bodyRadius; groundY = s.groundY;
+        aimTargetFollowSpeed = s.aimTargetFollowSpeed; aimAngularSpeedDeg = s.aimAngularSpeedDeg;
+        aimPreviewTime = s.aimPreviewTime; fireShowDuration = s.fireShowDuration; cooldown = s.cooldown;
+        beamLength = s.beamLength; survivalDamageOnHit = s.survivalDamageOnHit;
+        contamStepMeters = s.contamStepMeters; contamRadiusMeters = s.contamRadiusMeters;
+        previewLineWidth = s.previewLineWidth; fireLineWidth = s.fireLineWidth;
+        previewColor = s.previewColor; fireColor = s.fireColor;
+    }
+
 
     // ───────── 외부에서 호출 ─────────
     public void Setup(BoardGrid board, Transform player, SurvivalDirector director)
@@ -127,7 +169,7 @@ public class PollutionSniper : MonoBehaviour
             anim.SetBool(animAttackHash, false);
         }
 
-        
+
 
         foreach (var c in GetComponentsInChildren<Collider>(true))
         {
@@ -143,7 +185,7 @@ public class PollutionSniper : MonoBehaviour
 
         // 초기 조준 타깃
         _smoothedTarget = _player ? _player.position : transform.position + transform.forward;
-_smoothedTarget.y = BoardY + groundY;  // 기존: groundY
+        _smoothedTarget.y = BoardY + groundY;  // 기존: groundY
 
         // 초기 에임 방향
         Vector3 initDir = (_smoothedTarget - transform.position); initDir.y = 0f;

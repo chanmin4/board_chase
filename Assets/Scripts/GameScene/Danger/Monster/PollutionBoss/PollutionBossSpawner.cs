@@ -4,6 +4,22 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class PollutionBossSpawner : MonoBehaviour
 {
+    [Header("Boss Settings (Spawner controls)")]
+    public PollutionBoss.BossSettings settings = new PollutionBoss.BossSettings
+    {
+        groundY = 0.2f,
+        bossRadius = 0.6f,
+        wallPaddingWorld = 0.35f,
+        maxHP = 12,
+        damagePerHit = 1,
+        damageByLayers = ~0,
+        firstSpawnDelay = 2f,
+        spawnInterval = 7.5f,
+        rocketLifetime = 5f,
+        homingSpeed = 7f,
+        rocketSpawnYOffset = 0f
+    };
+
     [Header("Scene Refs (Spawner holds them)")]
     public BoardGrid board;                 // 필수
     public Transform player;                // 보통 PlayerDisk
@@ -16,8 +32,8 @@ public class PollutionBossSpawner : MonoBehaviour
     public HomingRocket rocketPrefab;       // 보스가 쏠 로켓(필수)
 
     [Header("Spawn Timing")]
-    public bool spawnAtStart = true;
-    [Min(0)] public float spawnDelay = 0f;  // 초
+    [NonSerialized]public bool spawnAtStart = true;
+    [NonSerialized][Min(0)] public float spawnDelay = 0f;  // 초
 
     [Header("Options")]
     public bool destroyExistingRocketSpawner = true; // 기존 RocketHazardSystem 제거
@@ -87,7 +103,7 @@ public class PollutionBossSpawner : MonoBehaviour
 
         if (bossPrefab)
         {
-            bossInstance = Instantiate(bossPrefab, spawnPos, Quaternion.identity);
+            bossInstance = Instantiate(bossPrefab, spawnPos, Quaternion.identity,transform);
         }
         else
         {
@@ -105,7 +121,7 @@ public class PollutionBossSpawner : MonoBehaviour
 
             bossInstance = go.AddComponent<PollutionBoss>();
         }
-
+        bossInstance.ApplySettings(settings);
         // 스포너가 **씬 레퍼런스 주입**
         bossInstance.Setup(
             board: board,
