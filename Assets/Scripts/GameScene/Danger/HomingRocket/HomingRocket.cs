@@ -178,13 +178,6 @@ public float tipGroundMargin = 0.05f;   // 수직 허용 오차
         }
 
         // 링 생성
-        if (!previewRingPrefab)
-        {
-            previewRingPrefab = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            var col = previewRingPrefab.GetComponent<Collider>();
-            if (col) Destroy(col);
-        }
-
         var ring = Instantiate(previewRingPrefab, previewParent);
         ring.name = "RadiusRing";
         ring.layer = LayerMask.NameToLayer(previewLayerName);

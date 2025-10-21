@@ -36,7 +36,14 @@ public class PollutionGunner : MonoBehaviour
     [HideInInspector] public Settings config;
 
     // 주입
-    public void ApplySettings(Settings s) => config = s;
+    public void ApplySettings(Settings s)
+    {
+        config = s; // 그대로 보관해서 나머지 로직은 config.* 사용
+
+        // InkEater 스타일: 즉시 적용이 필요한 것만 로컬에도 캐시
+        killByLayers = s.killByLayers;
+    }
+
 
     // ====== Refs ======
     public SurvivalDirector director;
@@ -49,7 +56,8 @@ public class PollutionGunner : MonoBehaviour
     enum State { PreFireWait, Fire, Retreat }
     State state;
     Vector3 retreatTarget;
-    int hp;
+    int _hp;
+    LayerMask killByLayers;
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
@@ -73,7 +81,6 @@ public class PollutionGunner : MonoBehaviour
         return w;
     }
 
-    // ★ ADD: 월드 → 보드 로컬(u,v)
     Vector2 WorldToUV(Vector3 world)
     {
         GetBoardAxes(out var r, out var f);
@@ -106,7 +113,7 @@ public class PollutionGunner : MonoBehaviour
         state = State.PreFireWait;
         stateTimer = (config.postFireDelay > 0f) ? config.postFireDelay : 2f;
 
-        hp = Mathf.Max(1, config.hitsToKill);
+        _hp = Mathf.Max(1, config.hitsToKill);
         // Y 정렬
         if (board)
         {
@@ -224,20 +231,22 @@ public class PollutionGunner : MonoBehaviour
         clamped.y = board.origin.y + addY;
         return clamped;
     }
-    void OnTriggerEnter(Collider other)
+      void OnCollisionEnter(Collision other)
     {
-        if (config.killByLayers.value != 0 &&
-            ((config.killByLayers.value & (1 << other.gameObject.layer)) != 0))
-        {
-            TakeHit();
-        }
+        int l = other.collider.gameObject.layer;
+        if ((killByLayers.value & (1 << l)) == 0) return;
+
+        // 미충족: 기존처럼 HP만 감소, 물리 충돌로 튕김
+        TakeHit();
     }
+
+
 
 
     void TakeHit()
     {
-        hp--;
-        if (hp <= 0) Die();
+        _hp--;
+        if (_hp <= 0) Die();
     }
 
 

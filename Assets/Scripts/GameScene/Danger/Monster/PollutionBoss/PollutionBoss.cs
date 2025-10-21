@@ -16,7 +16,7 @@ public class PollutionBoss : MonoBehaviour
         // HP
         public int maxHP;
         public int damagePerHit;
-        public LayerMask damageByLayers;
+        public LayerMask killByLayers;
 
         // Rocket
         public float firstSpawnDelay;
@@ -38,7 +38,7 @@ public class PollutionBoss : MonoBehaviour
     [Header("HP")]
     public int maxHP = 12;
     public int damagePerHit = 1;
-    public LayerMask damageByLayers;
+    public LayerMask killByLayers;
 
     // ───────── Rocket ─────────
     [Header("Rocket")]
@@ -75,7 +75,7 @@ public class PollutionBoss : MonoBehaviour
     public void ApplySettings(BossSettings s)
     {
         groundY = s.groundY; bossRadius = s.bossRadius; wallPaddingWorld = s.wallPaddingWorld;
-        maxHP = s.maxHP; damagePerHit = s.damagePerHit; damageByLayers = s.damageByLayers;
+        maxHP = s.maxHP; damagePerHit = s.damagePerHit; killByLayers = s.killByLayers;
         firstSpawnDelay = s.firstSpawnDelay; spawnInterval = s.spawnInterval;
         rocketLifetime = s.rocketLifetime; homingSpeed = s.homingSpeed; rocketSpawnYOffset = s.rocketSpawnYOffset;
     }
@@ -113,7 +113,6 @@ public class PollutionBoss : MonoBehaviour
         transform.position = p;
 
         var col = GetComponentInChildren<SphereCollider>();
-        col.isTrigger = true;
         col.radius = Mathf.Max(bossRadius, 0.1f);
 
         _hp = Mathf.Max(1, maxHP);
@@ -181,28 +180,32 @@ public class PollutionBoss : MonoBehaviour
     }
 
     // ───────── Damage / Hit ─────────
-    void OnTriggerEnter(Collider other)
+           void OnCollisionEnter(Collision other)
     {
-        if (damageByLayers.value == 0)
-        {
-            Hit(damagePerHit);
-            return;
-        }
-        if ((damageByLayers.value & (1 << other.gameObject.layer)) != 0)
-        {
-            Hit(damagePerHit);
-        }
+        int l = other.collider.gameObject.layer;
+        if ((killByLayers.value & (1 << l)) == 0) return;
+
+        // 미충족: 기존처럼 HP만 감소, 물리 충돌로 튕김
+        TakeHit();
     }
 
-    void Hit(int dmg)
+
+    void TakeHit()
     {
         if (_hp <= 0) return;
 
-        _hp = Mathf.Max(0, _hp - Mathf.Max(1, dmg));
+        _hp = Mathf.Max(0, _hp - Mathf.Max(1));
         UpdateHPUIFill();
 
         if (_hp <= 0) { Die(); return; }
         TeleportInsideWalls();
+    }
+        void Die()
+    {
+        if (_activeRocket) { _activeRocket.Explode(); _activeRocket = null; }
+        if (_uiRoot) Destroy(_uiRoot.gameObject);
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.Boss);
+        Destroy(gameObject);
     }
 
     void TeleportInsideWalls()
@@ -233,13 +236,7 @@ public class PollutionBoss : MonoBehaviour
         UpdateHPUIPose_Bar();
     }
 
-    void Die()
-    {
-        if (_activeRocket) { _activeRocket.Explode(); _activeRocket = null; }
-        if (_uiRoot) Destroy(_uiRoot.gameObject);
-        MobSpawnManager.Instance?.ReportMobKilled(MobType.Boss);
-        Destroy(gameObject);
-    }
+
 
     // ───────── HP UI (막대형) ─────────
     void EnsureHPUI_Bar()

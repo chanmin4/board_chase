@@ -18,7 +18,7 @@ public class PollutionSniper : MonoBehaviour
         // HP/Hit
         public int maxHP;
         public int damagePerHit;
-        public LayerMask hitByLayers;
+        public LayerMask killByLayers;
         public float bodyRadius;
         public float groundY;
 
@@ -52,7 +52,6 @@ public class PollutionSniper : MonoBehaviour
     [Header("HP / Hit")]
     public int maxHP = 3;
     public int damagePerHit = 1;               // 디스크 등 충돌 시 깎이는 양
-    public LayerMask hitByLayers;              // 스나이퍼에 데미지 주는 레이어
     public float bodyRadius = 0.5f;
     public float groundY = 0.2f;
 
@@ -83,7 +82,7 @@ public class PollutionSniper : MonoBehaviour
     [Tooltip("오염 살포 반경(미터)")]
     public float contamRadiusMeters = 0.7f;
     [Tooltip("플레이어/환경 히트 판정 레이어(플레이어 포함)")]
-    public LayerMask hitLayers;
+    public LayerMask killByLayers;
 
     // ───────── 라인(조준/레이저 표시) ─────────
     [Header("Line (Preview/Laser)")]
@@ -91,7 +90,7 @@ public class PollutionSniper : MonoBehaviour
     public float previewLineWidth = 0.08f;     // 굵은 프리뷰
     public float fireLineWidth = 0.10f;        // 굵은 레이저
     public Color previewColor = new Color(0.2f, 1f, 0.6f, 0.95f);
-    public Color fireColor    = new Color(1f, 0.2f, 0.2f, 1f);
+    public Color fireColor = new Color(1f, 0.2f, 0.2f, 1f);
 
     // ───────── HP UI (막대형) ─────────
     public enum HpUiMode { ScreenTopRight, WorldBillboard, WorldFlat }
@@ -104,14 +103,14 @@ public class PollutionSniper : MonoBehaviour
     public Vector2 hudBarSizePx = new Vector2(220f, 18f);
     public float hudInnerPadPx = 2f;
     public int hudSortingOrder = 1000;
-     [Header("Animation)")]
+    [Header("Animation)")]
     [SerializeField] string animSpeedParam = "Speed";
     [SerializeField] string animAttackParam = "Attack";
     Animator anim;
     int animSpeedHash;
     int animAttackHash;
     Vector3 prevPos; // 이동속도 계산용 (수평)
-    
+
 
     [Header("World Bar")]
     public Vector2 worldBarSizeM = new Vector2(0.7f, 0.1f);
@@ -141,7 +140,7 @@ public class PollutionSniper : MonoBehaviour
     Image _uiFill;
     public void ApplySettings(SniperSettings s)
     {
-        maxHP = s.maxHP; damagePerHit = s.damagePerHit; hitByLayers = s.hitByLayers;
+        maxHP = s.maxHP; damagePerHit = s.damagePerHit; killByLayers = s.killByLayers;
         bodyRadius = s.bodyRadius; groundY = s.groundY;
         aimTargetFollowSpeed = s.aimTargetFollowSpeed; aimAngularSpeedDeg = s.aimAngularSpeedDeg;
         aimPreviewTime = s.aimPreviewTime; fireShowDuration = s.fireShowDuration; cooldown = s.cooldown;
@@ -174,7 +173,6 @@ public class PollutionSniper : MonoBehaviour
         foreach (var c in GetComponentsInChildren<Collider>(true))
         {
             if (c is MeshCollider mc) mc.convex = true;
-            c.isTrigger = true;
         }
         _hp = Mathf.Max(1, maxHP);
         EnsureHPUI();
@@ -203,7 +201,7 @@ public class PollutionSniper : MonoBehaviour
             animSpeedHash = Animator.StringToHash(animSpeedParam);
             animAttackHash = Animator.StringToHash(animAttackParam);
         }
-        
+
     }
     void Update()
     {
@@ -220,8 +218,8 @@ public class PollutionSniper : MonoBehaviour
         // 타깃 위치 ‘관성’ 추적(속도 조절형 조준 핵심 ①)
         if (_player)
         {
-           Vector3 desired = _player ? _player.position : _smoothedTarget;
-desired.y = BoardY + groundY;    // 기존: groundY
+            Vector3 desired = _player ? _player.position : _smoothedTarget;
+            desired.y = BoardY + groundY;    // 기존: groundY
             float follow = 1f - Mathf.Exp(-Mathf.Max(0.001f, aimTargetFollowSpeed) * dt);
             _smoothedTarget = Vector3.Lerp(_smoothedTarget, desired, follow);
         }
@@ -256,7 +254,7 @@ desired.y = BoardY + groundY;    // 기존: groundY
             {
                 if (anim) anim.SetBool(animAttackHash, true);
                 StartFire();
-                
+
             }
         }
         else if (_state == State.Firing)
@@ -265,7 +263,7 @@ desired.y = BoardY + groundY;    // 기존: groundY
             if (_timer >= fireShowDuration)
             {
                 SetLineActive(false);
-                if(anim)anim.SetBool(animAttackHash, false);
+                if (anim) anim.SetBool(animAttackHash, false);
                 _state = State.Cooldown;
                 _timer = 0f;
 
@@ -328,7 +326,7 @@ desired.y = BoardY + groundY;    // 기존: groundY
                 end = hit;
         }
 
-        end.y = BoardY + groundY + 0.02f; 
+        end.y = BoardY + groundY + 0.02f;
 
         outPts.Add(start);
         outPts.Add(end);
@@ -403,7 +401,7 @@ desired.y = BoardY + groundY;    // 기존: groundY
         if (dist <= 1e-4f) return;
         dir /= dist;
 
-        var hits = Physics.RaycastAll(a, dir, dist, hitLayers, QueryTriggerInteraction.Ignore);
+        var hits = Physics.RaycastAll(a, dir, dist, killByLayers, QueryTriggerInteraction.Ignore);
         if (hits == null || hits.Length == 0) return;
 
         foreach (var h in hits)
@@ -488,16 +486,21 @@ desired.y = BoardY + groundY;    // 기존: groundY
     }
 
     // ───────── HP / HIT / UI ─────────
-    void OnTriggerEnter(Collider other)
+            void OnCollisionEnter(Collision other)
     {
-        if (hitByLayers.value == 0) { Hit(damagePerHit); return; }
-        if ((hitByLayers.value & (1 << other.gameObject.layer)) != 0) Hit(damagePerHit);
+        int l = other.collider.gameObject.layer;
+        if ((killByLayers.value & (1 << l)) == 0) return;
+
+        Debug.Log("collision hit before take hit");
+        // 미충족: 기존처럼 HP만 감소, 물리 충돌로 튕김
+        TakeHit();
     }
 
-    void Hit(int dmg)
+    void TakeHit()
     {
         if (_hp <= 0) return;
-        _hp = Mathf.Max(0, _hp - Mathf.Max(1, dmg));
+        _hp = Mathf.Max(0, _hp - Mathf.Max(1));
+        Debug.Log("hp: " + _hp);
         UpdateHPUIFill();
         if (_hp <= 0) { Die(); return; }
     }
@@ -506,7 +509,7 @@ desired.y = BoardY + groundY;    // 기존: groundY
     {
         SetLineActive(false);
         if (_uiRoot) Destroy(_uiRoot.gameObject);
-        MobSpawnManager.Instance?.ReportMobKilled(MobType.Sniper); 
+        MobSpawnManager.Instance?.ReportMobKilled(MobType.Sniper);
         Destroy(gameObject);
     }
 
@@ -635,4 +638,5 @@ desired.y = BoardY + groundY;    // 기존: groundY
             _uiRoot.localRotation = Quaternion.Euler(worldFlatAngleDeg, 0f, 0f);
         }
     }
+
 }

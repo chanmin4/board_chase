@@ -762,4 +762,3 @@ public class SurvivalDirector : MonoBehaviour
     }
 
 }
-

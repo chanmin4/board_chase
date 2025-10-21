@@ -63,7 +63,7 @@ public class PollutionGhost : MonoBehaviour
     public int maxPathContamDrops = 0;
 
     [Header("Hit Rule")]
-    public LayerMask killByLayers;         // 여기에 닿으면 즉사(예: Player, Disk, Projectile)
+    public LayerMask killByLayers;         // 여기에 닿으면 데미지(예: Player, Disk, Projectile)
     public int hitsToKill = 1;   // 스포너에서 주입
     
     [SerializeField] string animSpeedParam = "Speed";
@@ -76,7 +76,6 @@ public class PollutionGhost : MonoBehaviour
     public ParticleSystem timeoutFx;
     public AudioSource killSfx;
 
-    MeshCollider trigger; // 내부 관통용: isTrigger = true
     Vector3 velocity;       // 현재 이동 방향 * 속도
 
     float lifeClock;        // 생존 시간
@@ -128,9 +127,6 @@ public class PollutionGhost : MonoBehaviour
 
     void Awake()
     {
-        trigger = GetComponentInChildren<MeshCollider>();
-        if (!trigger) trigger = gameObject.AddComponent<MeshCollider>();
-        trigger.isTrigger = true;                                // 내부 오브젝트는 관통
 
         anim = GetComponentInChildren<Animator>(true);
         if (anim) animSpeedHash = Animator.StringToHash(animSpeedParam);
@@ -217,14 +213,15 @@ public class PollutionGhost : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter(Collider other)
+    void OnCollisionEnter(Collision other)
     {
-        if (killByLayers.value != 0 && ((killByLayers.value & (1 << other.gameObject.layer)) != 0))
-        {
-            TakeHit();  
-            return;
-        }
+        int l = other.collider.gameObject.layer;
+        if ((killByLayers.value & (1 << l)) == 0) return;
+
+        // 미충족: 기존처럼 HP만 감소, 물리 충돌로 튕김
+        TakeHit();
     }
+
 
     void TakeHit()
     {

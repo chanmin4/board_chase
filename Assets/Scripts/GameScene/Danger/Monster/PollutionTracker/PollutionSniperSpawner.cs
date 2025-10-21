@@ -9,7 +9,7 @@ public class PollutionSniperSpawner : MonoBehaviour
     {
         maxHP = 3,
         damagePerHit = 1,
-        hitByLayers = ~0,
+        killByLayers = ~0,
         bodyRadius = 0.5f,
         groundY = 0.2f,
         aimTargetFollowSpeed = 6f,
@@ -54,8 +54,6 @@ public class PollutionSniperSpawner : MonoBehaviour
         if (!board) board = FindAnyObjectByType<BoardGrid>();
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
         if (!player && director) player = director.player;
-
-        if (spawnAtStart) Invoke(nameof(SpawnOne), Mathf.Max(0f, spawnDelay));
     }
 
     [ContextMenu("Spawn Now")]

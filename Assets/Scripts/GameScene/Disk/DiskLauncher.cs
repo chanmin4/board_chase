@@ -272,19 +272,4 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
             OnTileChanged?.Invoke(ix, iy);
         }
     }
-
-    void SnapToTileCenterAndReport()
-    {
-        if (!board) return;
-
-        Vector3 p = transform.position;
-        board.SnapToNearest(ref p, out int ix, out int iy);
-        transform.position = p;
-        CurrentTile = new Vector2Int(ix, iy);
-        _lastTile   = CurrentTile;
-        HasValidTile = true;
-
-        OnTileChanged?.Invoke(ix, iy);
-        OnStoppedOnTile?.Invoke(ix, iy);
-    }
 }

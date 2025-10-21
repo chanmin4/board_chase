@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 8770213412680816613}
   - component: {fileID: 1651437425555977778}
   - component: {fileID: 1058810221760220157}
-  - component: {fileID: 6757645702811978097}
   m_Layer: 11
   m_Name: PollutionGhost
   m_TagString: Untagged
@@ -94,29 +93,7 @@ Rigidbody:
   m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 4
-  m_CollisionDetection: 0
---- !u!64 &6757645702811978097
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1734523677795513279}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: e607f74860c67814e93c914b710142d5, type: 3}
+  m_CollisionDetection: 2
 --- !u!1 &7436812972784309670
 GameObject:
   m_ObjectHideFlags: 0
@@ -199,7 +176,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1000011655237804, guid: 9c8e6b52a146b2d4994f42592a19bba0, type: 3}
       propertyPath: m_Layer
-      value: 12
+      value: 11
       objectReference: {fileID: 0}
     - target: {fileID: 1000011728027242, guid: 9c8e6b52a146b2d4994f42592a19bba0, type: 3}
       propertyPath: m_Layer
@@ -330,7 +307,7 @@ MeshCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5

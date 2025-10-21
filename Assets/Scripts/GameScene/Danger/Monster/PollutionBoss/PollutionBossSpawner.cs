@@ -12,7 +12,7 @@ public class PollutionBossSpawner : MonoBehaviour
         wallPaddingWorld = 0.35f,
         maxHP = 12,
         damagePerHit = 1,
-        damageByLayers = ~0,
+        killByLayers = ~0,
         firstSpawnDelay = 2f,
         spawnInterval = 7.5f,
         rocketLifetime = 5f,
@@ -74,8 +74,6 @@ public class PollutionBossSpawner : MonoBehaviour
             var old = FindAnyObjectByType<RocketHazardSystem>();
             if (old) Destroy(old.gameObject);
         }
-
-        if (spawnAtStart) Invoke(nameof(SpawnOne), Mathf.Max(0f, spawnDelay));
     }
 
     [ContextMenu("Spawn Now")]

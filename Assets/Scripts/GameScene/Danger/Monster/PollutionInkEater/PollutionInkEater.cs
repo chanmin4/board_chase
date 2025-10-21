@@ -55,7 +55,7 @@ public class PollutionInkEater : MonoBehaviour
     public bool useBoardWideSeek = true;
 
     int _hp;
-    LayerMask _killByLayers;
+    LayerMask killByLayers;
     public void ApplySettings(Settings s)
     {
         moveSpeed = s.moveSpeed;
@@ -66,7 +66,7 @@ public class PollutionInkEater : MonoBehaviour
         burstThreshold = Mathf.Max(0f, s.burstThreshold);
         burstRadius = Mathf.Max(0.01f, s.burstRadius);
         burstCooldown = Mathf.Max(0f, s.burstCooldown);
-        _killByLayers = s.killByLayers;
+        killByLayers = s.killByLayers;
         _hp = Mathf.Max(1, s.hitsToKill);
     }
 
@@ -180,14 +180,13 @@ public class PollutionInkEater : MonoBehaviour
         float h = board.height * board.tileSize;
         return 0.5f * Mathf.Sqrt(w * w + h * h);
     }
-    void OnTriggerEnter(Collider other)
+      void OnCollisionEnter(Collision other)
     {
-        // 지정 레이어와 충돌 시 히트
-        if (_killByLayers.value != 0 &&
-            ((_killByLayers.value & (1 << other.gameObject.layer)) != 0))
-        {
-            TakeHit();
-        }
+        int l = other.collider.gameObject.layer;
+        if ((killByLayers.value & (1 << l)) == 0) return;
+
+        // 미충족: 기존처럼 HP만 감소, 물리 충돌로 튕김
+        TakeHit();
     }
 
 

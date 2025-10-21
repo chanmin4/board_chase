@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 8770213412680816613}
   - component: {fileID: 2291960406972820804}
   - component: {fileID: 2062955687061634342}
-  - component: {fileID: 4337537289072599329}
   m_Layer: 11
   m_Name: PollutionBoss
   m_TagString: Untagged
@@ -52,9 +51,9 @@ MonoBehaviour:
   wallPaddingWorld: 0.35
   maxHP: 5
   damagePerHit: 1
-  damageByLayers:
+  killByLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 0
   firstSpawnDelay: 0
   spawnInterval: 8
   rocketLifetime: 5
@@ -100,27 +99,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 4
   m_CollisionDetection: 0
---- !u!135 &4337537289072599329
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1734523677795513279}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &9156089062076583551
 GameObject:
   m_ObjectHideFlags: 0
@@ -133,7 +111,7 @@ GameObject:
   - component: {fileID: 704120558989666139}
   - component: {fileID: 6881619192077567617}
   - component: {fileID: 8855218551465489507}
-  m_Layer: 12
+  m_Layer: 11
   m_Name: visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -223,7 +201,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
