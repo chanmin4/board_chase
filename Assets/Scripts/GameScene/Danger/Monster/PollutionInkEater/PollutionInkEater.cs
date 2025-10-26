@@ -113,7 +113,7 @@ public class PollutionInkEater : MonoBehaviour
         if (burstCd > 0f) burstCd -= Time.deltaTime;
         if (eaten >= burstThreshold && burstCd <= 0f)
         {
-            maskRenderer.ContaminateCircleWorld_Batched(transform.position, burstRadius);
+            maskRenderer.EnemyCircleWorld_Batched(transform.position, burstRadius);
             eaten = 0f;
             burstCd = burstCooldown;
         }

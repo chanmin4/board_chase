@@ -1,15 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;   // ★ 추가
-public class SurvivalGauge : MonoBehaviour
+public class EnemyInkGauge : MonoBehaviour
 {
     [Header("Gauge")]
     public float max = 100f;
     public float current = 100f;
-
-    [Header("Drain (per sec)")]
-    //public float baseDrain = 0f;          // 기본 감소
-    //public float contaminatedExtra = 0f; // 오염 시 추가 감소
 
     [Header("UI")]
     public Slider slider;   // Slider (Min 0, Max 1)
@@ -27,11 +23,11 @@ public class SurvivalGauge : MonoBehaviour
 
     [Header("Smoothing")]
     public float lerpSpeed = 8f; // 값/색 보간 속도
-                                 // ★ 게임오버 트리거용
+                               
     [Header("Events")]
-    public UnityEvent onDepleted;
-    public UnityEvent onStunBegin;
-    public UnityEvent onStunEnd;
+    public UnityEvent onEnemyDepleted;
+    public UnityEvent onEnemyStunBegin;
+    public UnityEvent onEnemyStunEnd;
 
     [Header("Stun/Recovery")]
     [Tooltip("게이지가 0이 되면 이 시간(초) 동안 0→100으로 서서히 회복")]
@@ -44,7 +40,7 @@ public class SurvivalGauge : MonoBehaviour
     public float stunCooldownAddSeconds = 1.5f;
 
     [Header("Refs · (선택) 디버프 적용 대상")]
-    public DiskLauncher disk;   // 인스펙터에서 디스크(Launcher) 연결
+    public EnemyDiskLauncher Enemydisk;   // 인스펙터에서 디스크(Launcher) 연결
 
     [Header("Ink Painting Cost")]
     [Tooltip("내 영역을 1m 칠할 때 드는 기본 잉크 소모량")]
@@ -59,7 +55,7 @@ public class SurvivalGauge : MonoBehaviour
         current = 0f;
         invoked = false;
         Debug.Log("[SG] DEBUG_ForceDeplete()");
-        onDepleted?.Invoke();
+        onEnemyDepleted?.Invoke();
     }
 
     bool recovering = false;    // 기절(회복) 중인지
@@ -122,17 +118,12 @@ public class SurvivalGauge : MonoBehaviour
 
         else
         {
-            // ─ 기존 감소 로직 그대로 ─
-            //float drain = baseDrain + (contaminated ? contaminatedExtra : 0f);
-            //if (drain > 0f)
-            // current = Mathf.Clamp(current - drain * Time.deltaTime, 0f, max);
-
             // 0이 되었을 때 한 번만 트리거 → 기절 시작
             if (!invoked && current <= 0f)
             {
                 invoked = true;
                 Debug.Log($"[SG] Depleted at t={Time.time:0.00}");
-                onDepleted?.Invoke();
+                onEnemyDepleted?.Invoke();
                 BeginStun();   // ★ 여기서 기절 상태 진입
             }
         }
@@ -186,13 +177,13 @@ public class SurvivalGauge : MonoBehaviour
         current = 0f;
         isstun = true;
         // 디버프 적용(선택)
-        if (disk)
+        if (Enemydisk)
         {
             Debug.Log("begin stun&debuff");
-            disk.externalSpeedMul?.Invoke(Mathf.Clamp(stunMoveSpeedMul, 0.1f, 1.0f));
-            disk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
+            Enemydisk.externalSpeedMul?.Invoke(Mathf.Clamp(stunMoveSpeedMul, 0.1f, 1.0f));
+            Enemydisk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
         }
-        onStunBegin?.Invoke();
+        onEnemyStunBegin?.Invoke();
     }
 
     void EndStun()
@@ -202,19 +193,19 @@ public class SurvivalGauge : MonoBehaviour
         invoked = false; // 다음 사이클에서 다시 0 트리거 가능
         isstun = false;
         // 디버프 해제
-        if (disk)
+        if (Enemydisk)
         {
-            disk.externalSpeedMul?.Invoke(1f);
-            disk.externalCooldownAdd?.Invoke(0f);
+            Enemydisk.externalSpeedMul?.Invoke(1f);
+            Enemydisk.externalCooldownAdd?.Invoke(0f);
         }
-        onStunEnd?.Invoke();
+        onEnemyStunEnd?.Invoke();
     }
-    public bool TryConsumeByPaint(float meters, bool ismyink, float widthMul = 1f)
+    public bool TryConsumeByPaint(float meters, bool isContam, float widthMul = 1f)   // ★ ADDED
     {
         if (isstun) return false;
         if (meters <= 0f || baseCostPerMeter <= 0f || widthMul <= 0f)
             return true; // 비용 없음 → 성공 처리
-        float mul = ismyink ? 1f : contamExtraMul;
+        float mul = isContam ? contamExtraMul : 1f;
         float cost = meters * baseCostPerMeter * mul * widthMul;
 
         if (current <= 0f || cost <= 0f)
@@ -227,7 +218,6 @@ public class SurvivalGauge : MonoBehaviour
         // 전액 지불 여부로 이번 도장 성공/실패 반환
         return (consume >= cost);
     }
-
     
     
 

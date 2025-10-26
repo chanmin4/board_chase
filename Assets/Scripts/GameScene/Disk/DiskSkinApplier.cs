@@ -67,7 +67,7 @@ public class DiskSkinApplier : MonoBehaviour
         // 자동 맞춤이 필요할 때만 켜기
         if (autoFit) AutoFit(_currentSkin.transform, targetRadius, thickness, rotateToXZ);
 
-        if (meshRenderer) meshRenderer.enabled = false; // z-fighting 방지
+        //if (meshRenderer) meshRenderer.enabled = false; // z-fighting 방지
     }
 
     void ClearPrefabSkin()

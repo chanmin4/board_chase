@@ -238,13 +238,21 @@ public class BoardMaskRenderer : MonoBehaviour,Game.Masks.IMaskProvider
 
 
 
-    public bool IsContaminatedWorld(Vector3 worldPos)
+    public bool IsEnemyPaintedWorld(Vector3 worldPos)
     {
         if (_contamBuf == null || _EnemyMask == null) return false;
         int px, py;
         if (!WorldToPixel(worldPos, _EnemyMask.width, _EnemyMask.height, out px, out py)) return false;
         return _contamBuf[py * _EnemyMask.width + px].a > 0;
     }
+        public bool IsPlayerPaintedWorld(Vector3 worldPos)
+    {
+        if (_playerBuf == null || _playerMask == null) return false;
+        int px, py;
+        if (!WorldToPixel(worldPos, _playerMask.width, _playerMask.height, out px, out py)) return false;
+        return _playerBuf[py * _playerMask.width + px].a > 0;
+    }
+
 
     bool WorldToPixel(Vector3 wpos, int TW, int TH, out int px, out int py)
     {
@@ -264,7 +272,7 @@ public class BoardMaskRenderer : MonoBehaviour,Game.Masks.IMaskProvider
         tex.SetPixels32(buf);
         tex.Apply(false, false);
     }
-    public void ContaminateCircleWorld_Batched(Vector3 centerW, float radiusW)
+    public void EnemyCircleWorld_Batched(Vector3 centerW, float radiusW)
     {
         if (_EnemyMask == null || _contamBuf == null) return;
         StampCircle(_EnemyMask, _contamBuf, pixelsPerTile, centerW, radiusW, 255);
@@ -303,13 +311,6 @@ public class BoardMaskRenderer : MonoBehaviour,Game.Masks.IMaskProvider
     }
 
 
-    public bool IsPlayerPaintedWorld(Vector3 worldPos)
-    {
-        if (_playerBuf == null || _playerMask == null) return false;
-        int px, py;
-        if (!WorldToPixel(worldPos, _playerMask.width, _playerMask.height, out px, out py)) return false;
-        return _playerBuf[py * _playerMask.width + px].a > 0;
-    }
 
 
     //inkeater

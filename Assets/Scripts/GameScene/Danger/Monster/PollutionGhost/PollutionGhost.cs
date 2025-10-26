@@ -97,33 +97,34 @@ public class PollutionGhost : MonoBehaviour
         hitsToKill = Mathf.Max(1, s.hitsToKill);  
     }
 
-
-    // ===== 초기화(스포너가 호출) =====
-    public void Setup(SurvivalDirector dir, BoardGrid bd, Transform ply, float spd, float life, float contamR)
+    void OnEnable()
     {
-        director = dir; board = bd; player = ply;
-        speed = randomizeSpeed ? UnityEngine.Random.Range(speedRange.x, speedRange.y) : spd;
-        lifetime = life;
-        contamRadiusWorld = contamR; // (타임아웃 전용 기본값으로 재활용 가능)
+        // 페인트 시스템 캐시
         _paint = FindAnyObjectByType<BoardPaintSystem>();
-        if (!_paint) Debug.LogWarning("[Ghost] BoardPaintSystem not found.");
-        // 랜덤 방향으로 시작
+
+        // Y 정렬
+        if (board)
+        {
+            var p = transform.position;
+            p.y = board.origin.y + groundY;
+            transform.position = p;
+        }
+
+        // 속도(랜덤 옵션이면 여기서만 한 번 랜덤)
+        float spd = randomizeSpeed ? UnityEngine.Random.Range(speedRange.x, speedRange.y) : speed;
         float ang = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        velocity = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * speed;
+        velocity = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * spd;
 
-        // 높이 고정
-        var p = transform.position;
-        p.y = BoardY + groundY;          // 기존: groundY
-        transform.position = p;
-
+        // 런타임 상태 초기화
         prevPos = transform.position;
-        if (anim) anim.SetFloat(animSpeedHash, 0f);
-        // 경로 오염 타이머 초기화
-        lifeClock = 0f; pathClock = 0f; pathStarted = false;
-        nextDropTimer = pathContamInterval;
+        lifeClock = 0f;
+        pathClock = 0f;
+        pathStarted = false;
+        nextDropTimer = Mathf.Max(0.05f, pathContamInterval);
         droppedCount = 0;
-        _hp = Mathf.Max(1, hitsToKill); 
+        _hp = Mathf.Max(1, hitsToKill);
     }
+
 
     void Awake()
     {

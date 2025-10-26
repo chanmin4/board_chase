@@ -1,29 +1,30 @@
-// DiskLauncher.cs (기존 파일 수정)
 using UnityEngine;
 using System;
 using UnityEngine.Events;
 [RequireComponent(typeof(Rigidbody))]
 public class DiskLauncher : MonoBehaviour
 {
+    [Header("REF")]
+    [SerializeField]SurvivalGauge survivalgauge;
     [Header("First Spawn")]
     [Min(0f)] public float firstSpawnDelay = 0f;
-    
+
     [Header("Launch / Stop")]
-    public float powerScale   = 1.4f;
+    public float powerScale = 1.4f;
     //public float minStopSpeed = 0.25f;
 
     [Header("Grid")]
     [SerializeField] BoardGrid board;
-    public Vector2Int CurrentTile { get; private set; } = new Vector2Int(-1,-1);
+    public Vector2Int CurrentTile { get; private set; } = new Vector2Int(-1, -1);
     public bool HasValidTile { get; private set; } = false;
 
     // ==== 쿨타임 모드 추가 ====
     [Header("Cooldown Mode")]
-    public bool  useCooldown      = true;   // ← 쿨타임 모드 활성화
-    public float cooldownSeconds  = 2f;     //
+    public bool useCooldown = true;   // ← 쿨타임 모드 활성화
+    public float cooldownSeconds = 2f;     //
     public float CooldownRemain { get; private set; } = 0f;
-    public bool  CanLaunchNow => useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
-    public event Action<float,float> OnCooldownChanged; // (remain, duration)
+    public bool CanLaunchNow => useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
+    public event Action<float, float> OnCooldownChanged; // (remain, duration)
 
     [Header("Cooldown Bonus On Wall Bounce")]
     [Tooltip("벽에 튕길 때마다 남은 쿨다운을 줄입니다 (useCooldown이 true일 때만 동작).")]
@@ -34,7 +35,7 @@ public class DiskLauncher : MonoBehaviour
 
     [Header("Bounce Charges")] //구기능 충전형 튕기기
     public int baseCharges = 2;
-    public int maxCharges  = 5; // 0 or less => unlimited cap
+    public int maxCharges = 5; // 0 or less => unlimited cap
     public int Charges { get; private set; }
     bool _readyPrev;
 
@@ -42,26 +43,33 @@ public class DiskLauncher : MonoBehaviour
     //int _lastWallHitsForBonus = 0;
     [Header("Wall Hit")]
     public LayerMask wallMask;
-    public event System.Action WallHit; 
-  [Header("External Modifiers (Events)")]
-public UnityEvent<float> externalSpeedMul;     // (1=기본, 0.6=감소 등)
-public UnityEvent<float> externalCooldownAdd;  // (초 가산)
+    public event System.Action WallHit;
+    [Header("External Modifiers (Events)")]
+    public UnityEvent<float> externalSpeedMul;     // (1=기본, 0.6=감소 등)
+
+    public UnityEvent<float> externalCooldownAdd;  // (초 가산)
+    // 필드 추가
+    [Header("Bonus Arc Hook")]
+    public DiskBonusArc bonusArc;
+    [Tooltip("상대 디스크 레이어(플레이어는 Enemy 디스크, 적은 Player 디스크를 넣기)")]
+    public LayerMask otherDiskMask;
+    public float bonusArcInkPenalty = 50f;
 
     // 이벤트
     public event Action<int, int> OnTileChanged;
-    public event Action<int,int> OnStoppedOnTile;
-    public event Action<int,int> OnChargesChanged;
+    public event Action<int, int> OnStoppedOnTile;
+    public event Action<int, int> OnChargesChanged;
     public event System.Action DragChargeOn;
 
-float _extSpeedMul = 1f;
-float _extCooldownAdd = 0f;
+    float _extSpeedMul = 1f;
+    float _extCooldownAdd = 0f;
     Rigidbody rb;
     //bool launched;
-    Vector2Int _lastTile = new Vector2Int(-1,-1);
+    Vector2Int _lastTile = new Vector2Int(-1, -1);
 
     SurvivalDirector director;
-public void SetExternalSpeedMul(float v)      => _extSpeedMul    = Mathf.Clamp(v, 0.1f, 1f);
-public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f, sec);
+    public void SetExternalSpeedMul(float v) => _extSpeedMul = Mathf.Clamp(v, 0.1f, 1f);
+    public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f, sec);
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -116,11 +124,18 @@ public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f,
     {
         bool readyNow = useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
         if (!_readyPrev && readyNow && invokeEvent)
-            DragChargeOn?.Invoke();  
+            DragChargeOn?.Invoke();
         _readyPrev = readyNow;
     }
     void OnCollisionEnter(Collision c)
     {
+        // 상대 디스크와 충돌이면 아크 판정 이벤트만 흘려보냄
+        if (c.rigidbody && c.rigidbody.TryGetComponent<EnemyDiskLauncher>(out _))
+        {
+            var pt = c.GetContact(0).point;
+            bonusArc?.OnCollisionWithOtherDisk(c.rigidbody.transform, pt);
+            return; // 벽 처리 스킵
+        }
         // 벽 레이어만 필터
         if (((1 << c.collider.gameObject.layer) & wallMask) == 0) return;
 
@@ -272,4 +287,11 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
             OnTileChanged?.Invoke(ix, iy);
         }
     }
+    public void ApplyBonusArcPenalty(Transform other)
+    {
+        // “내” 게이지를 깎는다(맞은 쪽이 손해).
+          Debug.Log("playergaugepanelty");
+        survivalgauge?.Add(-bonusArcInkPenalty);    // 플레이어 쪽
+    }
+
 }

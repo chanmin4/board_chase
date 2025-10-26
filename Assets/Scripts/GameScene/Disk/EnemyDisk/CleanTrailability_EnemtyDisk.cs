@@ -5,7 +5,7 @@ using UnityEngine;
 /// - 카드 필요 없음(지속 동작)
 /// - 잉크 소모/스턴은 SurvivalGauge(ink) 쪽에서 처리됨(BoardPaintSystem가 호출)
 [DefaultExecutionOrder(+50)]
-public class CleanTrailAbility_Disk : MonoBehaviour
+public class CleanTrailAbility_EnemyDisk : MonoBehaviour
 {
     [Header("Ink Radius (meters)")]
     [Tooltip("잉크(청소+페인트) 반지름 배수 (1=원래 r)")]
@@ -26,7 +26,7 @@ public class CleanTrailAbility_Disk : MonoBehaviour
     // Refs
     BoardPaintSystem paintSystem;
     BoardGrid board;
-    Transform player;
+    Transform EnemyDisk;
     Collider diskCol;
 
     // Trail 상태
@@ -38,7 +38,7 @@ public class CleanTrailAbility_Disk : MonoBehaviour
 
     void Awake()
     {
-        player   = transform;
+        EnemyDisk   = transform;
         diskCol  = GetComponent<Collider>();
         paintSystem = FindAnyObjectByType<BoardPaintSystem>();
         board       = paintSystem ? paintSystem.board : FindAnyObjectByType<BoardGrid>();
@@ -84,7 +84,7 @@ public class CleanTrailAbility_Disk : MonoBehaviour
 
         while (isRunning)
         {
-            if (player && paintSystem)
+            if (EnemyDisk && paintSystem)
             {
                 // 1) 기본 반지름 계산(디스크 콜라이더 형태 대응) + 타일 기반 추가 반지름
                 float addWorld = (board ? board.tileSize : 1f) * Mathf.Max(0f, extraRadiusTiles);
@@ -96,76 +96,66 @@ public class CleanTrailAbility_Disk : MonoBehaviour
                 {
                     GetCapsuleWorld(cap, out Vector3 a, out Vector3 b, out float rad);
                     centerNow = (a + b) * 0.5f;
-                    rBase = rad + addWorld;
+                    rBase     = rad + addWorld;
                 }
                 else if (diskCol is SphereCollider sph)
                 {
-                    centerNow = player.position;
-                    rBase = GetSphereRadiusWorld(sph) + addWorld;
+                    centerNow = EnemyDisk.position;
+                    rBase     = GetSphereRadiusWorld(sph) + addWorld;
                 }
                 else if (diskCol is BoxCollider box)
                 {
-                    centerNow = player.position;
-                    Vector3 e = Vector3.Scale(box.size * 0.5f, player.lossyScale);
-                    rBase = Mathf.Sqrt(e.x * e.x + e.z * e.z) + addWorld;
+                    centerNow = EnemyDisk.position;
+                    Vector3 e = Vector3.Scale(box.size * 0.5f, EnemyDisk.lossyScale);
+                    rBase     = Mathf.Sqrt(e.x * e.x + e.z * e.z) + addWorld;
                 }
                 else
                 {
-                    centerNow = player.position;
-                    rBase = addWorld;
+                    centerNow = EnemyDisk.position;
+                    rBase     = addWorld;
                 }
 
                 float rInk = Mathf.Max(0.01f, rBase * radiusMul + radiusAddWorld);
-
-                // ★ 0) 현재 위치 즉시 스탬프(프레임 드랍에도 발밑은 바로 칠해짐)
-                paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
-                                         centerNow, rInk, /*clearOther=*/true);
-
-                // 1) 첫 프레임은 한 번만 찍고 기준점 세팅
+                // 2) 첫 프레임은 한 번만 찍고 기준점 세팅
                 if (!haveLast)
                 {
                     Stamp(centerNow, rInk);
                     lastCenter = centerNow;
-                    haveLast = true;
+                    haveLast   = true;
                 }
                 else
                 {
-                    // 2) 지난 프레임→현재 프레임을 Trail로 배치(빈틈 보강)
-                    paintSystem.EnqueueTrail(BoardPaintSystem.PaintChannel.Player,
+                    // 3) 지난 프레임→현재 프레임을 Trail로 배치(간격/소모는 PaintSystem에서 처리)
+                    paintSystem.EnqueueTrail(BoardPaintSystem.PaintChannel.Enemy,
                                              lastCenter, centerNow,
                                              rInk,
                                              spacingMeters: -1f,
                                              clearOtherChannel: true);
                     lastCenter = centerNow;
                 }
-
             }
 
             yield return null; // 스케일 적용(일시정지 시 멈춤)
         }
     }
 
-    void Stamp(Vector3 p, float rInk)
+    void Stamp(Vector3 p, float rInk)                           
     {
         if (!paintSystem) return;
 
-        // 즉시 반영(게이지 체크 포함)
-        paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
-                                 p, rInk, /*clearOther=*/true);
-
-        // ★ 중복 방지: 아래 큐 스탬프는 제거하거나, 최소한 headStampImmediate가 꺼진 경우에만 사용
-        // if (!paintSystem.headStampImmediate)
-        //     paintSystem.EnqueueCircle(BoardPaintSystem.PaintChannel.Player, p, rInk, true);
+        // 이제 하나의 반지름으로 청소+페인트 일괄 처리(덮어쓰기)
+        paintSystem.EnqueueCircle(BoardPaintSystem.PaintChannel.Enemy,
+                                  p, rInk,
+                                  clearOtherChannel: true);
     }
-
 
 
     // ===== Helpers =====
     static void GetCapsuleWorld(CapsuleCollider cap, out Vector3 worldA, out Vector3 worldB, out float worldRadius)
     {
-        Vector3 cLocal = cap.center;
+        Vector3 cLocal    = cap.center;
         Vector3 axisLocal = cap.direction == 0 ? Vector3.right :
-                            cap.direction == 1 ? Vector3.up :
+                            cap.direction == 1 ? Vector3.up    :
                                                  Vector3.forward;
 
         Vector3 s = cap.transform.lossyScale;
