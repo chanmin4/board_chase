@@ -53,6 +53,10 @@ public class ZoneVisualManager : MonoBehaviour
     [Header("Auto Fit (match prefab size to world radius)")]
     public bool autoFitPrefabs = true;              // 프리팹 실제 치수에 맞춰 자동 스케일
     public float ringHeightWorld = 0.02f;           // 링 두께(월드)
+    [Header("Layering / Collision")]
+    public bool setZoneVisualsToWallLayer = false;   // 켜면 시각물 레이어를 Wall로
+    public string wallLayerName = "Wall";
+    public bool keepZoneVisualColliders = false;     // 콜라이더 제거하지 않기
 
     // === [추가] Visual 저장 구조에 필드 2개 추가 ===
     // class/struct Visual 안에 아래 두 줄 추가
@@ -165,7 +169,9 @@ public class ZoneVisualManager : MonoBehaviour
 
         // 돔
         GameObject dome = Instantiate(hemispherePrefab, root.transform, false);
-        StripAllColliders(dome);
+        if (!keepZoneVisualColliders) StripAllColliders(dome);              // ★ 유지 옵션
+        if (setZoneVisualsToWallLayer)
+            SetLayerRecursively(dome, LayerMask.NameToLayer(wallLayerName)); // ★ 레이어 재귀 적용
         var dRend = dome.GetComponentInChildren<Renderer>();
         if (dRend) dRend.sharedMaterial = snap.domeMat ? snap.domeMat : defaultDomeMat;
 
@@ -195,7 +201,9 @@ public class ZoneVisualManager : MonoBehaviour
         if (ringPrefab)
         {
             GameObject ring = Instantiate(ringPrefab, root.transform, false);
-            StripAllColliders(ring);
+        if (!keepZoneVisualColliders) StripAllColliders(ring);               // ★ 유지 옵션
+        if (setZoneVisualsToWallLayer)
+            SetLayerRecursively(ring, LayerMask.NameToLayer(wallLayerName));  // ★ 레이어 재귀 적용
 
             var rRend = ring.GetComponentInChildren<Renderer>();
             if (rRend) rRend.sharedMaterial = snap.ringMat ? snap.ringMat : defaultRingMat;
@@ -260,6 +268,13 @@ public class ZoneVisualManager : MonoBehaviour
         }
 
     }
+    static void SetLayerRecursively(GameObject go, int layer)
+    {
+        if (!go) return;
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            t.gameObject.layer = layer;
+    }
+
 
     // ---- 만료/소멸 ----
     void HandleExpired(int id)

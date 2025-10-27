@@ -1938,7 +1938,7 @@ MonoBehaviour:
   spacingByRadius: 0.7
   spacingByPixel: 0.9
   minSpacingWorld: 0.02
-  maxStampsPerFrame: 64
+  maxStampsPerFrame: 32
   headStampImmediate: 1
   headStampMinInterval: 0
 --- !u!4 &272264824
@@ -3114,6 +3114,65 @@ MonoBehaviour:
   unit: 10
   fenceScaleX: 5
   groupName: _Fences
+--- !u!1 &369463472
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 369463473}
+  - component: {fileID: 369463474}
+  m_Layer: 0
+  m_Name: EnemyDiskSpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &369463473
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369463472}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 960, y: 540, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1125586712}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &369463474
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369463472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc9d24952987f084583054723230b651, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  director: {fileID: 1606759577}
+  board: {fileID: 1290663343}
+  gauge: {fileID: 1445786933}
+  targetPlayer: {fileID: 2113993634}
+  enemyDiskPrefab: {fileID: 1674989674}
+  firstSpawnDelay: 0
+  spawnInterval: 10
+  spawnCount: 1
+  maxAlive: 2
+  edgeMarginWorld: 0.5
+  minDistFromPlayer: 10
+  snapToTileCenter: 1
+  maxTries: 24
+  groundY: 0.2
+  autoStart: 1
 --- !u!1001 &370530078
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3937,11 +3996,11 @@ MonoBehaviour:
   director: {fileID: 1606759577}
   board: {fileID: 1290663343}
   maskMat: {fileID: 2100000, guid: a4a941539f5baef42826356cdc8094d3, type: 2}
-  pixelsPerTile: 10
+  pixelsPerTile: 6
   yOffset: 0.02
   playerMat: {fileID: 2100000, guid: f1f0419e5e8ee8b4480a9a60ac2728fb, type: 2}
   playerMaskProperty: _MaskTex
-  playerPixelsPerTile: 10
+  playerPixelsPerTile: 6
   _EnemyMask: {fileID: 0}
   _playerMask: {fileID: 0}
 --- !u!4 &496033016 stripped
@@ -6898,31 +6957,31 @@ MonoBehaviour:
   manageGunner: 1
   manageBoss: 1
   ghostSpawner: {fileID: 356726099}
-  ghostFirstDelay: 0
+  ghostFirstDelay: 9999
   ghostInterval: 10
   ghostMaxAlive: 2
   ghostBatch: 2
   ghostKillXP: 15
   sniperSpawner: {fileID: 277282744}
-  sniperFirstDelay: 0
+  sniperFirstDelay: 9999
   sniperInterval: 10
   sniperMaxAlive: 1
   sniperBatch: 1
   sniperKillXP: 15
   inkEaterSpawner: {fileID: 1213088627}
-  inkEaterFirstDelay: 0
+  inkEaterFirstDelay: 9999
   inkEaterInterval: 7
   inkEaterMaxAlive: 1
   inkEaterBatch: 1
   inkEaterKillXP: 25
   gunnerSpawner: {fileID: 190564957}
-  gunnerFirstDelay: 0
+  gunnerFirstDelay: 9999
   gunnerInterval: 7
   gunnerMaxAlive: 1
   gunnerBatch: 1
   gunnerKillXP: 25
   bossSpawner: {fileID: 277300316}
-  bossFirstDelay: 0
+  bossFirstDelay: 9999
   bossInterval: 120
   bossMaxAlive: 1
   bossBatch: 1
@@ -7705,6 +7764,7 @@ Transform:
   - {fileID: 2072142993}
   - {fileID: 1899606460}
   - {fileID: 1508346400}
+  - {fileID: 369463473}
   - {fileID: 2113993634}
   - {fileID: 1674989663}
   - {fileID: 1290663342}
@@ -9288,7 +9348,7 @@ MonoBehaviour:
   stunMoveSpeedMul: 0.7
   stunCooldownAddSeconds: 1
   disk: {fileID: 2113993636}
-  baseCostPerMeter: 0.4
+  baseCostPerMeter: 0.2
   contamExtraMul: 1.5
 --- !u!222 &1445786935
 CanvasRenderer:
@@ -10540,7 +10600,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1674989663
 Transform:
   m_ObjectHideFlags: 0
@@ -11682,6 +11742,9 @@ MonoBehaviour:
   attachTimersToZone: 1
   autoFitPrefabs: 1
   ringHeightWorld: 0.02
+  setZoneVisualsToWallLayer: 1
+  wallLayerName: Wall
+  keepZoneVisualColliders: 1
   ringScalePerRadius: 0
   ringScaleY: 0
 --- !u!4 &1796449637
@@ -14105,6 +14168,7 @@ GameObject:
   - component: {fileID: 2113993644}
   - component: {fileID: 2113993645}
   - component: {fileID: 2113993646}
+  - component: {fileID: 2113993647}
   m_Layer: 6
   m_Name: PlayerDisk
   m_TagString: Player
@@ -14193,10 +14257,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   survivalgauge: {fileID: 1445786933}
   firstSpawnDelay: 0
-  powerScale: 1.8
+  powerScale: 2
   board: {fileID: 1290663343}
   useCooldown: 1
-  cooldownSeconds: 0
+  cooldownSeconds: 4
   cooldownBonusOnBounce: 0
   cooldownReducePerBounce: 0
   baseCharges: 2
@@ -14396,6 +14460,37 @@ MonoBehaviour:
   useRadiusOverride: 1
   radiusOverrideWorld: 1
   edgeGapWorld: 0.5
+--- !u!114 &2113993647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2113993630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5696dc83fe3d2b4439c8cc200305bb3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  launcher: {fileID: 2113993636}
+  rb: {fileID: 2113993635}
+  diskCollider: {fileID: 2113993631}
+  trail: {fileID: 2113993644}
+  gauge: {fileID: 1445786933}
+  speedMulOnSuccess: 1.35
+  inkGainOnSuccess: 20
+  speedMulOnFail: 0.7
+  inkLossOnFail: 10
+  extraRadiusPerComboTiles: 0.1
+  boundaryGraceDeg: 1
+  visualizeIndicatorPrefab: {fileID: 0}
+  visualizeArcRadiusWorld: 0
+  visualizeArcHeight: 0.02
+  visualizeArcHalfAngleDeg: 45
+  visualizeArcSegments: 32
+  visualizeArcColor: {r: 1, g: 0.2, b: 0.2, a: 0.9}
+  visualizeArcLineWidth: 0.2
+  selected: 0
 --- !u!21 &2126209664
 Material:
   serializedVersion: 8
