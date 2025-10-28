@@ -52,8 +52,11 @@ public class SurvivalGauge : MonoBehaviour
 
     [Tooltip("적 영역(오염)을 덧칠할 때 곱해지는 배수 (예: 1.5)")]
     public float contamExtraMul = 1.5f;
+    [Tooltip("존 보너스 각도 히트시 얻는 잉크게이지량")]
+    public float zonebonusarc = 5f;
 
     [ContextMenu("DEBUG_ForceDeplete")]
+    
     public void DEBUG_ForceDeplete()
     {
         current = 0f;

@@ -277,6 +277,7 @@ public class SurvivalDirector : MonoBehaviour
                 {
                     award = bonusHitAward;
                     isBonus = true;
+                    gauge.Add(gauge.zonebonusarc);
                 }
             }
 
@@ -302,6 +303,7 @@ public class SurvivalDirector : MonoBehaviour
                     BounceFromZone(z);
                     if (isBonus)
                     {
+                        
                         // 기존 예약이 있으면 취소
                         if (_bonusReroll.TryGetValue(z.id, out var co)) { StopCoroutine(co); _bonusReroll.Remove(z.id); }
                         _bonusReroll[z.id] = StartCoroutine(RerollBonusSectorAfter(z.id, bonusRefreshDelay));
@@ -328,8 +330,6 @@ public class SurvivalDirector : MonoBehaviour
                 }
             }
         }
-
-
     }
     System.Collections.IEnumerator RerollBonusSectorAfter(int zoneId, float delay)
     {
