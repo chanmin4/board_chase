@@ -105,6 +105,28 @@ public class SurvivalDirector : MonoBehaviour
     [Min(0)] public int layoutCountMedium = 0;
     [Min(0)] public int layoutCountLarge = 0;
 
+    [System.Serializable]
+    public struct SpawnBlockRule
+    {
+        public string label;
+        public LayerMask layers;                       // 여러 레이어 체크 가능
+        [Tooltip("존 반경 + padding으로 겹침 검사")]
+        public float paddingWorld;
+        [Tooltip("OverlapSphere Y 오프셋")]
+        public float yOffset;
+        public QueryTriggerInteraction triggerInteraction; // Ignore/Collide
+    }
+
+
+    [Header("Zone Spawn Blocking (Multi)")]
+    [Tooltip("여기에 규칙을 여러 개 추가해서 레이어별로 차단 조건을 세밀하게 설정")]
+    public SpawnBlockRule[] spawnBlockRules;
+
+    [Header("Zone Edge Clearance")]
+    [Tooltip("보드 경계선으로부터 요구하는 최소 거리(타일 단위)")]
+    public float minBoardEdgeClearTiles = 8.0f;
+
+
     // 보너스 아크 리롤 코루틴(존별)
     readonly Dictionary<int, Coroutine> _bonusReroll = new Dictionary<int, Coroutine>();
 
@@ -197,6 +219,49 @@ public class SurvivalDirector : MonoBehaviour
     public int Height => board ? board.height : 0;
 
     int Idx(int x, int y) => y * board.width + x;
+    bool FarFromBoardEdge_World(Vector3 centerWorld, float radiusWorld)
+    {
+        if (!board) return true;
+        var rect = board.GetBoardRectXZ();
+
+        float need = radiusWorld + Mathf.Max(0f, minBoardEdgeClearTiles) * board.tileSize;
+
+        // 사각형 경계까지의 여유
+        float left = (centerWorld.x - rect.xMin);
+        float right = (rect.xMax - centerWorld.x);
+        float bottom = (centerWorld.z - rect.yMin);
+        float top = (rect.yMax - centerWorld.z);
+
+        return (left >= need) && (right >= need) && (bottom >= need) && (top >= need);
+    }
+
+
+// 반경 내 차단 레이어가 있는지 검사
+    static readonly Collider[] _overlapBuf = new Collider[64];
+    bool AreaIsClearOfObstacles(Vector3 centerWorld, float radiusWorld)
+    {
+        // 규칙 배열이 설정되어 있으면 그 규칙들 모두 통과해야 함
+        if (spawnBlockRules != null && spawnBlockRules.Length > 0)
+        {
+            for (int i = 0; i < spawnBlockRules.Length; ++i)
+            {
+                var rule = spawnBlockRules[i];
+                if (rule.layers.value == 0) continue; // 비어있는 규칙은 스킵
+
+                float r = Mathf.Max(0f, radiusWorld + rule.paddingWorld);
+                Vector3 c = centerWorld + Vector3.up * rule.yOffset;
+
+                int hit = Physics.OverlapSphereNonAlloc(
+                    c, r, _overlapBuf, rule.layers, rule.triggerInteraction);
+
+                if (hit > 0) return false; // 하나라도 걸리면 스폰 불가
+            }
+            return true;
+        }
+        return true;
+    }
+
+
 
     void Awake()
     {
@@ -505,6 +570,10 @@ public class SurvivalDirector : MonoBehaviour
 
             var tiles = CollectBlock(c, footprint);
             if (tiles == null || tiles.Count == 0) continue;
+            Vector3 cW = board.IndexToWorld(c.x, c.y);
+            float   rW = (footprint.x * 0.5f) * board.tileSize;
+            if (!FarFromBoardEdge_World(cW, rW)) continue;
+            if (!AreaIsClearOfObstacles(cW, rW)) continue;
 
             if (zones.Any(z => Intersects(z.tiles, tiles))) continue;
             if (CirclesOverlapExisting(c, footprint)) continue;

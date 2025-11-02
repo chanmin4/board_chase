@@ -9,9 +9,11 @@ public class CardManager : MonoBehaviour
     [Header("UI")]
     public Image icon;
     public TextMeshProUGUI nameText;
-    public TextMeshProUGUI chargeText; // “현재/최대”
+    public TextMeshProUGUI cooldownText; // “현재/최대”
     public Button useButton;
     public TextMeshProUGUI durationText;
+
+    [SerializeField] float cooldownRemain = 0f;
 
     [Header("Input")]
     public bool enableSpacebarUse = true;
@@ -19,6 +21,10 @@ public class CardManager : MonoBehaviour
     public bool enableDoubleClick = true;
     [Range(0.15f, 0.5f)] public float doubleClickWindow = 0.3f;
     float lastClickTime = -999f;
+    [Header("Timing")]
+    [Tooltip("카드 쿨타임/지속시간을 언스케일드 시간(실시간)으로 처리")]
+    public bool useUnscaledTime = true;
+
 
     [Header("Resource Key")]
     public string cardResourceName = "Cards/Cleaner"; // Resources/Cards/Cleaner.asset
@@ -44,7 +50,14 @@ public class CardManager : MonoBehaviour
     // ===========================================
 
     public int EffectiveMaxCharge => (data ? Mathf.Max(0, data.maxCharge + riskAddRequiredCharge) : 0);
+    float DT => useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+    System.Collections.IEnumerator WaitFor(float sec)
+    {
+        if (useUnscaledTime) yield return new WaitForSecondsRealtime(sec);
+        else yield return new WaitForSeconds(sec);
+    }
 
+    
     void Awake()
     {
         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
@@ -135,13 +148,26 @@ public class CardManager : MonoBehaviour
     {
         if (!data) { if (useButton) useButton.interactable = false; return; }
 
-        if (icon)     icon.sprite = data.icon;
+        if (icon) icon.sprite = data.icon;
         if (nameText) nameText.text = data.cardName;
-        if (chargeText) chargeText.text = $"{charge}/{EffectiveMaxCharge}";
+
+        if (cooldownText)
+        {
+            if (onCooldown)
+                cooldownText.text = $"{Mathf.Max(0f, cooldownRemain):0.0}s";
+            else if (durationCo != null) // 사용 중
+                cooldownText.text = string.Empty;
+            else // 대기(READY)
+                cooldownText.text = "READY";
+        }
+
         if (durationText) durationText.text = $"{data.duration:0.0}s";
 
-        useButton.interactable = !onCooldown && !riskDisableUse && charge >= EffectiveMaxCharge;
+        // 사용 버튼: 쿨다운 아님 + 사용중 아님 + 조건 충족
+        useButton.interactable = !onCooldown && durationCo == null &&
+                                 !riskDisableUse && charge >= EffectiveMaxCharge;
     }
+
 
     void TryUse()
     {
@@ -159,16 +185,28 @@ public class CardManager : MonoBehaviour
 
         if (durationCo != null) StopCoroutine(durationCo);
         durationCo = StartCoroutine(DurationCountdownCo(data.duration));
-
-        if (data.cooldown > 0f) StartCoroutine(CooldownCo(data.cooldown));
     }
 
     IEnumerator CooldownCo(float sec)
     {
-        onCooldown = true; ApplyUI();
-        yield return new WaitForSeconds(sec);
-        onCooldown = false; ApplyUI();
+        onCooldown = true;
+        cooldownRemain = Mathf.Max(0f, sec);
+        ApplyUI();
+
+        var wait = new WaitForEndOfFrame();
+        while (cooldownRemain > 0f)
+        {
+            cooldownRemain = Mathf.Max(0f, cooldownRemain - DT); // DT = unscaled or scaled
+            if (cooldownText) cooldownText.text = $"{cooldownRemain:0.0}s";
+            yield return wait;
+        }
+
+        onCooldown = false;
+        cooldownRemain = 0f;
+        ApplyUI();
     }
+
+
 
     IEnumerator DurationCountdownCo(float sec)
     {
@@ -180,7 +218,7 @@ public class CardManager : MonoBehaviour
         var wait = new WaitForEndOfFrame();
         while (t > 0f)
         {
-            t -= Time.deltaTime;
+            t -= DT;
             if (durationText) durationText.text = $"{Mathf.Max(0f, t):0.0}s";
             yield return wait;
         }
@@ -191,6 +229,8 @@ public class CardManager : MonoBehaviour
         // 기본 표시(리소스 값)로 복귀
         if (durationText) durationText.text = $"{data.duration:0.0}s";
         durationCo = null;
+        if (data.cooldown > 0f) StartCoroutine(CooldownCo(data.cooldown));
+        ApplyUI();
     }
 
     void EnsureAbility()
@@ -206,6 +246,9 @@ public class CardManager : MonoBehaviour
                 break;
             case "ZoneCrit":
                 ability = host.AddComponent<ZoneCriticalArc>();
+                break;
+            case "TimeSlow":
+                ability = host.AddComponent<TimeSlowAbility_Card>();
                 break;
             default:
                 break;

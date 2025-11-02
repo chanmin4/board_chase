@@ -26,10 +26,12 @@ public class DiskInkLeveler : MonoBehaviour
     [Tooltip("레벨업 시 radiusAddWorld(미터)에 더할 값(레벨마다). 비어있으면 0으로 간주")]
     public List<float> addToRadiusAddWorld = new List<float> { 0f, 0f, 0f, 0f, 0f };
 
-  [Header("Events (UI)")]
+    [Header("Events (UI)")]   
     public UnityEvent<int> OnLevelChanged;               
-    public UnityEvent<float, float> OnXPChanged;         
+    public UnityEvent<float, float> OnXPChanged;
     public UnityEvent<float, string> OnXPGained;       //amount, 어디서얻었는가  
+    public UnityEvent<int> OnLevelUp;
+    
     [Header("Debug/State")]
     [SerializeField] int   level = 0;
     [SerializeField] float curXP = 0;
@@ -131,11 +133,13 @@ public void GrantXP(float amount, string reason = null)   // ★ ADDED
         trail.radiusMul      += GetAddToMul(level - 1);
         trail.radiusAddWorld += GetAddToAddWorld(level - 1);
 
-        // (선택) 상한 클램프가 있다면 여기에서
-        // trail.radiusMul      = Mathf.Min(trail.radiusMul, radiusMulMax);
-        // trail.radiusAddWorld = Mathf.Min(trail.radiusAddWorld, radiusAddWorldMax);
+            // (선택) 상한 클램프가 있다면 여기에서
+            // trail.radiusMul      = Mathf.Min(trail.radiusMul, radiusMulMax);
+            // trail.radiusAddWorld = Mathf.Min(trail.radiusAddWorld, radiusAddWorldMax);
 
-        OnLevelChanged?.Invoke(level);
+        OnLevelChanged?.Invoke(level); // ui 표시용
+        OnLevelUp?.Invoke(level);
+        
         EmitProgress(); // 필요치 바뀌었으니 다시
     }
 }

@@ -156,7 +156,6 @@ GameObject:
   - component: {fileID: 60276771217750463}
   - component: {fileID: 773935939886247932}
   - component: {fileID: 3899852829307150785}
-  - component: {fileID: 101629013379624146}
   - component: {fileID: 6338592630645243644}
   m_Layer: 12
   m_Name: EnemyDisk
@@ -291,7 +290,7 @@ MonoBehaviour:
   evalStepMeters: 0.25
   maxPredictMeters: 12
   bounceDamping: 0.9
-  bonusArc: {fileID: 101629013379624146}
+  bonusArc: {fileID: 0}
   otherDiskMask:
     serializedVersion: 2
     m_Bits: 64
@@ -313,49 +312,6 @@ MonoBehaviour:
   extraRadiusTiles: 0
   runOnEnable: 1
   startDelay: 0
---- !u!114 &101629013379624146
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6915450752968060550}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 05b7a3bdc3795a64eaf6cc08ad5b65e2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  team: 1
-  arcMaterial: {fileID: 0}
-  arcColor: {r: 1, g: 0, b: 0, a: 1}
-  segments: 32
-  radiusOffset: 0.08
-  width: 0.08
-  yLift: 11.5
-  arcDegLocal: 90
-  spinDegPerSec: 120
-  useSharedMatchConfig: 1
-  applySpin: 0
-  OnBonusArcHit:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 773935939886247932}
-        m_TargetAssemblyTypeName: EnemyDiskLauncher, Assembly-CSharp
-        m_MethodName: ApplyBonusArcPenalty
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  autoApplyGaugePenalty: 0
-  gaugePenalty: 50
-  useRadiusOverride: 1
-  radiusOverrideWorld: 1
-  edgeGapWorld: 0.5
 --- !u!114 &6338592630645243644
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -14,11 +14,11 @@ public class PerfectBounce : MonoBehaviour
 
     // ── 보상/패널티 ──
     [Header("Rewards (성공 시)")]
-    public float speedMulOnSuccess = 1.35f;
+    public float speedAddOnSuccess = 10f;
     public float inkGainOnSuccess  = 12f;   // TODO: 프로젝트 단위에 맞게 조정
 
     [Header("Penalty (실패 시)")]
-    public float speedMulOnFail = 0.85f;
+    public float speedDecOnFail = 20f;
     public float inkLossOnFail  = 10f;      // TODO: 프로젝트 단위에 맞게 조정
 
     [Header("Combo → Radius")]
@@ -151,8 +151,15 @@ public class PerfectBounce : MonoBehaviour
     // ── 성공/실패 ──
     void ApplySuccess()
     {
-        if (rb && speedMulOnSuccess > 0f) rb.linearVelocity *= speedMulOnSuccess;
-        if (gauge && inkGainOnSuccess != 0f) gauge.Add(inkGainOnSuccess); // TODO: 단위 확인
+        if (rb)
+        {
+            Vector3 v = rb.linearVelocity;
+            Vector3 dir = (v.sqrMagnitude > 1e-6f) ? v.normalized : transform.forward;
+            float s = v.magnitude + speedAddOnSuccess;         // ← 합연산(+)
+            rb.linearVelocity = dir * Mathf.Max(0f, s);        // (마이너스 방지만 최소 보정)
+        }
+
+        if (gauge && inkGainOnSuccess != 0f) gauge.Add(inkGainOnSuccess);
 
         combo = Mathf.Max(0, combo + 1);
         if (trail) trail.extraRadiusTiles = baseExtraRadiusTiles + combo * extraRadiusPerComboTiles;
@@ -160,8 +167,15 @@ public class PerfectBounce : MonoBehaviour
 
     void ApplyFail()
     {
-        if (rb && speedMulOnFail > 0f) rb.linearVelocity *= speedMulOnFail;
-        if (gauge && inkLossOnFail != 0f) gauge.Add(-inkLossOnFail);     // TODO: 단위 확인
+        if (rb)
+        {
+            Vector3 v = rb.linearVelocity;
+            Vector3 dir = (v.sqrMagnitude > 1e-6f) ? v.normalized : transform.forward;
+            float s = v.magnitude - speedDecOnFail;            // ← 합연산(-)
+            rb.linearVelocity = dir * Mathf.Max(0f, s);        // (0 미만 방지)
+        }
+
+        if (gauge && inkLossOnFail != 0f) gauge.Add(-inkLossOnFail);
 
         combo = 0;
         if (trail) trail.extraRadiusTiles = baseExtraRadiusTiles;

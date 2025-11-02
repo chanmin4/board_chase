@@ -49,12 +49,26 @@ public class DiskLauncher : MonoBehaviour
 
     public UnityEvent<float> externalCooldownAdd;  // (초 가산)
     // 필드 추가
-    [Header("Bonus Arc Hook")]
-    public DiskBonusArc bonusArc;
     [Tooltip("상대 디스크 레이어(플레이어는 Enemy 디스크, 적은 Player 디스크를 넣기)")]
     public LayerMask otherDiskMask;
-    public float bonusArcInkPenalty = 50f;
+    //public float bonusArcInkPenalty = 50f;
 
+    [Header("Persistent Min Speed")]
+    [Tooltip("최초로 일정 속도 이상 가속된 이후부터 계속 최소 속도를 유지합니다.")]
+    public bool usePersistentMinSpeed = true;
+
+    [Tooltip("유지할 최소 속도 (m/s)")]
+    public float minSpeed = 45f;
+
+    [Tooltip("XZ 평면 속도로만 판정/보정(Y는 유지)")]
+    public bool planarMinSpeed = true;
+
+    [Tooltip("이 속도 이상이 되면 '무한 유지'를 활성화합니다.")]
+    public float armSpeedThreshold = 0.5f;
+    [Header("Cooldown Timing")]
+    [Tooltip("쿨타임을 언스케일드 시간(실시간)으로 처리")]
+    public bool useUnscaledCooldown = true;
+float CDT => useUnscaledCooldown ? Time.unscaledDeltaTime : Time.deltaTime;
     // 이벤트
     public event Action<int, int> OnTileChanged;
     public event Action<int, int> OnStoppedOnTile;
@@ -66,10 +80,17 @@ public class DiskLauncher : MonoBehaviour
     Rigidbody rb;
     //bool launched;
     Vector2Int _lastTile = new Vector2Int(-1, -1);
-
+    bool _minSpeedArmed = false; 
+    Vector3 _lastMoveDir;
     SurvivalDirector director;
     public void SetExternalSpeedMul(float v) => _extSpeedMul = Mathf.Clamp(v, 0.1f, 1f);
     public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f, sec);
+    System.Collections.IEnumerator WaitFor(float sec)
+    {
+        if (useUnscaledCooldown) yield return new WaitForSecondsRealtime(sec);
+        else                     yield return new WaitForSeconds(sec);
+    }
+    
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -115,7 +136,7 @@ public class DiskLauncher : MonoBehaviour
         if (!useCooldown) return;
         if (CooldownRemain > 0f)
         {
-            CooldownRemain = Mathf.Max(0f, CooldownRemain - Time.deltaTime);
+           CooldownRemain = Mathf.Max(0f, CooldownRemain - CDT);
             NotifyCooldown();
         }
         CheckReadyEdge(true);
@@ -133,9 +154,9 @@ public class DiskLauncher : MonoBehaviour
         if (c.rigidbody && c.rigidbody.TryGetComponent<EnemyDiskLauncher>(out _))
         {
             var pt = c.GetContact(0).point;
-            bonusArc?.OnCollisionWithOtherDisk(c.rigidbody.transform, pt);
             return; // 벽 처리 스킵
         }
+
         // 벽 레이어만 필터
         if (((1 << c.collider.gameObject.layer) & wallMask) == 0) return;
 
@@ -144,10 +165,13 @@ public class DiskLauncher : MonoBehaviour
         Vector3 v = rb.linearVelocity;
         float into = Vector3.Dot(v, -contact.normal);
         if (into > 0f) rb.linearVelocity = v + contact.normal * into;
-        // 구독자(SFX 등)에게 알림
 
+        // 구독자(SFX 등)에게 알림
         WallHit?.Invoke();
     }
+
+
+
 
     void StartCooldown()
     {
@@ -217,20 +241,7 @@ public class DiskLauncher : MonoBehaviour
         // ③ 쿨타임 시작
         if (useCooldown) StartCooldown();
     }
-    // 벽 튕김수 변경 시 호출됨
-    /*
-void HandleWallHitsChanged_Bonus(int hitsNow)
-{
-    if (!useCooldown) return;                  // 쿨타임 모드일 때만
-    if (!cooldownBonusOnBounce) return;        // 토글 Off면 무시
 
-    int delta = Mathf.Max(0, hitsNow - _lastWallHitsForBonus);
-    _lastWallHitsForBonus = hitsNow;
-    if (delta <= 0) return;
-
-    ReduceCooldown(delta * cooldownReducePerBounce);
-}
-*/
 
     // 남은 쿨다운을 줄이는 유틸
     void ReduceCooldown(float seconds)
@@ -240,19 +251,6 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
         NotifyCooldown(); // HUD 갱신
         CheckReadyEdge(true);
     }
-    /*
-            void FixedUpdate()
-            {
-                UpdateCurrentTile(forceEvent:false);
-
-                if (launched && rb.linearVelocity.magnitude < minStopSpeed)
-                {
-                    launched = false;
-                    rb.linearVelocity = Vector3.zero;
-                    SnapToTileCenterAndReport();
-                }
-            }
-        */
     public void CancelAddCooldown(float seconds)
     {
         if (!useCooldown) return;
@@ -287,11 +285,64 @@ void HandleWallHitsChanged_Bonus(int hitsNow)
             OnTileChanged?.Invoke(ix, iy);
         }
     }
+
+    void FixedUpdate()
+    {
+        if (rb == null) return;
+
+        // 현재 속도
+        Vector3 v = rb.linearVelocity;
+        Vector3 vPlanar = v;
+        if (planarMinSpeed) vPlanar.y = 0f;
+
+        float s = vPlanar.magnitude;
+
+        // 최근 이동방향 캐시
+        if (s > 1e-4f)
+            _lastMoveDir = vPlanar.normalized;
+
+        if (!usePersistentMinSpeed) return;
+
+        // 한 번 일정 속도 이상 가속되면 '무한 유지' ARM
+        if (!_minSpeedArmed && s >= armSpeedThreshold)
+            _minSpeedArmed = true;
+
+        // ARM된 뒤에는 항상 최소속도 유지
+        if (_minSpeedArmed && s < minSpeed)
+        {
+            Vector3 dir;
+            if (s > 1e-4f) dir = vPlanar.normalized;
+            else if (_lastMoveDir.sqrMagnitude > 1e-6f) dir = _lastMoveDir;
+            else dir = transform.forward; // 완정지 안전장치
+
+            Vector3 newVel = dir * minSpeed;
+            if (!planarMinSpeed) newVel.y = v.y; // Y 보존
+            rb.linearVelocity = newVel;
+        }
+    }
+
+
+
+        // 벽 튕김수 변경 시 호출됨
+    /*
+void HandleWallHitsChanged_Bonus(int hitsNow)
+{
+    if (!useCooldown) return;                  // 쿨타임 모드일 때만
+    if (!cooldownBonusOnBounce) return;        // 토글 Off면 무시
+
+    int delta = Mathf.Max(0, hitsNow - _lastWallHitsForBonus);
+    _lastWallHitsForBonus = hitsNow;
+    if (delta <= 0) return;
+
+    ReduceCooldown(delta * cooldownReducePerBounce);
+}
+*/
+    /*
     public void ApplyBonusArcPenalty(Transform other)
     {
         // “내” 게이지를 깎는다(맞은 쪽이 손해).
           Debug.Log("playergaugepanelty");
         survivalgauge?.Add(-bonusArcInkPenalty);    // 플레이어 쪽
-    }
+    }*/
 
 }

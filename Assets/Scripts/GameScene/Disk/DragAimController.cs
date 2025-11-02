@@ -36,13 +36,15 @@ public class DragAimController : MonoBehaviour
                                     // DragAimController.cs 상단 필드들 사이에 추가
     [Header("Integrations")]
     public SurvivalDirector director;                 // 인스펙터에서 연결(없으면 자동 탐색)
-    public int DragCount=0;  //현재 리셋까지 드래그한횟수 
+    public int DragCount = 0;  //현재 리셋까지 드래그한횟수 
     public int resetDragNum = 2;          // 리셋 드래그 허용량
 
-
+    [Header("Power Mode")]
+    [Tooltip("드래그 길이와 무관하게 항상 최대 파워/최대 원 크기로 발사")]
+    public bool fixedMaxPower = true;
     [Header("Debug · Aim Visual Sanitize")]
 
-public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
+    public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
     [Header("Debug")]
     public bool debugForceHideAim = false;
     float baseCircleDiameter = 1f;
@@ -61,7 +63,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
     void Start()
     {
         if (!cam) cam = Camera.main;
-         if (!director) director = FindAnyObjectByType<SurvivalDirector>();
+        if (!director) director = FindAnyObjectByType<SurvivalDirector>();
         ground = new Plane(Vector3.up, new Vector3(0f, launcher.transform.position.y, 0f));
         SetVis(false);
 
@@ -80,7 +82,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
         MakePureVisual(dragCircle);
         MakePureVisual(arrowRoot);
         baseCircleDiameter = ComputeRendererWidthWorld(dragCircle);
-    if (baseCircleDiameter <= 0f) baseCircleDiameter = 1f;
+        if (baseCircleDiameter <= 0f) baseCircleDiameter = 1f;
     }
 
     void Update()
@@ -94,7 +96,8 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
             {
                 launchedThisDrag = false;
                 dragging = true; SetVis(true); InitAt(startPos);
-                DragPull?.Invoke(); 
+                if (fixedMaxPower) UpdateVis(1f);   // ★ 시작하자마자 원/화살표 최대 표시
+                DragPull?.Invoke();
             }
             // UI 위에서 누른 경우: 드래그 시작을 ‘무시’만 하고 그대로 종료
         }
@@ -126,14 +129,23 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
 
                     if (raw > 1e-5f) dragDir = fromCenter.normalized;
 
-                    UpdateVis(pull / maxPull);
+                    if (fixedMaxPower)
+                    {
+                        pull = maxPull;           // ★ 파워 고정
+                        UpdateVis(1f);            // ★ 항상 최대 원/화살표
+                    }
+                    else
+                    {
+                        UpdateVis(pull / maxPull);
+                    }
                 }
             }
+
 
             // 놓기: UI 위에서도 반드시 처리!
             if (Input.GetMouseButtonUp(0))
             {
-                if (DragCount >=resetDragNum)
+                if (DragCount >= resetDragNum)
                 {
                     //director?.ResetWallHits();
                 }
@@ -147,13 +159,21 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
                 {
                     launchedThisDrag = true;
                     Vector3 launchDir = -dragDir;
-                    float strength = pull * launchBoost;
 
                     var rb = launcher.GetComponent<Rigidbody>();
-                    if (rb) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                    float keep = (rb != null) ? rb.linearVelocity.magnitude : 0f;
 
-                    launcher.Launch(launchDir, strength);
+                    // 현재 속도를 그대로 사용, 완전 정지라면 최소속도(또는 기존 계산)로 안전하게 시작
+                    float strength = (keep > 0.01f)
+                        ? keep
+                        : (launcher ? launcher.minSpeed : pull * launchBoost);
+
+
+                    if (rb) rb.angularVelocity = Vector3.zero; // 회전만 리셋(선택)
+
+                    launcher.Launch(launchDir, strength);  // ← 방향만 바뀌고, 속도 크기는 그대로 유지
                 }
+
                 pull = 0f;
             }
 
@@ -183,15 +203,18 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
         world = default; return false;
     }
     // 스프라이트/메시 상관없이 폭(월드유닛)을 구함
-    float ComputeRendererWidthWorld(Transform t) {
+    float ComputeRendererWidthWorld(Transform t)
+    {
         if (!t) return 1f;
         var sr = t.GetComponent<SpriteRenderer>();
-        if (sr && sr.sprite) {
+        if (sr && sr.sprite)
+        {
             // Sprite.bounds = 로컬(스프라이트) 기준, lossyScale로 월드 변환
             return sr.sprite.bounds.size.x * t.lossyScale.x;
         }
         var mr = t.GetComponent<MeshRenderer>();
-        if (mr) {
+        if (mr)
+        {
             // bounds = 월드 기준. 로컬 스케일 제거해서 순수 메시 폭 추정
             return mr.bounds.size.x; // 이미 월드폭이므로 그대로
         }
@@ -206,7 +229,7 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
     void InitAt(Vector3 _)
     {
         var center = DiskCenter();
-        float y = center.y+aimHeight;  
+        float y = center.y + aimHeight;
 
         // 원(드래그 서클)은 디스크 중심에
         if (dragCircle) dragCircle.position = new Vector3(center.x, y, center.z);
@@ -220,45 +243,45 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
     }
 
     void UpdateVis(float t)
-{
-    // t = 0~1
-
-    // 🔵 원(DragCircle): 목표 "반지름"을 화살표와 동일 단위로 사용
-    float radius = Mathf.Lerp(circleMin, circleMax, t);
-    if (dragCircle)
     {
-        // 목표 지름(= 2 * 반지름) 을 현재 스프라이트 기본 지름에 맞춰 정규화
-        float targetDiameter = Mathf.Max(0f, 2f * radius);
-        float scaleFactor = (baseCircleDiameter > 0f) ? (targetDiameter / baseCircleDiameter) : 1f;
+        // t = 0~1
 
-        // X/Y 동일 스케일, Z는 1 (스프라이트는 XY평면, X=90°로 눕혀둔 상태)
-        dragCircle.localScale = new Vector3(scaleFactor, scaleFactor, 1f);
+        // 🔵 원(DragCircle): 목표 "반지름"을 화살표와 동일 단위로 사용
+        float radius = Mathf.Lerp(circleMin, circleMax, t);
+        if (dragCircle)
+        {
+            // 목표 지름(= 2 * 반지름) 을 현재 스프라이트 기본 지름에 맞춰 정규화
+            float targetDiameter = Mathf.Max(0f, 2f * radius);
+            float scaleFactor = (baseCircleDiameter > 0f) ? (targetDiameter / baseCircleDiameter) : 1f;
+
+            // X/Y 동일 스케일, Z는 1 (스프라이트는 XY평면, X=90°로 눕혀둔 상태)
+            dragCircle.localScale = new Vector3(scaleFactor, scaleFactor, 1f);
+        }
+
+        if (!arrowRoot) return;
+
+        // 🔺 화살표 세팅 (기존 동일)
+        var launchDir = (-dragDir).sqrMagnitude > 1e-6f ? -dragDir : Vector3.forward;
+        var basePos = EdgeAnchor(launchDir);
+        float y = DiskCenter().y + aimHeight;
+
+        arrowRoot.position = new Vector3(basePos.x, y, basePos.z);
+        arrowRoot.rotation = Quaternion.LookRotation(launchDir, Vector3.up);
+
+        bool show = t > 0.0001f;
+        if (arrowBody) arrowBody.gameObject.SetActive(show);
+        if (arrowHead) arrowHead.gameObject.SetActive(show);
+        if (!show) return;
+
+        // 🔺 화살표 길이도 "반지름"과 같은 수치 사용 → 비율 1:1
+        float len = radius;
+        if (arrowBody)
+        {
+            arrowBody.localScale = new Vector3(0.1f, 0.1f, len);
+            arrowBody.localPosition = new Vector3(0, 0, len * 0.5f);
+        }
+        if (arrowHead) arrowHead.localPosition = new Vector3(0, 0, len);
     }
-
-    if (!arrowRoot) return;
-
-    // 🔺 화살표 세팅 (기존 동일)
-    var launchDir = (-dragDir).sqrMagnitude > 1e-6f ? -dragDir : Vector3.forward;
-    var basePos   = EdgeAnchor(launchDir);
-    float y       = DiskCenter().y + aimHeight;
-
-    arrowRoot.position = new Vector3(basePos.x, y, basePos.z);
-    arrowRoot.rotation = Quaternion.LookRotation(launchDir, Vector3.up);
-
-    bool show = t > 0.0001f;
-    if (arrowBody) arrowBody.gameObject.SetActive(show);
-    if (arrowHead) arrowHead.gameObject.SetActive(show);
-    if (!show) return;
-
-    // 🔺 화살표 길이도 "반지름"과 같은 수치 사용 → 비율 1:1
-    float len = radius;
-    if (arrowBody)
-    {
-        arrowBody.localScale    = new Vector3(0.1f, 0.1f, len);
-        arrowBody.localPosition = new Vector3(0, 0, len * 0.5f);
-    }
-    if (arrowHead) arrowHead.localPosition = new Vector3(0, 0, len);
-}
 
     void LateUpdate()
     {
@@ -270,45 +293,60 @@ public VisualSanitizeLevel sanitizeLevel = VisualSanitizeLevel.FullSafe;
         if (dragCircle)
         {
             var c = DiskCenter();
-            dragCircle.position = new Vector3(c.x, c.y+aimHeight, c.z);
+            dragCircle.position = new Vector3(c.x, c.y + aimHeight, c.z);
         }
         if (arrowRoot)
         {
             var basePos = EdgeAnchor(launchDir);
-            arrowRoot.position = new Vector3(basePos.x, DiskCenter().y+aimHeight, basePos.z);
+            arrowRoot.position = new Vector3(basePos.x, DiskCenter().y + aimHeight, basePos.z);
         }
     }
-void MakePureVisual(Transform root)
-{
-    if (!root) return;
-
-    if (sanitizeLevel == VisualSanitizeLevel.Noop) return;
-
-    if (sanitizeLevel == VisualSanitizeLevel.CollisionsOnly ||
-        sanitizeLevel == VisualSanitizeLevel.FullSafe)
+    void MakePureVisual(Transform root)
     {
-        foreach (var c in root.GetComponentsInChildren<Collider>(true)) c.enabled = false;
-        foreach (var rb in root.GetComponentsInChildren<Rigidbody>(true))
-        { rb.detectCollisions = false; rb.isKinematic = true; rb.useGravity = false; }
-    }
+        if (!root) return;
 
-    if (sanitizeLevel == VisualSanitizeLevel.ShadowsOnly ||
-        sanitizeLevel == VisualSanitizeLevel.FullSafe)
-    {
-        foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+        if (sanitizeLevel == VisualSanitizeLevel.Noop) return;
+
+        if (sanitizeLevel == VisualSanitizeLevel.CollisionsOnly ||
+            sanitizeLevel == VisualSanitizeLevel.FullSafe)
         {
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
+            foreach (var c in root.GetComponentsInChildren<Collider>(true)) c.enabled = false;
+            foreach (var rb in root.GetComponentsInChildren<Rigidbody>(true))
+            { rb.detectCollisions = false; rb.isKinematic = true; rb.useGravity = false; }
         }
-    }
 
-    // ⚠️ 여기서는 머티리얼(_ZWrite/_ZTest/renderQueue 등)과 레이어는 절대 건드리지 않음
-}
+        if (sanitizeLevel == VisualSanitizeLevel.ShadowsOnly ||
+            sanitizeLevel == VisualSanitizeLevel.FullSafe)
+        {
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+            {
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+            }
+        }
+
+        // ⚠️ 여기서는 머티리얼(_ZWrite/_ZTest/renderQueue 등)과 레이어는 절대 건드리지 않음
+    }
     void SetLayerRecursively(GameObject obj, int layer)
     {
         obj.layer = layer;
         for (int i = 0; i < obj.transform.childCount; i++)
             SetLayerRecursively(obj.transform.GetChild(i).gameObject, layer);
+    }
+
+    public bool CancelDragExternal()
+    {
+        if (!dragging) return false;
+
+        dragging = false;
+        SetVis(false);
+        pull = 0f;
+
+        if (launcher) launcher.CancelAddCooldown(launcher.cooldownSeconds);
+
+        // 드래그 종료 이벤트 알림(슬로우모션 등이 이 이벤트를 듣고 있음)
+        DragPush?.Invoke();
+        return true;
     }
 
 }

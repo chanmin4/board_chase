@@ -57,6 +57,11 @@ public class SurvivalTimerHUD : MonoBehaviour
     {
         if (paused == v) return;
         if (v) { frozenElapsed = Time.time - startTime; paused = true; }
-        else   { startTime = Time.time - frozenElapsed; paused = false; }
+        else { startTime = Time.time - frozenElapsed; paused = false; }
     }
+    public float ElapsedSeconds()
+    {
+        return paused ? frozenElapsed : (Time.time - startTime);
+    }
+
 }
