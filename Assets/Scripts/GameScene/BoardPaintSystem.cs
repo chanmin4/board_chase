@@ -285,13 +285,13 @@ public class BoardPaintSystem : MonoBehaviour
         if (ch == PaintChannel.Player)
         {
             if (now < _nextHeadStampPlayer) return;
-            TryStampCircleNow(ch, centerW, radiusW, clearOther);
+            TryStampCircleNow(ch, centerW, radiusW, clearOther,stampMeters: 0f);
             _nextHeadStampPlayer = now + headStampMinInterval;
         }
         else
         {
             if (now < _nextHeadStampEnemy) return;
-            TryStampCircleNow(ch, centerW, radiusW, clearOther);
+            TryStampCircleNow(ch, centerW, radiusW, clearOther,stampMeters: 0f);
             _nextHeadStampEnemy = now + headStampMinInterval;
         }
     }

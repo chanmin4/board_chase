@@ -28,7 +28,8 @@ public class LevelUpChoiceUI : MonoBehaviour
     void Awake()
     {
         if (!leveler) leveler = FindAnyObjectByType<DiskInkLeveler>();
-        if (!bank)    bank    = FindAnyObjectByType<DiskPassiveBank>();
+        if (!bank) bank = FindAnyObjectByType<DiskPassiveBank>();
+        if(panel)panel.SetActive(false);   
     }
 
     void OnEnable()  { if (leveler) leveler.OnLevelUp.AddListener(OnLevelUp); }

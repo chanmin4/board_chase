@@ -77,7 +77,7 @@ public class SurvivalDirector : MonoBehaviour
     public float zoneTouchToleranceTiles = 0.35f;
     [Header("Bonus Sector (directional hit)")]
     public bool enableBonusSector = true;
-    [Range(1f, 360f)] public float bonusArcDeg = 10f; // 섹터 각도(전체)
+    [Range(1f, 360f)] public float bonusArcDeg = 60f; // 섹터 각도(전체)
     public int normalHitAward = 1;                 // 일반 접촉 시 +1
     public int bonusHitAward = 2;                 // 보너스 접촉 시 +2
     public float bonusRefreshDelay = 0.05f;           // 보너스 히트 후 재배치 지연(초)

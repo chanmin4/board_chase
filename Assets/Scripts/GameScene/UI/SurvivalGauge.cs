@@ -4,8 +4,8 @@ using UnityEngine.Events;   // ★ 추가
 public class SurvivalGauge : MonoBehaviour
 {
     [Header("Gauge")]
-    public float max = 100f;
-    public float current = 100f;
+    public float max = 200f;
+    public float current =200f;
 
     [Header("Drain (per sec)")]
     //public float baseDrain = 0f;          // 기본 감소
@@ -35,13 +35,13 @@ public class SurvivalGauge : MonoBehaviour
 
     [Header("Stun/Recovery")]
     [Tooltip("게이지가 0이 되면 이 시간(초) 동안 0→100으로 서서히 회복")]
-    public float recoverDuration = 5f;
+    public float recoverDuration = 20f;
 
     [Tooltip("기절 중 디스크 이동속도 배수 (1=변화 없음, 0.6=40% 감소 등)")]
-    [Range(0.1f, 1.0f)] public float stunMoveSpeedMul = 0.4f;
+    [Range(0.1f, 1.0f)] public float stunMoveSpeedMul = 0.6f;
 
     [Tooltip("기절 중 발사 쿨타임에 더해지는 초(가산)")]
-    public float stunCooldownAddSeconds = 1.5f;
+    public float stunCooldownAddSeconds = 0f;
 
     [Header("Refs · (선택) 디버프 적용 대상")]
     public DiskLauncher disk;   // 인스펙터에서 디스크(Launcher) 연결
@@ -53,7 +53,7 @@ public class SurvivalGauge : MonoBehaviour
     [Tooltip("적 영역(오염)을 덧칠할 때 곱해지는 배수 (예: 1.5)")]
     public float contamExtraMul = 1.5f;
     [Tooltip("존 보너스 각도 히트시 얻는 잉크게이지량")]
-    public float zonebonusarc = 5f;
+    public float zonebonusarc = 20f;
 
     [ContextMenu("DEBUG_ForceDeplete")]
     

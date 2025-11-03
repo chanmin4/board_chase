@@ -13,15 +13,21 @@ public class CleanTrailAbility_Disk : MonoBehaviour
     [Tooltip("잉크(청소+페인트) 반지름 추가/감소 값(미터, 음수 가능)")]
     public float radiusAddWorld = 0f;          
 
-    [Header("Extra Radius (tiles)")]
-    [Tooltip("추가 반지름(타일). 0이면 추가 없음")]
-    public float extraRadiusTiles = 0f;
 
     [Header("Behaviour")]
     [Tooltip("씬 시작/활성화 시 자동 실행")]
     public bool runOnEnable = true;
     [Tooltip("초기화 레이스 방지용 소량 딜레이")]
     public float startDelay = 0f;
+    [Header("Baseline (Optional)")]
+    [Tooltip("ON이면 콜라이더 대신 '처음' 기준 잉크 반지름을 고정값(월드 m)으로 사용")]
+    public bool useExplicitBaseRadius = true;
+
+    [Tooltip("기본 잉크 반지름(월드 m). useExplicitBaseRadius = ON일 때 사용")]
+    public float explicitBaseRadiusWorld = 1f;
+
+    // (선택) 디버그 확인용 현재 값
+    public float CurrentInkRadiusWorld { get; private set; }
 
     // Refs
     BoardPaintSystem paintSystem;
@@ -86,36 +92,47 @@ public class CleanTrailAbility_Disk : MonoBehaviour
         {
             if (player && paintSystem)
             {
-                // 1) 기본 반지름 계산(디스크 콜라이더 형태 대응) + 타일 기반 추가 반지름
-                float addWorld = (board ? board.tileSize : 1f) * Mathf.Max(0f, extraRadiusTiles);
+                // 1) 기본 반지름 계산(디스크 콜라이더 형태 대응)
+                float addWorld = 0;
 
+                float colliderBaseWorld;
                 Vector3 centerNow;
-                float rBase;
 
                 if (diskCol is CapsuleCollider cap)
                 {
                     GetCapsuleWorld(cap, out Vector3 a, out Vector3 b, out float rad);
                     centerNow = (a + b) * 0.5f;
-                    rBase = rad + addWorld;
+                    colliderBaseWorld = rad;
                 }
                 else if (diskCol is SphereCollider sph)
                 {
                     centerNow = player.position;
-                    rBase = GetSphereRadiusWorld(sph) + addWorld;
+                    colliderBaseWorld = GetSphereRadiusWorld(sph);
                 }
                 else if (diskCol is BoxCollider box)
                 {
                     centerNow = player.position;
                     Vector3 e = Vector3.Scale(box.size * 0.5f, player.lossyScale);
-                    rBase = Mathf.Sqrt(e.x * e.x + e.z * e.z) + addWorld;
+                    colliderBaseWorld = Mathf.Sqrt(e.x * e.x + e.z * e.z);
                 }
                 else
                 {
                     centerNow = player.position;
-                    rBase = addWorld;
+                    colliderBaseWorld = 0f;
                 }
 
+                // ── ★ 기준 반지름 선택: 명시적 기준값 vs 콜라이더 기반 ──
+                float baseCore = useExplicitBaseRadius ? Mathf.Max(0f, explicitBaseRadiusWorld)
+                                                    : Mathf.Max(0f, colliderBaseWorld);
+
+                // ── addWorld(콤보/타일 보정)는 기준에 더해진 후 배수/가산 적용 ──
+                float rBase = baseCore + addWorld;
+
+                // 최종 잉크 반지름
                 float rInk = Mathf.Max(0.01f, rBase * radiusMul + radiusAddWorld);
+
+                // (선택) 디버그용 공개 값 업데이트
+                CurrentInkRadiusWorld = rInk;
 
                 // ★ 0) 현재 위치 즉시 스탬프(프레임 드랍에도 발밑은 바로 칠해짐)
                 paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
@@ -152,10 +169,6 @@ public class CleanTrailAbility_Disk : MonoBehaviour
         // 즉시 반영(게이지 체크 포함)
         paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
                                  p, rInk, /*clearOther=*/true);
-
-        // ★ 중복 방지: 아래 큐 스탬프는 제거하거나, 최소한 headStampImmediate가 꺼진 경우에만 사용
-        // if (!paintSystem.headStampImmediate)
-        //     paintSystem.EnqueueCircle(BoardPaintSystem.PaintChannel.Player, p, rInk, true);
     }
 
 

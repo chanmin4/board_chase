@@ -12,22 +12,22 @@ public class DiskInkLeveler : MonoBehaviour
     [Tooltip("스탬프 길이(m) 1당 기본 XP")]
     public float xpPerMeter = 0.2f;
     [Tooltip("적 잉크 덧칠 시 XP 배수")]
-    public float contamXPMul = 0.2f;
+    public float contamXPMul = 1f;
     [Tooltip("면적 기반 추가 XP (πr² × 이 값) — 0이면 미사용")]
     public float areaXPPerSquare = 0f;
 
     [Header("Level Requirements (per level)")]
     [Tooltip("각 레벨에 도달하기 위한 필요 XP (L0→L1, L1→L2, ...). 비어있으면 모두 100으로 간주")]
-    public List<float> xpNeedPerLevel = new List<float> { 100, 120, 150, 180, 220 };
+    public List<float> xpNeedPerLevel = new List<float> { 150, 250, 400, 700, 1200 };
 
     [Header("Radius Growth (per level)")]
     [Tooltip("레벨업 시 radiusMul에 더할 값(레벨마다). 비어있으면 모두 0으로 간주")]
-    public List<float> addToRadiusMul = new List<float> { 0.25f, 0.25f, 0.25f, 0.25f, 0.25f };
+    public List<float> addToRadiusMul = new List<float> { 0f, 0f, 0f, 0f, 0f };
     [Tooltip("레벨업 시 radiusAddWorld(미터)에 더할 값(레벨마다). 비어있으면 0으로 간주")]
     public List<float> addToRadiusAddWorld = new List<float> { 0f, 0f, 0f, 0f, 0f };
 
     [Header("Events (UI)")]   
-    public UnityEvent<int> OnLevelChanged;               
+    public UnityEvent<int> OnLevelChanged; //ui표시용          
     public UnityEvent<float, float> OnXPChanged;
     public UnityEvent<float, string> OnXPGained;       //amount, 어디서얻었는가  
     public UnityEvent<int> OnLevelUp;
@@ -66,6 +66,7 @@ public class DiskInkLeveler : MonoBehaviour
 
     void OnPainted(float meters, bool isContam, Vector3 pos, float radius)
     {
+         if (meters <= 0.0001f) return;
         float xp = meters * Mathf.Max(0f, xpPerMeter);
         if (isContam) xp *= contamXPMul;
 

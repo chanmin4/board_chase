@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [DefaultExecutionOrder(+55)]
@@ -14,20 +15,21 @@ public class PerfectBounce : MonoBehaviour
 
     // ── 보상/패널티 ──
     [Header("Rewards (성공 시)")]
-    public float speedAddOnSuccess = 10f;
-    public float inkGainOnSuccess  = 12f;   // TODO: 프로젝트 단위에 맞게 조정
+    public float speedAddOnSuccess = 8f;
+    public float inkGainOnSuccess  = 12.5f;   // TODO: 프로젝트 단위에 맞게 조정
 
     [Header("Penalty (실패 시)")]
-    public float speedDecOnFail = 20f;
-    public float inkLossOnFail  = 10f;      // TODO: 프로젝트 단위에 맞게 조정
+    public float speedDecOnFail = 15f;
+    public float inkLossOnFail  = 25f;      // TODO: 프로젝트 단위에 맞게 조정
 
     [Header("Combo → Radius")]
-    public float extraRadiusPerComboTiles = 0.15f;
+    public float extraRadiusPerComboTiles = 0f;
 
     // ── 경계 허용(45/135/225/315 양쪽 인정) ──
     [Header("Boundary")]
     [Tooltip("경계 허용 오차(도). 이 각도 안쪽이면 양쪽 섹터 모두 성공으로 인정")]
     public float boundaryGraceDeg = 1.0f;
+    [Range(10f,170f)] public float PerfectBounceDeg = 90f;
 
     // ── Selection Visual (프리팹 or LineRenderer 폴백) ──
     [Header("Selection Visual")]
@@ -37,11 +39,12 @@ public class PerfectBounce : MonoBehaviour
     [Tooltip("아크 표시 높이(Y 오프셋)")]
     public float visualizeArcHeight = 0.02f;
     [Tooltip("아크 반각(도). 45면 섹터 중심 기준 ±45°")]
-    public float visualizeArcHalfAngleDeg = 45f;
+    [NonSerialized] public float visualizeArcHalfAngleDeg;
     [Range(8,128)] public int visualizeArcSegments = 32;
     public Color visualizeArcColor = new Color(1f, 0.2f, 0.2f, 0.9f);
-    [Tooltip("폴백(LineRenderer) 선 굵기")] 
+    [Tooltip("폴백(LineRenderer) 선 굵기")]
     public float visualizeArcLineWidth = 0.08f;
+    
 
     // ── 내부 상태 ──
     public enum FourDir { North, West, South, East } // WASD = 북서남동
@@ -49,7 +52,7 @@ public class PerfectBounce : MonoBehaviour
     public FourDir selected = FourDir.North;
 
     int combo = 0;
-    float baseExtraRadiusTiles;
+    //float baseExtraRadiusTiles;
 
     // 시각화 인스턴스
     GameObject visGO;         // 프리팹 또는 LineRenderer를 담는 GO(디스크의 자식)
@@ -70,7 +73,8 @@ public class PerfectBounce : MonoBehaviour
         if (!diskCollider) diskCollider = GetComponent<Collider>();
         if (!launcher) launcher = GetComponent<DiskLauncher>();
         if (!trail) trail = GetComponent<CleanTrailAbility_Disk>();
-        if (trail) baseExtraRadiusTiles = trail.extraRadiusTiles;
+        //if (trail) baseExtraRadiusTiles = trail.extraRadiusTiles;
+        visualizeArcHalfAngleDeg= PerfectBounceDeg * 0.5f;
     }
 
     void Update()
@@ -120,32 +124,31 @@ public class PerfectBounce : MonoBehaviour
     // ── 12시=0°, 시계방향 각도 → 섹터 매칭 ──
     bool IsDirectionOk(Vector3 hitPoint)
     {
+        // 충돌점 → 디스크 중심 방향 벡터
         Vector3 v = hitPoint - transform.position;
         v.y = 0f;
         if (v.sqrMagnitude < 1e-6f) return false;
 
-        float ang = Mathf.Atan2(v.x, v.z) * Mathf.Rad2Deg; // +Z=0°, +X=90° ...
+        // +Z(12시)=0°, +X(3시)=90° 기준 각도
+        float ang = Mathf.Atan2(v.x, v.z) * Mathf.Rad2Deg;
         if (ang < 0f) ang += 360f;
 
+        // 섹터 반각(half) + 경계 여유각(grace)만큼 허용
+        float half = Mathf.Clamp(PerfectBounceDeg * 0.5f, 1f, 179f);
+        float lim = half + Mathf.Max(0f, boundaryGraceDeg);
+
+        // 선택된 4방위의 '중심각'
+        float center = 0f;
         switch (selected)
         {
-            case FourDir.North:
-                if (ang < 45f - boundaryGraceDeg || ang >= 315f + boundaryGraceDeg) return true;
-                return Mathf.Abs(ang - 45f) <= boundaryGraceDeg || Mathf.Abs(Mathf.DeltaAngle(ang, 315f)) <= boundaryGraceDeg;
-
-            case FourDir.East:
-                if (ang >= 45f + boundaryGraceDeg && ang < 135f - boundaryGraceDeg) return true;
-                return Mathf.Abs(ang - 45f) <= boundaryGraceDeg || Mathf.Abs(ang - 135f) <= boundaryGraceDeg;
-
-            case FourDir.South:
-                if (ang >= 135f + boundaryGraceDeg && ang < 225f - boundaryGraceDeg) return true;
-                return Mathf.Abs(ang - 135f) <= boundaryGraceDeg || Mathf.Abs(ang - 225f) <= boundaryGraceDeg;
-
-            case FourDir.West:
-                if (ang >= 225f + boundaryGraceDeg && ang < 315f - boundaryGraceDeg) return true;
-                return Mathf.Abs(ang - 225f) <= boundaryGraceDeg || Mathf.Abs(ang - 315f) <= boundaryGraceDeg;
+            case FourDir.North: center = 0f; break;  // 12시
+            case FourDir.East: center = 90f; break;  // 3시
+            case FourDir.South: center = 180f; break;  // 6시
+            case FourDir.West: center = 270f; break;  // 9시
         }
-        return false;
+
+        // 중심각과의 차이(래핑 포함)가 lim 이하면 성공
+        return Mathf.Abs(Mathf.DeltaAngle(ang, center)) <= lim;
     }
 
     // ── 성공/실패 ──
@@ -162,7 +165,7 @@ public class PerfectBounce : MonoBehaviour
         if (gauge && inkGainOnSuccess != 0f) gauge.Add(inkGainOnSuccess);
 
         combo = Mathf.Max(0, combo + 1);
-        if (trail) trail.extraRadiusTiles = baseExtraRadiusTiles + combo * extraRadiusPerComboTiles;
+        //if (trail) trail.extraRadiusTiles = baseExtraRadiusTiles + combo * extraRadiusPerComboTiles;
     }
 
     void ApplyFail()
@@ -178,7 +181,7 @@ public class PerfectBounce : MonoBehaviour
         if (gauge && inkLossOnFail != 0f) gauge.Add(-inkLossOnFail);
 
         combo = 0;
-        if (trail) trail.extraRadiusTiles = baseExtraRadiusTiles;
+        //if (trail) trail.extraRadiusTiles = baseExtraRadiusTiles;
     }
 
     // ── 입력 상태 ──
