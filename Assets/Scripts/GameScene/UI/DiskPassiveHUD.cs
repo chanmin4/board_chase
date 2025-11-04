@@ -1,105 +1,125 @@
-using System.Linq;
-using System.Text;
+using System.Collections.Generic;  // [MOD]
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections;
 
 [DisallowMultipleComponent]
 public class DiskPassiveHUD : MonoBehaviour
 {
     [Header("Refs")]
     public DiskPassiveBank bank;
-    public TextMeshProUGUI summaryText;
 
     [Header("Slide Panel")]
-    [Tooltip("슬라이드할 패널(보통 이 스크립트가 붙은 오브젝트의 RectTransform)")]
     public RectTransform panel;
-    [Tooltip("열렸을 때 패널의 anchoredPosition")]
     public Vector2 openAnchoredPos;
-    [Tooltip("닫혔을 때 패널의 anchoredPosition")]
     public Vector2 closedAnchoredPos;
-    [Tooltip("슬라이드 시간(초). 언스케일드 시간 기준")]
-    public float slideDuration = 0.25f;
-    [Tooltip("게임 시작 시 열린 상태로 시작할지")]
-    public bool startOpen = false;
-    [Tooltip("언스케일드 시간 사용(일시정지/슬로우 중에도 동작)")]
-    public bool useUnscaledTime = true;
+    public float  slideDuration = 0.25f;
+    public bool   startOpen = true;                          // [MOD] 기본 열림
+    public bool   useUnscaledTime = true;
 
     [Header("Toggle Input")]
-    public Button toggleButton;
-    [Tooltip("단축키로 열고닫기 활성화")]
-    public bool enableHotkey = false;
+    public Button  toggleButton;
+    public bool    enableHotkey = false;
     public KeyCode hotkey = KeyCode.Tab;
 
-    bool isOpen;
-    Coroutine slideCo;
+    [Header("Targets (Live Stats)")]
+    public CleanTrailAbility_Disk trail;
+    public DiskLauncher           launcher;
+    public PerfectBounce          perfectbounce;
+    public SurvivalGauge          survivalgauge;
+    public SurvivalDirector       survivaldirector;
+
+    [Header("List (Instantiate)")]
+    public RectTransform listContainer;
+    public Vector2       itemSize = new Vector2(300f, 50f);
+
+    [Header("Options")]
+    public bool showOnlyExistingComponents = true;           // [MOD] 없는 컴포넌트 항목은 숨김
+    public bool rebuildUIWhenSchemaChanges = false;          // [MOD] 카탈로그가 바뀌면 재생성 옵션
+    public float periodicRefreshSec = 0f;                    // [MOD] 0이면 OnChanged/수동만, >0이면 주기 갱신
+
+    class StatRow
+    {
+        public string label;
+        public System.Func<string> get;
+        public TextMeshProUGUI tmp;
+    }
+
+    readonly List<StatRow> _rows = new();                   // [MOD]
+    bool  _listBuilt;
+    bool  _isOpen;
+    Coroutine slideCo, refreshCo;                            // [MOD]
 
     void Awake()
     {
-        if (!bank) bank = FindAnyObjectByType<DiskPassiveBank>();
         if (!panel) panel = GetComponent<RectTransform>();
+        if (!bank)  bank  = FindAnyObjectByType<DiskPassiveBank>();
     }
 
     void Start()
     {
-        // 시작 상태 적용
-        isOpen = startOpen;
-        if (panel) panel.anchoredPosition = isOpen ? openAnchoredPos : closedAnchoredPos;
+        _isOpen = startOpen;
+        if (panel) panel.anchoredPosition = _isOpen ? openAnchoredPos : closedAnchoredPos;
 
+        if (toggleButton && panel && toggleButton.transform.parent != panel)
+            toggleButton.transform.SetParent(panel, false);
+        if (toggleButton) toggleButton.transform.SetAsLastSibling();
         if (toggleButton)
+        {
+            toggleButton.onClick.RemoveListener(Toggle);
             toggleButton.onClick.AddListener(Toggle);
+        }
 
-        Refresh(); // 최초 갱신
+        EnsureTargetRefs();
+
+        BuildCatalogRows();   // [MOD] ★★ 처음부터 “표시할 스텟 카탈로그”로 행 구성
+        BuildListOnce();      // [MOD] UI 오브젝트 생성
+        RefreshRows();        // [MOD] 값 채워넣기 (OnChanged 없이도 처음부터 꽉 찬다)
+
+        if (periodicRefreshSec > 0f)                          // [MOD]
+            refreshCo = StartCoroutine(PeriodicRefreshCo());  // (선택) 주기 갱신
     }
 
     void OnEnable()
     {
-        if (bank) bank.OnChanged.AddListener(Refresh);
+        if (bank) bank.OnChanged.AddListener(Refresh);        // [MOD] 값만 새로고침
         Refresh();
     }
 
     void OnDisable()
     {
         if (bank) bank.OnChanged.RemoveListener(Refresh);
-        if (toggleButton)
-            toggleButton.onClick.RemoveListener(Toggle);
+        if (toggleButton) toggleButton.onClick.RemoveListener(Toggle);
+        if (refreshCo != null) { StopCoroutine(refreshCo); refreshCo = null; } // [MOD]
     }
 
     void Update()
     {
-        if (enableHotkey && Input.GetKeyDown(hotkey))
-            Toggle();
+        if (enableHotkey && Input.GetKeyDown(hotkey)) Toggle();
     }
 
-    public void Toggle()
-    {
-        SetOpen(!isOpen);
-    }
-
-    public void Open()  => SetOpen(true);
-    public void Close() => SetOpen(false);
+    public void Toggle() => SetOpen(!_isOpen);
+    public void Open()   => SetOpen(true);
+    public void Close()  => SetOpen(false);
 
     public void SetOpen(bool open)
     {
-        if (!panel) return;
-        if (isOpen == open) return;
-
-        isOpen = open;
+        if (!panel || _isOpen == open) return;
+        _isOpen = open;
         if (slideCo != null) StopCoroutine(slideCo);
-        slideCo = StartCoroutine(SlideCo(isOpen ? openAnchoredPos : closedAnchoredPos));
+        slideCo = StartCoroutine(SlideCo(_isOpen ? openAnchoredPos : closedAnchoredPos));
+        if (toggleButton) toggleButton.transform.SetAsLastSibling();
     }
 
-    IEnumerator SlideCo(Vector2 target)
+    System.Collections.IEnumerator SlideCo(Vector2 target)
     {
         Vector2 start = panel.anchoredPosition;
-        float t = 0f;
-        float dur = Mathf.Max(0.01f, slideDuration);
+        float t = 0f, dur = Mathf.Max(0.01f, slideDuration);
 
         while (t < dur)
         {
             t += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, t / dur); // 부드러운 가감속
+            float k = Mathf.SmoothStep(0f, 1f, t / dur);
             panel.anchoredPosition = Vector2.LerpUnclamped(start, target, k);
             yield return null;
         }
@@ -109,17 +129,148 @@ public class DiskPassiveHUD : MonoBehaviour
 
     void Refresh()
     {
-        if (!summaryText || bank == null) return;
+        EnsureTargetRefs();
+        // [MOD] 스키마(표시 항목) 자체는 처음에 고정 생성.
+        //       OnChanged에서는 텍스트만 갱신한다.
+        RefreshRows();
+    }
 
-        var groups = bank.GetAcquired().GroupBy(d => d.id);
-        var sb = new StringBuilder();
+    void EnsureTargetRefs()
+    {
+        if (!trail)            trail            = FindAnyObjectByType<CleanTrailAbility_Disk>();
+        if (!launcher)         launcher         = FindAnyObjectByType<DiskLauncher>();
+        if (!perfectbounce)    perfectbounce    = FindAnyObjectByType<PerfectBounce>();
+        if (!survivalgauge)    survivalgauge    = FindAnyObjectByType<SurvivalGauge>();
+        if (!survivaldirector) survivaldirector = FindAnyObjectByType<SurvivalDirector>();
+    }
 
-        foreach (var g in groups)
+    // ─────────────────────────────────────────────────────────
+    // [MOD] 처음부터 “카탈로그”로 행 구성 (획득 패시브와 무관)
+    // ─────────────────────────────────────────────────────────
+    void BuildCatalogRows()
+    {
+        _rows.Clear();
+
+        // 공통 포맷터
+        string S(object v)
         {
-            var any = g.First();
-            int stacks = bank.GetStacks(any.id);
-            sb.AppendLine($"{any.title} x{stacks}");
+            if (v == null) return "N/A";
+            if (v is float f) return f.ToString("0.##");
+            if (v is double d) return d.ToString("0.##");
+            return v.ToString();
         }
-        summaryText.text = sb.ToString();
+
+        // 헬퍼: 존재할 때만 추가
+        void AddIf(string label, System.Func<bool> exists, System.Func<string> get)
+        {
+            if (!showOnlyExistingComponents || exists())
+                _rows.Add(new StatRow { label = label, get = get });
+        }
+
+        // === Ink / Trail ===
+        AddIf("trail.radiusAddWorld",
+            () => trail,
+            () => trail ? S(trail.radiusAddWorld) : "N/A");
+
+        // === Launcher ===
+        AddIf("launcher.cooldownSeconds",
+            () => launcher,
+            () => launcher ? S(launcher.cooldownSeconds) : "N/A");
+
+        // === PerfectBounce ===
+        AddIf("perfectbounce.inkGainOnSuccess",
+            () => perfectbounce,
+            () => perfectbounce ? S(perfectbounce.inkGainOnSuccess) : "N/A");
+
+        AddIf("perfectbounce.inkLossOnFail",
+            () => perfectbounce,
+            () => perfectbounce ? S(perfectbounce.inkLossOnFail) : "N/A");
+
+        AddIf("perfectbounce.speedAddOnSuccess",
+            () => perfectbounce,
+            () => perfectbounce ? S(perfectbounce.speedAddOnSuccess) : "N/A");
+
+        AddIf("perfectbounce.PerfectBounceDeg",
+            () => perfectbounce,
+            () => perfectbounce ? S(perfectbounce.PerfectBounceDeg) : "N/A");
+
+        // === SurvivalGauge ===
+        AddIf("survivalgauge.baseCostPerMeter",
+            () => survivalgauge,
+            () => survivalgauge ? S(survivalgauge.baseCostPerMeter) : "N/A");
+
+        AddIf("survivalgauge.contamExtraMul",
+            () => survivalgauge,
+            () => survivalgauge ? S(survivalgauge.contamExtraMul) : "N/A");
+
+        AddIf("survivalgauge.recoverDuration",
+            () => survivalgauge,
+            () => survivalgauge ? S(survivalgauge.recoverDuration) : "N/A");
+
+        AddIf("survivalgauge.zonebonusarc",
+            () => survivalgauge,
+            () => survivalgauge ? S(survivalgauge.zonebonusarc) : "N/A");
+
+        // === SurvivalDirector ===
+        AddIf("survivaldirector.bonusArcDeg",
+            () => survivaldirector,
+            () => survivaldirector ? S(survivaldirector.bonusArcDeg) : "N/A");
+
+        // (필요 시 여기 계속 추가하면 됨)
+    }
+
+    // ── UI 생성(한 번만) ──
+    void BuildListOnce()
+    {
+        if (!listContainer || _listBuilt) return;
+
+        // 기존 자식 정리(안전)
+        for (int i = listContainer.childCount - 1; i >= 0; --i)
+            Destroy(listContainer.GetChild(i).gameObject);
+
+        foreach (var r in _rows)
+        {
+            var go = new GameObject("Stat", typeof(RectTransform));
+            go.transform.SetParent(listContainer, false);
+
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot     = new Vector2(0f, 1f);
+            rt.sizeDelta = itemSize;
+
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredWidth  = itemSize.x;
+            le.preferredHeight = itemSize.y;
+
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.alignment = TextAlignmentOptions.Left;
+            tmp.textWrappingMode = 0;
+            tmp.fontSize = 20;
+
+            r.tmp = tmp;
+        }
+
+        _listBuilt = true;
+    }
+
+    // ── 값만 새로고침 ──
+    void RefreshRows()
+    {
+        foreach (var r in _rows)
+        {
+            if (r.tmp)
+                r.tmp.text = $"{r.label}: {r.get()}"; // "변수이름: 값"
+        }
+    }
+
+    System.Collections.IEnumerator PeriodicRefreshCo() // [MOD]
+    {
+        var wait = new WaitForSecondsRealtime(Mathf.Max(0.05f, periodicRefreshSec));
+        while (true)
+        {
+            RefreshRows();
+            yield return wait;
+        }
     }
 }
