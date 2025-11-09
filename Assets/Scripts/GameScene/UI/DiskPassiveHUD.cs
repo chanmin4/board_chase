@@ -93,6 +93,7 @@ public class DiskPassiveHUD : MonoBehaviour
 
     void Update()
     {
+        if (GamePause.IsPaused) return;
         if (enableHotkey && Input.GetKeyDown(hotkey)) Toggle();
     }
 
@@ -116,7 +117,7 @@ public class DiskPassiveHUD : MonoBehaviour
 
         while (t < dur)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float k = Mathf.SmoothStep(0f, 1f, t / dur);
             panel.anchoredPosition = Vector2.LerpUnclamped(start, target, k);
             yield return null;
