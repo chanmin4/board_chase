@@ -62,6 +62,7 @@ public class SlowMotionDrag : MonoBehaviour
 
     void Update()
     {
+        if (GamePause.IsPaused) return;
         // 블렌드…
         float t = (_armed ? blendInSeconds : blendOutSeconds);
         if (t <= 0.0001f)

@@ -15,8 +15,6 @@ public class DiskPassiveHUD : MonoBehaviour
     public Vector2 closedAnchoredPos;
     public float  slideDuration = 0.25f;
     public bool   startOpen = true;                          // [MOD] 기본 열림
-    public bool   useUnscaledTime = true;
-
     [Header("Toggle Input")]
     public Button  toggleButton;
     public bool    enableHotkey = false;
@@ -118,7 +116,7 @@ public class DiskPassiveHUD : MonoBehaviour
 
         while (t < dur)
         {
-            t += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            t += Time.deltaTime;
             float k = Mathf.SmoothStep(0f, 1f, t / dur);
             panel.anchoredPosition = Vector2.LerpUnclamped(start, target, k);
             yield return null;

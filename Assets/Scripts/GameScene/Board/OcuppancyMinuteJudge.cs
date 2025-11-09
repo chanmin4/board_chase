@@ -6,10 +6,6 @@ public class OccupancyMinuteJudge : MonoBehaviour
     [Header("Refs")]
     public OccupacncyRatio occupancy; // 플레이어/적 비율 이벤트 제공자
     public GameOverUI gameOver;       // 실패 시 호출
-
-    [Header("Timing")]
-    [Tooltip("슬로모션과 무관하게 실시간으로 판정하려면 ON")]
-    public bool useUnscaledTime = true;
     [Tooltip("첫 판정 시각(초) — 기본 60s")]
     public float firstCheckAtSeconds = 60f;
     [Tooltip("매 60초마다 반복 판정할지")]
@@ -40,7 +36,6 @@ public class OccupancyMinuteJudge : MonoBehaviour
     float nextCheckTime;
     bool  running;
 
-    float Now => useUnscaledTime ? Time.unscaledTime : Time.time;
 
     void Awake()
     {
@@ -79,12 +74,6 @@ public class OccupancyMinuteJudge : MonoBehaviour
 {
     get
     {
-        if (useUnscaledTime)
-        {
-            if (ignoreWhilePaused && Time.timeScale <= pauseEpsilon)
-                pausedAccum += Time.unscaledDeltaTime;   // 일시정지 시간 적산
-            return Time.unscaledTime - pausedAccum;       // 보정된 시간
-        }
         return Time.time;
     }
 }
@@ -136,7 +125,6 @@ public class OccupancyMinuteJudge : MonoBehaviour
             else Debug.LogWarning("[OccupancyMinuteJudge] GameOverUI missing; would trigger GameOver.");
         }
 
-        Debug.Log($"[OccupancyMinuteJudge] t={Now:0.00}s player={playerRatio:P1} enemy={enemyRatio:P1} => {(survive ? "SURVIVE" : "FAIL")}");
     }
 
     void OnPlayerRatio(float r) => playerRatio = r;

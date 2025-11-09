@@ -88,7 +88,7 @@ public class DragAimController : MonoBehaviour
     void Update()
     {
         bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-
+        if (GamePause.IsPaused) return;
         // ───────────── 드래그 시작 ─────────────
         if (!dragging && Input.GetMouseButtonDown(0))
         {

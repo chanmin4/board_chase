@@ -118,7 +118,7 @@ public class BoardPaintSystem : MonoBehaviour
 
         // 60fps 기준으로 프레임이 늘어지면 예산을 자동 확대
         int baseBudget = Mathf.Max(8, maxStampsPerFrame);
-        float factor = Mathf.Clamp(Time.unscaledDeltaTime / (1f / 60f), 1f, 6f);
+        float factor = Mathf.Clamp(Time.timeScale / (1f / 60f), 1f, 6f);
         int budget = Mathf.CeilToInt(baseBudget * factor);
 
         // ── Trail을 Circle로 확장 ───────────────────────────────
@@ -280,7 +280,7 @@ public class BoardPaintSystem : MonoBehaviour
     public void HeadStampNow(PaintChannel ch, Vector3 centerW, float radiusW, bool clearOther)
     {
         if (!headStampImmediate) return;
-        float now = Time.unscaledTime;
+        float now = Time.timeScale;
 
         if (ch == PaintChannel.Player)
         {

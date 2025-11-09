@@ -97,7 +97,7 @@ public class AchievementPopupManager : MonoBehaviour
             bool timeOk = t >= minShowSeconds;
             if (!requireClick && timeOk) break;
             if (requireClick && timeOk && clicked) break;
-            t += Time.unscaledDeltaTime;
+            t += Time.timeScale;
             yield return null;
         }
 

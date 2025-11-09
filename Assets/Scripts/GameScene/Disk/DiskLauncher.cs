@@ -65,10 +65,6 @@ public class DiskLauncher : MonoBehaviour
 
     [Tooltip("이 속도 이상이 되면 '무한 유지'를 활성화합니다.")]
     public float armSpeedThreshold = 0.5f;
-    [Header("Cooldown Timing")]
-    [Tooltip("쿨타임을 언스케일드 시간(실시간)으로 처리")]
-    public bool useUnscaledCooldown = true;
-float CDT => useUnscaledCooldown ? Time.unscaledDeltaTime : Time.deltaTime;
     // 이벤트
     public event Action<int, int> OnTileChanged;
     public event Action<int, int> OnStoppedOnTile;
@@ -87,8 +83,7 @@ float CDT => useUnscaledCooldown ? Time.unscaledDeltaTime : Time.deltaTime;
     public void SetExternalCooldownAdd(float sec) => _extCooldownAdd = Mathf.Max(0f, sec);
     System.Collections.IEnumerator WaitFor(float sec)
     {
-        if (useUnscaledCooldown) yield return new WaitForSecondsRealtime(sec);
-        else                     yield return new WaitForSeconds(sec);
+        yield return new WaitForSeconds(sec);
     }
     
     void Awake()
@@ -120,7 +115,54 @@ float CDT => useUnscaledCooldown ? Time.unscaledDeltaTime : Time.deltaTime;
         externalCooldownAdd.AddListener(SetExternalCooldownAdd);
     }
 
-    void OnDestroy()
+ 
+    // ==== 쿨타임 틱 ====
+    void Update()
+    {
+        if (!useCooldown) return;
+        if (CooldownRemain > 0f)
+        {
+            CooldownRemain = Mathf.Max(0f, CooldownRemain - Time.deltaTime);
+            NotifyCooldown();
+        }
+        CheckReadyEdge(true);
+    }
+    void FixedUpdate()
+    {
+    
+        if (rb == null) return;
+
+        // 현재 속도
+        Vector3 v = rb.linearVelocity;
+        Vector3 vPlanar = v;
+        if (planarMinSpeed) vPlanar.y = 0f;
+
+        float s = vPlanar.magnitude;
+
+        // 최근 이동방향 캐시
+        if (s > 1e-4f)
+            _lastMoveDir = vPlanar.normalized;
+
+        if (!usePersistentMinSpeed) return;
+
+        // 한 번 일정 속도 이상 가속되면 '무한 유지' ARM
+        if (!_minSpeedArmed && s >= armSpeedThreshold)
+            _minSpeedArmed = true;
+
+        // ARM된 뒤에는 항상 최소속도 유지
+        if (_minSpeedArmed && s < minSpeed)
+        {
+            Vector3 dir;
+            if (s > 1e-4f) dir = vPlanar.normalized;
+            else if (_lastMoveDir.sqrMagnitude > 1e-6f) dir = _lastMoveDir;
+            else dir = transform.forward; // 완정지 안전장치
+
+            Vector3 newVel = dir * minSpeed;
+            if (!planarMinSpeed) newVel.y = v.y; // Y 보존
+            rb.linearVelocity = newVel;
+        }
+    }
+       void OnDestroy()
     {
         if (director != null)
         {
@@ -130,17 +172,6 @@ float CDT => useUnscaledCooldown ? Time.unscaledDeltaTime : Time.deltaTime;
         }
     }
 
-    // ==== 쿨타임 틱 ====
-    void Update()
-    {
-        if (!useCooldown) return;
-        if (CooldownRemain > 0f)
-        {
-           CooldownRemain = Mathf.Max(0f, CooldownRemain - CDT);
-            NotifyCooldown();
-        }
-        CheckReadyEdge(true);
-    }
     void CheckReadyEdge(bool invokeEvent = true)
     {
         bool readyNow = useCooldown ? (CooldownRemain <= 0f) : (Charges > 0);
@@ -286,40 +317,7 @@ float CDT => useUnscaledCooldown ? Time.unscaledDeltaTime : Time.deltaTime;
         }
     }
 
-    void FixedUpdate()
-    {
-        if (rb == null) return;
-
-        // 현재 속도
-        Vector3 v = rb.linearVelocity;
-        Vector3 vPlanar = v;
-        if (planarMinSpeed) vPlanar.y = 0f;
-
-        float s = vPlanar.magnitude;
-
-        // 최근 이동방향 캐시
-        if (s > 1e-4f)
-            _lastMoveDir = vPlanar.normalized;
-
-        if (!usePersistentMinSpeed) return;
-
-        // 한 번 일정 속도 이상 가속되면 '무한 유지' ARM
-        if (!_minSpeedArmed && s >= armSpeedThreshold)
-            _minSpeedArmed = true;
-
-        // ARM된 뒤에는 항상 최소속도 유지
-        if (_minSpeedArmed && s < minSpeed)
-        {
-            Vector3 dir;
-            if (s > 1e-4f) dir = vPlanar.normalized;
-            else if (_lastMoveDir.sqrMagnitude > 1e-6f) dir = _lastMoveDir;
-            else dir = transform.forward; // 완정지 안전장치
-
-            Vector3 newVel = dir * minSpeed;
-            if (!planarMinSpeed) newVel.y = v.y; // Y 보존
-            rb.linearVelocity = newVel;
-        }
-    }
+ 
 
 
 

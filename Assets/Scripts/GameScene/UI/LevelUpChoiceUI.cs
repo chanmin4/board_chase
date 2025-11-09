@@ -42,9 +42,10 @@ public class LevelUpChoiceUI : MonoBehaviour
         for (int i = 0; i < 3; i++) current[i] = (i < offers.Count) ? offers[i] : null;
 
         // 2) 시간 정지 + 패널 ON
-        savedScale = Time.timeScale;
-        Time.timeScale = 0f;
-
+        GamePause.On();
+        Debug.Log(" is paused");
+        
+        
         if (panel) panel.SetActive(true);
 
         // 3) 슬롯 채우기
@@ -80,7 +81,9 @@ public class LevelUpChoiceUI : MonoBehaviour
         if (def && bank) bank.Apply(def);
 
         if (panel) panel.SetActive(false);
-        Time.timeScale = savedScale;
+        
+        GamePause.Off();
+        Debug.Log(" is resumed");
     }
 
     List<PassiveUpgradeDef> Pick3()
