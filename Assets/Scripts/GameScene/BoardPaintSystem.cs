@@ -12,7 +12,7 @@ public class BoardPaintSystem : MonoBehaviour
     public BoardGrid board;
     public BoardMaskRenderer maskRenderer;     // Board 위 오염/플레이어 마스크를 그리는 기존 렌더러
     public SurvivalGauge survivalgauge;
-    public EnemyInkGauge enemyinkgauge;
+    //public EnemyInkGauge enemyinkgauge;
 
     [Header("Trail Sampling")]
     [Tooltip("스탬프 간격 = min( r * spacingByRadius , worldPixel * spacingByPixel )")]
@@ -65,7 +65,7 @@ public class BoardPaintSystem : MonoBehaviour
         if (!board || !maskRenderer)
             Debug.LogWarning("[BoardPaintSystem] Board or MaskRenderer missing. Please assign.");
         if (!survivalgauge) survivalgauge = FindAnyObjectByType<SurvivalGauge>();
-        if (!enemyinkgauge) enemyinkgauge = FindAnyObjectByType<EnemyInkGauge>();
+        //if (!enemyinkgauge) enemyinkgauge = FindAnyObjectByType<EnemyInkGauge>();
     }
 
     // ========== 외부 API ==========
@@ -191,9 +191,11 @@ public class BoardPaintSystem : MonoBehaviour
             switch (c.ch)
             {
                 case PaintChannel.Enemy:
+                /*
                     if (enemyinkgauge != null &&
                         !enemyinkgauge.TryConsumeByPaint(c.stampMeters, isenemyink, c.widthMul))
                         continue; // 잉크 부족 → 스킵
+                */
                     maskRenderer.EnemyCircleWorld_Batched(c.worldPos, c.radiusWorld);
                     OnEnemyPaintStamp?.Invoke(c.stampMeters, isplayerink, c.worldPos, c.radiusWorld);
                     break;
@@ -217,9 +219,10 @@ public class BoardPaintSystem : MonoBehaviour
             // (동일 처리 루틴; 중복이라 간단히 호출로 빼도 OK)
             if (c.ch == PaintChannel.Enemy)
             {
+
                 bool isenemyink = maskRenderer.IsEnemyPaintedWorld(c.worldPos);
-                if (enemyinkgauge == null || enemyinkgauge.TryConsumeByPaint(c.stampMeters, isenemyink, c.widthMul))
-                    maskRenderer.EnemyCircleWorld_Batched(c.worldPos, c.radiusWorld);
+                //if (enemyinkgauge == null || enemyinkgauge.TryConsumeByPaint(c.stampMeters, isenemyink, c.widthMul))
+                maskRenderer.EnemyCircleWorld_Batched(c.worldPos, c.radiusWorld);
             }
             else
             {
@@ -250,12 +253,13 @@ public class BoardPaintSystem : MonoBehaviour
         {
             case PaintChannel.Player:
                 {
+
                     bool isEnemyHere = maskRenderer.IsEnemyPaintedWorld(posW);
                     // 게이지 체크(실패 시 false 반환, 찍지 않음)
                     if (survivalgauge != null &&
                         !survivalgauge.TryConsumeByPaint(stampMeters, /*alreadyMine=*/maskRenderer.IsPlayerPaintedWorld(posW), widthMul))
                         return false;
-
+                    Debug.Log("painting player now");
                     maskRenderer.PaintPlayerCircleWorld_Batched(posW, radiusW, clearOther);
                     OnPlayerPaintStamp?.Invoke(stampMeters, isEnemyHere, posW, radiusW);
                     return true;
@@ -264,9 +268,9 @@ public class BoardPaintSystem : MonoBehaviour
             case PaintChannel.Enemy:
                 {
                     bool isPlayerHere = maskRenderer.IsPlayerPaintedWorld(posW);
-                    if (enemyinkgauge != null &&
-                        !enemyinkgauge.TryConsumeByPaint(stampMeters, /*alreadyMine=*/maskRenderer.IsEnemyPaintedWorld(posW), widthMul))
-                        return false;
+                    //if (enemyinkgauge != null &&
+                     //   !enemyinkgauge.TryConsumeByPaint(stampMeters, /*alreadyMine=*/maskRenderer.IsEnemyPaintedWorld(posW), widthMul))
+                     //   return false;
 
                     maskRenderer.EnemyCircleWorld_Batched(posW, radiusW);
                     OnEnemyPaintStamp?.Invoke(stampMeters, isPlayerHere, posW, radiusW);
@@ -280,8 +284,8 @@ public class BoardPaintSystem : MonoBehaviour
     public void HeadStampNow(PaintChannel ch, Vector3 centerW, float radiusW, bool clearOther)
     {
         if (!headStampImmediate) return;
-        float now = Time.timeScale;
-
+        float now = Time.time;
+        
         if (ch == PaintChannel.Player)
         {
             if (now < _nextHeadStampPlayer) return;

@@ -16,12 +16,12 @@ public class DragAimController : MonoBehaviour
     public Transform arrowRoot, arrowBody, arrowHead;
 
     [Header("Pull Settings")]
-    public float minPull = 0.5f;
-    public float maxPull = 6f;
+    public float minPull = 1.0f;
+    public float maxPull = 1f;
     public float deadZone = 0.20f;
 
     [Header("Power Tuning")]
-    public float launchBoost = 6f;   // ← 이동량 키우는 추가 배율
+    public float launchBoost = 1f;   // ← 이동량 키우는 추가 배율
 
     [Header("Visual Scaling")]
     public float circleMin = 0f, circleMax = 3.0f;
@@ -166,7 +166,7 @@ public class DragAimController : MonoBehaviour
                     // 현재 속도를 그대로 사용, 완전 정지라면 최소속도(또는 기존 계산)로 안전하게 시작
                     float strength = (keep > 0.01f)
                         ? keep
-                        : (launcher ? launcher.minSpeed : pull * launchBoost);
+                        : launcher.minSpeed ;
 
 
                     if (rb) rb.angularVelocity = Vector3.zero; // 회전만 리셋(선택)

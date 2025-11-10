@@ -9,22 +9,29 @@ public class CleanTrailAbility_Disk : MonoBehaviour
 {
     [Header("Ink Radius (meters)")]
     [Tooltip("잉크(청소+페인트) 반지름 배수 (1=원래 r)")]
-    public float radiusMul = 1f;                
+    public float radiusMul = 1f;
     [Tooltip("잉크(청소+페인트) 반지름 추가/감소 값(미터, 음수 가능)")]
-    public float radiusAddWorld = 0f;          
-
+    public float radiusAddWorld = 0f;
 
     [Header("Behaviour")]
     [Tooltip("씬 시작/활성화 시 자동 실행")]
     public bool runOnEnable = true;
     [Tooltip("초기화 레이스 방지용 소량 딜레이")]
     public float startDelay = 0f;
+
     [Header("Baseline (Optional)")]
     [Tooltip("ON이면 콜라이더 대신 '처음' 기준 잉크 반지름을 고정값(월드 m)으로 사용")]
     public bool useExplicitBaseRadius = true;
-
     [Tooltip("기본 잉크 반지름(월드 m). useExplicitBaseRadius = ON일 때 사용")]
     public float explicitBaseRadiusWorld = 1f;
+
+    [Header("Hybrid Stamp (Patch2)")]
+    [Tooltip("이동량 임계(미터). 이 값 미만이면 정지로 간주하고 아무 것도 안 찍음")]
+    public float minMoveMeters = 0.02f;
+    [Tooltip("백필 간격 = rInk * segSpacingMul (작을수록 촘촘)")]
+    public float segSpacingMul = 0.6f;
+    [Tooltip("한 프레임에 백필로 찍을 최대 개수(프레임 예산)")]
+    public int backfillCapPerFrame = 16;
 
     // (선택) 디버그 확인용 현재 값
     public float CurrentInkRadiusWorld { get; private set; }
@@ -93,8 +100,7 @@ public class CleanTrailAbility_Disk : MonoBehaviour
             if (player && paintSystem)
             {
                 // 1) 기본 반지름 계산(디스크 콜라이더 형태 대응)
-                float addWorld = 0;
-
+                float addWorld = 0f;
                 float colliderBaseWorld;
                 Vector3 centerNow;
 
@@ -121,57 +127,69 @@ public class CleanTrailAbility_Disk : MonoBehaviour
                     colliderBaseWorld = 0f;
                 }
 
-                // ── ★ 기준 반지름 선택: 명시적 기준값 vs 콜라이더 기반 ──
+                // ── 기준 반지름 선택 ──
                 float baseCore = useExplicitBaseRadius ? Mathf.Max(0f, explicitBaseRadiusWorld)
-                                                    : Mathf.Max(0f, colliderBaseWorld);
-
-                // ── addWorld(콤보/타일 보정)는 기준에 더해진 후 배수/가산 적용 ──
+                                                       : Mathf.Max(0f, colliderBaseWorld);
                 float rBase = baseCore + addWorld;
 
                 // 최종 잉크 반지름
                 float rInk = Mathf.Max(0.01f, rBase * radiusMul + radiusAddWorld);
-
-                // (선택) 디버그용 공개 값 업데이트
                 CurrentInkRadiusWorld = rInk;
 
-                // ★ 0) 현재 위치 즉시 스탬프(프레임 드랍에도 발밑은 바로 칠해짐)
-                paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
-                                         centerNow, rInk, /*clearOther=*/true);
+                // ─────────────────────────────────────────────────────────────
+                // [PATCH2] 하이브리드 방식
+                //   - 정지면 아무 것도 안 찍음
+                //   - 이동하면: 헤드 1점 즉시 Now + 구간 백필 EnqueueCircle(거리기반, 프레임캡)
+                // ─────────────────────────────────────────────────────────────
 
-                // 1) 첫 프레임은 한 번만 찍고 기준점 세팅
                 if (!haveLast)
                 {
-                    Stamp(centerNow, rInk);
+                    // 시작 1회: 가볍게 큐로 보내고 기준점만 세팅
+                    StampQueued(centerNow, rInk);
                     lastCenter = centerNow;
-                    haveLast = true;
+                    haveLast   = true;
                 }
                 else
                 {
-                    // 2) 지난 프레임→현재 프레임을 Trail로 배치(빈틈 보강)
-                    paintSystem.EnqueueTrail(BoardPaintSystem.PaintChannel.Player,
-                                             lastCenter, centerNow,
-                                             rInk,
-                                             spacingMeters: -1f,
-                                             clearOtherChannel: true);
-                    lastCenter = centerNow;
-                }
+                    float dist = (centerNow - lastCenter).magnitude;
 
+                    // 정지면 아무 것도 안 찍음 (가만히 있어도 레벨업 방지)
+                    if (dist >= minMoveMeters)
+                    {
+                        // 1) 헤드 1점 즉시
+                        paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
+                                                 centerNow, rInk, /*clearOther=*/true);
+
+                        // 2) 백필: 거리 기반으로 분할 + 프레임 캡
+                        float segSpacing = Mathf.Max(0.001f, rInk * Mathf.Max(0.05f, segSpacingMul));
+                        int stepsTarget = Mathf.CeilToInt(dist / segSpacing);
+                        int steps = Mathf.Min(Mathf.Max(1, stepsTarget), Mathf.Max(1, backfillCapPerFrame));
+
+                        // i=1..steps 구간
+                        for (int i = 1; i <= steps; ++i)
+                        {
+                            float t = (float)i / steps;
+                            Vector3 p = Vector3.Lerp(lastCenter, centerNow, t);
+                            paintSystem.EnqueueCircle(BoardPaintSystem.PaintChannel.Player,
+                                                      p, rInk, /*clearOtherChannel=*/true);
+                        }
+
+                        lastCenter = centerNow;
+                    }
+                }
             }
 
             yield return null; // 스케일 적용(일시정지 시 멈춤)
         }
     }
 
-    void Stamp(Vector3 p, float rInk)
+    // 시작 1회/리셋 등 '한 번만' 찍는 용도는 큐 사용(과도한 즉시 처리 방지)
+    void StampQueued(Vector3 p, float rInk)
     {
         if (!paintSystem) return;
-
-        // 즉시 반영(게이지 체크 포함)
-        paintSystem.HeadStampNow(BoardPaintSystem.PaintChannel.Player,
-                                 p, rInk, /*clearOther=*/true);
+        paintSystem.EnqueueCircle(BoardPaintSystem.PaintChannel.Player,
+                                  p, rInk, /*clearOtherChannel=*/true);
     }
-
-
 
     // ===== Helpers =====
     static void GetCapsuleWorld(CapsuleCollider cap, out Vector3 worldA, out Vector3 worldB, out float worldRadius)

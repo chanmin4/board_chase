@@ -16,7 +16,7 @@ public class EnemyDiskLauncher : MonoBehaviour
     [SerializeField] BoardMaskRenderer mask;          // 평가(플레이어/오염) 쿼리
     [SerializeField] LayerMask wallMask;              // 벽 레이어 (실충돌/예측)
     Rigidbody rb;
-    [SerializeField]EnemyInkGauge enemyinkgauge;
+    //[SerializeField]EnemyInkGauge enemyinkgauge;
 
     // ─────────────────────────────────────
     // DiskLauncher와 동일한 런처 코어
@@ -79,8 +79,8 @@ public class EnemyDiskLauncher : MonoBehaviour
     [Range(0.7f, 1.0f)] public float bounceDamping = 0.9f;
     [Header("Bonus Arc Hook")]
     public DiskBonusArc bonusArc;
-    public LayerMask otherDiskMask;
-    public float bonusArcInkPenalty = 50f; // 인스펙터에서 조절
+    //public LayerMask otherDiskMask;
+    //public float bonusArcInkPenalty = 50f; // 인스펙터에서 조절
 
     // 내부 상태
     Vector3 _trailPrev;
@@ -119,7 +119,6 @@ public class EnemyDiskLauncher : MonoBehaviour
             // 1) 현재 위치 즉시 스탬프(시각 즉시 반영)
             paint.HeadStampNow(BoardPaintSystem.PaintChannel.Enemy,
                             transform.position, trailRadiusWorld, true);
-
             // 2) 거리 기반 트레일(빈틈 보강)
             /*
             paint.EnqueueTrail(BoardPaintSystem.PaintChannel.Enemy,
@@ -376,12 +375,13 @@ public class EnemyDiskLauncher : MonoBehaviour
                 break;
         }
     }
+    /*
     public void ApplyBonusArcPenalty(Transform other)
     {
         // “내” 게이지를 깎는다(맞은 쪽이 손해).
         Debug.Log("enemygaugepanelty");
         enemyinkgauge?.Add(-bonusArcInkPenalty);    // 적 쪽
     }
-
+*/
 
 }

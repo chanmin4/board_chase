@@ -214,6 +214,7 @@ public class SurvivalGauge : MonoBehaviour
     }
     public bool TryConsumeByPaint(float meters, bool ismyink, float widthMul = 1f)
     {
+        Debug.Log("meters : "+meters);
         if (isstun) return false;
         if (meters <= 0f || baseCostPerMeter <= 0f || widthMul <= 0f)
             return true; // 비용 없음 → 성공 처리
