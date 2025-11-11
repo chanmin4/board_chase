@@ -53,8 +53,9 @@ public class MobSpawnManager : MonoBehaviour
     public float bossFirstDelay = 30f;
     public float bossInterval   = 9999f; // 한 번만이면 크게
     public int   bossMaxAlive   = 1;
-    public int   bossBatch      = 1; 
+    public int   bossBatch      = 1;
     public float bossKillXP = 150f;
+    
 
 
     // 내부 카운트

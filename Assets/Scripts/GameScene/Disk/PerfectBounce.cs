@@ -44,12 +44,11 @@ public class PerfectBounce : MonoBehaviour
     public Color visualizeArcColor = new Color(1f, 0.2f, 0.2f, 0.9f);
     [Tooltip("폴백(LineRenderer) 선 굵기")]
     public float visualizeArcLineWidth = 0.08f;
-    
 
     // ── 내부 상태 ──
-    public enum FourDir { North, West, South, East } // WASD = 북서남동
+    public enum EightDir { NorthWest,North,NorthEast, West, East,SouthWest,South,SouthEast } // WASD = 북서남동
     [Header("Runtime")]
-    public FourDir selected = FourDir.North;
+    public EightDir selected = EightDir.North;
 
     int combo = 0;
     //float baseExtraRadiusTiles;
@@ -57,7 +56,45 @@ public class PerfectBounce : MonoBehaviour
     // 시각화 인스턴스
     GameObject visGO;         // 프리팹 또는 LineRenderer를 담는 GO(디스크의 자식)
     LineRenderer visLR;       // 폴백용 LineRenderer(프리팹 없을 때만)
-    FourDir visDir;           // 현재 시각화 중인 방향
+    EightDir visDir;           // 현재 시각화 중인 방향
+    PerfectBounce.EightDir ComputeEightDirFromWASD(PerfectBounce.EightDir fallback)
+    {
+        int x = 0, z = 0; // X=좌(-)/우(+), Z=뒤(-)/앞(+)
+        if (Input.GetKey(KeyCode.A)) x -= 1;
+        if (Input.GetKey(KeyCode.D)) x += 1;
+        if (Input.GetKey(KeyCode.S)) z -= 1;
+        if (Input.GetKey(KeyCode.W)) z += 1;
+
+        if (x == 0 && z == 0) return fallback; // 아무 키도 없음 → 유지
+
+        if (z > 0) // 북쪽 계열
+        {
+            if (x < 0) return EightDir.NorthWest;
+            if (x > 0) return EightDir.NorthEast;
+            return EightDir.North;
+        }
+        if (z < 0) // 남쪽 계열
+        {
+            if (x < 0) return EightDir.SouthWest;
+            if (x > 0) return EightDir.SouthEast;
+            return EightDir.South;
+        }
+        // 좌/우 단일
+        if (x < 0) return EightDir.West;
+        if (x > 0) return EightDir.East;
+
+        return fallback;
+    }
+
+    // ★ ADD: KeyDown/KeyUp 헬퍼(선택)
+    bool AnyKeyDown() =>
+        Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) ||
+        Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D);
+
+    bool AnyKeyUp() =>
+        Input.GetKeyUp(KeyCode.W) || Input.GetKeyUp(KeyCode.A) ||
+        Input.GetKeyUp(KeyCode.S) || Input.GetKeyUp(KeyCode.D);
+
 
     void Reset()
     {
@@ -79,17 +116,19 @@ public class PerfectBounce : MonoBehaviour
 
     void Update()
     {
-        // ── 홀드 방식: KeyDown으로 선택 갱신, 키를 "누르고 있는가"가 성공 조건 ──
-        if (Input.GetKeyDown(KeyCode.W)) { selected = FourDir.North; StartVisualize(selected); }
-        if (Input.GetKeyDown(KeyCode.A)) { selected = FourDir.West;  StartVisualize(selected); }
-        if (Input.GetKeyDown(KeyCode.S)) { selected = FourDir.South; StartVisualize(selected); }
-        if (Input.GetKeyDown(KeyCode.D)) { selected = FourDir.East;  StartVisualize(selected); }
+        if (AnyHold())
+        {
+            var prev = selected;
+            selected = ComputeEightDirFromWASD(prev);
 
-        // 키를 전혀 안 누르면 시각화 종료
-        if (!AnyHold())
-            StopVisualize();
+            if (prev != selected) StartVisualize(selected);
+            else UpdateVisualize();
+        }
         else
-            UpdateVisualize(); // 방향 유지 중이면 폴백 라인 업데이트(프리팹이면 보정 불필요)
+        {
+            StopVisualize();
+        }
+    
     }
 
     void ResolveHit(Vector3 hitPoint)
@@ -141,10 +180,15 @@ public class PerfectBounce : MonoBehaviour
         float center = 0f;
         switch (selected)
         {
-            case FourDir.North: center = 0f; break;  // 12시
-            case FourDir.East: center = 90f; break;  // 3시
-            case FourDir.South: center = 180f; break;  // 6시
-            case FourDir.West: center = 270f; break;  // 9시
+            case EightDir.NorthWest: center = 315f; break;
+            case EightDir.North: center = 0f; break;  // 12시
+            case EightDir.NorthEast: center = 45f; break;
+            case EightDir.West: center = 270f; break;  // 9시
+            case EightDir.East: center = 90f; break;  // 3시
+            case EightDir.SouthWest: center = 225f; break;  
+            case EightDir.South: center = 180f; break;  // 6시
+            case EightDir.SouthEast: center = 135f; break;  // 9시
+            
         }
 
         // 중심각과의 차이(래핑 포함)가 lim 이하면 성공
@@ -194,29 +238,44 @@ public class PerfectBounce : MonoBehaviour
     {
         switch (selected)
         {
-            case FourDir.North: return Input.GetKey(KeyCode.W);
-            case FourDir.West:  return Input.GetKey(KeyCode.A);
-            case FourDir.South: return Input.GetKey(KeyCode.S);
-            case FourDir.East:  return Input.GetKey(KeyCode.D);
+            // 대각: 두 키 모두 눌림 필요
+            case EightDir.NorthWest: return Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.A);
+            case EightDir.NorthEast: return Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.D);
+            case EightDir.SouthWest: return Input.GetKey(KeyCode.S) && Input.GetKey(KeyCode.A);
+            case EightDir.SouthEast: return Input.GetKey(KeyCode.S) && Input.GetKey(KeyCode.D);
+
+            // 단일: 해당 키만 눌려 있으면 OK
+            case EightDir.North: return Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D);
+            case EightDir.South: return Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D);
+            case EightDir.West: return Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.S);
+            case EightDir.East: return Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.S);
         }
         return false;
     }
 
+
+
+
     // ── 방향 벡터 ──
-    static Vector3 DirVector(FourDir d)
+    static Vector3 DirVector(EightDir d)
     {
         switch (d)
         {
-            case FourDir.North: return Vector3.forward; // W
-            case FourDir.West:  return Vector3.left;    // A
-            case FourDir.South: return Vector3.back;    // S
-            case FourDir.East:  return Vector3.right;   // D
+            case EightDir.North: return Vector3.forward;                     // W
+            case EightDir.South: return Vector3.back;                        // S
+            case EightDir.East: return Vector3.right;                       // D
+            case EightDir.West: return Vector3.left;                        // A
+            case EightDir.NorthEast: return (Vector3.forward + Vector3.right).normalized;   // W+D
+            case EightDir.NorthWest: return (Vector3.forward + Vector3.left).normalized;    // W+A
+            case EightDir.SouthEast: return (Vector3.back + Vector3.right).normalized;   // S+D
+            case EightDir.SouthWest: return (Vector3.back + Vector3.left).normalized;    // S+A
         }
         return Vector3.forward;
     }
 
+
     // ── 시각화 (프리팹 or LineRenderer 폴백) ──
-    void StartVisualize(FourDir dir)
+    void StartVisualize(EightDir dir)
     {
         visDir = dir;
 
@@ -284,7 +343,7 @@ public class PerfectBounce : MonoBehaviour
         }
     }
 
-    void BuildArc(LineRenderer lr, FourDir dir)
+    void BuildArc(LineRenderer lr, EightDir dir)
     {
         if (!lr) return;
 

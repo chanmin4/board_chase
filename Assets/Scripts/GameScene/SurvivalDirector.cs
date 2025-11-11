@@ -823,11 +823,52 @@ public class SurvivalDirector : MonoBehaviour
     public void SetBonusArcForAll(float arcDeg)
     {
         bonusArcDeg = Mathf.Clamp(arcDeg, 1f, 360f);
-         for (int i = 0; i < zones.Count; i++)
+        for (int i = 0; i < zones.Count; i++)
         {
             var z = zones[i];
             OnZoneBonusSectorChanged?.Invoke(z.id, z.bonusAngleDeg, bonusArcDeg);
         }
     }
+    void BounceZone_RandomOutward(Vector3 zoneCenterWorld,
+                              Vector3 contactWorld,          // 디스크-존 접점(없으면 플레이어 pos)
+                              float speedMul = 1.00f,        // 반사 후 속도 배율
+                              float addSpeed = 0f,           // (선택) 추가 속도
+                              float minOutwardDot = 0.0f,    // (선택) 최소 바깥 성분(0~1)
+                              float smallNudge = 0.05f)      // (선택) 겹침 방지 미세 밀기
+    {
+        if (!playerRb) return;
+
+        // 1) 바깥 방향(존 중심→접점)
+        Vector3 n = contactWorld - zoneCenterWorld;
+        n.y = 0f;
+        if (n.sqrMagnitude < 1e-6f)
+            n = (playerRb.linearVelocity.sqrMagnitude > 1e-6f) ? playerRb.linearVelocity : Vector3.forward;
+        n.Normalize();
+
+        // 2) n을 중심으로 ±90° 범위에서 임의 회전 → 항상 바깥 반평면
+        float phi = UnityEngine.Random.Range(-90f, +90f);
+        Vector3 dir = Quaternion.AngleAxis(phi, Vector3.up) * n; // 평면 회전
+        dir.y = 0f; dir.Normalize();
+
+        // 3) 바깥 성분 하한 보장(원하면 사용)
+        if (minOutwardDot > 0f && Vector3.Dot(dir, n) < minOutwardDot)
+        {
+            // minOutwardDot에 해당하는 최대 허용 회전각으로 클램프
+            float maxDeg = Mathf.Acos(Mathf.Clamp(minOutwardDot, 0f, 1f)) * Mathf.Rad2Deg; // 0~90
+            phi = Mathf.Clamp(phi, -maxDeg, +maxDeg);
+            dir = Quaternion.AngleAxis(phi, Vector3.up) * n;
+            dir.y = 0f; dir.Normalize();
+        }
+
+        // 4) 속도 재설정
+        float s = playerRb.linearVelocity.magnitude * speedMul + addSpeed;
+        s = Mathf.Max(0f, s);
+        playerRb.linearVelocity = dir * s;
+
+        // 5) 즉시 재충돌 방지: 바깥으로 아주 살짝 밀어냄(선택)
+        if (smallNudge > 0f)
+            player.position += n * smallNudge;
+    }
+
 
 }

@@ -3330,7 +3330,7 @@ MonoBehaviour:
     speedRange: {x: 2, y: 5}
     radiusWorld: 0.35
     groundY: 0.2
-    lifetime: 20
+    lifetime: 999999
     dropOnTimeout: 0
     contamRadiusWorld: 1.4
     enablePathContam: 1
@@ -15995,10 +15995,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   survivalgauge: {fileID: 1445786933}
   firstSpawnDelay: 0
-  powerScale: 2
+  powerScale: 1
   board: {fileID: 1290663343}
   useCooldown: 1
-  cooldownSeconds: 6
+  cooldownSeconds: 3
   cooldownBonusOnBounce: 0
   cooldownReducePerBounce: 0
   baseCharges: 2
@@ -16133,7 +16133,7 @@ MonoBehaviour:
   contamXPMul: 1
   areaXPPerSquare: 0
   xpNeedPerLevel:
-  - 30
+  - 100
   - 100
   - 200
   - 300
@@ -16187,7 +16187,7 @@ MonoBehaviour:
   inkLossOnFail: 20
   extraRadiusPerComboTiles: 0
   boundaryGraceDeg: 1
-  PerfectBounceDeg: 90
+  PerfectBounceDeg: 45
   visualizeIndicatorPrefab: {fileID: 0}
   visualizeArcRadiusWorld: 0
   visualizeArcHeight: 0.25
