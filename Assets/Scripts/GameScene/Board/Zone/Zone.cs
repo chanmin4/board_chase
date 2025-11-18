@@ -1,27 +1,42 @@
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using System;
+using System.Linq;
 
 [DisallowMultipleComponent]
 public class Zone : MonoBehaviour
 {
-    [Header("Runtime")]
-    public int id;
-    public int profileIndex;
-    public Vector3 centerWorld;
-    public float radiusWorld;
+       public int id;
+        public int profileIndex;
+        public Vector2Int center;
+        public List<Vector2Int> tiles;
+        public float xp;
+        public float remaintime;
+        public float time_to_live;
+        public int curhit;                 // ★ 누적 히트(존별)
+        public int reqHit;             // 요구 튕김(종류별 고정)
+        public float enterBonus;
+        public float gainPerSec;
+        public Vector2Int footprint;
+        public Vector3 centerWorld;
+        public float radiusWorld;
+        public Material domeMat;
+        public Material ringMat;
 
-    ZoneSpawnManager owner;
+        public float consumeUnlockTime = 0f;
+        public bool mustExitFirst = false;
 
-    public void Init(ZoneSpawnManager mgr, int _id, int _profile, Vector3 cW, float rW)
+        public float bonusAngleDeg;          // 0~360, 존 중심에서 바라보는 방향
+        public float bonusNextRefreshAt;     // >0이면 해당 시각에 각도 리롤
+        public int RemainingHit => Mathf.Max(0, reqHit - curhit);
+
+    public void Init(int _id, int _profile, Vector3 cW, float rW)
     {
-        owner = mgr;
-        id = _id; profileIndex = _profile; centerWorld = cW; radiusWorld = rW;
+        id = _id;
+        profileIndex = _profile;
+        centerWorld = cW; 
+         radiusWorld = rW;
         transform.position = new Vector3(cW.x, transform.position.y, cW.z);
-    }
-
-    // 필요시 트리거 기반 상호작용으로 확장할 수 있는 훅
-    void OnTriggerEnter(Collider other)
-    {
-        // ex) 특정 태그/레이어만 반응 등
-        // owner?.OnZoneTriggerEnter(this, other);
     }
 }

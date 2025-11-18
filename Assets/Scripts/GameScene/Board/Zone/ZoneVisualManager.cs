@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -443,28 +444,12 @@ public class ZoneVisualManager : MonoBehaviour
         }
         foreach (var t in toRemove) Destroy(t.gameObject);
     }
-*/
+
     // ---- 공용 유틸 ----
     void StripAllColliders(GameObject go)
-    {
-        if (!go) return;
-        foreach (var c in go.GetComponentsInChildren<Collider>(true)) Destroy(c);
-    }
-/*
-    static void SetTagLayerAndTriggerRecursively(GameObject go, string tag, int layer, bool makeTrigger)
-    {
-        if (!go) return;
-        var transforms = go.GetComponentsInChildren<Transform>(true);
-        foreach (var t in transforms)
-        {
-            if (!string.IsNullOrEmpty(tag)) t.gameObject.tag = tag;
-            if (layer >= 0) t.gameObject.layer = layer;
-            if (makeTrigger)
-            {
-                var col = t.GetComponent<Collider>();
-                if (col) col.isTrigger = true;
-            }
-        }
-    }
-    */
+{
+    if (!go) return;
+    foreach (var c in go.GetComponentsInChildren<Collider>(true)) Destroy(c);
 }
+
+*/

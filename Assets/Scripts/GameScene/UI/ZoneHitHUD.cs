@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using TMPro;
 using System.Text;
@@ -125,3 +126,4 @@ public class ZoneHitHUD : MonoBehaviour
         t.text = $"{label} zone count {cnt}\n  require hit {req}";
     }
 }
+*/

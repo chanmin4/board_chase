@@ -13121,59 +13121,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1796449637}
-  - component: {fileID: 1796449636}
+  - component: {fileID: 1796449638}
   m_Layer: 0
-  m_Name: Zonevisual
+  m_Name: ZoneSpawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1796449636
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1796449635}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 835b7da50b6521747bea354de9a08b99, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  board: {fileID: 1290663343}
-  director: {fileID: 1606759577}
-  hemispherePrefab: {fileID: 4175801190772229611, guid: 96fd74db458bc344f8bcfa9e7794747a, type: 3}
-  ringPrefab: {fileID: 0}
-  defaultDomeMat: {fileID: 0}
-  defaultRingMat: {fileID: 0}
-  contamDiscPrefab: {fileID: 0}
-  contamMat: {fileID: 2100000, guid: a4a941539f5baef42826356cdc8094d3, type: 2}
-  contamDiscY: 0.01
-  makeContamDiscsTriggers: 1
-  pollutionTag: Pollution
-  pollutionLayer: Pollution
-  bonusArcMaterial: {fileID: 0}
-  bonusArcColor: {r: 0.2460814, g: 0.13070129, b: 0.79622644, a: 1}
-  arcSegments: 32
-  arcRadiusOffset: 0.02
-  widthScalesWithRadius: 1
-  widthPerRadius: 0.045
-  minWidth: 0.2
-  maxWidth: 0.4
-  offsetPerRadius: 0.04
-  yLiftPerRadius: 0.08
-  minYLift: 0.1
-  screenCanvas: {fileID: 311061716}
-  miniTimerPrefab: {fileID: 6098060398709968939, guid: 25d8eb12b14c3444c9ddfbdf8862f9b4, type: 3}
-  attachTimersToZone: 1
-  autoFitPrefabs: 1
-  ringHeightWorld: 0.02
-  setZoneVisualsToWallLayer: 1
-  wallLayerName: Wall
-  keepZoneVisualColliders: 1
-  ringScalePerRadius: 0
-  ringScaleY: 0
 --- !u!4 &1796449637
 Transform:
   m_ObjectHideFlags: 0
@@ -13189,6 +13144,61 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1172909832}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1796449638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796449635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cee3e3a73a93df47981bb43d7ecd344, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  director: {fileID: 1606759577}
+  board: {fileID: 1290663343}
+  player: {fileID: 2113993634}
+  playerRb: {fileID: 2113993635}
+  gauge: {fileID: 1445786933}
+  zoneProfiles:
+  - name: 
+    footprint: {x: 0, y: 0}
+    size: 0
+    requiredZoneHits: 0
+    enterBonus: 0
+    gainPerSec: 0
+    xp: 0
+    domeMat: {fileID: 0}
+    ringMat: {fileID: 0}
+    time_to_live_profile: 0
+  minZoneSeparationTiles: 0.35
+  minSpawnTileDistance: 6
+  padByHalfFootprint: 1
+  minBoardEdgeClearTiles: 8
+  spawnBlockRules: []
+  zoneReqHitsAdd_S: 0
+  zoneReqHitsAdd_M: 0
+  zoneReqHitsAdd_L: 0
+  baseAlpha: 0.5
+  minAlpha: 0.1
+  relaxStep: 0.05
+  zoneTouchToleranceTiles: 0.35
+  enableBonusSector: 1
+  bonusArcDeg: 60
+  normalHitAward: 1
+  bonusHitAward: 2
+  bonusRefreshDelay: 0.05
+  zoneRestitution: 0.98
+  reflectClampSpeed: 0
+  zoneBounceCooldown: 0.08
+  consumeLockAfterBounce: 0.15
+  requireExitReenterAfterBounce: 1
+  zoneEnterBonusMul: 10
+  useLayoutCounts: 1
+  layoutCountSmall: 2
+  layoutCountMedium: 0
+  layoutCountLarge: 0
 --- !u!1 &1815349102
 GameObject:
   m_ObjectHideFlags: 0
@@ -13431,7 +13441,7 @@ MonoBehaviour:
   gauge: {fileID: 1445786933}
   mainMenuSceneName: A_MainScene
   toDisableOnGameOver:
-  - {fileID: 1796449636}
+  - {fileID: 0}
   - {fileID: 1445786933}
   - {fileID: 1443057745}
   - {fileID: 1151417598}
