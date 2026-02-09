@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -6,7 +7,7 @@ using System.Collections.Generic;
 public class ChargesHUD : MonoBehaviour
 {
     [Header("Refs")]
-    public DiskLauncher launcher;     // PlayerDisk에 붙어있는 DiskLauncher
+    public PlayerDisk playerdisk;     // PlayerDisk에 붙어있는 DiskLauncher
     public TMP_Text label;            // "CHARGES 2/∞" 같은 텍스트
     [Tooltip("아이콘(피프)들을 담을 부모 Transform (Horizontal/Vertical Layout Group 권장)")]
     public Transform ChargeRoot;
@@ -130,3 +131,4 @@ public class ChargesHUD : MonoBehaviour
         }
     }
 }
+*/

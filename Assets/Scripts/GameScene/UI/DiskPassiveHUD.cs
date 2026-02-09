@@ -22,8 +22,8 @@ public class DiskPassiveHUD : MonoBehaviour
 
     [Header("Targets (Live Stats)")]
     public CleanTrailAbility_Disk trail;
-    public DiskLauncher           launcher;
-    public PerfectBounce          perfectbounce;
+    public PlayerDisk          playerdisk;
+    //public PerfectBounce          perfectbounce;
     public SurvivalGauge          survivalgauge;
     public SurvivalDirector       survivaldirector;
 
@@ -137,8 +137,8 @@ public class DiskPassiveHUD : MonoBehaviour
     void EnsureTargetRefs()
     {
         if (!trail)            trail            = FindAnyObjectByType<CleanTrailAbility_Disk>();
-        if (!launcher)         launcher         = FindAnyObjectByType<DiskLauncher>();
-        if (!perfectbounce)    perfectbounce    = FindAnyObjectByType<PerfectBounce>();
+        if (!playerdisk)         playerdisk         = FindAnyObjectByType<PlayerDisk>();
+        //if (!perfectbounce)    perfectbounce    = FindAnyObjectByType<PerfectBounce>();
         if (!survivalgauge)    survivalgauge    = FindAnyObjectByType<SurvivalGauge>();
         if (!survivaldirector) survivaldirector = FindAnyObjectByType<SurvivalDirector>();
     }
@@ -170,12 +170,13 @@ public class DiskPassiveHUD : MonoBehaviour
         AddIf("trail.radiusAddWorld",
             () => trail,
             () => trail ? S(trail.radiusAddWorld) : "N/A");
-
+/*
         // === Launcher ===
         AddIf("launcher.cooldownSeconds",
-            () => launcher,
-            () => launcher ? S(launcher.cooldownSeconds) : "N/A");
-
+            () => playerdisk,
+            () => playerdisk ? S(playerdisk.cooldownSeconds) : "N/A");
+*/
+/*
         // === PerfectBounce ===
         AddIf("perfectbounce.inkGainOnSuccess",
             () => perfectbounce,
@@ -192,7 +193,7 @@ public class DiskPassiveHUD : MonoBehaviour
         AddIf("perfectbounce.PerfectBounceDeg",
             () => perfectbounce,
             () => perfectbounce ? S(perfectbounce.PerfectBounceDeg) : "N/A");
-
+*/
         // === SurvivalGauge ===
         AddIf("survivalgauge.baseCostPerMeter",
             () => survivalgauge,

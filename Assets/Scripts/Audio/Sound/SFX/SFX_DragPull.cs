@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public class Sfx_DragPull : MonoBehaviour
@@ -18,3 +19,4 @@ public class Sfx_DragPull : MonoBehaviour
     }
     void Fire()  => AudioMaster.I?.PlayKey(key);   
 }
+*/

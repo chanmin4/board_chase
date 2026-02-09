@@ -1,3 +1,4 @@
+/*
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -125,7 +126,7 @@ public class EnemyDiskLauncher : MonoBehaviour
                             _trailPrev, transform.position,
                             trailRadiusWorld, -1f, true);
             _trailPrev = transform.position;
-            */
+            
         }
 
 
@@ -375,13 +376,14 @@ public class EnemyDiskLauncher : MonoBehaviour
                 break;
         }
     }
-    /*
     public void ApplyBonusArcPenalty(Transform other)
     {
         // “내” 게이지를 깎는다(맞은 쪽이 손해).
         Debug.Log("enemygaugepanelty");
         enemyinkgauge?.Add(-bonusArcInkPenalty);    // 적 쪽
     }
-*/
+
 
 }
+
+*/

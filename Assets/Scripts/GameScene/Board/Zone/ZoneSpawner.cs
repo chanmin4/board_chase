@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -33,7 +34,6 @@ public class ZoneProfile
     public float gainPerSec = 0f;
     [Header("존 소모시 xp획득량")]
     public float xp;
-
     [Header("비주얼(선택)")]
     public Material domeMat;
     public Material ringMat;
@@ -51,7 +51,7 @@ public class ZoneSpawner : MonoBehaviour
     public SurvivalGauge gauge;
     public BoardMaskRenderer maskRenderer;
     public DiskInkLeveler diskleveler;
-
+    public SurvivalDirector director;
 
     [Header("Inspector-Driven Zones")]
     public List<ZoneProfile> zoneProfiles = new List<ZoneProfile>(); // ★ 인스펙터에서 관리
@@ -79,6 +79,8 @@ public class ZoneSpawner : MonoBehaviour
     public float zoneBounceCooldown = 0.08f;
     public float consumeLockAfterBounce = 0.15f;
     public bool requireExitReenterAfterBounce = true;
+    [Header("Risk Tuning")]
+    public float zoneEnterBonusMul = 1f;
     [Tooltip("미충족 후엔 한 번 존 밖으로 나갔다 재진입해야 소비 허용")]
     public int ResetSeq { get; private set; } = 0;
     [Header("Layout (Counts per Set)")]          // ★
@@ -116,6 +118,9 @@ public class ZoneSpawner : MonoBehaviour
     public event Action OnZonesReset;
     public event Action<int, float> OnZoneProgress;                    // 0~1
     public event Action<int, Vector3, float> OnZoneContaminatedCircle;//오염원생성
+    public event System.Action<Vector3, float, bool> OnPlayerPaintCircleWorld;
+    
+    public event Action<int> OnZoneConsumed;
 
     // 사이즈별 프로필을 “순서대로” 뽑아오는 헬퍼
     System.Collections.Generic.List<int> TakeProfileIndicesBySize(ZoneSize s, int count)
@@ -246,7 +251,7 @@ public class ZoneSpawner : MonoBehaviour
                     z.mustExitFirst = true;
                 }
             }
-
+        }
     }
 
     bool FarFromBoardEdge_World(Vector3 centerWorld, float radiusWorld)
@@ -266,7 +271,7 @@ public class ZoneSpawner : MonoBehaviour
     }
 
     // 반경 내 차단 레이어가 있는지 검사
-    static readonly Collider[] _overlapBuf = new Collider[64];
+    public static Collider[] _overlapBuf = new Collider[64];
     bool AreaIsClearOfObstacles(Vector3 centerWorld, float radiusWorld)
     {
         // 규칙 배열이 설정되어 있으면 그 규칙들 모두 통과해야 함
@@ -291,7 +296,7 @@ public class ZoneSpawner : MonoBehaviour
     }
     public void EmitZoneProgress(int id, float progress)
     {
-        OnZoneProgress?.Invoke(id, progress); // ✅ 같은 타입 내부에서만 Invoke
+        OnZoneProgress?.Invoke(id, progress); // 같은 타입 내부에서만 Invoke
     }
     Zone TrySpawnZoneByProfile(int profileIndex)
     {
@@ -426,6 +431,26 @@ public class ZoneSpawner : MonoBehaviour
     }
 
     // ===== 상호작용/소비/튕김 =====
+     public void PaintPlayerCircleWorld(Vector3 centerWorld, float radiusWorld,
+                                   bool applyBoardClean, bool clearPollutionMask)
+    {
+        // --- 보드 상태(점유율) ---
+        if (applyBoardClean)
+        {
+            // 기존 파이프라인 재사용: 내부에서 타일/카운트/이벤트 처리
+            ClearCircleWorld(centerWorld, radiusWorld);
+        }
+
+        // --- 플레이어 페인트 비주얼(별도 레이어에 칠하기) ---
+        OnPlayerPaintCircleWorld?.Invoke(centerWorld, radiusWorld, clearPollutionMask);
+
+        // --- 오염 비주얼 덮어쓰기(렌더 마스크 0으로) ---
+        if (clearPollutionMask)
+        {
+            // 기존 렌더 파이프 유지: 오염 마스크 지우는 이벤트
+            OnClearedCircleWorld?.Invoke(centerWorld, radiusWorld);
+        }
+    }
  
     void ConsumeZone(Zone z)
     {
@@ -444,6 +469,7 @@ public class ZoneSpawner : MonoBehaviour
         // (필요시) 보충 스폰은 기존 주석대로 사용
         // StartCoroutine(RespawnAfterDelay(z.profileIndex, 1.0f));
     }
+    
       void BounceFromZone(Zone z)
     {
         if (!playerRb) return;
@@ -462,5 +488,7 @@ public class ZoneSpawner : MonoBehaviour
 
         playerRb.linearVelocity = rDir * speed;
     }
+    
 
 }
+*/

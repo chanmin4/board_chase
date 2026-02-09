@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;   // ★ 추가
@@ -222,3 +223,5 @@ public class EnemyInkGauge : MonoBehaviour
     
 
 }
+
+*/

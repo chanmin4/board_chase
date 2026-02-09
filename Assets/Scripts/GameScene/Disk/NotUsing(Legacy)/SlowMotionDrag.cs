@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public class SlowMotionDrag : MonoBehaviour
@@ -91,3 +92,4 @@ public class SlowMotionDrag : MonoBehaviour
             Time.fixedDeltaTime = _baseFixed * Time.timeScale;
     }
 }
+*/

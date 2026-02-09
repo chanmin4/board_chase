@@ -2,19 +2,19 @@ using UnityEngine;
 
 public class Sfx_DragChargeOn : MonoBehaviour
 {
-    public DiskLauncher drag;
+    public PlayerDisk playerdisk;
     public string key = "sfx.dragchargeon";
 
-    void Reset()    => drag ??= GetComponent<DiskLauncher>();
+    void Reset()    => playerdisk ??= GetComponent<PlayerDisk>();
     void OnEnable()
     {
-        drag ??= GetComponent<DiskLauncher>();
-        if (!drag) { enabled = false; return; }
-        drag.DragChargeOn+= Charge;
+        playerdisk ??= GetComponent<PlayerDisk>();
+        if (!playerdisk) { enabled = false; return; }
+        //playerdisk.DragChargeOn+= Charge;
     }
     void OnDisable()
     {
-        if (drag) drag.DragChargeOn -= Charge;
+        //if (playerdisk) drag.DragChargeOn -= Charge;
     }
     void Charge() => AudioMaster.I?.PlayKey(key);
 }

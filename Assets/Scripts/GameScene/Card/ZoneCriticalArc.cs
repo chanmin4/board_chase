@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using System.Collections;
 
@@ -71,3 +72,4 @@ public class ZoneCriticalArc : CardAbility
         StopNow();
     }
 }
+*/

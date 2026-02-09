@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class PollutionGhost : MonoBehaviour
+public class PollutionGhost : MonoBehaviour, IInkDamageable
 {
     [System.Serializable]
     public struct GhostSettings
@@ -84,7 +84,7 @@ public class PollutionGhost : MonoBehaviour
     float nextDropTimer;    // 다음 드롭까지 남은 시간
     int   droppedCount;
     float BoardY => board ? board.origin.y : 0f;
-    int _hp;                     // 런타임 현재 HP
+    float _hp;                     // 런타임 현재 HP
     public void ApplySettings(GhostSettings s)
     {
         speed = s.speed; randomizeSpeed = s.randomizeSpeed; speedRange = s.speedRange;
@@ -224,14 +224,28 @@ public class PollutionGhost : MonoBehaviour
     }
 
 
-    void TakeHit()
-    {
-        _hp--;
-        if (_hp <= 0)
-        {
-            Die();
-        }
-    }
+    public void ApplyInkDamage(float damage, Vector3 hitPoint, GameObject source)
+{
+    TakeDamage(damage);
+}
+
+void TakeHit()
+{
+    // 기존 충돌 방식(원하면 유지)
+    TakeDamage(1f);
+}
+
+
+
+
+void TakeDamage(float dmg)
+{
+    _hp -= Mathf.Max(0f, dmg);
+    if (_hp <= 0f)
+     
+        Die();
+}
+
 
     void Die()
     {
@@ -270,3 +284,4 @@ public class PollutionGhost : MonoBehaviour
     }
 #endif
 }
+

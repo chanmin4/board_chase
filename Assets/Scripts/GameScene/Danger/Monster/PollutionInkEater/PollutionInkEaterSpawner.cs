@@ -31,7 +31,7 @@ public class PollutionInkEaterSpawner : MonoBehaviour
     {
         if (!maskRenderer) maskRenderer = FindAnyObjectByType<BoardMaskRenderer>();
         if (!board) board = FindAnyObjectByType<BoardGrid>();
-        if (!targetPlayer) targetPlayer = FindAnyObjectByType<DiskLauncher>()?.transform;
+        if (!targetPlayer) targetPlayer = FindAnyObjectByType<PlayerDisk>()?.transform;
     }
 
     public bool SpawnOne()

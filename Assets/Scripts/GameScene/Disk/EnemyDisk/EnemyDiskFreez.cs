@@ -1,3 +1,4 @@
+/*
 // EnemyDiskDebugFreeze.cs
 using System.Collections;
 using UnityEngine;
@@ -53,3 +54,5 @@ public class EnemyDiskDebugFreeze : MonoBehaviour
         SetFrozen(false);
     }
 }
+
+*/

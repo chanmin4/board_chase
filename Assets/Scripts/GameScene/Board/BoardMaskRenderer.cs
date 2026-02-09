@@ -57,15 +57,15 @@ public class BoardMaskRenderer : MonoBehaviour,Game.Masks.IMaskProvider
         if (!director) return;
         if (on)
         {
-            director.OnZonesReset += HandleReset;
-            director.OnZoneContaminatedCircle += HandleContamCircle;   // 적 페인트
+           // director.OnZonesReset += HandleReset;
+           // director.OnZoneContaminatedCircle += HandleContamCircle;   // 적 페인트
             director.OnClearedCircleWorld += HandleClearedCircle;  // 오염만 클리어
             director.OnPlayerPaintCircleWorld += HandlePlayerPaint;    // 플레이어 페인트
         }
         else
         {
-            director.OnZonesReset -= HandleReset;
-            director.OnZoneContaminatedCircle -= HandleContamCircle;
+           // director.OnZonesReset -= HandleReset;
+            //director.OnZoneContaminatedCircle -= HandleContamCircle;
             director.OnClearedCircleWorld -= HandleClearedCircle;
             director.OnPlayerPaintCircleWorld -= HandlePlayerPaint;
         }

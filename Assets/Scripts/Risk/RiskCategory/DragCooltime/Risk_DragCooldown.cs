@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -45,3 +46,4 @@ public class Risk_DragCooldown : MonoBehaviour
         disklauncher.cooldownSeconds = _original;
     }
 }
+*/

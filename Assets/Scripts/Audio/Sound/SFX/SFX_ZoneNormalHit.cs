@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public class SFX_ZoneNormalHit : MonoBehaviour
@@ -18,3 +19,4 @@ public class SFX_ZoneNormalHit : MonoBehaviour
     }
     void Trigger() => AudioMaster.I?.PlayKey(key);
 }
+*/

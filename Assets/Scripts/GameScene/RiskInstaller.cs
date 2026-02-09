@@ -40,7 +40,7 @@ public class RiskInstaller : MonoBehaviour
 
 
     [Header("Debug Targets (ReadOnly)")]
-    public DiskLauncher dbgLauncher;
+    public PlayerDisk dbgplayerdisk;
     public HomingRocket dbgMissile;
     public SurvivalDirector dbgSurvivalDirector;
     public CardManager dbgCardManager;
@@ -102,11 +102,11 @@ public class RiskInstaller : MonoBehaviour
         dbgTypeCountSummary = string.Join("\n", byType);
 
         // 2) 대상 탐색 (씬에만 있으면 됨)
-        dbgLauncher = FindAnyObjectByType<DiskLauncher>();
+        dbgplayerdisk = FindAnyObjectByType<PlayerDisk>();
         dbgMissile = FindAnyObjectByType<HomingRocket>();
         dbgSurvivalDirector = FindAnyObjectByType<SurvivalDirector>();
         dbgCardManager = FindAnyObjectByType<CardManager>();
-        if (!dbgLauncher) Debug.LogWarning("[RiskInstaller] DiskLauncher를 못 찾음");
+        if (!dbgplayerdisk) Debug.LogWarning("[RiskInstaller] DiskLauncher를 못 찾음");
         if (!dbgMissile) Debug.LogWarning("[RiskInstaller] HomingMissile를 못 찾음");
         if (!dbgSurvivalDirector) Debug.LogWarning("[RiskInstaller] SurvivalDirector를 못 찾음");
         if (!dbgCardManager) Debug.LogWarning("[RiskInstaller] CardManager를 못 찾음");
@@ -237,14 +237,14 @@ public class RiskInstaller : MonoBehaviour
 
         // 5) 실제 적용
         // Drag Cooldown
-        if (dbgLauncher && onDragCooldown)
+        if (dbgplayerdisk && onDragCooldown)
         {
-            var patch = dbgLauncher.GetComponent<Risk_DragCooldown>();
-            if (!patch) patch = dbgLauncher.gameObject.AddComponent<Risk_DragCooldown>();
-            patch.disklauncher = dbgLauncher;
-            patch.addSeconds = dragCooldownExtra;      // ★ 여기로 값 전달
-            patch.applyOnStart = false;
-            patch.Apply();
+           // var patch = dbgplayerdisk.GetComponent<Risk_DragCooldown>();
+            //if (!patch) patch = dbgplayerdisk.gameObject.AddComponent<Risk_DragCooldown>();
+//patch.disklauncher = dbgplayerdisk;
+            //patch.addSeconds = dragCooldownExtra;      // ★ 여기로 값 전달
+            //patch.applyOnStart = false;
+           // patch.Apply();
             Debug.Log($"[RiskInstaller] DragCooldownAdd +{dragCooldownExtra:0.##}s 적용");
         }
 

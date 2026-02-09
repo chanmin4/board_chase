@@ -1,3 +1,4 @@
+
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -7,8 +8,8 @@ public class DiskPassiveBank : MonoBehaviour
 {
     [Header("Refs")]
     public CleanTrailAbility_Disk trail;
-    public DiskLauncher launcher;
-    public PerfectBounce perfectbounce;
+    public PlayerDisk playerdisk;
+    //public PerfectBounce perfectbounce;
     public SurvivalGauge survivalgauge;
     public SurvivalDirector survivaldirector;
 
@@ -21,7 +22,7 @@ public class DiskPassiveBank : MonoBehaviour
     void Awake()
     {
         if (!trail)    trail    = GetComponent<CleanTrailAbility_Disk>();
-        if (!launcher) launcher = GetComponent<DiskLauncher>();
+        if (!playerdisk) playerdisk = GetComponent<PlayerDisk>();
     }
 
     public void Apply(PassiveUpgradeDef def)
@@ -39,18 +40,6 @@ public class DiskPassiveBank : MonoBehaviour
             case PassiveEffectType.InkRadiusAddWorld_Plus:
                 if (trail) trail.radiusAddWorld += def.amount;
                 break;
-            case PassiveEffectType.LaunchCooldown_Minus:
-                if (launcher) launcher.cooldownSeconds -= def.amount;
-                break;
-            case PassiveEffectType.BounceInkGet_Plus:
-                if (perfectbounce) perfectbounce.inkGainOnSuccess += def.amount;
-                break;
-            case PassiveEffectType.BounceInkLoss_Minus:
-                if (perfectbounce) perfectbounce.inkLossOnFail -= def.amount;
-                break;
-            case PassiveEffectType.BounceSpeed_Plus:
-                if (perfectbounce) perfectbounce.speedAddOnSuccess += def.amount;
-                break;
             case PassiveEffectType.InkRadiusConsume_Minus:
                 if (survivalgauge) survivalgauge.baseCostPerMeter -= def.amount;
                 break;
@@ -59,15 +48,6 @@ public class DiskPassiveBank : MonoBehaviour
                 break;
             case PassiveEffectType.StunRecoverSpeedUp_Minus:
                 if (survivalgauge) survivalgauge.recoverDuration -= def.amount;
-                break;
-            case PassiveEffectType.InkZonebonusHitInkRecover_Plus:
-                if (survivalgauge) survivalgauge.zonebonusarc += def.amount;
-                break;
-            case PassiveEffectType.PerFectBounceRange_Plus:
-                if (perfectbounce) perfectbounce.PerfectBounceDeg += def.amount;
-                break;
-            case PassiveEffectType.ZoneBonusArc_Plus:
-                if (survivaldirector) survivaldirector.bonusArcDeg += def.amount;
                 break;
         }
 

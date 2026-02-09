@@ -75,14 +75,14 @@ public class CardManager : MonoBehaviour
 
         if (useButton) useButton.onClick.AddListener(OnUseButtonClicked);
 
-        if (director) director.OnZoneHit += HandleZoneHit;
+       // if (director) director.OnZoneHit += HandleZoneHit;
 
         ApplyUI();
     }
 
     void OnDestroy()
     {
-        if (director) director.OnZoneHit -= HandleZoneHit;
+        //if (director) director.OnZoneHit -= HandleZoneHit;
         if (gauge)
         {
             gauge.onStunBegin?.RemoveListener(() => chargingLocked = true);
@@ -245,7 +245,7 @@ public class CardManager : MonoBehaviour
                 ability = host.AddComponent<CleanTrailAbility_Card>();
                 break;
             case "ZoneCrit":
-                ability = host.AddComponent<ZoneCriticalArc>();
+                //ability = host.AddComponent<ZoneCriticalArc>();
                 break;
             case "TimeSlow":
                 ability = host.AddComponent<TimeSlowAbility_Card>();

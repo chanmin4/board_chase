@@ -44,7 +44,7 @@ public class SurvivalGauge : MonoBehaviour
     public float stunCooldownAddSeconds = 0f;
 
     [Header("Refs · (선택) 디버프 적용 대상")]
-    public DiskLauncher disk;   // 인스펙터에서 디스크(Launcher) 연결
+    public PlayerDisk disk;   // 인스펙터에서 디스크(Launcher) 연결
 
     [Header("Ink Painting Cost")]
     [Tooltip("내 영역을 1m 칠할 때 드는 기본 잉크 소모량")]
@@ -192,8 +192,8 @@ public class SurvivalGauge : MonoBehaviour
         if (disk)
         {
             Debug.Log("begin stun&debuff");
-            disk.externalSpeedMul?.Invoke(Mathf.Clamp(stunMoveSpeedMul, 0.1f, 1.0f));
-            disk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
+          //  disk.externalSpeedMul?.Invoke(Mathf.Clamp(stunMoveSpeedMul, 0.1f, 1.0f));
+          //  disk.externalCooldownAdd?.Invoke(Mathf.Max(0f, stunCooldownAddSeconds));
         }
         onStunBegin?.Invoke();
     }
@@ -207,8 +207,8 @@ public class SurvivalGauge : MonoBehaviour
         // 디버프 해제
         if (disk)
         {
-            disk.externalSpeedMul?.Invoke(1f);
-            disk.externalCooldownAdd?.Invoke(0f);
+          //  disk.externalSpeedMul?.Invoke(1f);
+          //  disk.externalCooldownAdd?.Invoke(0f);
         }
         onStunEnd?.Invoke();
     }
