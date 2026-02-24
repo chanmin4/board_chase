@@ -14,7 +14,7 @@ public class GameSceneSO : DescriptionBaseSO
     {
         Location,
         Menu,
-
+        Risk,
         Initialisation,
         PersistentManager,
         Gameplay,
