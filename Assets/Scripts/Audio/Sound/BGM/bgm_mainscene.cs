@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public class bgm_mainscene : MonoBehaviour
@@ -18,3 +19,4 @@ public class bgm_mainscene : MonoBehaviour
     }
     void Trigger() => AudioMaster.I?.PlayKey(key);
 }
+*/
