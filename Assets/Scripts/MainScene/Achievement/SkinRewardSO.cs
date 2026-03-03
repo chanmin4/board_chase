@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Skin", menuName = "Game/Reward/Skin")]
@@ -35,3 +36,4 @@ public class SkinRewardSO : RewardSO
         // pm.OnUnlocksChanged?.Invoke();
     }
 }
+*/

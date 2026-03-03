@@ -1,3 +1,4 @@
+/*
 // AchievementManager.cs
 using UnityEngine;
 using UnityEngine.UI;
@@ -114,3 +115,4 @@ IEnumerator OpenRoutine()
         }
     }
 }
+*/

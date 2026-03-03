@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -39,17 +40,18 @@ public class AchievementPopupManager : MonoBehaviour
     }
 
     // ProgressManager 상태 기반으로 “수령 대기”만 만든 뒤 팝업 알림
+    /*
     public IEnumerator ShowEligibleUnlocksFromProgress(ProgressManager pm, bool requireClick = true, float minShowSeconds = 0.1f)
     {
         if (!pm) yield break;
 
-        RewardDB.EnsureLoaded();
+        //RewardDB.EnsureLoaded();
 
-        var list = RewardDB.All
-        .Where(so => so && pm.IsUnlockable(so.id))
-        .OrderBy(so => so.requiredBestScore)
-        .ToList();
-        if (list.Count == 0) yield break;
+        //var list = RewardDB.All
+        //.Where(so => so && pm.IsUnlockable(so.id))
+        //.OrderBy(so => so.requiredBestScore)
+        //.ToList();
+       // if (list.Count == 0) yield break;
 
         EnsurePanel(true);
 
@@ -64,7 +66,7 @@ public class AchievementPopupManager : MonoBehaviour
         MaybeClosePanel();
     }
 
-
+*/
     public IEnumerator ShowOnce(string title, string desc, Sprite image = null, bool requireClick = true, float minShowSeconds = 0f)
     {
         EnsurePanel(true);

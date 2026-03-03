@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public class BGM_GameScene_Success : MonoBehaviour
@@ -18,3 +19,4 @@ public class BGM_GameScene_Success : MonoBehaviour
     }
     void Trigger() => AudioMaster.I?.PlayKey(key);
 }
+*/

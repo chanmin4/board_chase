@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public enum RewardType { Skin, Card }
@@ -32,3 +33,4 @@ public abstract class RewardSO : ScriptableObject
     /// </summary>
     public abstract void Grant(ProgressManager pm);
 }
+*/

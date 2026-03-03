@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Card", menuName = "Game/Reward/Card")]
@@ -19,3 +20,4 @@ public class CardRewardSO : RewardSO
         // pm.OnUnlocksChanged?.Invoke();
     }
 }
+*/

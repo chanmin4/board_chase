@@ -1,40 +1,87 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-
+using UnityEngine.Events;
 [CreateAssetMenu(menuName = "Input/Input Reader", fileName = "InputReader")]
 public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInput.IMenuActions
 {
+    [Space]
+
+
     private GameInput _gameInput;
+    	// Gameplay
+	public event UnityAction JumpEvent = delegate { };
+	public event UnityAction JumpCanceledEvent = delegate { };
+	public event UnityAction AttackEvent = delegate { };
+	public event UnityAction AttackCanceledEvent = delegate { };
+	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
+	public event UnityAction InventoryActionButtonEvent = delegate { };
+	public event UnityAction SaveActionButtonEvent = delegate { };
+	public event UnityAction ResetActionButtonEvent = delegate { };
+	public event UnityAction<Vector2> MoveEvent = delegate { };
+	public event UnityAction<Vector2, bool> CameraMoveEvent = delegate { };
+	public event UnityAction EnableMouseControlCameraEvent = delegate { };
+	public event UnityAction DisableMouseControlCameraEvent = delegate { };
+	public event UnityAction StartedRunning = delegate { };
+	public event UnityAction StoppedRunning = delegate { };
 
-    private void OnEnable()
-    {
-        if (_gameInput == null)
-        {
-            _gameInput = new GameInput();
-            _gameInput.Gameplay.SetCallbacks(this);
-            _gameInput.Menu.SetCallbacks(this);
-        }
-        DisableAllInput();
-    }
+	// Shared between menus and dialogues
+	public event UnityAction MoveSelectionEvent = delegate { };
 
-    public void EnableGameplayInput()
-    {
-        _gameInput.Menu.Disable();
-        _gameInput.Gameplay.Enable();
-    }
+	// Dialogues
+	public event UnityAction AdvanceDialogueEvent = delegate { };
 
-    public void EnableMenuInput()
-    {
-        _gameInput.Gameplay.Disable();
-        _gameInput.Menu.Enable();
-    }
+	// Menus
+	public event UnityAction MenuMouseMoveEvent = delegate { };
+	public event UnityAction MenuClickButtonEvent = delegate { };
+	public event UnityAction MenuUnpauseEvent = delegate { };
+	public event UnityAction MenuPauseEvent = delegate { };
+	public event UnityAction MenuCloseEvent = delegate { };
+	public event UnityAction OpenInventoryEvent = delegate { }; // Used to bring up the inventory
+	public event UnityAction CloseInventoryEvent = delegate { }; // Used to bring up the inventory
+	public event UnityAction<float> TabSwitched = delegate { };
 
-    public void DisableAllInput()
-    {
-        _gameInput.Gameplay.Disable();
-        _gameInput.Menu.Disable();
-    }
 
+	private void OnEnable()
+	{
+		if (_gameInput == null)
+		{
+			_gameInput = new GameInput();
+
+			_gameInput.Menu.SetCallbacks(this);
+			_gameInput.Gameplay.SetCallbacks(this);
+		}
+
+	}
+
+	private void OnDisable()
+	{
+		DisableAllInput();
+	}
+    	public void EnableDialogueInput()
+	{
+		_gameInput.Menu.Enable();
+		_gameInput.Gameplay.Disable();
+	}
+
+	public void EnableGameplayInput()
+	{
+		_gameInput.Menu.Disable();
+		_gameInput.Gameplay.Enable();
+	}
+
+	public void EnableMenuInput()
+	{
+		_gameInput.Gameplay.Disable();
+
+		_gameInput.Menu.Enable();
+	}
+
+	public void DisableAllInput()
+	{
+		_gameInput.Gameplay.Disable();
+		_gameInput.Menu.Disable();
+	}
+    public bool LeftMouseDown() => Mouse.current.leftButton.isPressed;
     // ---------------- Gameplay ----------------
     public void OnMove(InputAction.CallbackContext context) { }
     public void OnLook(InputAction.CallbackContext context) { }

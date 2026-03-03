@@ -1,3 +1,4 @@
+/*
 // 상단 using 유지
 using UnityEngine;
 using TMPro;
@@ -65,3 +66,4 @@ public class SurvivalTimerHUD : MonoBehaviour
     }
 
 }
+*/

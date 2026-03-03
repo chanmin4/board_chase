@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -86,6 +87,7 @@ public class GameOverUI : MonoBehaviour
             // 2) 저장 (예외는 잡고 계속 진행)
             try
             {
+                /*
                 if (ProgressManager.Instance != null)
                 {
                     Log("ProgressManager exist");
@@ -98,6 +100,7 @@ public class GameOverUI : MonoBehaviour
                 ProgressManager.Instance.GameOverReportRunTimeMs(finalTimeMs);
                 ProgressManager.Instance.GameOverReportRunScore(finalPoints);
                 Log("Save OK");
+                
             }
             catch (System.Exception e)
             {
@@ -181,3 +184,5 @@ public class GameOverUI : MonoBehaviour
     
 
 }
+
+*/

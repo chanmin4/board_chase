@@ -1,3 +1,5 @@
+
+/*
 using System;
 using System.Linq;
 //기존코드 호환용 이제 reward DB all로 전환가능 여기사용 X
@@ -39,3 +41,4 @@ public static class Achievements
         }
     }
 }
+*/

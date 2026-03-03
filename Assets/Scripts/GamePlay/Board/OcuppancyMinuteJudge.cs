@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -103,3 +104,4 @@ public class OccupancyMinuteJudge : MonoBehaviour
         }
     }
 }
+*/

@@ -1,7 +1,9 @@
+
 using UnityEngine;
 
 public class DiskSkinApplier : MonoBehaviour
 {
+    /*
     [Header("Renderer-based (기존)")]
     public Renderer meshRenderer; // Cylinder MeshRenderer (fallback용)
 
@@ -99,4 +101,5 @@ public class DiskSkinApplier : MonoBehaviour
         t.localScale  = new Vector3(scaleXZ, scaleY, scaleXZ);
         if (rotateXZ) t.localRotation = Quaternion.Euler(90f, 0f, 0f);
     }
+    */
 }

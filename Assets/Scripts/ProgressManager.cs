@@ -1,8 +1,12 @@
+
 using System.Collections.Generic;
 using UnityEngine;
 
 public class ProgressManager : MonoBehaviour
 {
+    public static ProgressManager Instance { get; private set; }
+
+    /*
 #if UNITY_EDITOR
     [Header("Debug (Editor Only)")]
     public bool debugOverrideBest = false;
@@ -12,31 +16,29 @@ public class ProgressManager : MonoBehaviour
     void OnValidate()
     {
         if (!Application.isPlaying) return;
-        if (!debugOverrideBest || Data == null) return;
+        //if (!debugOverrideBest || Data == null) return;
 
-        if (Data.bestScore != debugBestScore)
+        //if (Data.bestScore != debugBestScore)
         {
-            Data.bestScore = debugBestScore;
-            OnChallengeScoreChanged?.Invoke(Data.bestScore);
+        //    Data.bestScore = debugBestScore;
+         //   OnChallengeScoreChanged?.Invoke(Data.bestScore);
             if (debugAutoSave) Save();
-            Debug.Log($"[DEBUG] bestScore = {Data.bestScore}");
+         //   Debug.Log($"[DEBUG] bestScore = {Data.bestScore}");
         }
     }
 
     [ContextMenu("DEBUG: Apply Inspector BestScore")]
     public void DebugApplyInspectorBestScore()
     {
-        if (!Application.isPlaying || Data == null) return;
-        Data.bestScore = debugBestScore;
-        OnChallengeScoreChanged?.Invoke(Data.bestScore);
+       // if (!Application.isPlaying || Data == null) return;
+       // Data.bestScore = debugBestScore;
+       // OnChallengeScoreChanged?.Invoke(Data.bestScore);
         if (debugAutoSave) Save();
-        Debug.Log($"[DEBUG] Applied bestScore = {Data.bestScore}");
+       // Debug.Log($"[DEBUG] Applied bestScore = {Data.bestScore}");
     }
 #endif
 
-    public static ProgressManager Instance { get; private set; }
-    public SaveData Data { get; private set; }
-
+    
     // 외부 UI가 구독하는 이벤트
     public System.Action<int> OnChallengeScoreChanged;
     public System.Action<int> OnBestScoreChanged;
@@ -63,70 +65,70 @@ public class ProgressManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        Data = SaveSystem.Load() ?? new SaveData();
+        //Data = SaveSystem.Load() ?? new SaveData();
 
         // null-guard (구버전 세이브 호환)
-        Data.unlockedSkins ??= new List<string>();
-        Data.unlockedAbilities ??= new List<string>();
-        Data.claimedAchievements ??= new List<string>();
-        if (string.IsNullOrEmpty(Data.equippedSkinId))
-            Data.equippedSkinId = "skin_default";
-        if (!Data.unlockedSkins.Contains("skin_default"))
-            Data.unlockedSkins.Add("skin_default");
+       // Data.unlockedSkins ??= new List<string>();
+      //  Data.unlockedAbilities ??= new List<string>();
+      //  Data.claimedAchievements ??= new List<string>();
+       // if (string.IsNullOrEmpty(Data.equippedSkinId))
+       //     Data.equippedSkinId = "skin_default";
+       // if (!Data.unlockedSkins.Contains("skin_default"))
+        //    Data.unlockedSkins.Add("skin_default");
     }
 
-    public void Save() => SaveSystem.Save(Data);
+   // public void Save() => SaveSystem.Save(Data);
 
     // 점수 보고
     public void GameOverReportRunScore(int score)
     {
-        if (score > Data.challengeScore)
+   //     if (score > Data.challengeScore)
         {
-            Data.challengeScore= score;
-            OnChallengeScoreChanged?.Invoke(Data.challengeScore);
-            Save();
+     //       Data.challengeScore= score;
+     //       OnChallengeScoreChanged?.Invoke(Data.challengeScore);
+     //       Save();
         }
     }
 
     public void GameOverReportRunTimeMs(int timeMs)
     {
-        if (timeMs > Data.challengeTimeMs)
+      //  if (timeMs > Data.challengeTimeMs)
         {
-            Data.challengeTimeMs = timeMs;
-            OnChallengeTimeChangedMs?.Invoke(Data.challengeTimeMs);
-            Save();
+      //      Data.challengeTimeMs = timeMs;
+     //      OnChallengeTimeChangedMs?.Invoke(Data.challengeTimeMs);
+       //     Save();
         }
     }
     public void GameSuccessReportRunScore(int score)
     {
-        if (score > Data.bestScore)
+       // if (score > Data.bestScore)
         {
-            Data.bestScore= score;
-            OnBestScoreChanged?.Invoke(Data.bestScore);
-            Save();
+       //     Data.bestScore= score;
+       //     OnBestScoreChanged?.Invoke(Data.bestScore);
+        //    Save();
         }
     }
     
 
-    public bool HasSkin(string id) => Data.unlockedSkins.Contains(id);
-    public bool HasAbility(string key) => Data.unlockedAbilities.Contains(key);
+   // public bool HasSkin(string id) => Data.unlockedSkins.Contains(id);
+   // public bool HasAbility(string key) => Data.unlockedAbilities.Contains(key);
 
     public void EquipSkin(string id)
     {
-        if (HasSkin(id)) { Data.equippedSkinId = id; Save(); }
+   //     if (HasSkin(id)) { Data.equippedSkinId = id; Save(); }
     }
 
     public void ResetProgress(bool saveFileAfter = false)
     {
-        Data = new SaveData();
-        if (!Data.unlockedSkins.Contains("skin_default"))
-            Data.unlockedSkins.Add("skin_default");
+    //    Data = new SaveData();
+    //    if (!Data.unlockedSkins.Contains("skin_default"))
+     //       Data.unlockedSkins.Add("skin_default");
 
-        OnChallengeScoreChanged?.Invoke(Data.challengeScore);
-        OnChallengeTimeChangedMs?.Invoke(Data.challengeTimeMs);
-        OnUnlocksChanged?.Invoke();
+    //    OnChallengeScoreChanged?.Invoke(Data.challengeScore);
+     //   OnChallengeTimeChangedMs?.Invoke(Data.challengeTimeMs);
+     //   OnUnlocksChanged?.Invoke();
 
-        if (saveFileAfter) Save();
+     //   if (saveFileAfter) Save();
         Debug.Log("[Progress] Reset done");
     }
 
@@ -136,17 +138,17 @@ public class ProgressManager : MonoBehaviour
     {
         foreach (var a in Achievements.Table)
             if (a.id == achievementId)
-                return Data.bestScore >= a.requiredBestScore;
+    //            return Data.bestScore >= a.requiredBestScore;
         return false;
     }
-    public bool IsAchievementClaimed(string achievementId)
-        => Data.claimedAchievements.Contains(achievementId);
+  //  public bool IsAchievementClaimed(string achievementId)
+    //    => Data.claimedAchievements.Contains(achievementId);
 
     // 성취 패널 ‘수령’ 버튼에서 호출
     public bool IsAchievementClaimable(string achievementId)
     {
         // 1) 이미 수령했으면 불가
-        if (IsAchievementClaimed(achievementId)) return false;  // claimedAchievements 기준
+     //   if (IsAchievementClaimed(achievementId)) return false;  // claimedAchievements 기준
 
         // 2) 보상 메타 조회(타입/요구치 등)
         var so = RewardDB.Get(achievementId);                   // RewardSO(id, type, requiredBestScore...)
@@ -160,10 +162,10 @@ public class ProgressManager : MonoBehaviour
         switch (so.type) // RewardType.Skin | RewardType.Card
         {
             case RewardType.Skin:
-                unlocked= Data.unlockedSkins != null && Data.unlockedSkins.Contains(so.id);
+      //          unlocked= Data.unlockedSkins != null && Data.unlockedSkins.Contains(so.id);
                 break;
-            case RewardType.Card:
-                unlocked= Data.unlockedAbilities != null && Data.unlockedAbilities.Contains(so.id);
+      //      case RewardType.Card:
+      //          unlocked= Data.unlockedAbilities != null && Data.unlockedAbilities.Contains(so.id);
                 break;
         }
 
@@ -173,7 +175,7 @@ public class ProgressManager : MonoBehaviour
     public bool IsUnlockable(string achievementId)
     {
         // 이미 수령(Claimed)했으면 언락 대상 아님
-        if (IsAchievementClaimed(achievementId)) return false;
+     //   if (IsAchievementClaimed(achievementId)) return false;
 
         var so = RewardDB.Get(achievementId);
         if (so == null) return false;
@@ -202,13 +204,13 @@ public class ProgressManager : MonoBehaviour
 
         if (so.type == RewardType.Skin)
         {
-            Data.unlockedSkins ??= new List<string>();
-            if (!Data.unlockedSkins.Contains(so.id)) Data.unlockedSkins.Add(so.id);
+            //Data.unlockedSkins ??= new List<string>();
+            //if (!Data.unlockedSkins.Contains(so.id)) Data.unlockedSkins.Add(so.id);
         }
         else // RewardType.Card
         {
-            Data.unlockedAbilities ??= new List<string>();
-            if (!Data.unlockedAbilities.Contains(so.id)) Data.unlockedAbilities.Add(so.id);
+            //Data.unlockedAbilities ??= new List<string>();
+            //if (!Data.unlockedAbilities.Contains(so.id)) Data.unlockedAbilities.Add(so.id);
         }
 
         Save();
@@ -250,4 +252,5 @@ public class ProgressManager : MonoBehaviour
         OnUnlocksChanged?.Invoke();
         return true;
     }
+    */
 }
