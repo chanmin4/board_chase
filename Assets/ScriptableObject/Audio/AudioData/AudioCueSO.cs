@@ -9,12 +9,14 @@ public class AudioCueSO : DescriptionBaseSO
 
     public AudioClip[] GetClips()
     {
-        if (_audioClipGroups == null) return Array.Empty<AudioClip>();
+        if (_audioClipGroups == null || _audioClipGroups.Length == 0)
+            return Array.Empty<AudioClip>();
 
         int n = _audioClipGroups.Length;
-        var clips = new AudioClip[n];
+        AudioClip[] clips = new AudioClip[n];
         for (int i = 0; i < n; i++)
-            clips[i] = _audioClipGroups[i].GetNextClip();
+            clips[i] = _audioClipGroups[i] != null ? _audioClipGroups[i].GetNextClip() : null;
+
         return clips;
     }
 }
@@ -30,11 +32,18 @@ public class AudioClipsGroup
 
     public AudioClip GetNextClip()
     {
-        if (audioClips == null || audioClips.Length == 0) return null;
-        if (audioClips.Length == 1) return audioClips[0];
+        if (audioClips == null || audioClips.Length == 0)
+            return null;
+
+        if (audioClips.Length == 1)
+            return audioClips[0];
 
         if (_nextClipToPlay == -1)
-            _nextClipToPlay = (sequenceMode == SequenceMode.Sequential) ? 0 : UnityEngine.Random.Range(0, audioClips.Length);
+        {
+            _nextClipToPlay = sequenceMode == SequenceMode.Sequential
+                ? 0
+                : UnityEngine.Random.Range(0, audioClips.Length);
+        }
         else
         {
             switch (sequenceMode)
@@ -43,11 +52,14 @@ public class AudioClipsGroup
                     _nextClipToPlay = UnityEngine.Random.Range(0, audioClips.Length);
                     break;
                 case SequenceMode.RandomNoImmediateRepeat:
-                    do { _nextClipToPlay = UnityEngine.Random.Range(0, audioClips.Length); }
-                    while (_nextClipToPlay == _lastClipPlayed);
+                    do
+                    {
+                        _nextClipToPlay = UnityEngine.Random.Range(0, audioClips.Length);
+                    }
+                    while (audioClips.Length > 1 && _nextClipToPlay == _lastClipPlayed);
                     break;
                 case SequenceMode.Sequential:
-                    _nextClipToPlay = (int)Mathf.Repeat(++_nextClipToPlay, audioClips.Length);
+                    _nextClipToPlay = (int)Mathf.Repeat(_nextClipToPlay + 1, audioClips.Length);
                     break;
             }
         }
@@ -56,5 +68,10 @@ public class AudioClipsGroup
         return audioClips[_nextClipToPlay];
     }
 
-    public enum SequenceMode { Random, RandomNoImmediateRepeat, Sequential }
+    public enum SequenceMode
+    {
+        Random,
+        RandomNoImmediateRepeat,
+        Sequential
+    }
 }

@@ -5,10 +5,9 @@ using UnityEngine.Events;
 public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInput.IMenuActions
 {
     [Space]
-
+	[SerializeField] private GameStateSO _gameStateManager;
 
     private GameInput _gameInput;
-    	// Gameplay
 	public event UnityAction JumpEvent = delegate { };
 	public event UnityAction JumpCanceledEvent = delegate { };
 	public event UnityAction AttackEvent = delegate { };

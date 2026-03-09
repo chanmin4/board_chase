@@ -164,7 +164,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1169e75e3e00ca4468e5ce77199a1dc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _audioChannel: {fileID: 0}
+  _pool: {fileID: 11400000, guid: c9e3deada6d801b4e8bcae4478f43a75, type: 2}
+  _initialSize: 10
+  _SFXEventChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+  _musicEventChannel: {fileID: 11400000, guid: 433707c2ad8b86d4fac943cea41c0309, type: 2}
+  _SFXVolumeEventChannel: {fileID: 11400000, guid: e72956ee834863643a4d6c5051910f98, type: 2}
+  _musicVolumeEventChannel: {fileID: 11400000, guid: 719d7d9fd7c635847a67ba842911982e, type: 2}
+  _masterVolumeEventChannel: {fileID: 11400000, guid: 6e5de3a46a1c5644f95a85a5508349ea, type: 2}
+  audioMixer: {fileID: 24100000, guid: 4ec18c545f8f1864cbc96259630c5eec, type: 2}
+  _masterVolume: 1
+  _musicVolume: 1
+  _sfxVolume: 1
 --- !u!114 &355485495
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -178,8 +188,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Events:
-    m_Signals: []
-    m_Events: []
+    m_Signals:
+    - {fileID: 0}
+    m_Events:
+    - m_PersistentCalls:
+        m_Calls: []
 --- !u!1 &1078539312
 GameObject:
   m_ObjectHideFlags: 0
@@ -224,13 +237,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 973b6a241d1782248968acd041e84086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SaveSettingsEvent: {fileID: 0}
-  _currentSettings: {fileID: 0}
-  _urpAsset: {fileID: 0}
-  _saveSystem: {fileID: 0}
-  _changeMasterVolumeEventChannel: {fileID: 0}
-  _changeSFXVolumeEventChannel: {fileID: 0}
-  _changeMusicVolumeEventChannel: {fileID: 0}
+  SaveSettingsEvent: {fileID: 11400000, guid: f8f55615a22af4b47a61cd0c68eec9ad, type: 2}
+  _currentSettings: {fileID: 11400000, guid: d2341db4079fa944fa7ec4eaecd637e7, type: 2}
+  _urpAsset: {fileID: 11400000, guid: 4b83569d67af61e458304325a23e5dfd, type: 2}
+  _saveSystem: {fileID: 11400000, guid: 096e40e8aee5c694a824b4025828ec02, type: 2}
+  _changeMasterVolumeEventChannel: {fileID: 11400000, guid: 6e5de3a46a1c5644f95a85a5508349ea, type: 2}
+  _changeSFXVolumeEventChannel: {fileID: 11400000, guid: e72956ee834863643a4d6c5051910f98, type: 2}
+  _changeMusicVolumeEventChannel: {fileID: 11400000, guid: 719d7d9fd7c635847a67ba842911982e, type: 2}
 --- !u!1 &1628866394
 GameObject:
   m_ObjectHideFlags: 0

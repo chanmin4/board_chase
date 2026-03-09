@@ -1,75 +1,118 @@
-﻿/*
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
-
 
 /// <summary>
-/// This class contains the function to call when play button is pressed
+/// Open Project StartGame 폼 유지.
+/// 단, 위치 기반 이어하기는 제거하고
+/// 고정된 게임 씬으로만 진입하도록 단순화한 버전.
 /// </summary>
 public class StartGame : MonoBehaviour
 {
-	[SerializeField] private GameSceneSO _locationsToLoad;
-	[SerializeField] private SaveSystem _saveSystem = default;
-	[SerializeField] private bool _showLoadScreen = default;
-	
-	[Header("Broadcasting on")]
-	[SerializeField] private LoadEventChannelSO _loadLocation = default;
+    [SerializeField] private GameSceneSO _gameplayScene;
+    [SerializeField] private SaveSystem _saveSystem = default;
+    [SerializeField] private bool _showLoadScreen = default;
 
-	[Header("Listening to")]
-	[SerializeField] private VoidEventChannelSO _onNewGameButton = default;
-	[SerializeField] private VoidEventChannelSO _onContinueButton = default;
+    [Header("Broadcasting on")]
+    [SerializeField] private LoadEventChannelSO _loadGameScene = default;
 
-	private bool _hasSaveData;
+    [Header("Listening to")]
+    [SerializeField] private VoidEventChannelSO _onNewGameButton = default;
+    [SerializeField] private VoidEventChannelSO _onContinueButton = default;
 
-	private void Start()
-	{
-		_hasSaveData = _saveSystem.LoadSaveDataFromDisk();
-		_onNewGameButton.OnEventRaised += StartNewGame;
-		_onContinueButton.OnEventRaised += ContinuePreviousGame;
-	}
+    private bool _hasSaveData;
 
-	private void OnDestroy()
-	{
-		_onNewGameButton.OnEventRaised -= StartNewGame;
-		_onContinueButton.OnEventRaised -= ContinuePreviousGame;
-	}
+    private void Start()
+    {
+        RefreshSaveState();
 
-	private void StartNewGame()
-	{
-		_hasSaveData = false;
-		
-		_saveSystem. WriteEmptySaveFile();
-		_saveSystem.SetNewGameData();
-		_loadLocation.RaiseEvent(_locationsToLoad, _showLoadScreen);
-	}
+        if (_onNewGameButton != null)
+            _onNewGameButton.OnEventRaised += StartNewGame;
 
-	private void ContinuePreviousGame()
-	{
-		StartCoroutine(LoadSaveGame());
-	}
+        if (_onContinueButton != null)
+            _onContinueButton.OnEventRaised += ContinuePreviousGame;
+    }
 
-	private void OnResetSaveDataPress()
-	{
-		_hasSaveData = false;
-	}
+    private void OnDestroy()
+    {
+        if (_onNewGameButton != null)
+            _onNewGameButton.OnEventRaised -= StartNewGame;
 
-	private IEnumerator LoadSaveGame()
-	{
-		yield return StartCoroutine(_saveSystem.LoadSavedInventory());
+        if (_onContinueButton != null)
+            _onContinueButton.OnEventRaised -= ContinuePreviousGame;
+    }
 
-		_saveSystem.LoadSavedQuestlineStatus(); 
-		var locationGuid = _saveSystem.saveData._locationId;
-		var asyncOperationHandle = Addressables.LoadAssetAsync<LocationSO>(locationGuid);
+    private void RefreshSaveState()
+    {
+        if (_saveSystem == null)
+        {
+            Debug.LogError("[StartGame] SaveSystem reference is missing.");
+            _hasSaveData = false;
+            return;
+        }
 
-		yield return asyncOperationHandle;
+        _hasSaveData = _saveSystem.LoadSaveDataFromDisk();
+    }
 
-		if (asyncOperationHandle.Status == AsyncOperationStatus.Succeeded)
-		{
-			LocationSO locationSO = asyncOperationHandle.Result;
-			_loadLocation.RaiseEvent(locationSO, _showLoadScreen);
-		}
-	}
+    private void StartNewGame()
+    {
+        if (_saveSystem == null)
+        {
+            Debug.LogError("[StartGame] SaveSystem reference is missing.");
+            return;
+        }
+
+        if (_gameplayScene == null)
+        {
+            Debug.LogError("[StartGame] Gameplay scene is not assigned.");
+            return;
+        }
+
+        _hasSaveData = false;
+
+        // 오픈프로젝트 느낌 유지:
+        // 빈 세이브 작성 -> 새 게임 데이터 세팅 -> 씬 진입
+        _saveSystem.WriteEmptySaveFile();
+        _saveSystem.SetNewGameData();
+
+        _loadGameScene.RaiseEvent(_gameplayScene, _showLoadScreen);
+    }
+
+    private void ContinuePreviousGame()
+    {
+        RefreshSaveState();
+
+        if (!_hasSaveData)
+        {
+            Debug.LogWarning("[StartGame] No save data found. Starting new game instead.");
+            StartNewGame();
+            return;
+        }
+
+        StartCoroutine(LoadSaveGame());
+    }
+
+   private IEnumerator LoadSaveGame()
+{
+    bool loaded = _saveSystem.LoadSaveDataFromDisk();
+
+    if (!loaded)
+    {
+        Debug.LogWarning("[StartGame] Save data not found. Starting new game instead.");
+        StartNewGame();
+        yield break;
+    }
+
+    _loadGameScene.RaiseEvent(_gameplayScene, _showLoadScreen);
+    yield break;
 }
-*/
+
+    public bool HasSaveData()
+    {
+        return _hasSaveData;
+    }
+
+    public void ResetSaveDataFlag()
+    {
+        _hasSaveData = false;
+    }
+}

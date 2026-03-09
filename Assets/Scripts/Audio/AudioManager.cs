@@ -1,164 +1,348 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 
 public class AudioManager : MonoBehaviour
 {
-    [Header("Listen on")]
-    [SerializeField] private AudioCueEventChannelSO _audioChannel;
+    private static AudioManager _instance;
 
-    private class Playing
+    [Header("SoundEmitters pool")]
+    [SerializeField] private SoundEmitterPoolSO _pool = default;
+    [SerializeField] private int _initialSize = 10;
+
+    [Header("Listening on channels")]
+    [Tooltip("The SoundManager listens to this event, fired by objects in any scene, to play SFXs")]
+    [SerializeField] private AudioCueEventChannelSO _SFXEventChannel = default;
+    [Tooltip("The SoundManager listens to this event, fired by objects in any scene, to play Music")]
+    [SerializeField] private AudioCueEventChannelSO _musicEventChannel = default;
+    [Tooltip("The SoundManager listens to this event, fired by objects in any scene, to change SFXs volume")]
+    [SerializeField] private FloatEventChannelSO _SFXVolumeEventChannel = default;
+    [Tooltip("The SoundManager listens to this event, fired by objects in any scene, to change Music volume")]
+    [SerializeField] private FloatEventChannelSO _musicVolumeEventChannel = default;
+    [Tooltip("The SoundManager listens to this event, fired by objects in any scene, to change Master volume")]
+    [SerializeField] private FloatEventChannelSO _masterVolumeEventChannel = default;
+
+    [Header("Audio control")]
+    [SerializeField] private AudioMixer audioMixer = default;
+    [Range(0f, 1f)] [SerializeField] private float _masterVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float _musicVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float _sfxVolume = 1f;
+
+    private readonly Dictionary<AudioCueKey, List<SoundEmitter>> _activeEmittersByKey = new();
+    private readonly Dictionary<SoundEmitter, AudioCueKey> _emitterToKey = new();
+
+    private SoundEmitter _musicSoundEmitter;
+
+    private const string MasterVolumeParam = "MasterVolume";
+    private const string MusicVolumeParam = "MusicVolume";
+    private const string SFXVolumeParam = "SFXVolume";
+
+    private void Awake()
     {
-        public GameObject root;
-        public List<AudioSource> sources = new();
-        public bool looping;
-        public AudioConfigurationSO config;
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        _instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        if (_pool != null)
+        {
+            _pool.Prewarm(_initialSize);
+            _pool.SetParent(transform);
+        }
+
+        ApplyAllVolumes();
     }
 
-    private readonly Dictionary<AudioCueKey, Playing> _playing = new();
+    private void OnEnable()
+    {
+        if (_SFXEventChannel != null)
+        {
+            _SFXEventChannel.OnAudioCuePlayRequested += PlayAudioCue;
+            _SFXEventChannel.OnAudioCueStopRequested += StopAudioCue;
+            _SFXEventChannel.OnAudioCueFinishRequested += FinishAudioCue;
+        }
 
-   private void OnEnable()
-    {       
-        if (_audioChannel == null) return;
-        _audioChannel.OnAudioCuePlayRequested   += HandlePlay;
-        _audioChannel.OnAudioCueStopRequested   += HandleStop;
-        _audioChannel.OnAudioCueFinishRequested += HandleFinish;
+        if (_musicEventChannel != null)
+        {
+            _musicEventChannel.OnAudioCuePlayRequested += PlayMusicTrack;
+            _musicEventChannel.OnAudioCueStopRequested += StopMusic;
+        }
+
+        if (_masterVolumeEventChannel != null)
+            _masterVolumeEventChannel.OnEventRaised += ChangeMasterVolume;
+
+        if (_musicVolumeEventChannel != null)
+            _musicVolumeEventChannel.OnEventRaised += ChangeMusicVolume;
+
+        if (_SFXVolumeEventChannel != null)
+            _SFXVolumeEventChannel.OnEventRaised += ChangeSFXVolume;
     }
 
     private void OnDisable()
     {
-        if (_audioChannel == null) return;
-        _audioChannel.OnAudioCuePlayRequested   -= HandlePlay;
-        _audioChannel.OnAudioCueStopRequested   -= HandleStop;
-        _audioChannel.OnAudioCueFinishRequested -= HandleFinish;
-    }
-
-
-    private AudioCueKey HandlePlay(AudioCueSO cue, AudioConfigurationSO config, Vector3 position)
-    {
-        if (cue == null || config == null) return AudioCueKey.Invalid;
-
-        var clips = cue.GetClips();
-        if (clips == null || clips.Length == 0) return AudioCueKey.Invalid;
-
-        var key = AudioCueKey.Create();
-
-        var root = new GameObject($"AudioCue_{key.id}_{cue.name}");
-        root.transform.SetParent(transform, false);
-        root.transform.position = position;
-
-        var playing = new Playing { root = root, looping = cue.looping, config = config };
-
-        float longest = 0f;
-
-        foreach (var clip in clips)
+        if (_SFXEventChannel != null)
         {
-            if (clip == null) continue;
-
-            var src = root.AddComponent<AudioSource>();
-            ApplyConfig(src, config);
-
-            src.clip = clip;
-            src.loop = cue.looping;
-            src.Play();
-
-            playing.sources.Add(src);
-
-            if (!cue.looping)
-                longest = Mathf.Max(longest, clip.length);
+            _SFXEventChannel.OnAudioCuePlayRequested -= PlayAudioCue;
+            _SFXEventChannel.OnAudioCueStopRequested -= StopAudioCue;
+            _SFXEventChannel.OnAudioCueFinishRequested -= FinishAudioCue;
         }
 
-        _playing[key] = playing;
+        if (_musicEventChannel != null)
+        {
+            _musicEventChannel.OnAudioCuePlayRequested -= PlayMusicTrack;
+            _musicEventChannel.OnAudioCueStopRequested -= StopMusic;
+        }
 
-        if (!cue.looping)
-            StartCoroutine(AutoCleanup(key, longest / Mathf.Max(0.01f, playing.sources.Count > 0 ? playing.sources[0].pitch : 1f)));
+        if (_masterVolumeEventChannel != null)
+            _masterVolumeEventChannel.OnEventRaised -= ChangeMasterVolume;
 
+        if (_musicVolumeEventChannel != null)
+            _musicVolumeEventChannel.OnEventRaised -= ChangeMusicVolume;
+
+        if (_SFXVolumeEventChannel != null)
+            _SFXVolumeEventChannel.OnEventRaised -= ChangeSFXVolume;
+    }
+
+    private void OnValidate()
+    {
+        if (Application.isPlaying)
+            ApplyAllVolumes();
+    }
+
+    private void ApplyAllVolumes()
+    {
+        SetGroupVolume(MasterVolumeParam, _masterVolume);
+        SetGroupVolume(MusicVolumeParam, _musicVolume);
+        SetGroupVolume(SFXVolumeParam, _sfxVolume);
+    }
+
+    private void ChangeMasterVolume(float newVolume)
+    {
+        _masterVolume = newVolume;
+        SetGroupVolume(MasterVolumeParam, _masterVolume);
+    }
+
+    private void ChangeMusicVolume(float newVolume)
+    {
+        _musicVolume = newVolume;
+        SetGroupVolume(MusicVolumeParam, _musicVolume);
+    }
+
+    private void ChangeSFXVolume(float newVolume)
+    {
+        _sfxVolume = newVolume;
+        SetGroupVolume(SFXVolumeParam, _sfxVolume);
+    }
+
+    public void SetGroupVolume(string parameterName, float normalizedVolume)
+    {
+        if (audioMixer == null)
+            return;
+
+        bool volumeSet = audioMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
+        if (!volumeSet)
+            Debug.LogWarning($"AudioMixer parameter not found: {parameterName}");
+    }
+
+    public float GetGroupVolume(string parameterName)
+    {
+        if (audioMixer == null)
+            return 0f;
+
+        if (audioMixer.GetFloat(parameterName, out float rawVolume))
+            return MixerValueToNormalized(rawVolume);
+
+        Debug.LogWarning($"AudioMixer parameter not found: {parameterName}");
+        return 0f;
+    }
+
+    private float MixerValueToNormalized(float mixerValue)
+    {
+        return 1f + (mixerValue / 80f);
+    }
+
+    private float NormalizedToMixerValue(float normalizedValue)
+    {
+        normalizedValue = Mathf.Clamp01(normalizedValue);
+        return (normalizedValue - 1f) * 80f;
+    }
+
+    private AudioCueKey PlayMusicTrack(AudioCueSO audioCue, AudioConfigurationSO audioConfiguration, Vector3 positionInSpace)
+    {
+        if (_pool == null || audioCue == null)
+            return AudioCueKey.Invalid;
+
+        AudioClip[] clips = audioCue.GetClips();
+        if (clips == null || clips.Length == 0 || clips[0] == null)
+            return AudioCueKey.Invalid;
+
+        AudioClip musicClip = clips[0];
+
+        float fadeDuration = audioConfiguration != null ? audioConfiguration.stopFadeTime : 0.25f;
+        float startTime = 0f;
+
+        if (_musicSoundEmitter != null && _musicSoundEmitter.IsPlaying())
+        {
+            if (_musicSoundEmitter.GetClip() == musicClip)
+                return AudioCueKey.Invalid;
+
+            startTime = _musicSoundEmitter.FadeMusicOut(fadeDuration);
+            _musicSoundEmitter.OnSoundFinishedPlaying -= StopMusicEmitter;
+            _musicSoundEmitter.OnSoundFinishedPlaying += StopMusicEmitter;
+        }
+
+        _musicSoundEmitter = _pool.Request();
+        _musicSoundEmitter.OnSoundFinishedPlaying -= StopMusicEmitter;
+        _musicSoundEmitter.OnSoundFinishedPlaying += StopMusicEmitter;
+        _musicSoundEmitter.transform.position = positionInSpace;
+        _musicSoundEmitter.FadeMusicIn(musicClip, audioConfiguration, fadeDuration, startTime);
+
+        return AudioCueKey.Invalid;
+    }
+
+    private bool StopMusic(AudioCueKey key)
+    {
+        if (_musicSoundEmitter == null)
+            return false;
+
+        if (_musicSoundEmitter.IsPlaying())
+        {
+            _musicSoundEmitter.OnSoundFinishedPlaying -= StopMusicEmitter;
+            _musicSoundEmitter.Stop();
+            StopMusicEmitter(_musicSoundEmitter);
+            _musicSoundEmitter = null;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void TimelineInterruptsMusic()
+    {
+        StopMusic(AudioCueKey.Invalid);
+    }
+
+    public AudioCueKey PlayAudioCue(AudioCueSO audioCue, AudioConfigurationSO settings, Vector3 position = default)
+    {
+        if (_pool == null || audioCue == null)
+            return AudioCueKey.Invalid;
+
+        AudioClip[] clipsToPlay = audioCue.GetClips();
+        if (clipsToPlay == null || clipsToPlay.Length == 0)
+            return AudioCueKey.Invalid;
+
+        AudioCueKey key = AudioCueKey.Create();
+        List<SoundEmitter> emitters = new();
+
+        for (int i = 0; i < clipsToPlay.Length; i++)
+        {
+            AudioClip clip = clipsToPlay[i];
+            if (clip == null)
+                continue;
+
+            SoundEmitter emitter = _pool.Request();
+            if (emitter == null)
+                continue;
+
+            emitter.transform.position = position;
+            emitter.OnSoundFinishedPlaying -= OnSoundEmitterFinishedPlaying;
+            emitter.OnSoundFinishedPlaying += OnSoundEmitterFinishedPlaying;
+            emitter.PlayAudioClip(clip, settings, audioCue.looping, position);
+
+            emitters.Add(emitter);
+            _emitterToKey[emitter] = key;
+        }
+
+        if (emitters.Count == 0)
+            return AudioCueKey.Invalid;
+
+        _activeEmittersByKey[key] = emitters;
         return key;
     }
 
-    private void ApplyConfig(AudioSource src, AudioConfigurationSO config)
+    public bool FinishAudioCue(AudioCueKey audioCueKey)
     {
-        src.outputAudioMixerGroup = config.outputMixerGroup;
-        src.volume = config.volume;
+        if (!_activeEmittersByKey.TryGetValue(audioCueKey, out List<SoundEmitter> emitters))
+            return false;
 
-        float pitch = config.pitch;
-        if (config.randomPitch)
-            pitch = Random.Range(config.pitchMin, config.pitchMax);
-        src.pitch = pitch;
-
-        src.spatialBlend = config.spatialBlend;
-        src.minDistance = config.minDistance;
-        src.maxDistance = config.maxDistance;
-        src.playOnAwake = false;
-    }
-
-    private bool HandleStop(AudioCueKey key)
-    {
-        if (!_playing.TryGetValue(key, out var p)) return false;
-        StopAndDestroy(key, p);
-        return true;
-    }
-
-    private bool HandleFinish(AudioCueKey key)
-    {
-        if (!_playing.TryGetValue(key, out var p)) return false;
-
-        // 최소 구현: loop면 loop 해제 후 정리, non-loop는 stop과 동일
-        foreach (var s in p.sources)
+        for (int i = 0; i < emitters.Count; i++)
         {
-            if (s == null) continue;
-            s.loop = false;
-        }
-
-        // fade는 나중에(지금은 stopFadeTime 0이면 즉시 정리)
-        if (p.looping)
-        {
-            if (p.config != null && p.config.stopFadeTime > 0f)
-                StartCoroutine(FadeOutThenDestroy(key, p, p.config.stopFadeTime));
-            else
-                StopAndDestroy(key, p);
-        }
-        else
-        {
-            StopAndDestroy(key, p);
+            if (emitters[i] != null)
+                emitters[i].Finish();
         }
 
         return true;
     }
 
-    private IEnumerator FadeOutThenDestroy(AudioCueKey key, Playing p, float t)
+    public bool StopAudioCue(AudioCueKey audioCueKey)
     {
-        float start = 1f;
-        if (p.sources.Count > 0 && p.sources[0] != null) start = p.sources[0].volume;
+        if (!_activeEmittersByKey.TryGetValue(audioCueKey, out List<SoundEmitter> emitters))
+            return false;
 
-        float time = 0f;
-        while (time < t)
+        for (int i = emitters.Count - 1; i >= 0; i--)
         {
-            time += Time.unscaledDeltaTime;
-            float k = 1f - Mathf.Clamp01(time / t);
-            foreach (var s in p.sources)
-                if (s != null) s.volume = start * k;
-            yield return null;
+            if (emitters[i] != null)
+                StopAndCleanEmitter(emitters[i]);
         }
 
-        StopAndDestroy(key, p);
+        _activeEmittersByKey.Remove(audioCueKey);
+        return true;
     }
 
-    private IEnumerator AutoCleanup(AudioCueKey key, float delay)
+    private void OnSoundEmitterFinishedPlaying(SoundEmitter soundEmitter)
     {
-        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, delay));
-        if (_playing.TryGetValue(key, out var p))
-            StopAndDestroy(key, p);
+        if (soundEmitter == null)
+            return;
+
+        if (_emitterToKey.TryGetValue(soundEmitter, out AudioCueKey key) &&
+            _activeEmittersByKey.TryGetValue(key, out List<SoundEmitter> emitters))
+        {
+            emitters.Remove(soundEmitter);
+            if (emitters.Count == 0)
+                _activeEmittersByKey.Remove(key);
+        }
+
+        _emitterToKey.Remove(soundEmitter);
+        StopAndCleanEmitter(soundEmitter, false);
     }
 
-    private void StopAndDestroy(AudioCueKey key, Playing p)
+    private void StopAndCleanEmitter(SoundEmitter soundEmitter, bool removeFromMaps = true)
     {
-        _playing.Remove(key);
+        if (soundEmitter == null)
+            return;
 
-        foreach (var s in p.sources)
-            if (s != null) s.Stop();
+        soundEmitter.OnSoundFinishedPlaying -= OnSoundEmitterFinishedPlaying;
+        soundEmitter.Stop();
 
-        if (p.root != null)
-            Destroy(p.root);
+        if (removeFromMaps && _emitterToKey.TryGetValue(soundEmitter, out AudioCueKey key))
+        {
+            if (_activeEmittersByKey.TryGetValue(key, out List<SoundEmitter> emitters))
+            {
+                emitters.Remove(soundEmitter);
+                if (emitters.Count == 0)
+                    _activeEmittersByKey.Remove(key);
+            }
+
+            _emitterToKey.Remove(soundEmitter);
+        }
+
+        _pool?.Return(soundEmitter);
+    }
+
+    private void StopMusicEmitter(SoundEmitter soundEmitter)
+    {
+        if (soundEmitter == null)
+            return;
+
+        soundEmitter.OnSoundFinishedPlaying -= StopMusicEmitter;
+        soundEmitter.Stop();
+        _pool?.Return(soundEmitter);
+
+        if (_musicSoundEmitter == soundEmitter)
+            _musicSoundEmitter = null;
     }
 }

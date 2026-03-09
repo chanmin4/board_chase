@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+[CreateAssetMenu(fileName = "SaveSystem", menuName = "Save/Save System")]
 public class SaveSystem : ScriptableObject
 {
     [SerializeField] private VoidEventChannelSO _saveSettingsEvent = default;
-	[SerializeField] private LoadEventChannelSO _loadLocation = default;
 	[SerializeField] private SettingsSO _currentSettings = default;
-    public string saveFilename = "save.ink";
-	public string backupSaveFilename = "save.ink.bak";
+    public string saveFilename = "save.vaccine";
+	public string backupSaveFilename = "save.vaccine.bak";
     public Save saveData = new Save();
 
     private void OnEnable()
