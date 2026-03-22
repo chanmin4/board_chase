@@ -7,6 +7,15 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.singularitygroup.hotreload": {
+      "version": "file:com.singularitygroup.hotreload",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0"
+      }
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -14,8 +23,8 @@
       "dependencies": {}
     },
     "com.unity.addressables": {
-      "version": "2.4.6",
-      "depth": 0,
+      "version": "2.4.3",
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.profiling.core": "1.0.2",
@@ -24,7 +33,7 @@
         "com.unity.modules.jsonserialize": "1.0.0",
         "com.unity.modules.imageconversion": "1.0.0",
         "com.unity.modules.unitywebrequest": "1.0.0",
-        "com.unity.scriptablebuildpipeline": "2.3.8",
+        "com.unity.scriptablebuildpipeline": "2.3.2",
         "com.unity.modules.unitywebrequestassetbundle": "1.0.0"
       },
       "url": "https://packages.unity.com"
@@ -182,7 +191,7 @@
     },
     "com.unity.profiling.core": {
       "version": "1.0.2",
-      "depth": 1,
+      "depth": 2,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -231,8 +240,8 @@
       }
     },
     "com.unity.scriptablebuildpipeline": {
-      "version": "2.3.8",
-      "depth": 1,
+      "version": "2.3.2",
+      "depth": 2,
       "source": "registry",
       "dependencies": {
         "com.unity.test-framework": "1.4.5",

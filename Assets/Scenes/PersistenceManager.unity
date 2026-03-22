@@ -367,7 +367,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d5d36e93c3ff404292c68285e07875d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _loadChannel: {fileID: 11400000, guid: a55063cbe05e0b04f866cff6b728ff55, type: 2}
+  _gameplayScene: {fileID: 11400000, guid: 029e548f69352ea41b32c331b4991911, type: 2}
+  _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
+  _loadMenu: {fileID: 11400000, guid: a55063cbe05e0b04f866cff6b728ff55, type: 2}
+  _loadGameScene: {fileID: 11400000, guid: 90032009b4361944f9d5a41ca641d320, type: 2}
+  _coldStartupLocation: {fileID: 11400000, guid: 9b603e519742ff140b06a29a9c0c7aa7, type: 2}
+  _toggleLoadingScreen: {fileID: 11400000, guid: 9f7403ed0ce45594c976d8096a3d796d, type: 2}
+  _onSceneReady: {fileID: 11400000, guid: 6ffdab77583331c4ca20a575a1ebcdee, type: 2}
+  _fadeRequestChannel: {fileID: 11400000, guid: 1380f68c9847e0243b66fa5509085f07, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
