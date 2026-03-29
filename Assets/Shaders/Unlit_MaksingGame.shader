@@ -1,4 +1,4 @@
-Shader "Unlit/ContamMask"
+Shader "Unlit/MaskingGame"
 {
     Properties
     {
