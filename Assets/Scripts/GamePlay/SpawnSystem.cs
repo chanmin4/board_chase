@@ -7,7 +7,7 @@ public class SpawnSystem : MonoBehaviour
 { 
 	[Header("Asset References")]
 	[SerializeField] private InputReader _inputReader = default;
-	[SerializeField] private VCSplatter _playerPrefab = default;
+	[SerializeField] private VSplatter_Character _playerPrefab = default;
 	[SerializeField] private TransformAnchor _playerTransformAnchor = default;
 	[SerializeField] private TransformEventChannelSO _playerInstantiatedChannel = default;
 
@@ -37,7 +37,7 @@ public class SpawnSystem : MonoBehaviour
 	private void SpawnPlayer()
 	{
 		Transform spawnLocation = _defaultSpawnPoint;
-		VCSplatter playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
+		VSplatter_Character playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
 
 		_playerInstantiatedChannel.RaiseEvent(playerInstance.transform);
 		_playerTransformAnchor.Provide(playerInstance.transform); //the CameraSystem will pick this up to frame the player

@@ -18,8 +18,8 @@ public class BoardPaintManager : MonoBehaviour
     /// </summary>
     public enum PaintChannel
     {
-        Player,
-        Enemy
+        Vaccine,
+        Virus
     }
 
     /// <summary>

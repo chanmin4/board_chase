@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7431fd0d2ecf4954ca4f5994f7bd235a, type: 3}
+  m_Name: GameplayCameraTransform
+  m_EditorClassIdentifier: 
+  _guid: 8dc0c7f2fe261f94ab5471edc537ab39
+  description: Transform of the GameplayCamera. The CameraSystem provides this in
+    its OnEnable.
+  isSet: 0
+  _value: {fileID: 0}

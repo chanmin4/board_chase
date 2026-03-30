@@ -2,14 +2,14 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Events;
 [CreateAssetMenu(menuName = "Input/Input Reader", fileName = "InputReader")]
-public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInput.IMenuActions
+public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInput.IUIActions
 {
     [Space]
 	[SerializeField] private GameStateSO _gameStateManager;
 
     private GameInput _gameInput;
-	public event UnityAction JumpEvent = delegate { };
-	public event UnityAction JumpCanceledEvent = delegate { };
+	public event UnityAction DashEvent = delegate { };
+	public event UnityAction DashCanceledEvent = delegate { };
 	public event UnityAction AttackEvent = delegate { };
 	public event UnityAction AttackCanceledEvent = delegate { };
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
@@ -46,7 +46,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		{
 			_gameInput = new GameInput();
 
-			_gameInput.Menu.SetCallbacks(this);
+			_gameInput.UI.SetCallbacks(this);
 			_gameInput.Gameplay.SetCallbacks(this);
 		}
 
@@ -58,13 +58,13 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	}
     	public void EnableDialogueInput()
 	{
-		_gameInput.Menu.Enable();
+		_gameInput.UI.Enable();
 		_gameInput.Gameplay.Disable();
 	}
 
 	public void EnableGameplayInput()
 	{
-		_gameInput.Menu.Disable();
+		_gameInput.UI.Disable();
 		_gameInput.Gameplay.Enable();
 	}
 
@@ -72,13 +72,13 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	{
 		_gameInput.Gameplay.Disable();
 
-		_gameInput.Menu.Enable();
+		_gameInput.UI.Enable();
 	}
 
 	public void DisableAllInput()
 	{
 		_gameInput.Gameplay.Disable();
-		_gameInput.Menu.Disable();
+		_gameInput.UI.Disable();
 	}
     public bool LeftMouseDown() => Mouse.current.leftButton.isPressed;
     // ---------------- Gameplay ----------------
@@ -86,8 +86,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
     public void OnLook(InputAction.CallbackContext context) { }
     public void OnAttack(InputAction.CallbackContext context) { }
     public void OnInteract(InputAction.CallbackContext context) { }
-    public void OnCrouch(InputAction.CallbackContext context) { }
-    public void OnJump(InputAction.CallbackContext context) { }
+    public void OnTab(InputAction.CallbackContext context) { }
+    public void OnDash(InputAction.CallbackContext context) { }
     public void OnPrevious(InputAction.CallbackContext context) { }
     public void OnNext(InputAction.CallbackContext context) { }
     public void OnSprint(InputAction.CallbackContext context) { }

@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// <para>This component consumes input on the InputReader and stores its values. The input is then read, and manipulated, by the StateMachines's Actions.</para>
 /// </summary>
-public class VCSplatter : MonoBehaviour
+public class VSplatter_Character: MonoBehaviour
 {
 	[SerializeField] private InputReader _inputReader = default;
 	[SerializeField] private TransformAnchor _gameplayCameraTransform = default;
@@ -13,7 +13,7 @@ public class VCSplatter : MonoBehaviour
 	private float _previousSpeed;
 
 	//These fields are read and manipulated by the StateMachine actions
-	[NonSerialized] public bool jumpInput;
+	[NonSerialized] public bool DashInput;
 	[NonSerialized] public bool extraActionInput;
 	[NonSerialized] public bool attackInput;
 	[NonSerialized] public Vector3 movementInput; //Initial input coming from the Protagonist script
@@ -36,8 +36,8 @@ public class VCSplatter : MonoBehaviour
 	//Adds listeners for events being triggered in the InputReader script
 	private void OnEnable()
 	{
-		_inputReader.JumpEvent += OnJumpInitiated;
-		_inputReader.JumpCanceledEvent += OnJumpCanceled;
+		_inputReader.DashEvent += OnDashInitiated;
+		_inputReader.DashCanceledEvent += OnDashCanceled;
 		_inputReader.MoveEvent += OnMove;
 		_inputReader.StartedRunning += OnStartedRunning;
 		_inputReader.StoppedRunning += OnStoppedRunning;
@@ -48,8 +48,8 @@ public class VCSplatter : MonoBehaviour
 	//Removes all listeners to the events coming from the InputReader script
 	private void OnDisable()
 	{
-		_inputReader.JumpEvent -= OnJumpInitiated;
-		_inputReader.JumpCanceledEvent -= OnJumpCanceled;
+		_inputReader.DashEvent -= OnDashInitiated;
+		_inputReader.DashCanceledEvent -= OnDashCanceled;
 		_inputReader.MoveEvent -= OnMove;
 		_inputReader.StartedRunning -= OnStartedRunning;
 		_inputReader.StoppedRunning -= OnStoppedRunning;
@@ -117,14 +117,14 @@ public class VCSplatter : MonoBehaviour
 		_inputVector = movement;
 	}
 
-	private void OnJumpInitiated()
+	private void OnDashInitiated()
 	{
-		jumpInput = true;
+		DashInput = true;
 	}
 
-	private void OnJumpCanceled()
+	private void OnDashCanceled()
 	{
-		jumpInput = false;
+		DashInput = false;
 	}
 
 	private void OnStoppedRunning() => isRunning = false;

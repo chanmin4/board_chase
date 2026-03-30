@@ -130,11 +130,11 @@ public void ApplyCircle(BoardPaintManager.CirclePaintRequest request)
 
     switch (request.channel)
     {
-        case BoardPaintManager.PaintChannel.Player:
+        case BoardPaintManager.PaintChannel.Vaccine:
             maskRenderer.StampVaccineCircle(request.worldPos, request.radiusWorld, true);
             break;
 
-        case BoardPaintManager.PaintChannel.Enemy:
+        case BoardPaintManager.PaintChannel.Virus:
             maskRenderer.StampVirusCircle(request.worldPos, request.radiusWorld, true);
             break;
     }
@@ -200,7 +200,7 @@ public void ApplyCircle(BoardPaintManager.CirclePaintRequest request)
     /// </summary>
     public IReadOnlyList<StoredCirclePaint> GetStoredPaints(BoardPaintManager.PaintChannel channel)
     {
-        if (channel == BoardPaintManager.PaintChannel.Player)
+        if (channel == BoardPaintManager.PaintChannel.Vaccine)
             return _playerPaints;
 
         return _enemyPaints;
@@ -222,7 +222,7 @@ public void ApplyCircle(BoardPaintManager.CirclePaintRequest request)
     /// </summary>
     public void ClearStoredPaint(BoardPaintManager.PaintChannel channel)
     {
-        if (channel == BoardPaintManager.PaintChannel.Player)
+        if (channel == BoardPaintManager.PaintChannel.Vaccine)
             _playerPaints.Clear();
         else
             _enemyPaints.Clear();

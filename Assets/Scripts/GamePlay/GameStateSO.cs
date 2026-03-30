@@ -7,7 +7,9 @@ public enum GameState
 	Gameplay, //regular state: player moves, attacks, can perform actions
 	Pause, //pause menu is opened, the whole game world is frozen
 	Inventory, //when inventory UI or cooking UI are open
-	Dialogue
+	Dialogue,
+	Cutscene,
+	Combat
 }
 
 //[CreateAssetMenu(fileName = "GameState", menuName = "Gameplay/GameState", order = 51)]
@@ -29,7 +31,28 @@ public class GameStateSO : DescriptionBaseSO
 		_alertEnemies = new List<Transform>();
 	}
 
+public void AddAlertEnemy(Transform enemy)
+	{
+		if (!_alertEnemies.Contains(enemy))
+		{
+			_alertEnemies.Add(enemy);
+		}
 
+		UpdateGameState(GameState.Combat);
+	}
+
+	public void RemoveAlertEnemy(Transform enemy)
+	{
+		if (_alertEnemies.Contains(enemy))
+		{
+			_alertEnemies.Remove(enemy);
+
+			if (_alertEnemies.Count == 0)
+			{
+				UpdateGameState(GameState.Gameplay);
+			}
+		}
+	}
 	public void UpdateGameState(GameState newGameState)
 	{
 		if (newGameState == CurrentGameState)

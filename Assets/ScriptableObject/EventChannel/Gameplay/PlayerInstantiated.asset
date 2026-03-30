@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eb6f956760e23945a7674626d291f0e, type: 3}
+  m_Name: PlayerInstantiated
+  m_EditorClassIdentifier: 
+  _guid: 2723b3f59f7ede3498fe7e385d2bb6ee
+  description: Raised by the SpawnSystem each time the player is instantiated, including
+    after changing location.
