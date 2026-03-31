@@ -1943,9 +1943,49 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: f3027c4528b8e794f940a4696506f0c3, type: 2}
     - target: {fileID: 1129259094068729541, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _onCutsceneStart
+      value: 
+      objectReference: {fileID: 11400000, guid: 6018ba8038d5a0f418011f645241e86f, type: 2}
+    - target: {fileID: 1129259094068729541, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _onInteractionEnded
+      value: 
+      objectReference: {fileID: 11400000, guid: 6a8475f429cbabd42a27316fd920cd2b, type: 2}
+    - target: {fileID: 1129259094068729541, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
       propertyPath: _toggleInteractionUI
       value: 
       objectReference: {fileID: 11400000, guid: 818cc55cb05226248bdb15ace58eab84, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _deathEvent
+      value: 
+      objectReference: {fileID: 11400000, guid: 0a29544909be226418bc1677ec369790, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _restoreHealth
+      value: 
+      objectReference: {fileID: 11400000, guid: de4a39f85969d44cba990125224ff7ef, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _getHitEffectSO
+      value: 
+      objectReference: {fileID: 11400000, guid: dcf7b20a3fc92814b8b7640e48d40d3a, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _healthConfigSO
+      value: 
+      objectReference: {fileID: 11400000, guid: 4a31c5d403836f34e985dbcadd8d8453, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _updateHealthUI
+      value: 
+      objectReference: {fileID: 11400000, guid: 2447a760b3f9f134f8730aa53c8d2ece, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _currentHealthSO
+      value: 
+      objectReference: {fileID: 11400000, guid: 53a134cbd7189844c8d61c74cd1b50ce, type: 2}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _mainMeshRenderer
+      value: 
+      objectReference: {fileID: 780332678}
+    - target: {fileID: 3725409875933228798, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _droppableRewardSO
+      value: 
+      objectReference: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
     - target: {fileID: 4351803592356138420, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
       propertyPath: _inputReader
       value: 
@@ -1994,6 +2034,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6766731295951724156, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6915450752968060550, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
       propertyPath: m_Name
       value: VSplatter
@@ -2002,6 +2046,18 @@ PrefabInstance:
       propertyPath: _gameState
       value: 
       objectReference: {fileID: 11400000, guid: 8e8b48267ef954f49a75dbff9d394778, type: 2}
+    - target: {fileID: 7029684008800762381, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _audioConfig
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7029684008800762381, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: _sfxEventChannel
+      value: 
+      objectReference: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+    - target: {fileID: 7212158188188398964, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7548800111824649869, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -2015,6 +2071,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+--- !u!23 &780332678 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 3607562842501971094, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+  m_PrefabInstance: {fileID: 780332677}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &798172895
 GameObject:
   m_ObjectHideFlags: 0

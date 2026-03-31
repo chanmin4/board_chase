@@ -2,10 +2,10 @@ using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
-[CreateAssetMenu(menuName = "State Machines/Conditions/Is Holding Dash")]
-public class IsHoldingDashConditionSO : StateConditionSO<IsHoldingJumpCondition> { }
+[CreateAssetMenu(menuName = "State Machines/Conditions/Is Using Dash")]
+public class IsUsingDashConditionSO : StateConditionSO<IsUsingDashCondition> { }
 
-public class IsHoldingJumpCondition : Condition
+public class IsUsingDashCondition: Condition
 {
 	//Component references
 	private VSplatter_Character _vsplatterScript;

@@ -10,7 +10,7 @@ public enum ZoneType
 }
 
 [CreateAssetMenu(fileName = "PlayerIsInZone", menuName = "State Machines/Conditions/Player Is In Zone")]
-public class PlayerIsInZoneSO : StateConditionSO
+public class PlayerIsInZoneSO : StateConditionSO<PlayerIsInZone>
 {
 	public ZoneType zone;
 

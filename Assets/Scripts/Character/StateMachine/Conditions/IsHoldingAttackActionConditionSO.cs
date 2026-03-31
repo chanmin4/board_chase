@@ -8,15 +8,15 @@ public class IsHoldingAttackActionConditionSO : StateConditionSO<IsHoldingAttack
 public class IsHoldingAttackActionCondition : Condition
 {
 	//Component references
-	private VSplatter_Character _protagonistScript;
+	private VSplatter_Character _vsplatterScript;
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_protagonistScript = stateMachine.GetComponent<VSplatter_Character>();
+		_vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
 	}
 
 	protected override bool Statement()
 	{
-		return _protagonistScript.attackInput;
+		return _vsplatterScript.attackInput;
 	}
 }

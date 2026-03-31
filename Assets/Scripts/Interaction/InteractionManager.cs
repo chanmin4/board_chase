@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
 
-public enum InteractionType { None = 0, PickUp, Cook, Talk };
+public enum InteractionType { None = 0, PickUp, Talk };
 
 public class InteractionManager : MonoBehaviour
 {
@@ -80,10 +80,6 @@ public class InteractionManager : MonoBehaviour
 		{
 			newPotentialInteraction.type = InteractionType.PickUp;
 		}
-		else if (obj.CompareTag("CookingPot"))
-		{
-			newPotentialInteraction.type = InteractionType.Cook;
-		}
 		else if (obj.CompareTag("NPC"))
 		{
 			newPotentialInteraction.type = InteractionType.Talk;
@@ -124,7 +120,6 @@ public class InteractionManager : MonoBehaviour
 	{
 		switch (currentInteractionType)
 		{
-			case InteractionType.Cook:
 			case InteractionType.Talk:
 				//We show the UI after cooking or talking, in case player wants to interact again
 				RequestUpdateUI(true);

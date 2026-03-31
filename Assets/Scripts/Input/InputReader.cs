@@ -10,6 +10,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
     private GameInput _gameInput;
 	public event UnityAction DashEvent = delegate { };
 	public event UnityAction DashCanceledEvent = delegate { };
+	public event UnityAction ShockwaveChargeEvent = delegate { };
+	public event UnityAction ShockwaveExpelEvent = delegate { };
 	public event UnityAction AttackEvent = delegate { };
 	public event UnityAction AttackCanceledEvent = delegate { };
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
@@ -86,7 +88,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
     public void OnLook(InputAction.CallbackContext context) { }
     public void OnAttack(InputAction.CallbackContext context) { }
     public void OnInteract(InputAction.CallbackContext context) { }
-    public void OnTab(InputAction.CallbackContext context) { }
+    public void OnShockwave(InputAction.CallbackContext context) { }
     public void OnDash(InputAction.CallbackContext context) { }
     public void OnPrevious(InputAction.CallbackContext context) { }
     public void OnNext(InputAction.CallbackContext context) { }

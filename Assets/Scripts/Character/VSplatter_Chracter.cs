@@ -14,6 +14,7 @@ public class VSplatter_Character: MonoBehaviour
 
 	//These fields are read and manipulated by the StateMachine actions
 	[NonSerialized] public bool DashInput;
+	[NonSerialized] public bool ShockwaveInput;
 	[NonSerialized] public bool extraActionInput;
 	[NonSerialized] public bool attackInput;
 	[NonSerialized] public Vector3 movementInput; //Initial input coming from the Protagonist script
@@ -38,6 +39,8 @@ public class VSplatter_Character: MonoBehaviour
 	{
 		_inputReader.DashEvent += OnDashInitiated;
 		_inputReader.DashCanceledEvent += OnDashCanceled;
+		_inputReader.ShockwaveChargeEvent+= OnShockWaveInitiated;
+		_inputReader.ShockwaveExpelEvent+=OnShockWaveExpel;
 		_inputReader.MoveEvent += OnMove;
 		_inputReader.StartedRunning += OnStartedRunning;
 		_inputReader.StoppedRunning += OnStoppedRunning;
@@ -122,11 +125,21 @@ public class VSplatter_Character: MonoBehaviour
 		DashInput = true;
 	}
 
+
 	private void OnDashCanceled()
 	{
 		DashInput = false;
 	}
+	private void OnShockWaveInitiated()
+	{
+		ShockwaveInput = true;
+	}
+	
 
+	private void OnShockWaveExpel()
+	{
+		ShockwaveInput = false;
+	}
 	private void OnStoppedRunning() => isRunning = false;
 
 	private void OnStartedRunning() => isRunning = true;
