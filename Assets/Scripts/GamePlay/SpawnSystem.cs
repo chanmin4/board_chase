@@ -23,6 +23,7 @@ public class SpawnSystem : MonoBehaviour
 
 	private void OnEnable()
 	{
+		Debug.Log("onsceneready event raised");
 		_onSceneReady.OnEventRaised += SpawnPlayer;
 	}
 
@@ -38,7 +39,7 @@ public class SpawnSystem : MonoBehaviour
 	{
 		Transform spawnLocation = _defaultSpawnPoint;
 		VSplatter_Character playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
-
+		Debug.Log("vplatter spawn ");
 		_playerInstantiatedChannel.RaiseEvent(playerInstance.transform);
 		_playerTransformAnchor.Provide(playerInstance.transform); //the CameraSystem will pick this up to frame the player
 

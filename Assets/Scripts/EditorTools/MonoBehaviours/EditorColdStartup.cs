@@ -32,6 +32,7 @@ public class EditorColdStartup : MonoBehaviour
 	{
 		if (isColdStart)
 		{
+			Debug.Log("started editor");
 			_persistentManagersSO.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true).Completed += LoadEventChannel;
 
 		}
@@ -46,6 +47,7 @@ public class EditorColdStartup : MonoBehaviour
 	}
 	private void LoadEventChannel(AsyncOperationHandle<SceneInstance> obj)
 	{
+		Debug.Log("editor load event channel");
 		_notifyColdStartupChannel.LoadAssetAsync<LoadEventChannelSO>().Completed += OnNotifyChannelLoaded;
 	}
 
@@ -53,10 +55,12 @@ public class EditorColdStartup : MonoBehaviour
 	{
 		if (_thisSceneSO != null)
 		{
+			Debug.Log("_thisSceneSO != null");
 			obj.Result.RaiseEvent(_thisSceneSO);
 		}
 		else
 		{
+			Debug.Log("onscenereadychannel raise event");
 			//Raise a fake scene ready event, so the player is spawned
 			_onSceneReadyChannel.RaiseEvent();
 			//When this happens, the player won't be able to move between scenes because the SceneLoader has no conception of which scene we are in
