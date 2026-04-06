@@ -9,8 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5e724f945a0fb204fa0f39919afe653b, type: 3}
-  m_Name: GroundGravity
+  m_Script: {fileID: 11500000, guid: f766c9f4e1f285f4ca8b67a035c3df70, type: 3}
+  m_Name: ClearInputCache_OnEnter
   m_EditorClassIdentifier: 
-  description: Sets the y component of the VSplatter's movementVector
-  verticalPull: -10
+  description: Clears the VSplatter's cached input of actions like Jump

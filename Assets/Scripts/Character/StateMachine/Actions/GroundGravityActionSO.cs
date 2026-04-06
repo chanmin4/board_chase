@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
@@ -25,4 +26,5 @@ public class GroundGravityAction : StateAction
 	{
 		_vsplatterScript.movementVector.y = _originSO.verticalPull;
 	}
+	
 }

@@ -27,15 +27,27 @@ namespace VSplatter.StateMachine.ScriptableObjects
 			return state;
 		}
 
-		private static StateAction[] GetActions(StateActionSO[] scriptableActions,
-			StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances)
-		{
-			int count = scriptableActions.Length;
-			var actions = new StateAction[count];
-			for (int i = 0; i < count; i++)
-				actions[i] = scriptableActions[i].GetAction(stateMachine, createdInstances);
+	private static StateAction[] GetActions(StateActionSO[] scriptableActions,
+    StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances)
+	{
+		if (scriptableActions == null || scriptableActions.Length == 0)
+			return new StateAction[0];
 
-			return actions;
+		var validActions = new List<StateAction>();
+
+		for (int i = 0; i < scriptableActions.Length; i++)
+		{
+			if (scriptableActions[i] == null)
+			{
+				Debug.LogWarning($"State action is missing at index {i} on state machine asset.");
+				continue;
+			}
+
+			validActions.Add(scriptableActions[i].GetAction(stateMachine, createdInstances));
 		}
+
+		return validActions.ToArray();
+	}
+
 	}
 }

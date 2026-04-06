@@ -39,10 +39,10 @@ public class VSplatter_Character: MonoBehaviour
 		_inputReader.DashCanceledEvent += OnDashCanceled;
 		_inputReader.ShockwaveChargeEvent+= OnShockWaveInitiated;
 		_inputReader.ShockwaveExpelEvent+=OnShockWaveExpel;
+		_inputReader.ShockwaveCanceledEvent+=OnShockWaveCanceled;
 		_inputReader.MoveEvent += OnMove;
-		_inputReader.StartedRunning += OnStartedRunning;
-		_inputReader.StoppedRunning += OnStoppedRunning;
 		_inputReader.AttackEvent += OnStartedAttack;
+		_inputReader.AttackCanceledEvent+=OnCanceledAttack;
 		//...
 	}
 
@@ -51,20 +51,51 @@ public class VSplatter_Character: MonoBehaviour
 	{
 		_inputReader.DashEvent -= OnDashInitiated;
 		_inputReader.DashCanceledEvent -= OnDashCanceled;
+		_inputReader.ShockwaveChargeEvent-= OnShockWaveInitiated;
+		_inputReader.ShockwaveExpelEvent-=OnShockWaveExpel;
+		_inputReader.ShockwaveCanceledEvent-=OnShockWaveCanceled;
 		_inputReader.MoveEvent -= OnMove;
-		_inputReader.StartedRunning -= OnStartedRunning;
-		_inputReader.StoppedRunning -= OnStoppedRunning;
 		_inputReader.AttackEvent -= OnStartedAttack;
+		_inputReader.AttackCanceledEvent-=OnCanceledAttack;
 		//...
 	}
 
+	private void Update()
+	{
+		RecalculateMovement();
+	}
 
+	private void RecalculateMovement()
+	{
+		float targetSpeed = Mathf.Clamp01(_inputVector.magnitude);
+
+		if (targetSpeed > 0f)
+		{
+			if (isRunning)
+				targetSpeed = 1f;
+
+			if (attackInput)
+				targetSpeed = 0.05f;
+		}
+
+		targetSpeed = Mathf.Lerp(_previousSpeed, targetSpeed, Time.deltaTime * 4f);
+
+		Vector3 adjustedMovement = new Vector3(_inputVector.x, 0f, _inputVector.y);
+
+		if (adjustedMovement.sqrMagnitude > 1f)
+			adjustedMovement.Normalize();
+
+		movementInput = adjustedMovement * targetSpeed;
+
+		_previousSpeed = targetSpeed;
+		Debug.Log($"input={_inputVector}, movementInput={movementInput}");
+	}
 
 	//---- EVENT LISTENERS ----
 
 	private void OnMove(Vector2 movement)
 	{
-
+		Debug.Log("Onmove event");
 		_inputVector = movement;
 	}
 
@@ -88,13 +119,15 @@ public class VSplatter_Character: MonoBehaviour
 	{
 		ShockwaveInput = false;
 	}
-	private void OnStoppedRunning() => isRunning = false;
-
-	private void OnStartedRunning() => isRunning = true;
+	private void OnShockWaveCanceled()
+	{
+		ShockwaveInput=false;
+	}
 
 
 	private void OnStartedAttack() => attackInput = true;
+	private void OnCanceledAttack()=> attackInput=false;
 
 	// Triggered from Animation Event
-	public void ConsumeAttackInput() => attackInput = false;
+	//public void ConsumeAttackInput() => attackInput = false;
 }

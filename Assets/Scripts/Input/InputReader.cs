@@ -12,25 +12,17 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction DashCanceledEvent = delegate { };
 	public event UnityAction ShockwaveChargeEvent = delegate { };
 	public event UnityAction ShockwaveExpelEvent = delegate { };
+	public event UnityAction ShockwaveCanceledEvent = delegate { };
 	public event UnityAction AttackEvent = delegate { };
 	public event UnityAction AttackCanceledEvent = delegate { };
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
-	public event UnityAction InventoryActionButtonEvent = delegate { };
-	public event UnityAction SaveActionButtonEvent = delegate { };
-	public event UnityAction ResetActionButtonEvent = delegate { };
+	//public event UnityAction InventoryActionButtonEvent = delegate { };
+	//public event UnityAction SaveActionButtonEvent = delegate { };
+	//public event UnityAction ResetActionButtonEvent = delegate { };
 	public event UnityAction<Vector2> MoveEvent = delegate { };
-	public event UnityAction<Vector2, bool> CameraMoveEvent = delegate { };
-	public event UnityAction EnableMouseControlCameraEvent = delegate { };
-	public event UnityAction DisableMouseControlCameraEvent = delegate { };
-	public event UnityAction StartedRunning = delegate { };
-	public event UnityAction StoppedRunning = delegate { };
 
 	// Shared between menus and dialogues
 	public event UnityAction MoveSelectionEvent = delegate { };
-
-	// Dialogues
-	public event UnityAction AdvanceDialogueEvent = delegate { };
-
 	// Menus
 	public event UnityAction MenuMouseMoveEvent = delegate { };
 	public event UnityAction MenuClickButtonEvent = delegate { };
@@ -84,15 +76,16 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	}
     public bool LeftMouseDown() => Mouse.current.leftButton.isPressed;
     // ---------------- Gameplay ----------------
-    public void OnMove(InputAction.CallbackContext context) { }
-    public void OnLook(InputAction.CallbackContext context) { }
+    public void OnMove(InputAction.CallbackContext context) {
+		MoveEvent.Invoke(context.ReadValue<Vector2>()); 
+	}
+
     public void OnAttack(InputAction.CallbackContext context) { }
     public void OnInteract(InputAction.CallbackContext context) { }
     public void OnShockwave(InputAction.CallbackContext context) { }
     public void OnDash(InputAction.CallbackContext context) { }
     public void OnPrevious(InputAction.CallbackContext context) { }
     public void OnNext(InputAction.CallbackContext context) { }
-    public void OnSprint(InputAction.CallbackContext context) { }
 
     // ---------------- Menu (UI) ----------------
     public void OnNavigate(InputAction.CallbackContext context) { }

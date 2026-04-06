@@ -22,6 +22,7 @@ public class IsMovingCondition : Condition
 	{
 		Vector3 movementVector = _vsplatterScript.movementInput;
 		movementVector.y = 0f;
+		Debug.Log(movementVector.sqrMagnitude +" " +_originSO.treshold);
 		return movementVector.sqrMagnitude > _originSO.treshold;
 	}
 }
