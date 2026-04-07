@@ -22,7 +22,7 @@ public class SectorPaint : MonoBehaviour
     [Serializable]
     public struct StoredCirclePaint
     {
-        public BoardPaintManager.PaintChannel channel;
+        public SectorPaintManager.PaintChannel channel;
         public Vector3 worldPos;
         public float radiusWorld;
         public int priority;
@@ -31,7 +31,7 @@ public class SectorPaint : MonoBehaviour
     }
 
     [Header("Refs")]
-    [SerializeField] private BoardPaintManager paintManager;
+    [SerializeField] private SectorPaintManager paintManager;
     [SerializeField] private SectorRuntime runtime;
     [SerializeField] private MaskRenderer maskRenderer;
 
@@ -72,7 +72,7 @@ public class SectorPaint : MonoBehaviour
 
 
         if (!paintManager)
-            paintManager = FindAnyObjectByType<BoardPaintManager>();
+            paintManager = FindAnyObjectByType<SectorPaintManager>();
     }
 
     private void Awake()
@@ -82,7 +82,7 @@ public class SectorPaint : MonoBehaviour
 
 
         if (!paintManager)
-            paintManager = FindAnyObjectByType<BoardPaintManager>();
+            paintManager = FindAnyObjectByType<SectorPaintManager>();
     }
 
     private void OnEnable()
@@ -106,7 +106,7 @@ public class SectorPaint : MonoBehaviour
     /// 
     /// BoardPaintManager는 이 함수 결과만 보고 전달 여부를 결정한다.
     /// </summary>
-    public bool CanAcceptCircle(BoardPaintManager.CirclePaintRequest request)
+    public bool CanAcceptCircle(SectorPaintManager.CirclePaintRequest request)
     {
         if (!CanPaintNow())
             return false;
@@ -123,18 +123,18 @@ public class SectorPaint : MonoBehaviour
     /// </summary>
   
 
-public void ApplyCircle(BoardPaintManager.CirclePaintRequest request)
+public void ApplyCircle(SectorPaintManager.CirclePaintRequest request)
 {
     if (maskRenderer == null)
         return;
 
     switch (request.channel)
     {
-        case BoardPaintManager.PaintChannel.Vaccine:
+        case SectorPaintManager.PaintChannel.Vaccine:
             maskRenderer.StampVaccineCircle(request.worldPos, request.radiusWorld, true);
             break;
 
-        case BoardPaintManager.PaintChannel.Virus:
+        case SectorPaintManager.PaintChannel.Virus:
             maskRenderer.StampVirusCircle(request.worldPos, request.radiusWorld, true);
             break;
     }
@@ -198,9 +198,9 @@ public void ApplyCircle(BoardPaintManager.CirclePaintRequest request)
     /// 플레이어/적 채널별로 저장된 페인트 기록 리스트를 반환한다.
     /// 읽기 전용으로만 쓰는 걸 권장.
     /// </summary>
-    public IReadOnlyList<StoredCirclePaint> GetStoredPaints(BoardPaintManager.PaintChannel channel)
+    public IReadOnlyList<StoredCirclePaint> GetStoredPaints(SectorPaintManager.PaintChannel channel)
     {
-        if (channel == BoardPaintManager.PaintChannel.Vaccine)
+        if (channel == SectorPaintManager.PaintChannel.Vaccine)
             return _playerPaints;
 
         return _enemyPaints;
@@ -220,9 +220,9 @@ public void ApplyCircle(BoardPaintManager.CirclePaintRequest request)
     /// <summary>
     /// 특정 채널의 페인트 기록만 삭제한다.
     /// </summary>
-    public void ClearStoredPaint(BoardPaintManager.PaintChannel channel)
+    public void ClearStoredPaint(SectorPaintManager.PaintChannel channel)
     {
-        if (channel == BoardPaintManager.PaintChannel.Vaccine)
+        if (channel == SectorPaintManager.PaintChannel.Vaccine)
             _playerPaints.Clear();
         else
             _enemyPaints.Clear();

@@ -10,7 +10,7 @@ using UnityEngine;
 /// 가능하면 그쪽으로 요청을 전달하는 역할만 담당한다.
 /// </summary>
 [DisallowMultipleComponent]
-public class BoardPaintManager : MonoBehaviour
+public class SectorPaintManager : MonoBehaviour
 {
     /// <summary>
     /// 누가 칠하는지 구분하는 채널.

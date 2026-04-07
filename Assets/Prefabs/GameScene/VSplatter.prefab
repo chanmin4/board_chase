@@ -104,7 +104,7 @@ GameObject:
   - component: {fileID: 3601251521957474038}
   - component: {fileID: 9017905057833243592}
   m_Layer: 3
-  m_Name: VsplatterAttackController
+  m_Name: VsplatterClickController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -140,6 +140,7 @@ MonoBehaviour:
   _character: {fileID: 4351803592356138420}
   _animator: {fileID: 6766731295951724156}
   shotsPerSecond: 5
+  upperBodyLayerIndex: 1
 --- !u!1 &6915450752968060550
 GameObject:
   m_ObjectHideFlags: 0
@@ -186,6 +187,7 @@ Transform:
   - {fileID: 6270111692562515479}
   - {fileID: 1209306903707651627}
   - {fileID: 3601251521957474038}
+  - {fileID: 1003668878456256313}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &8994133820209950284
@@ -418,6 +420,75 @@ MonoBehaviour:
     appendConditionsInfo: 1
     appendActionsInfo: 1
     currentState: 
+--- !u!1 &7973477281289552522
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1003668878456256313}
+  - component: {fileID: 2978944384377007248}
+  m_Layer: 3
+  m_Name: VSplatter_Attack_Paint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1003668878456256313
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7973477281289552522}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5546477128773306913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2978944384377007248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7973477281289552522}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffcf257b651776142a48f4514e20a6cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _character: {fileID: 4351803592356138420}
+  _animator: {fileID: 6766731295951724156}
+  _sectorPaintManager: {fileID: 0}
+  _aimCamera: {fileID: 0}
+  _ownerRoot: {fileID: 1003668878456256313}
+  attackShotsPerSecond: 2
+  driveAttackAnimator: 1
+  attackHoldBoolName: IsShooting
+  attackTriggerName: Shoot
+  paintShotsPerSecond: 4
+  paintRadiusWorld: 1.2
+  maxPaintDistance: 12
+  paintPriority: 0
+  aimHitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  paintChannel: 0
+  requirePhysicsHit: 1
+  fallbackPlaneY: 0
+  drivePaintAnimator: 0
+  paintHoldBoolName: IsPainting
+  paintTriggerName: Paint
+  debugLogs: 0
+  debugDrawAimPoint: 0
+  debugDrawDuration: 0.1
 --- !u!1001 &3135370206224279509
 PrefabInstance:
   m_ObjectHideFlags: 0

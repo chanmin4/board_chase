@@ -15,6 +15,7 @@ public class VSplatter_Character: MonoBehaviour
 	[NonSerialized] public bool ShockwaveInput;
 	[NonSerialized] public bool extraActionInput;
 	[NonSerialized] public bool attackInput;
+	[NonSerialized] public bool paintInput;
 	[NonSerialized] public Vector3 movementInput; //Initial input coming from the Protagonist script
 	[NonSerialized] public Vector3 movementVector; //Final movement vector, manipulated by the StateMachine actions
 	[NonSerialized] public ControllerColliderHit lastHit;
@@ -43,6 +44,9 @@ public class VSplatter_Character: MonoBehaviour
 		_inputReader.MoveEvent += OnMove;
 		_inputReader.AttackEvent += OnStartedAttack;
 		_inputReader.AttackCanceledEvent+=OnCanceledAttack;
+		_inputReader.PaintEvent+=OnPaint;
+		_inputReader.PaintCanceledEvent+=OnPaintCanceled;
+
 		//...
 	}
 
@@ -57,6 +61,8 @@ public class VSplatter_Character: MonoBehaviour
 		_inputReader.MoveEvent -= OnMove;
 		_inputReader.AttackEvent -= OnStartedAttack;
 		_inputReader.AttackCanceledEvent-=OnCanceledAttack;
+		_inputReader.PaintEvent-=OnPaint;
+		_inputReader.PaintCanceledEvent-=OnPaintCanceled;
 		//...
 	}
 
@@ -127,7 +133,9 @@ public class VSplatter_Character: MonoBehaviour
 
 	private void OnStartedAttack() => attackInput = true;
 	private void OnCanceledAttack()=> attackInput=false;
+    private void OnPaint() => paintInput = true;
+	private void OnPaintCanceled() => paintInput = false;
+    // Triggered from Animation Event
+    //public void ConsumeAttackInput() => attackInput = false;
 
-	// Triggered from Animation Event
-	//public void ConsumeAttackInput() => attackInput = false;
 }
