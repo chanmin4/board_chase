@@ -15,6 +15,7 @@ public class SpawnSystem : MonoBehaviour
 	[SerializeField] private VoidEventChannelSO _onSceneReady = default; //Raised by SceneLoader when the scene is set to active
 
 	private Transform _defaultSpawnPoint;
+	
 
 	private void Awake()
 	{
@@ -38,8 +39,8 @@ public class SpawnSystem : MonoBehaviour
 	private void SpawnPlayer()
 	{
 		Transform spawnLocation = _defaultSpawnPoint;
+		Debug.Log($"player Spawn position: {spawnLocation.position}");
 		VSplatter_Character playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
-		Debug.Log("vplatter spawn ");
 		_playerInstantiatedChannel.RaiseEvent(playerInstance.transform);
 		_playerTransformAnchor.Provide(playerInstance.transform); //the CameraSystem will pick this up to frame the player
 
