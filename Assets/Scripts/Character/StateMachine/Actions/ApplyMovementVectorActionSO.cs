@@ -19,7 +19,7 @@ public class ApplyMovementVectorAction : StateAction
 
 	public override void OnUpdate()
 	{
-		Debug.Log($"grounded={_characterController.isGrounded}, pos={_characterController.transform.position}, moveVec={_vsplatterScript.movementVector}");
+		//Debug.Log($"grounded={_characterController.isGrounded}, pos={_characterController.transform.position}, moveVec={_vsplatterScript.movementVector}");
 		_characterController.Move(_vsplatterScript.movementVector * Time.deltaTime);
 		_vsplatterScript.movementVector = _characterController.velocity;
 	}

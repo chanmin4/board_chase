@@ -75,7 +75,7 @@ public class VSplatter_Character: MonoBehaviour
 				targetSpeed = 1f;
 
 			if (attackInput)
-				targetSpeed = 0.05f;
+				targetSpeed = 1f;
 		}
 
 		targetSpeed = Mathf.Lerp(_previousSpeed, targetSpeed, Time.deltaTime * 4f);
@@ -88,7 +88,7 @@ public class VSplatter_Character: MonoBehaviour
 		movementInput = adjustedMovement * targetSpeed;
 
 		_previousSpeed = targetSpeed;
-		Debug.Log($"input={_inputVector}, movementInput={movementInput}");
+		//Debug.Log($"input={_inputVector}, movementInput={movementInput}");
 	}
 
 	//---- EVENT LISTENERS ----

@@ -80,12 +80,48 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		MoveEvent.Invoke(context.ReadValue<Vector2>()); 
 	}
 
-    public void OnAttack(InputAction.CallbackContext context) { }
-    public void OnInteract(InputAction.CallbackContext context) { }
-    public void OnShockwave(InputAction.CallbackContext context) { }
-    public void OnDash(InputAction.CallbackContext context) { }
-    public void OnPrevious(InputAction.CallbackContext context) { }
-    public void OnNext(InputAction.CallbackContext context) { }
+    public void OnAttack(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				AttackEvent.Invoke();
+				break;
+			case InputActionPhase.Canceled:
+				AttackCanceledEvent.Invoke();
+				break;
+		}
+	}
+    public void OnInteract(InputAction.CallbackContext context)
+	{
+		if ((context.phase == InputActionPhase.Performed)
+		&& (_gameStateManager.CurrentGameState == GameState.Gameplay)) // Interaction is only possible when in gameplay GameState
+			InteractEvent.Invoke();
+	}
+    public void OnShockwave(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				ShockwaveChargeEvent.Invoke();
+				break;
+			case InputActionPhase.Canceled:
+				ShockwaveCanceledEvent.Invoke();
+				break;
+		}
+	}
+    public void OnDash(InputAction.CallbackContext context)
+	{
+				switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				DashEvent.Invoke();
+				break;
+			case InputActionPhase.Canceled:
+				DashCanceledEvent.Invoke();
+				break;
+		}
+	}
 
     // ---------------- Menu (UI) ----------------
     public void OnNavigate(InputAction.CallbackContext context) { }
