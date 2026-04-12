@@ -34,60 +34,8 @@ Transform:
   - {fileID: 3681902135282496780}
   - {fileID: 7088086740102359308}
   - {fileID: 5940524281837953142}
-  - {fileID: 3117100705096127463}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2295541379695041217
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3117100705096127463}
-  - component: {fileID: 8761721609307041090}
-  m_Layer: 7
-  m_Name: MaskRenderer
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3117100705096127463
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2295541379695041217}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7518838868959679074}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8761721609307041090
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2295541379695041217}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ab8a01fddde86a46ac127b028fb9813, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  runtime: {fileID: 6537253398039711889}
-  vaccineBaseMaterial: {fileID: 2100000, guid: ee37d239efe6c1044a8708071784dbef, type: 2}
-  virusBaseMaterial: {fileID: 2100000, guid: fdb19f6fa4db56f489e46c44ce245ae5, type: 2}
-  maskTextureProperty: _MaskTex
-  pixelsPerUnit: 16
-  yOffset: 0.02
-  virusAboveVaccine: 1
 --- !u!1 &2643803301705229806
 GameObject:
   m_ObjectHideFlags: 0
@@ -165,9 +113,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   paintManager: {fileID: 0}
   runtime: {fileID: 6537253398039711889}
-  maskRenderer: {fileID: 8761721609307041090}
-  allowPaintWhenClosed: 1
+  allowPaintWhenClosed: 0
   boundsPadding: 0.1
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
+  initialized: 0
+  vaccineMask: {fileID: 0}
+  virusMask: {fileID: 0}
+  vaccineBuffer: []
+  virusBuffer: []
+  vaccineDirty: 0
+  virusDirty: 0
+  vaccineMaterialInstance: {fileID: 0}
+  virusMaterialInstance: {fileID: 0}
+  vaccineRenderer: {fileID: 0}
+  virusRenderer: {fileID: 0}
+  vaccineFilter: {fileID: 0}
+  virusFilter: {fileID: 0}
+  textureWidth: 0
+  textureHeight: 0
 --- !u!1 &6566145928494755947
 GameObject:
   m_ObjectHideFlags: 0

@@ -12,27 +12,42 @@ public class VSplatterClickController : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private VSplatter_Character _character;
     [SerializeField] private Animator _animator;
+    [SerializeField] private VSplatterAimAction _aimAction;
+    [SerializeField] private VSplatterAttack _attack;
+    [SerializeField] private VSplatterPaint _paint;
 
-    [Header("Fire Settings")]
-    [SerializeField] private float shotsPerSecond = 2f;
-    [SerializeField] private int upperBodyLayerIndex = 1;
-
-    private float _nextFireTime;
     private bool _wasHoldingLastFrame;
 
     private static readonly int ShootHash = Animator.StringToHash("Shoot");
     private static readonly int IsShootingHash = Animator.StringToHash("IsShooting");
 
+    private void OnEnable()
+    {
+        if (_attack != null)
+            _attack.Fired += OnFired;
+
+        if (_paint != null)
+            _paint.Fired += OnFired;
+    }
+
+    private void OnDisable()
+    {
+        if (_attack != null)
+            _attack.Fired -= OnFired;
+
+        if (_paint != null)
+            _paint.Fired -= OnFired;
+    }
+
     private void Update()
     {
-        if (_character == null || _animator == null)
+        if (_character == null || _animator == null || _aimAction == null)
             return;
 
         bool holdAttack = _character.attackInput;
         bool holdPaint = _character.paintInput;
-
         bool holdAny = holdAttack || holdPaint;
-        Debug.Log("holdany "+holdAny);
+
         _animator.SetBool(IsShootingHash, holdAny);
 
         if (!holdAny)
@@ -41,41 +56,35 @@ public class VSplatterClickController : MonoBehaviour
             return;
         }
 
-        // 처음 누른 프레임엔 Aiming 상태로만 들어가게 하고,
-        // Shoot 트리거는 다음 프레임부터 쏜다.
-        Debug.Log("1");
         if (!_wasHoldingLastFrame)
         {
             _wasHoldingLastFrame = true;
             return;
         }
-Debug.Log("2");
-        if (Time.time < _nextFireTime)
+
+        if (!_aimAction.CanFireNow)
             return;
 
         FireMode mode = holdPaint ? FireMode.Paint : FireMode.Attack;
-        Debug.Log("what mode" +mode);
-        FireOnce(mode);
-
-        _nextFireTime = Time.time + (1f / shotsPerSecond);
-    }
-
-    private void FireOnce(FireMode mode)
-    {
-        _animator.ResetTrigger(ShootHash);
-        _animator.SetTrigger(ShootHash);
 
         switch (mode)
         {
             case FireMode.Attack:
-                Debug.Log("AttackFire!");
-                // TODO: 적 공격 처리
+                _attack?.TryFireOnce();
                 break;
 
             case FireMode.Paint:
-                Debug.Log("PaintFire!");
-                // TODO: 페인트 처리
+                _paint?.TryFireOnce();
                 break;
         }
+    }
+
+    private void OnFired()
+    {
+        if (_animator == null)
+            return;
+
+        _animator.ResetTrigger(ShootHash);
+        _animator.SetTrigger(ShootHash);
     }
 }

@@ -17,6 +17,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction AttackCanceledEvent = delegate { };
 	public event UnityAction PaintEvent = delegate { };
 	public event UnityAction PaintCanceledEvent = delegate { };
+	public event UnityAction ReloadEvent=delegate{};
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
 	//public event UnityAction InventoryActionButtonEvent = delegate { };
 	//public event UnityAction SaveActionButtonEvent = delegate { };
@@ -138,6 +139,15 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		}
 	}
 
+public void OnReload(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				ReloadEvent.Invoke();
+				break;
+		}
+	}
     // ---------------- Menu (UI) ----------------
     public void OnNavigate(InputAction.CallbackContext context) { }
     public void OnSubmit(InputAction.CallbackContext context) { } 

@@ -3,8 +3,8 @@
 [CreateAssetMenu(fileName = "HealthConfig", menuName = "EntityConfig/Health Config")]
 public class HealthConfigSO : ScriptableObject
 {
-	[SerializeField] private int _initialHealth;
+	[SerializeField] private float _initialHealth;
 
-	public int InitialHealth => _initialHealth;
+	public float InitialHealth => _initialHealth;
 
 }

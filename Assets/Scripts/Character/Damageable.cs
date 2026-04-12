@@ -17,7 +17,7 @@ public class Damageable : MonoBehaviour
 	[SerializeField] private VoidEventChannelSO _deathEvent = default;
 
 	[Header("Listening To")]
-	[SerializeField] private IntEventChannelSO _restoreHealth = default; //Getting cured when eating food
+	[SerializeField] private FloatEventChannelSO _restoreHealth = default; //Getting cured when eating food
 
 	public DroppableRewardConfigSO DroppableRewardConfig => _droppableRewardSO;
 
@@ -57,7 +57,7 @@ public class Damageable : MonoBehaviour
 			_restoreHealth.OnEventRaised -= Cure;
 	}
 
-	public void ReceiveAnAttack(int damage)
+	public void ReceiveAnAttack(float damage)
 	{
 		if (IsDead)
 			return;
@@ -104,7 +104,7 @@ public class Damageable : MonoBehaviour
 	/// <summary>
 	/// Used for cure events, like eating food. Triggered by an IntEventChannelSO.
 	/// </summary>
-	private void Cure(int healthToAdd)
+	private void Cure(float healthToAdd)
 	{
 		if (IsDead)
 			return;
