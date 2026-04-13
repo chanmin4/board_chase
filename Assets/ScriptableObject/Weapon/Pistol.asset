@@ -15,8 +15,9 @@ MonoBehaviour:
   weaponId: weapon_pistol
   displayName: Pistol
   shotsPerSecond: 2
-  maxRange: 12
-  maxMagazine: 6
+  maxRange: 36
+  magazineSize: 6
+  reloadDuration: 3
   aimHitMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -28,3 +29,17 @@ MonoBehaviour:
     m_Bits: 4294967295
   paintRadiusWorld: 1.25
   paintPriority: 0
+  paintHitMask:
+    serializedVersion: 2
+    m_Bits: 0
+  attackBulletPrefab: {fileID: 0}
+  paintBulletPrefab: {fileID: 0}
+  projectileSpeed: 18
+  projectileCastRadius: 0.08
+  projectileMaxLifetime: 2
+  projectileBlockHitMask:
+    serializedVersion: 2
+    m_Bits: 0
+  projectileTriggerInteraction: 1
+  attackBullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
+  paintBullet: {fileID: 11400000, guid: 9d354fefd2ce4cc449aca4599df4938f, type: 2}

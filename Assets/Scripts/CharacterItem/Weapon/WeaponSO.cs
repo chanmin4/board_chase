@@ -35,6 +35,28 @@ public class WeaponSO : ScriptableObject
 
     [SerializeField] private int paintPriority = 0;
 
+    [SerializeField] private LayerMask paintHitMask = 0;
+
+    [Header("Projectile")]
+    [SerializeField] private AttackBullet attackBulletPrefab;
+    [SerializeField] private PaintBullet paintBulletPrefab;
+
+    [Min(0.1f)]
+    [SerializeField] private float projectileSpeed = 18f;
+
+    [Min(0.001f)]
+    [SerializeField] private float projectileCastRadius = 0.08f;
+
+    [Min(0.01f)]
+    [SerializeField] private float projectileMaxLifetime = 2f;
+
+    [SerializeField] private LayerMask projectileBlockHitMask = 0;
+    [SerializeField] private QueryTriggerInteraction projectileTriggerInteraction = QueryTriggerInteraction.Ignore;
+    [Header("Bullets")]
+    [SerializeField] private AttackBulletSO attackBullet;
+    [SerializeField] private PaintBulletSO paintBullet;
+    public AttackBulletSO AttackBullet => attackBullet;
+    public PaintBulletSO PaintBullet => paintBullet;
     public string WeaponId => weaponId;
     public string DisplayName => displayName;
     public float ShotsPerSecond => shotsPerSecond;
@@ -48,4 +70,12 @@ public class WeaponSO : ScriptableObject
     public LayerMask DamageHitMask => damageHitMask;
     public float PaintRadiusWorld => paintRadiusWorld;
     public int PaintPriority => paintPriority;
+    public LayerMask PaintHitMask => paintHitMask;
+    public AttackBullet AttackBulletPrefab => attackBulletPrefab;
+    public PaintBullet PaintBulletPrefab => paintBulletPrefab;
+    public float ProjectileSpeed => projectileSpeed;
+    public float ProjectileCastRadius => projectileCastRadius;
+    public float ProjectileMaxLifetime => projectileMaxLifetime;
+    public LayerMask ProjectileBlockHitMask => projectileBlockHitMask;
+    public QueryTriggerInteraction ProjectileTriggerInteraction => projectileTriggerInteraction;
 }

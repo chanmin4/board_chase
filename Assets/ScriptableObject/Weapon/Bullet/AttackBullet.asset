@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccffa4595ffdb29449da26447f92e2d0, type: 3}
+  m_Name: AttackBullet
+  m_EditorClassIdentifier: 
+  bulletPrefab: {fileID: 6562571228875492699, guid: 8412ee2d3eb95b041a91f37cc5e636ab, type: 3}
+  speed: 50
+  castRadius: 0.08
+  maxLifetime: 2
+  blockHitMask:
+    serializedVersion: 2
+    m_Bits: 0
+  triggerInteraction: 1

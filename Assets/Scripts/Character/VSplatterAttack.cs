@@ -1,4 +1,5 @@
 using System;
+using UnityEditor.EditorTools;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -6,8 +7,10 @@ public class VSplatterAttack : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private VSplatterRange _range;
-    [SerializeField] private Transform _fireOrigin;
+    
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
+    [Tooltip("bullet parent object")]
+    [SerializeField] private Transform _projectilesRoot;
 
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
@@ -20,17 +23,19 @@ public class VSplatterAttack : MonoBehaviour
     public event Action Fired;
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
-
+    private Transform FireOrigin => _weaponHolder != null ? _weaponHolder.FireOrigin : transform;
+    private Vector3 FireDirection => _weaponHolder != null ? _weaponHolder.FireDirection : FireOrigin.forward;
     private void Reset()
     {
         if (_range == null)
             _range = GetComponent<VSplatterRange>();
 
+        if (_weaponHolder == null)
+            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
+
         if (_aimCamera == null)
             _aimCamera = Camera.main;
 
-        if (_fireOrigin == null)
-            _fireOrigin = transform;
     }
 
     private void Awake()
@@ -38,19 +43,25 @@ public class VSplatterAttack : MonoBehaviour
         if (_range == null)
             _range = GetComponent<VSplatterRange>();
 
+        if (_weaponHolder == null)
+            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
+
         if (_aimCamera == null)
             _aimCamera = Camera.main;
 
-        if (_fireOrigin == null)
-            _fireOrigin = transform;
     }
 
     public bool TryFireOnce()
     {
         if (_range == null || !_range.HasValidWeapon() || CurrentWeapon == null)
             return false;
+        AttackBulletSO bulletConfig = CurrentWeapon.AttackBullet;
+        if (bulletConfig == null || bulletConfig.BulletPrefab == null)
+            return false;
 
-        Transform fireOrigin = _fireOrigin != null ? _fireOrigin : transform;
+        
+
+        Transform fireOrigin = FireOrigin != null ? FireOrigin : transform;
 
         bool gotAimPoint = VSplatterAimUtility.TryGetAimPoint(
             _aimCamera,
@@ -59,7 +70,7 @@ public class VSplatterAttack : MonoBehaviour
             CurrentWeapon.FallbackPlaneY,
             out Vector3 aimPoint,
             out _);
-
+        Debug.Log($"gotAimPoint: {gotAimPoint}, aimPoint: {aimPoint}");
         if (!gotAimPoint)
             return false;
 
@@ -67,47 +78,57 @@ public class VSplatterAttack : MonoBehaviour
         {
             if (debugLogs)
                 Debug.Log("[VSplatterAttack] out of range");
+
             return false;
         }
 
         Vector3 start = fireOrigin.position;
-        Vector3 dir = aimPoint - start;
+
+        Vector3 dir = FireDirection;
+        dir.y = 0f;
 
         if (dir.sqrMagnitude < 0.0001f)
             return false;
 
         dir.Normalize();
 
-        bool hitSomething = Physics.Raycast(
-            start,
-            dir,
-            out RaycastHit hit,
-            CurrentWeapon.MaxRange,
-            CurrentWeapon.DamageHitMask,
-            QueryTriggerInteraction.Ignore);
+        Vector3 rangeBoundary = _range.RangeOrigin.position;
+        rangeBoundary.y = start.y;
+        rangeBoundary += dir * CurrentWeapon.MaxRange;
+
+        float maxDistance = Vector3.Distance(Flatten(start), Flatten(rangeBoundary));
 
         if (debugDraw)
-        {
-            Vector3 end = hitSomething ? hit.point : (start + dir * CurrentWeapon.MaxRange);
-            Debug.DrawLine(start, end, Color.yellow, debugDrawDuration);
-        }
+            Debug.DrawLine(start, rangeBoundary, Color.yellow, debugDrawDuration);
+        Quaternion bulletRotation = Quaternion.LookRotation(dir, Vector3.up);
+        AttackBullet bullet = Instantiate(
+        bulletConfig.BulletPrefab,
+        start,
+        bulletRotation,
+        _projectilesRoot).GetComponent<AttackBullet>();
 
-        if (!hitSomething)
-        {
-            if (debugLogs)
-                Debug.Log("[VSplatterAttack] fired, but no valid damage target was hit.");
-
-            Fired?.Invoke();
-            return true;
-        }
-
-        // TODO: 데미지 처리 붙일 위치
-        // TryApplyDamage(hit, CurrentWeapon.Damage);
+        bullet.Init(
+            dir,
+            maxDistance,
+            bulletConfig.Speed,
+            bulletConfig.CastRadius,
+            bulletConfig.MaxLifetime,
+            CurrentWeapon.Damage,
+            CurrentWeapon.DamageHitMask,
+            bulletConfig.BlockHitMask,
+            bulletConfig.TriggerInteraction,
+            gameObject);
 
         if (debugLogs)
-            Debug.Log("[VSplatterAttack] hit = " + hit.collider.name);
+            Debug.Log("[VSplatterAttack] attack bullet fired.");
 
         Fired?.Invoke();
         return true;
+    }
+
+    private static Vector3 Flatten(Vector3 value)
+    {
+        value.y = 0f;
+        return value;
     }
 }
