@@ -111,8 +111,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1a6de695c9b5514b8bd90f8f8d5c1cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  paintManager: {fileID: 0}
   runtime: {fileID: 6537253398039711889}
+  MaskRenderManager: {fileID: 0}
   allowPaintWhenClosed: 0
   boundsPadding: 0.1
   worldBounds:
@@ -178,8 +178,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   coord: {x: -1, y: 0}
-  isStartSector: 1
-  isOpened: 1
+  isStartSector: 0
+  isOpened: 0
   cameraPoint: {fileID: 3681902135282496780}
   enemySpawnPoints: []
   XMin:

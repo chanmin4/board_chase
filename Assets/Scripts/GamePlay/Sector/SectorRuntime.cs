@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 public class SectorRuntime : MonoBehaviour
 {
+    [Tooltip("X 와 Z)")]
     public Vector2Int coord;
     public bool isStartSector;
     public bool isOpened;

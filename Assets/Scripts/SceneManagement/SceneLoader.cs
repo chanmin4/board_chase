@@ -60,6 +60,20 @@ public class SceneLoader : MonoBehaviour
 	{
 		_currentlyLoadedScene = currentlyOpenedLocation;
 
+		if (_gameplayManagerSceneInstance.Scene == null || !_gameplayManagerSceneInstance.Scene.isLoaded)
+		{
+			_gameplayManagerLoadingOpHandle = _gameplayScene.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true);
+			_gameplayManagerLoadingOpHandle.Completed += OnColdStartupGameplayManagersLoaded;
+		}
+		else
+		{
+			StartGameplay();
+		}
+	}
+	private void OnColdStartupGameplayManagersLoaded(AsyncOperationHandle<SceneInstance> obj)
+	{
+		_gameplayManagerSceneInstance = obj.Result;
+		StartGameplay();
 	}
 #endif
 	/// <summary>

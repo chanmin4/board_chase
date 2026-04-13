@@ -8,7 +8,8 @@ using UnityEngine;
 /// </summary>
 public class StartGame : MonoBehaviour
 {
-    [SerializeField] private GameSceneSO _gameplayScene;
+    [Tooltip("게임시작씬")]
+    [SerializeField] private GameSceneSO LocationtoLoad;
     [SerializeField] private SaveSystem _saveSystem = default;
     [SerializeField] private bool _showLoadScreen = default;
 
@@ -61,7 +62,7 @@ public class StartGame : MonoBehaviour
             return;
         }
 
-        if (_gameplayScene == null)
+        if (LocationtoLoad == null)
         {
             Debug.LogError("[StartGame] Gameplay scene is not assigned.");
             return;
@@ -74,7 +75,7 @@ public class StartGame : MonoBehaviour
         _saveSystem.WriteEmptySaveFile();
         _saveSystem.SetNewGameData();
 
-        _loadGameScene.RaiseEvent(_gameplayScene, _showLoadScreen);
+        _loadGameScene.RaiseEvent(LocationtoLoad, _showLoadScreen);
     }
 
     private void ContinuePreviousGame()
@@ -99,10 +100,10 @@ public class StartGame : MonoBehaviour
     {
         Debug.LogWarning("[StartGame] Save data not found. Starting new game instead.");
         StartNewGame();
-        yield break;
+        yield break; 
     }
 
-    _loadGameScene.RaiseEvent(_gameplayScene, _showLoadScreen);
+    _loadGameScene.RaiseEvent(LocationtoLoad, _showLoadScreen);
     yield break;
 }
 
