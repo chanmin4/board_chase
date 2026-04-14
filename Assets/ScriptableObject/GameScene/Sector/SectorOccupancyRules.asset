@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5a0838d1a1567f4d8e5f402ff67f48c, type: 3}
+  m_Name: SectorOccupancyRules
+  m_EditorClassIdentifier: 
+  sampleInterval: 0.25
+  judgeInterval: 0.25
+  captureThreshold: 0.5
+  captureHoldSeconds: 5
+  sampleStride: 2
