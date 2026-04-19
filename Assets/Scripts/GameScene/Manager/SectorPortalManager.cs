@@ -192,11 +192,11 @@ public class SectorPortalManager : MonoBehaviour
 
     public bool TryMoveThroughPortal(SectorPortal sourcePortal, Transform player)
     {
-        Debug.Log($"[SectorPortalManager] TryMoveThroughPortal portal={sourcePortal}, player={player}");
+        
 
         if (!CanUsePortal(sourcePortal) || player == null)
         {
-            Debug.LogWarning("[SectorPortalManager] Move failed at CanUsePortal/player check.");
+        
             return false;
         }
 
@@ -205,13 +205,19 @@ public class SectorPortalManager : MonoBehaviour
 
         if (targetPortal == null || targetSector == null)
         {
-            Debug.LogWarning($"[SectorPortalManager] Move failed. targetPortal={targetPortal}, targetSector={targetSector}");
+           
             return false;
         }
 
-        Debug.Log($"[SectorPortalManager] Move success. from={sourcePortal.OwnerSector.name}, to={targetSector.name}, arrival={targetPortal.ArrivalPosition}");
+
+        CharacterController controller = player.GetComponent<CharacterController>();
+        if (controller != null)
+            controller.enabled = false;
 
         player.position = targetPortal.ArrivalPosition;
+
+        if (controller != null)
+            controller.enabled = true;
 
         if (_moveSectorCameraEvent != null)
             _moveSectorCameraEvent.RaiseEvent(targetSector);
