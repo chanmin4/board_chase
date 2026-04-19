@@ -2,136 +2,247 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
 
-public enum InteractionType { None = 0, PickUp, Talk };
+public enum InteractionType
+{
+    None = 0,
+    PickUp,
+    Talk,
+    Portal
+}
 
 public class InteractionManager : MonoBehaviour
 {
-	[SerializeField] private InputReader _inputReader = default;
+    [SerializeField] private InputReader _inputReader = default;
 
-	//Events for the different interaction types
-	[Header("Broadcasting on")]
-	[SerializeField] private ItemEventChannelSO _onObjectPickUp = default;
-	//[SerializeField] private DialogueActorChannelSO _startTalking = default;
-	[SerializeField] private InteractionUIEventChannelSO _toggleInteractionUI = default;
+    [Header("Actor")]
+    [SerializeField] private Transform _interactionActor;
 
-	[Header("Listening to")]
-	[SerializeField] private VoidEventChannelSO _onInteractionEnded = default;
-	[SerializeField] private PlayableDirectorChannelSO _onCutsceneStart = default;
-	
-	[ReadOnly] public InteractionType currentInteractionType; //This is checked/consumed by conditions in the StateMachine
+    [Header("Broadcasting on")]
+    [SerializeField] private ItemEventChannelSO _onObjectPickUp = default;
+    [SerializeField] private InteractionUIEventChannelSO _toggleInteractionUI = default;
 
-	private LinkedList<Interaction> _potentialInteractions = new LinkedList<Interaction>(); //To store the objects we the player could potentially interact with
+    [Header("Listening to")]
+    [SerializeField] private VoidEventChannelSO _onInteractionEnded = default;
+    [SerializeField] private PlayableDirectorChannelSO _onCutsceneStart = default;
 
-	private void OnEnable()
-	{
-		_inputReader.InteractEvent += OnInteractionButtonPress;
-		_onInteractionEnded.OnEventRaised += OnInteractionEnd;
-		_onCutsceneStart.OnEventRaised += ResetPotentialInteractions;
-	}
+    [ReadOnly] public InteractionType currentInteractionType;
 
-	private void OnDisable()
-	{
-		_inputReader.InteractEvent -= OnInteractionButtonPress;
-		_onInteractionEnded.OnEventRaised -= OnInteractionEnd;
-		_onCutsceneStart.OnEventRaised -= ResetPotentialInteractions;
-	}
+    private LinkedList<Interaction> _potentialInteractions = new LinkedList<Interaction>();
 
-	// Called mid-way through the AnimationClip of collecting
-	
-	private void Collect()
-	{
-		GameObject itemObject = _potentialInteractions.First.Value.interactableObject;
-		_potentialInteractions.RemoveFirst();
+    private Transform InteractionActor => _interactionActor != null ? _interactionActor : transform;
 
-		if (_onObjectPickUp != null)
-		{
-			ItemSO currentItem = itemObject.GetComponent<CollectableItem>().GetItem();
-			_onObjectPickUp.RaiseEvent(currentItem);
-		}
+    private void OnEnable()
+    {
+        if (_inputReader != null)
+            _inputReader.InteractEvent += OnInteractionButtonPress;
 
-		Destroy(itemObject); //TODO: maybe move this destruction in a more general manger, to implement a removal SFX
+        if (_onInteractionEnded != null)
+            _onInteractionEnded.OnEventRaised += OnInteractionEnd;
 
-		RequestUpdateUI(false);
-	}
-	
+        if (_onCutsceneStart != null)
+            _onCutsceneStart.OnEventRaised += ResetPotentialInteractions;
+    }
+
+    private void OnDisable()
+    {
+        if (_inputReader != null)
+            _inputReader.InteractEvent -= OnInteractionButtonPress;
+
+        if (_onInteractionEnded != null)
+            _onInteractionEnded.OnEventRaised -= OnInteractionEnd;
+
+        if (_onCutsceneStart != null)
+            _onCutsceneStart.OnEventRaised -= ResetPotentialInteractions;
+    }
+
+    private void Collect()
+    {
+        if (_potentialInteractions.Count == 0)
+            return;
+
+        Interaction interaction = _potentialInteractions.First.Value;
+
+        if (interaction.type != InteractionType.PickUp)
+            return;
+
+        GameObject itemObject = interaction.interactableObject;
+        _potentialInteractions.RemoveFirst();
+
+        if (_onObjectPickUp != null)
+        {
+            ItemSO currentItem = itemObject.GetComponent<CollectableItem>().GetItem();
+            _onObjectPickUp.RaiseEvent(currentItem);
+        }
+
+        Destroy(itemObject);
+        RequestUpdateUI(false);
+    }
 
 	private void OnInteractionButtonPress()
 	{
+		Debug.Log($"[InteractionManager] E pressed. potentialCount={_potentialInteractions.Count}");
+
 		if (_potentialInteractions.Count == 0)
 			return;
 
-		currentInteractionType = _potentialInteractions.First.Value.type;
+		Interaction interaction = _potentialInteractions.First.Value;
+		currentInteractionType = interaction.type;
+
+		Debug.Log($"[InteractionManager] Current interaction type={interaction.type}, obj={interaction.interactableObject}");
+
+		switch (interaction.type)
+		{
+			case InteractionType.Portal:
+				TryUsePortal(interaction);
+				break;
+
+			case InteractionType.PickUp:
+				break;
+
+			case InteractionType.Talk:
+				break;
+		}
 	}
 
-	//Called by the Event on the trigger collider on the child GO called "InteractionDetector"
-	public void OnTriggerChangeDetected(bool entered, GameObject obj)
+    private void TryUsePortal(Interaction interaction)
+    {
+        if (interaction.interactableObject == null)
+            return;
+
+        SectorPortal portal = interaction.interactableObject.GetComponent<SectorPortal>();
+        if (portal == null)
+            portal = interaction.interactableObject.GetComponentInParent<SectorPortal>();
+
+        if (portal == null)
+            return;
+
+        bool moved = portal.TryInteract(InteractionActor);
+
+        if (moved)
+        {
+            currentInteractionType = InteractionType.None;
+            _potentialInteractions.Clear();
+            RequestUpdateUI(false);
+        }
+    }
+
+   	public void OnTriggerChangeDetected(bool entered, GameObject obj)
 	{
+		Debug.Log($"[InteractionManager] Trigger {(entered ? "Enter" : "Exit")} obj={obj.name}, tag={obj.tag}, portal={obj.GetComponentInParent<SectorPortal>()}");
+
 		if (entered)
 			AddPotentialInteraction(obj);
 		else
 			RemovePotentialInteraction(obj);
 	}
 
-	private void AddPotentialInteraction(GameObject obj)
+    private void AddPotentialInteraction(GameObject obj)
+    {
+        if (!TryCreateInteraction(obj, out Interaction newPotentialInteraction))
+            return;
+
+        if (ContainsInteractionObject(newPotentialInteraction.interactableObject))
+            return;
+
+        _potentialInteractions.AddFirst(newPotentialInteraction);
+        RequestUpdateUI(true);
+    }
+
+    private void RemovePotentialInteraction(GameObject obj)
+    {
+        GameObject normalizedObject = ResolveInteractableObject(obj);
+
+        LinkedListNode<Interaction> currentNode = _potentialInteractions.First;
+        while (currentNode != null)
+        {
+            LinkedListNode<Interaction> nextNode = currentNode.Next;
+
+            if (currentNode.Value.interactableObject == normalizedObject)
+            {
+                _potentialInteractions.Remove(currentNode);
+                break;
+            }
+
+            currentNode = nextNode;
+        }
+
+        RequestUpdateUI(_potentialInteractions.Count > 0);
+    }
+
+	private bool TryCreateInteraction(GameObject obj, out Interaction interaction)
 	{
-		Interaction newPotentialInteraction = new Interaction(InteractionType.None, obj);
+		interaction = new Interaction(InteractionType.None, null);
 
-		if (obj.CompareTag("Pickable"))
-		{
-			newPotentialInteraction.type = InteractionType.PickUp;
-		}
-		else if (obj.CompareTag("NPC"))
-		{
-			newPotentialInteraction.type = InteractionType.Talk;
-		}
+		if (obj == null)
+			return false;
 
-		if (newPotentialInteraction.type != InteractionType.None)
+		SectorPortal portal = obj.GetComponentInParent<SectorPortal>();
+
+		Debug.Log($"[InteractionManager] TryCreateInteraction obj={obj.name}, portal={portal}, portalCanInteract={(portal != null ? portal.CanInteract.ToString() : "null")}");
+
+		if (portal != null && portal.CanInteract)
 		{
-			_potentialInteractions.AddFirst(newPotentialInteraction);
-			RequestUpdateUI(true);
+			interaction = new Interaction(InteractionType.Portal, portal.gameObject);
+			Debug.Log($"[InteractionManager] Added portal interaction. portal={portal.name}");
+			return true;
 		}
+		Debug.Log($"[InteractionManager] No valid interaction type. obj={obj.name}");
+		return false;
 	}
 
-	private void RemovePotentialInteraction(GameObject obj)
-	{
-		LinkedListNode<Interaction> currentNode = _potentialInteractions.First;
-		while (currentNode != null)
-		{
-			if (currentNode.Value.interactableObject == obj)
-			{
-				_potentialInteractions.Remove(currentNode);
-				break;
-			}
-			currentNode = currentNode.Next;
-		}
+    private GameObject ResolveInteractableObject(GameObject obj)
+    {
+        if (obj == null)
+            return null;
 
-		RequestUpdateUI(_potentialInteractions.Count > 0);
-	}
+        SectorPortal portal = obj.GetComponentInParent<SectorPortal>();
+        if (portal != null)
+            return portal.gameObject;
 
-	private void RequestUpdateUI(bool visible)
-	{
-		if (visible)
-			_toggleInteractionUI.RaiseEvent(true, _potentialInteractions.First.Value.type);
-		else
-			_toggleInteractionUI.RaiseEvent(false, InteractionType.None);
-	}
+        return obj;
+    }
 
-	private void OnInteractionEnd()
-	{
-		switch (currentInteractionType)
-		{
-			case InteractionType.Talk:
-				//We show the UI after cooking or talking, in case player wants to interact again
-				RequestUpdateUI(true);
-				break;
-		}
+    private bool ContainsInteractionObject(GameObject obj)
+    {
+        LinkedListNode<Interaction> currentNode = _potentialInteractions.First;
+        while (currentNode != null)
+        {
+            if (currentNode.Value.interactableObject == obj)
+                return true;
 
-		_inputReader.EnableGameplayInput();
-	}
+            currentNode = currentNode.Next;
+        }
 
-	private void ResetPotentialInteractions(PlayableDirector _playableDirector)
-	{
-		_potentialInteractions.Clear();
-		RequestUpdateUI(_potentialInteractions.Count > 0);
-	}
+        return false;
+    }
+
+    private void RequestUpdateUI(bool visible)
+    {
+        if (_toggleInteractionUI == null)
+            return;
+
+        if (visible && _potentialInteractions.Count > 0)
+            _toggleInteractionUI.RaiseEvent(true, _potentialInteractions.First.Value.type);
+        else
+            _toggleInteractionUI.RaiseEvent(false, InteractionType.None);
+    }
+
+    private void OnInteractionEnd()
+    {
+        switch (currentInteractionType)
+        {
+            case InteractionType.Talk:
+                RequestUpdateUI(true);
+                break;
+        }
+
+        if (_inputReader != null)
+            _inputReader.EnableGameplayInput();
+    }
+
+    private void ResetPotentialInteractions(PlayableDirector playableDirector)
+    {
+        _potentialInteractions.Clear();
+        RequestUpdateUI(false);
+    }
 }

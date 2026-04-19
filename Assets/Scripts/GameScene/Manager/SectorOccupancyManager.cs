@@ -12,11 +12,16 @@ public struct SectorOccupancySummary
     public int namedActiveCount;
     public int bossActiveCount;
     public float virusPressure;
+    public bool startSectorOpened;
+    public SectorOwner startSectorOwner;
+    public bool startSectorPlayerOwned;
 }
 
 
 public class SectorOccupancyManager : MonoBehaviour
 {
+    [Header("Refs")]
+    [SerializeField] private SectorStateManager _sectorStateManager;
     [Header("Map Snapshot")]
     [SerializeField] private SectorMapSnapshotEventChannelSO _mapSnapshotChangedChannel;
     [SerializeField] private VoidEventChannelSO _requestMapSnapshotChannel;
@@ -26,6 +31,18 @@ public class SectorOccupancyManager : MonoBehaviour
     private readonly Dictionary<SectorRuntime, SectorOccupancySnapshot> _snapshots = new();
     private Vector2Int _currentSectorCoord;
     private bool _hasCurrentSectorCoord;
+    public bool startSectorOpened;
+    public SectorOwner startSectorOwner;
+    public bool startSectorPlayerOwned;
+
+    private void Awake()
+    {
+        if (_sectorStateManager == null)
+            _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
+
+        if (_sectorStateManager != null)
+            _sectorStateManager.EnsureInitialized();
+    }
 
     private void OnEnable()
     {
@@ -60,9 +77,9 @@ public class SectorOccupancyManager : MonoBehaviour
 
             _snapshots[sector] = snapshot;
 
-            if (!_hasCurrentSectorCoord || sector.isStartSector)
+            if (!_hasCurrentSectorCoord || IsStartSector(sector))
             {
-                _currentSectorCoord = sector.coord;
+                _currentSectorCoord = GetSectorCoord(sector);
                 _hasCurrentSectorCoord = true;
             }
         }
@@ -92,6 +109,14 @@ public class SectorOccupancyManager : MonoBehaviour
 
             if (sector == null || !sector.isOpened)
                 continue;
+            if (IsStartSector(sector))
+            {
+                summary.startSectorOpened = true;
+                summary.startSectorOwner = snapshot.owner;
+                summary.startSectorPlayerOwned = snapshot.owner == SectorOwner.Player;
+                continue;
+            }
+
 
             summary.openedCount++;
 
@@ -128,7 +153,7 @@ public class SectorOccupancyManager : MonoBehaviour
 
             cells.Add(new SectorMapCellSnapshot
             {
-                coord = sector.coord,
+                coord = GetSectorCoord(sector),
                 isOpened = sector.isOpened,
                 isLocked = !sector.isOpened,
                 owner = snapshot.owner,
@@ -149,5 +174,18 @@ public class SectorOccupancyManager : MonoBehaviour
         };
 
         _mapSnapshotChangedChannel.RaiseEvent(snapshotMap);
+    }
+
+    private bool IsStartSector(SectorRuntime sector)
+    {
+        return _sectorStateManager != null && _sectorStateManager.IsStartSector(sector);
+    }
+
+    private Vector2Int GetSectorCoord(SectorRuntime sector)
+    {
+        if (_sectorStateManager != null)
+            return _sectorStateManager.GetSectorCoord(sector);
+
+        return sector != null ? sector.coord : default;
     }
 }

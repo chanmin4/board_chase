@@ -108,11 +108,19 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		}
 	}
 
-    public void OnInteract(InputAction.CallbackContext context)
+   	public void OnInteract(InputAction.CallbackContext context)
 	{
+		if (context.phase == InputActionPhase.Performed)
+		{
+			Debug.Log($"[InputReader] Interact performed. GameState={_gameStateManager.CurrentGameState}");
+		}
+
 		if ((context.phase == InputActionPhase.Performed)
-		&& (_gameStateManager.CurrentGameState == GameState.Gameplay)) // Interaction is only possible when in gameplay GameState
+			&& (_gameStateManager.CurrentGameState == GameState.Gameplay))
+		{
+			Debug.Log("[InputReader] InteractEvent invoked.");
 			InteractEvent.Invoke();
+		}
 	}
     public void OnShockwave(InputAction.CallbackContext context)
 	{

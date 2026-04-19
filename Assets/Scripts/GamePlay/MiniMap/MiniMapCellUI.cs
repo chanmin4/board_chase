@@ -2,95 +2,144 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+[DisallowMultipleComponent]
 public class MiniMapCellUI : MonoBehaviour
 {
-    [Header("Roots")]
-    [Tooltip("Root object to show when the cell is opened  (SetActive)")]
-    [SerializeField] private GameObject _openedRoot;
-    [SerializeField] private GameObject _lockedRoot;
-    [Tooltip("the cell where player can't go and can't see this cell")]
-    [SerializeField] private GameObject _missingRoot;
+    [Header("Visibility")]
+    [SerializeField] private CanvasGroup _cellCanvasGroup;
 
-    [Header("Visuals")]
+    [Header("Parts")]
     [SerializeField] private Image _background;
     [SerializeField] private Image _icon;
     [SerializeField] private TextMeshProUGUI _occupancyRatioText;
+    [SerializeField] private TextMeshProUGUI _sectorJudgeTimeText;
 
-    [Header("Options")]
-    [SerializeField] private bool _hideMissingCell = true;
+
+    private void Reset()
+    {
+        _cellCanvasGroup = GetComponent<CanvasGroup>();
+    }
+
+    private void Awake()
+    {
+        _cellCanvasGroup = UIVisibilityHelper.EnsureCanvasGroup(gameObject);
+
+        UIVisibilityHelper.ForceActive(_background);
+        UIVisibilityHelper.ForceActive(_icon);
+        UIVisibilityHelper.ForceActive(_occupancyRatioText);
+        UIVisibilityHelper.ForceActive(_sectorJudgeTimeText);
+    }
 
     public void SetMissing()
     {
-        gameObject.SetActive(!_hideMissingCell);
+        SetVisible(false);
 
-        SetRoot(_openedRoot, false);
-        SetRoot(_lockedRoot, false);
-        SetRoot(_missingRoot, true);
-
-        if (_background != null)
-            _background.gameObject.SetActive(false);
-
-        if (_icon != null)
-            _icon.gameObject.SetActive(false);
-
-        if (_occupancyRatioText != null)
-            _occupancyRatioText.gameObject.SetActive(false);
+        ClearIcon();
+        ClearRatio();
+        ClearJudgeTime();
     }
 
     public void SetLocked(Color backgroundColor, Sprite lockedIcon)
     {
-        gameObject.SetActive(true);
+        SetVisible(true);
 
-        SetRoot(_openedRoot, false);
-        SetRoot(_lockedRoot, true);
-        SetRoot(_missingRoot, false);
-
-        if (_background != null)
-        {
-            _background.gameObject.SetActive(true);
-            _background.color = backgroundColor;
-        }
-
-        if (_icon != null)
-        {
-            _icon.gameObject.SetActive(lockedIcon != null);
-            _icon.sprite = lockedIcon;
-        }
-
-        if (_occupancyRatioText != null)
-            _occupancyRatioText.gameObject.SetActive(false);
+        SetBackground(backgroundColor);
+        SetIcon(lockedIcon);
+        ClearRatio();
+        ClearJudgeTime();
     }
 
-    public void SetOpened(Color backgroundColor, Sprite iconSprite, string ratioText, bool showIcon, bool showRatio)
+    public void SetOpened(Color backgroundColor,Sprite iconSprite,string ratioText,bool showIcon,
+    bool showRatio,string judgeTimeText,bool showJudgeTime)
     {
-        gameObject.SetActive(true);
+        SetVisible(true);
 
-        SetRoot(_openedRoot, true);
-        SetRoot(_lockedRoot, false);
-        SetRoot(_missingRoot, false);
+        SetBackground(backgroundColor);
 
-        if (_background != null)
-        {
-            _background.gameObject.SetActive(true);
-            _background.color = backgroundColor;
-        }
+        if (showIcon)
+            SetIcon(iconSprite);
+        else
+            ClearIcon();
 
-        if (_icon != null)
-        {
-            _icon.gameObject.SetActive(showIcon && iconSprite != null);
-            _icon.sprite = iconSprite;
-        }
-
-        if (_occupancyRatioText != null)
-        {
-            _occupancyRatioText.gameObject.SetActive(showRatio);
-            _occupancyRatioText.text = ratioText;
-        }
+        if (showRatio)
+            SetRatio(ratioText);
+        else
+            ClearRatio();
+        if (showJudgeTime)
+            SetJudgeTime(judgeTimeText);
+        else
+            ClearJudgeTime();
     }
 
-    private void SetRoot(GameObject target, bool active)
+    private void SetVisible(bool visible)
     {
-        if (target != null)
-            target.SetActive(active);
+        UIVisibilityHelper.SetVisible(_cellCanvasGroup, visible);
+    }
+
+    private void SetBackground(Color color)
+    {
+        if (_background == null)
+            return;
+
+        _background.color = color;
+        UIVisibilityHelper.SetVisible(_background, true);
+    }
+
+    private void SetIcon(Sprite sprite)
+    {
+        if (_icon == null)
+            return;
+
+        _icon.sprite = sprite;
+        UIVisibilityHelper.SetVisible(_icon, sprite != null);
+    }
+
+    private void ClearIcon()
+    {
+        if (_icon == null)
+            return;
+
+        _icon.sprite = null;
+        UIVisibilityHelper.SetVisible(_icon, false);
+    }
+
+    private void SetRatio(string text)
+    {
+        if (_occupancyRatioText == null)
+            return;
+
+        _occupancyRatioText.text = text;
+        UIVisibilityHelper.SetVisible(_occupancyRatioText, true);
+    }
+
+    private void ClearRatio()
+    {
+        if (_occupancyRatioText == null)
+            return;
+
+        _occupancyRatioText.text = string.Empty;
+        UIVisibilityHelper.SetVisible(_occupancyRatioText, false);
+    }
+
+    private void SetJudgeTime(string text)
+    {
+        if (_sectorJudgeTimeText == null)
+            return;
+
+        _sectorJudgeTimeText.text = text;
+        UIVisibilityHelper.SetVisible(_sectorJudgeTimeText, true);
+    }
+
+    private void ClearJudgeTime()
+    {
+        if (_sectorJudgeTimeText == null)
+            return;
+
+        _sectorJudgeTimeText.text = string.Empty;
+        UIVisibilityHelper.SetVisible(_sectorJudgeTimeText, false);
+    }
+    private void SetRoot(GameObject root, bool active)
+    {
+        UIVisibilityHelper.SetVisible(root, active);
     }
 }

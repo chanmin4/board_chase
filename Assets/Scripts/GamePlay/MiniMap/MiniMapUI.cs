@@ -124,11 +124,23 @@ public class MiniMapUI : MonoBehaviour
         bool showRatio = snapshot.isOpened && !HasNamedOrBoss(snapshot);
 
         string ratioText = showRatio
-            ? $"{Mathf.RoundToInt(snapshot.playerRatio * 100f)}%"
+        ? $"{Mathf.RoundToInt(snapshot.playerRatio * 100f)}%"
+        : string.Empty;
+
+        bool showJudgeTime = ShouldShowJudgeTime(snapshot);
+        string judgeTimeText = showJudgeTime
+            ? FormatJudgeTime(snapshot)
             : string.Empty;
 
-        cellUI.SetOpened(backgroundColor, iconSprite, ratioText, showIcon, showRatio);
-    }
+        cellUI.SetOpened(
+            backgroundColor,
+            iconSprite,
+            ratioText,
+            showIcon,
+            showRatio,
+            judgeTimeText,
+            showJudgeTime); 
+     }
 
     private Color GetBackgroundColor(SectorMapCellSnapshot snapshot)
     {
@@ -167,5 +179,17 @@ public class MiniMapUI : MonoBehaviour
         return
             (snapshot.specialState & SectorSpecialState.NamedActive) != 0 ||
             (snapshot.specialState & SectorSpecialState.BossActive) != 0;
+    }
+    private bool ShouldShowJudgeTime(SectorMapCellSnapshot snapshot)
+    {
+        return snapshot.isOpened &&
+            snapshot.contestState != SectorContestState.None &&
+            snapshot.contestRequired > 0f;
+    }
+
+    private string FormatJudgeTime(SectorMapCellSnapshot snapshot)
+    {
+        float remaining = Mathf.Max(0f, snapshot.contestRequired - snapshot.contestElapsed);
+        return $"{remaining:0.0}s";
     }
 }
