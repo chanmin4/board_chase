@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿/*
+using UnityEngine;
 using DG.Tweening;
 
 public class CollectableItem : MonoBehaviour
@@ -29,3 +30,4 @@ public class CollectableItem : MonoBehaviour
 		}
 	}
 }
+*/

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿/*
+using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
@@ -77,3 +78,4 @@ public class DropReward : StateAction
 		collectibleItem.GetComponent<CollectableItem>().AnimateItem();
 	}
 }
+*/

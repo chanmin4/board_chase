@@ -29,7 +29,24 @@ public class InteractionManager : MonoBehaviour
 
     private LinkedList<Interaction> _potentialInteractions = new LinkedList<Interaction>();
 
-    private Transform InteractionActor => _interactionActor != null ? _interactionActor : transform;
+    private Transform InteractionActor
+    {
+        get
+        {
+            if (_interactionActor == null)
+                return transform;
+
+            CharacterController controller = _interactionActor.GetComponent<CharacterController>();
+            if (controller != null)
+                return controller.transform;
+
+            controller = _interactionActor.GetComponentInParent<CharacterController>();
+            if (controller != null)
+                return controller.transform;
+
+            return _interactionActor;
+        }
+    }
 
     private void OnEnable()
     {
@@ -67,13 +84,6 @@ public class InteractionManager : MonoBehaviour
 
         GameObject itemObject = interaction.interactableObject;
         _potentialInteractions.RemoveFirst();
-
-        if (_onObjectPickUp != null)
-        {
-            ItemSO currentItem = itemObject.GetComponent<CollectableItem>().GetItem();
-            _onObjectPickUp.RaiseEvent(currentItem);
-        }
-
         Destroy(itemObject);
         RequestUpdateUI(false);
     }

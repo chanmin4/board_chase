@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -114,3 +115,4 @@ namespace SceneSelectorInternal
 		}
 	}
 }
+*/

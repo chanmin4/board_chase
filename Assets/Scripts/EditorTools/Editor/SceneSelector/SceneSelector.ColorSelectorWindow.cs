@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿/*
+using UnityEditor;
 using UnityEngine;
 using SceneSelectorInternal;
 
@@ -84,3 +85,4 @@ public partial class SceneSelector : EditorWindow
 		}
 	}
 }
+*/

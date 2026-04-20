@@ -9,6 +9,11 @@ public class VSplatterAimAction : MonoBehaviour
     [SerializeField] private InputReader _inputReader;
     [SerializeField] private VSplatterAttack _attack;
     [SerializeField] private VSplatterPaint _paint;
+    [Header("Broadcasting")]
+    [SerializeField] private WeaponAmmoEventChannelSO _weaponAmmoEventChannel;
+
+    [Header("Listening")]
+    [SerializeField] private VoidEventChannelSO _requestWeaponAmmoSnapshotChannel;
 
     [Header("Auto Refs Don't Touch")]
     [SerializeField] private Camera _aimCamera;
@@ -16,6 +21,7 @@ public class VSplatterAimAction : MonoBehaviour
     [Header("Options")]
     [SerializeField] private bool _autoReloadOnEmpty = true;
     [SerializeField] private bool _debugLogs = false;
+
 
     private Vector3 _aimWorldPoint;
     private bool _hasAimPoint;
@@ -143,6 +149,10 @@ public class VSplatterAimAction : MonoBehaviour
 
         if (_paint != null)
             _paint.Fired += OnShotExecuted;
+        if (_requestWeaponAmmoSnapshotChannel != null)
+        _requestWeaponAmmoSnapshotChannel.OnEventRaised += PublishAmmoSnapshot;
+
+        PublishAmmoSnapshot();
     }
 
     private void OnDisable()
@@ -155,6 +165,8 @@ public class VSplatterAimAction : MonoBehaviour
 
         if (_paint != null)
             _paint.Fired -= OnShotExecuted;
+        if (_requestWeaponAmmoSnapshotChannel != null)
+            _requestWeaponAmmoSnapshotChannel.OnEventRaised -= PublishAmmoSnapshot;
     }
 
     private void Update()
@@ -164,6 +176,7 @@ public class VSplatterAimAction : MonoBehaviour
         UpdateAimPoint();
         UpdateReloadState();
     }
+
 
     public bool TryGetAimPoint(out Vector3 worldPoint)
     {
@@ -212,7 +225,7 @@ public class VSplatterAimAction : MonoBehaviour
         _reloadEndTime = Time.time + CurrentReloadDuration;
 
         OnReloadStarted?.Invoke();
-
+        PublishAmmoSnapshot();
         if (_debugLogs)
             Debug.Log("[VSplatterAimAction] Reload started.");
 
@@ -227,6 +240,7 @@ public class VSplatterAimAction : MonoBehaviour
         _reloadEndTime = 0f;
 
         OnReloadFinished?.Invoke();
+        PublishAmmoSnapshot();
     }
 
     private void OnReloadRequested()
@@ -243,6 +257,7 @@ public class VSplatterAimAction : MonoBehaviour
         _nextFireTime = Time.time + (1f / CurrentShotsPerSecond);
 
         OnShotConsumed?.Invoke();
+        PublishAmmoSnapshot();
 
         if (_debugLogs)
             Debug.Log($"[VSplatterAimAction] Shot consumed. Ammo={_currentAmmo}/{CurrentMagazineSize}");
@@ -260,6 +275,7 @@ public class VSplatterAimAction : MonoBehaviour
             _isReloading = false;
             _reloadStartTime = 0f;
             _reloadEndTime = 0f;
+            PublishAmmoSnapshot();
         }
 
         _currentAmmo = Mathf.Clamp(_currentAmmo, 0, CurrentMagazineSize);
@@ -290,6 +306,7 @@ public class VSplatterAimAction : MonoBehaviour
         _currentAmmo = CurrentMagazineSize;
 
         OnReloadFinished?.Invoke();
+        PublishAmmoSnapshot();
 
         if (_debugLogs)
             Debug.Log("[VSplatterAimAction] Reload finished.");
@@ -301,5 +318,17 @@ public class VSplatterAimAction : MonoBehaviour
             return;
 
         _aimCamera = Camera.main;
+    }
+    private void PublishAmmoSnapshot()
+    {
+        if (_weaponAmmoEventChannel == null)
+            return;
+
+        _weaponAmmoEventChannel.RaiseEvent(new WeaponAmmoSnapshot(
+            CurrentWeapon,
+            _currentAmmo,
+            CurrentMagazineSize,
+            _isReloading,
+            Reload01));
     }
 }

@@ -5,6 +5,10 @@ public class WeaponSO : ScriptableObject
     [Header("Identity")]
     [SerializeField] private string weaponId = "weapon_pistol";
     [SerializeField] private string displayName = "Pistol";
+    [Header("UI")]
+    [SerializeField] private Sprite icon;
+
+    public Sprite Icon => icon;
 
     [Header("Shared")]
     [Min(0.01f)]

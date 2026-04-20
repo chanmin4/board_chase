@@ -27,7 +27,8 @@ public class SectorOccupancyManager : MonoBehaviour
     [SerializeField] private VoidEventChannelSO _requestMapSnapshotChannel;
     [SerializeField] private SectorOccupancyEventChannelSO _sectorOccupancyChangedChannel;
     [SerializeField] private SectorOccupancySummaryEventChannelSO _summaryChangedChannel;
-
+    [Header("Current Sector")]
+    [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
     private readonly Dictionary<SectorRuntime, SectorOccupancySnapshot> _snapshots = new();
     private Vector2Int _currentSectorCoord;
     private bool _hasCurrentSectorCoord;
@@ -42,6 +43,7 @@ public class SectorOccupancyManager : MonoBehaviour
 
         if (_sectorStateManager != null)
             _sectorStateManager.EnsureInitialized();
+     
     }
 
     private void OnEnable()
@@ -49,7 +51,11 @@ public class SectorOccupancyManager : MonoBehaviour
         if (_sectorOccupancyChangedChannel != null)
             _sectorOccupancyChangedChannel.OnEventRaised += OnSectorOccupancyChanged;
         if( _requestMapSnapshotChannel != null)
-            _requestMapSnapshotChannel.OnEventRaised += PublishMapSnapshot;     
+            _requestMapSnapshotChannel.OnEventRaised += PublishMapSnapshot;   
+        if (_currentSectorChangedEvent != null)
+            _currentSectorChangedEvent.OnEventRaised += OnCurrentSectorChanged;  
+
+        
         CacheInitialSnapshots();
     }
 
@@ -59,6 +65,8 @@ public class SectorOccupancyManager : MonoBehaviour
             _sectorOccupancyChangedChannel.OnEventRaised -= OnSectorOccupancyChanged;
         if (_requestMapSnapshotChannel != null)     
             _requestMapSnapshotChannel.OnEventRaised -= PublishMapSnapshot;
+        if (_currentSectorChangedEvent != null)
+            _currentSectorChangedEvent.OnEventRaised -= OnCurrentSectorChanged;
     }
 
     private void CacheInitialSnapshots()
@@ -87,7 +95,16 @@ public class SectorOccupancyManager : MonoBehaviour
         PublishSummary();
         PublishMapSnapshot();
     }
+    private void OnCurrentSectorChanged(SectorRuntime currentSector)
+    {
+        if (currentSector == null)
+            return;
 
+        _currentSectorCoord = GetSectorCoord(currentSector);
+        _hasCurrentSectorCoord = true;
+
+        PublishMapSnapshot();
+    }
     private void OnSectorOccupancyChanged(SectorOccupancySnapshot snapshot)
     {
         if (snapshot.sector == null)

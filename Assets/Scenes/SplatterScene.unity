@@ -1619,7 +1619,8 @@ MonoBehaviour:
   _requestMapSnapshotChannel: {fileID: 11400000, guid: bb92d0f6df954f13a3352283d6e5e301, type: 2}
   _sectorOccupancyChangedChannel: {fileID: 11400000, guid: 05b78ebb298833d4090868239b02df1f, type: 2}
   _summaryChangedChannel: {fileID: 11400000, guid: 6f617f5b512f7664ab2f5dfb45d8d2f5, type: 2}
-  startSectorOpened: 0
+  _currentSectorChangedEvent: {fileID: 11400000, guid: cb39fc0f8d034346a9164254d2f477d7, type: 2}
+  startSectorOpened: 1
   startSectorOwner: 0
   startSectorPlayerOwned: 0
 --- !u!4 &1448688624

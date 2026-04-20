@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿/*
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -198,3 +199,4 @@ class ScriptableObjectBrowser : EditorWindow
 		return niceText;
 	}
 }
+*/

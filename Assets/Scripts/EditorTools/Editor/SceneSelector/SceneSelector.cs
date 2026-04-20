@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿/*
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using SceneSelectorInternal;
@@ -184,3 +185,4 @@ public partial class SceneSelector : EditorWindow, IHasCustomMenu
 		menu.AddItem(kOpenPreferencesItemContent, false, OpenPreferences);
 	}
 }
+*/
