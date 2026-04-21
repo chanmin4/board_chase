@@ -2,21 +2,21 @@
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
-[CreateAssetMenu(fileName = "CritterFaceProtagonist", menuName = "State Machines/Actions/Critter Face Protagonist")]
-public class CreatureFaceVSplatterSO : StateActionSO
+[CreateAssetMenu(fileName = "CreatureFacePlayer", menuName = "State Machines/Actions/Creature Face Player")]
+public class CreatureFacePlayerSO : StateActionSO
 {
 	public TransformAnchor playerAnchor;
-	protected override StateAction CreateAction() => new CritterFaceProtagonist();
+	protected override StateAction CreateAction() => new CreatureFacePlayer();
 }
 
-public class CritterFaceProtagonist : StateAction
+public class CreatureFacePlayer : StateAction
 {
 	TransformAnchor _protagonist;
 	Transform _actor;
 	public override void Awake(StateMachine stateMachine)
 	{
 		_actor = stateMachine.transform;
-		_protagonist = ((CreatureFaceVSplatterSO)OriginSO).playerAnchor;
+		_protagonist = ((CreatureFacePlayerSO)OriginSO).playerAnchor;
 	}
 
 	public override void OnUpdate()

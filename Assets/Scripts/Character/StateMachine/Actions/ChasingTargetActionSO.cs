@@ -20,7 +20,6 @@ public class ChasingTargetActionSO : StateActionSO
 
 public class ChasingTargetAction : StateAction
 {
-	private Creature _creature;
 	private ChasingTargetActionSO _config;
 	private NavMeshAgent _agent;
 	private bool _isActiveAgent;

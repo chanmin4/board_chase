@@ -570,6 +570,7 @@ Transform:
   - {fileID: 3601251521957474038}
   - {fileID: 1297113805532342119}
   - {fileID: 5731386009013077401}
+  - {fileID: 7076542028121995548}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &8994133820209950284
@@ -630,7 +631,7 @@ Animator:
   m_GameObject: {fileID: 6915450752968060550}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: b6c33e1d6632025468fb37a04e312606, type: 3}
-  m_Controller: {fileID: 9100000, guid: dffbd9326394a8d47a87a1e2aec70a59, type: 2}
+  m_Controller: {fileID: 9100000, guid: b8c2c69715f756244868d40778b837bd, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -805,6 +806,53 @@ MonoBehaviour:
   _samplePoint: {fileID: 5731386009013077401}
   _maskRenderManager: {fileID: 0}
   _requireOpenedSector: 1
+--- !u!1 &7425844027062615583
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7076542028121995548}
+  - component: {fileID: 7913140367112980641}
+  m_Layer: 3
+  m_Name: Level
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7076542028121995548
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7425844027062615583}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5546477128773306913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7913140367112980641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7425844027062615583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc83b2d302817f241bfbe8b08426602a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _reward: {fileID: 11400000, guid: cf0d121e2a477d14ab7ec44ed3ab1e4d, type: 2}
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _xpGainChannel: {fileID: 11400000, guid: ebfba834e3329e04f86812146cb2fad1, type: 2}
 --- !u!1 &9046344662812657720
 GameObject:
   m_ObjectHideFlags: 0

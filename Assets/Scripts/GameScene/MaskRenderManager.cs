@@ -28,6 +28,28 @@ public class MaskRenderManager : MonoBehaviour
         public object sender;
     }
 
+    [Serializable]
+    public struct CirclePaintImpact
+    {
+        public PaintChannel channel;
+        public Vector3 worldPos;
+        public float radiusWorld;
+        public object sender;
+
+        public int totalPixels;
+        public int neutralPixels;
+        public int overwrittenVirusPixels;
+        public int alreadyVaccinePixels;
+        public int alreadyVirusPixels;
+
+        public float neutralArea;
+        public float overwrittenVirusArea;
+        public float alreadyVaccineArea;
+        public float totalArea;
+
+        public float ValidArea => neutralArea + overwrittenVirusArea;
+        public int ValidPixels => neutralPixels + overwrittenVirusPixels;
+    }
     [Header("Base Materials")]
     [SerializeField] private Material vaccineBaseMaterial;
     [SerializeField] private Material virusBaseMaterial;
@@ -37,6 +59,8 @@ public class MaskRenderManager : MonoBehaviour
 
     [Header("Mask Resolution")]
     [SerializeField] private int pixelsPerUnit = 16;
+    [Header("Broadcasting On")]
+[SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
     [Header("Overlay")]
     [SerializeField] private float yOffset = 0.3f;
@@ -46,7 +70,18 @@ public class MaskRenderManager : MonoBehaviour
 
     public event Action<CirclePaintRequest> OnCircleRequestAccepted;
     public event Action<CirclePaintRequest> OnCircleRequestRejected;
+    public event Action<CirclePaintImpact> OnCirclePaintImpactAccepted;
+    private void OnEnable()
+    {
+        if (_maskRenderManagerReadyChannel != null)
+            _maskRenderManagerReadyChannel.RaiseEvent(this);
+    }
 
+    private void OnDisable()
+    {
+        if (_maskRenderManagerReadyChannel != null)
+            _maskRenderManagerReadyChannel.Clear(this);
+    }
     private void LateUpdate()
     {
         for (int i = 0; i < _registeredSectors.Count; i++)
@@ -100,34 +135,43 @@ public class MaskRenderManager : MonoBehaviour
         return false;
     }
 
-    public bool RequestCircle(
-        PaintChannel channel,
-        Vector3 worldPos,
-        float radiusWorld,
-        int priority = 0,
-        object sender = null)
+    public bool RequestCircle(PaintChannel channel,Vector3 worldPos,
+        float radiusWorld,int priority = 0,object sender = null)
     {
         CirclePaintRequest request = BuildCircleRequest(channel, worldPos, radiusWorld, priority, sender);
 
         bool accepted = false;
 
+        CirclePaintImpact totalImpact = CreateEmptyImpact(request);
+
         for (int i = 0; i < _registeredSectors.Count; i++)
         {
             SectorPaint sector = _registeredSectors[i];
+
             if (sector == null)
                 continue;
 
             if (!sector.CanAcceptCircle(request))
                 continue;
 
+            RefreshSector(sector);
+
+            CirclePaintImpact sectorImpact = EvaluateCircleImpact(sector, request);
+            AddImpact(ref totalImpact, sectorImpact);
+
             sector.ApplyCircle(request);
             accepted = true;
         }
 
         if (accepted)
+        {
             OnCircleRequestAccepted?.Invoke(request);
+            OnCirclePaintImpactAccepted?.Invoke(totalImpact);
+        }
         else
+        {
             OnCircleRequestRejected?.Invoke(request);
+        }
 
         return accepted;
     }
@@ -527,4 +571,121 @@ public class MaskRenderManager : MonoBehaviour
         else
             DestroyImmediate(obj);
     }
+    private CirclePaintImpact EvaluateCircleImpact(SectorPaint sector, CirclePaintRequest request)
+    {
+        CirclePaintImpact impact = CreateEmptyImpact(request);
+
+        if (sector == null || !sector.initialized)
+            return impact;
+
+        if (!TryWorldToPixel(sector, request.worldPos, out int cx, out int cy))
+            return impact;
+
+        float pixelsPerMeterX = sector.textureWidth / Mathf.Max(0.0001f, sector.worldBounds.size.x);
+        float pixelsPerMeterY = sector.textureHeight / Mathf.Max(0.0001f, sector.worldBounds.size.z);
+        float pixelsPerMeter = Mathf.Min(pixelsPerMeterX, pixelsPerMeterY);
+
+        int radiusPx = Mathf.Max(1, Mathf.RoundToInt(request.radiusWorld * pixelsPerMeter));
+
+        int minX = Mathf.Max(0, cx - radiusPx);
+        int maxX = Mathf.Min(sector.textureWidth - 1, cx + radiusPx);
+        int minY = Mathf.Max(0, cy - radiusPx);
+        int maxY = Mathf.Min(sector.textureHeight - 1, cy + radiusPx);
+
+        float rr = (radiusPx + 0.5f) * (radiusPx + 0.5f);
+
+        float pixelWorldWidth = sector.worldBounds.size.x / Mathf.Max(1, sector.textureWidth);
+        float pixelWorldHeight = sector.worldBounds.size.z / Mathf.Max(1, sector.textureHeight);
+        float pixelArea = pixelWorldWidth * pixelWorldHeight;
+
+        for (int y = minY; y <= maxY; y++)
+        {
+            int dy = y - cy;
+            int row = y * sector.textureWidth;
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                int dx = x - cx;
+
+                if ((dx * dx) + (dy * dy) > rr)
+                    continue;
+
+                int index = row + x;
+
+                bool hasVaccine =
+                    sector.vaccineBuffer != null &&
+                    sector.vaccineBuffer[index].a > 0;
+
+                bool hasVirus =
+                    sector.virusBuffer != null &&
+                    sector.virusBuffer[index].a > 0;
+
+                impact.totalPixels++;
+                impact.totalArea += pixelArea;
+
+                if (request.channel == PaintChannel.Vaccine)
+                {
+                    if (hasVirus)
+                    {
+                        impact.overwrittenVirusPixels++;
+                        impact.overwrittenVirusArea += pixelArea;
+                    }
+                    else if (!hasVaccine)
+                    {
+                        impact.neutralPixels++;
+                        impact.neutralArea += pixelArea;
+                    }
+                    else
+                    {
+                        impact.alreadyVaccinePixels++;
+                        impact.alreadyVaccineArea += pixelArea;
+                    }
+                }
+                else if (request.channel == PaintChannel.Virus)
+                {
+                    if (hasVaccine)
+                    {
+                        impact.overwrittenVirusPixels++;
+                        impact.overwrittenVirusArea += pixelArea;
+                    }
+                    else if (!hasVirus)
+                    {
+                        impact.neutralPixels++;
+                        impact.neutralArea += pixelArea;
+                    }
+                    else
+                    {
+                        impact.alreadyVirusPixels++;
+                    }
+                }
+            }
+        }
+
+        return impact;
+    }
+    private CirclePaintImpact CreateEmptyImpact(CirclePaintRequest request)
+    {
+        return new CirclePaintImpact
+        {
+            channel = request.channel,
+            worldPos = request.worldPos,
+            radiusWorld = request.radiusWorld,
+            sender = request.sender
+        };
+    }
+
+    private void AddImpact(ref CirclePaintImpact total, CirclePaintImpact add)
+    {
+        total.totalPixels += add.totalPixels;
+        total.neutralPixels += add.neutralPixels;
+        total.overwrittenVirusPixels += add.overwrittenVirusPixels;
+        total.alreadyVaccinePixels += add.alreadyVaccinePixels;
+        total.alreadyVirusPixels += add.alreadyVirusPixels;
+
+        total.neutralArea += add.neutralArea;
+        total.overwrittenVirusArea += add.overwrittenVirusArea;
+        total.alreadyVaccineArea += add.alreadyVaccineArea;
+        total.totalArea += add.totalArea;
+    }
+
 }

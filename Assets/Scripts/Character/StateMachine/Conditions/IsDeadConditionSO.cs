@@ -1,7 +1,9 @@
 ﻿using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
-
+/// <summary>
+/// 그냥 죽어있는지
+/// </summary>
 [CreateAssetMenu(fileName = "IsDeadCondition", menuName = "State Machines/Conditions/Is Dead")]
 public class IsDeadConditionSO : StateConditionSO
 {

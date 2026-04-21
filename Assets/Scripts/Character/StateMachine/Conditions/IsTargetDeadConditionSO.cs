@@ -1,7 +1,9 @@
 ﻿using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
-
+/// <summary>
+/// "선택한 타겟이 죽었는지
+/// </summary>
 [CreateAssetMenu(fileName = "IsTargetDeadCondition", menuName = "State Machines/Conditions/Is Target Dead Condition")]
 public class IsTargetDeadConditionSO : StateConditionSO
 {
@@ -10,15 +12,15 @@ public class IsTargetDeadConditionSO : StateConditionSO
 
 public class IsTargetDeadCondition : Condition
 {
-	private Creature _creatureScript;
+	private Enemy _enemy;
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_creatureScript = stateMachine.GetComponent<Creature>();
+		_enemy = stateMachine.GetComponent<Enemy>();
 	}
 
 	protected override bool Statement()
 	{
-		return _creatureScript.currentTarget == null || _creatureScript.currentTarget.IsDead;
+		return _enemy.currentTarget == null || _enemy.currentTarget.IsDead;
 	}
 }

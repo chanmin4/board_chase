@@ -168,7 +168,6 @@ public class VSplatterAimUI : MonoBehaviour
                 _aimAction.IsReloading ||
                 _aimAction.IsOnFireCooldown ||
                 !_hideProgressWhenReady;
-            Debug.Log($"shouldShowProgress? {_aimAction.IsReloading} || {_aimAction.IsOnFireCooldown} || {!_hideProgressWhenReady} => {shouldShowProgress}");
             Color ringColor = new Color(
                 baseColor.r * _progressColorMultiplier.r,
                 baseColor.g * _progressColorMultiplier.g,

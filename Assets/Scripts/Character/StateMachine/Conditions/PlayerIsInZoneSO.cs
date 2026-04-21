@@ -20,25 +20,25 @@ public class PlayerIsInZoneSO : StateConditionSO<PlayerIsInZone>
 public class PlayerIsInZone : Condition
 {
 
-	private Creature _creature;
+	private Enemy _enemy;
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_creature = stateMachine.GetComponent<Creature>();
+		_enemy = stateMachine.GetComponent<Enemy>();
 	}
 
 	protected override bool Statement()
 	{
 		bool result = false;
-		if (_creature != null)
+		if (_enemy != null)
 		{
 			switch (((PlayerIsInZoneSO)OriginSO).zone)
 			{
 				case ZoneType.Alert:
-					result = _creature.isPlayerInAlertZone;
+					result = _enemy.isPlayerInAlertZone;
 					break;
 				case ZoneType.Attack:
-					result = _creature.isPlayerInAttackZone;
+					result = _enemy.isPlayerInAttackZone;
 					break;
 				default:
 					break;

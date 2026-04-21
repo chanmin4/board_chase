@@ -3,6 +3,7 @@
 /// <summary>
 /// An instance of the health of a character, be it the player or an NPC.
 /// The initial values are usually contained in another SO of type HealthConfigSO.
+/// This scripts used for gameplay ui
 /// </summary>
 [CreateAssetMenu(fileName = "PlayersHealth", menuName = "EntityConfig/Player's Health")]
 public class HealthSO : ScriptableObject

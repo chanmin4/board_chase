@@ -150,31 +150,31 @@ public class SectorPortalManager : MonoBehaviour
 
         if (source == null)
         {
-            Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: source null. portal={portal.name}");
+           
             return false;
         }
 
         if (target == null)
         {
-            Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: target null. portal={portal.name}, source={source.name}");
+           
             return false;
         }
 
         if (portal.TargetPortal == null)
         {
-            Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: targetPortal null. portal={portal.name}, source={source.name}, target={target.name}");
+          
             return false;
         }
 
         if (!source.isOpened)
         {
-            Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: source closed. source={source.name}, coord={source.coord}");
+        
             return false;
         }
 
         if (!target.isOpened)
         {
-            Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: target closed. target={target.name}, coord={target.coord}");
+        
             return false;
         }
 

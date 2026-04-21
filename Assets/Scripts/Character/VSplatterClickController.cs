@@ -18,8 +18,8 @@ public class VSplatterClickController : MonoBehaviour
 
     private bool _wasHoldingLastFrame;
 
-    private static readonly int ShootHash = Animator.StringToHash("Shoot");
-    private static readonly int IsShootingHash = Animator.StringToHash("IsShooting");
+    //private static readonly int ShootHash = Animator.StringToHash("Shoot");
+    //private static readonly int IsShootingHash = Animator.StringToHash("IsShooting");
 
     private void OnEnable()
     {
@@ -48,7 +48,7 @@ public class VSplatterClickController : MonoBehaviour
         bool holdPaint = _character.paintInput;
         bool holdAny = holdAttack || holdPaint;
 
-        _animator.SetBool(IsShootingHash, holdAny);
+        //_animator.SetBool(IsShootingHash, holdAny);
 
         if (!holdAny)
         {
@@ -84,7 +84,7 @@ public class VSplatterClickController : MonoBehaviour
         if (_animator == null)
             return;
 
-        _animator.ResetTrigger(ShootHash);
-        _animator.SetTrigger(ShootHash);
+       // _animator.ResetTrigger(ShootHash);
+        //_animator.SetTrigger(ShootHash);
     }
 }

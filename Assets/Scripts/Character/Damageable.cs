@@ -5,6 +5,7 @@ public class Damageable : MonoBehaviour
 {
 	[Header("Health")]
 	[SerializeField] private HealthConfigSO _healthConfigSO;
+	[Tooltip("this SO only need when player setting not for any entities")] 
 	[SerializeField] private HealthSO _currentHealthSO;
 
 	[Header("Combat")]
