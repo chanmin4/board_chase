@@ -90,7 +90,6 @@ public class SectorPortalManager : MonoBehaviour
         SectorPortal portal = GetPortal(sector, direction);
         if (portal == null)
         {
-            Debug.LogWarning($"[SectorPortalManager] No portal. sector={sector.name}, dir={direction}");
             return;
         }
 
@@ -99,11 +98,8 @@ public class SectorPortalManager : MonoBehaviour
         Vector2Int ownerCoord = _sectorStateManager.GetSectorCoord(sector);
         Vector2Int targetCoord = ownerCoord + SectorPortalDirectionUtility.ToCoordOffset(direction);
 
-        Debug.Log($"[SectorPortalManager] BindPortal owner={sector.name}, ownerCoord={ownerCoord}, dir={direction}, targetCoord={targetCoord}");
-
         if (!_sectorByCoord.TryGetValue(targetCoord, out SectorRuntime targetSector))
         {
-            Debug.LogWarning($"[SectorPortalManager] Target sector not found. owner={sector.name}, dir={direction}, targetCoord={targetCoord}");
             portal.SetLink(null, null);
             return;
         }
@@ -111,7 +107,6 @@ public class SectorPortalManager : MonoBehaviour
         SectorPortalDirection opposite = SectorPortalDirectionUtility.Opposite(direction);
         SectorPortal targetPortal = GetPortal(targetSector, opposite);
 
-        Debug.Log($"[SectorPortalManager] Link result owner={sector.name}, target={targetSector.name}, opposite={opposite}, targetPortal={targetPortal}");
 
         portal.SetLink(targetSector, targetPortal);
     }

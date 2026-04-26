@@ -13,7 +13,8 @@ public class SpawnSystem : MonoBehaviour
 
 	[Header("Scene Ready Event")]
 	[SerializeField] private VoidEventChannelSO _onSceneReady = default; //Raised by SceneLoader when the scene is set to active
-
+	[Header("Scene Refs")]
+	[SerializeField] private Transform _projectilesRoot = default;
 	private Transform _defaultSpawnPoint;
 	
 
@@ -40,11 +41,22 @@ public class SpawnSystem : MonoBehaviour
 	{
 		Transform spawnLocation = _defaultSpawnPoint;
 		Debug.Log($"player Spawn position: {spawnLocation.position}");
-		VSplatter_Character playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
-		_playerInstantiatedChannel.RaiseEvent(playerInstance.transform);
-		_playerTransformAnchor.Provide(playerInstance.transform); //the CameraSystem will pick this up to frame the player
 
-		//TODO: Probably move this to the GameManager once it's up and running
+		VSplatter_Character playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
+
+		VSplatterWeaponHolder weaponHolder = playerInstance.GetComponentInChildren<VSplatterWeaponHolder>();
+		
+		if (weaponHolder != null)
+		{
+			Debug.Log($"[SpawnSystem] scene projectilesRoot = {_projectilesRoot}");
+			Debug.Log($"[SpawnSystem] weaponHolder = {weaponHolder}");
+			weaponHolder.SetProjectilesRoot(_projectilesRoot);
+			Debug.Log($"[SpawnSystem] holder.ProjectilesRoot after set = {weaponHolder.ProjectilesRoot}");
+		}
+
+		_playerInstantiatedChannel.RaiseEvent(playerInstance.transform);
+		_playerTransformAnchor.Provide(playerInstance.transform);
+
 		_inputReader.EnableGameplayInput();
 	}
 }

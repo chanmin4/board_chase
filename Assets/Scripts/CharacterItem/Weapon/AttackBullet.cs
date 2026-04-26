@@ -104,18 +104,15 @@ public class AttackBullet : MonoBehaviour
         if (_damage <= 0f || !IsLayerInMask(hit.collider.gameObject.layer, _damageHitMask))
             return;
 
-        IInkDamageable inkDamageable = hit.collider.GetComponentInParent<IInkDamageable>();
-        if (inkDamageable != null)
-        {
-            inkDamageable.ApplyInkDamage(_damage, hit.point, _source != null ? _source : gameObject);
-            return;
-        }
-
         Damageable damageable = hit.collider.GetComponentInParent<Damageable>();
-        if (damageable != null)
-            damageable.ReceiveAnAttack(_damage);
-    }
+        if (damageable == null)
+            return;
 
+        if (_source != null && hit.collider.transform.IsChildOf(_source.transform))
+            return;
+
+        damageable.ReceiveAnAttack(_damage);
+    }
     private static bool IsLayerInMask(int layer, LayerMask mask)
     {
         return (mask.value & (1 << layer)) != 0;

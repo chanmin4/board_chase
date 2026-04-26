@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 872cbaa965d1f6e4e98365d74e2060df, type: 3}
+  m_Name: Worm_Virus_MODE
+  m_EditorClassIdentifier: 
+  _transitions:
+  - FromState: {fileID: 11400000, guid: 6f5c7ee9dba8d7647875b89039120b5f, type: 2}
+    ToState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: e2a6a9cd7ab5cc44b829a27dfdc087ce, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
+    ToState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: c8bfb14271ab3d74ea981c6fda7746d9, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
+    ToState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
+    Conditions: []

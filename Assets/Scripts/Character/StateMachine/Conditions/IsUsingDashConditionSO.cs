@@ -7,13 +7,12 @@ public class IsUsingDashConditionSO : StateConditionSO<IsUsingDashCondition> { }
 
 public class IsUsingDashCondition: Condition
 {
-	//Component references
-	private VSplatter_Character _vsplatterScript;
+	private VSplatterDashController _dashController;
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
+		_dashController = stateMachine.GetOrAddComponent<VSplatterDashController>();
 	}
 
-	protected override bool Statement() => _vsplatterScript.DashInput;
+	protected override bool Statement() => _dashController != null && _dashController.IsDashing;
 }

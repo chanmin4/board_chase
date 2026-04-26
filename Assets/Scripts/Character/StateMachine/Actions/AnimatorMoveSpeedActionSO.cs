@@ -39,6 +39,6 @@ public class AnimatorMoveSpeedAction : StateAction
 	{
 		//TODO: do we like that we're using the magnitude here, per frame? Can this be done in a smarter way?
 		float normalisedSpeed = _vsplatter.movementInput.magnitude;
-		_animator.SetFloat(_parameterHash, normalisedSpeed);
+		//_animator.SetFloat(_parameterHash, normalisedSpeed);
 	}
 }

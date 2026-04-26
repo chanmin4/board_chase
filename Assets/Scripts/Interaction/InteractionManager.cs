@@ -138,7 +138,7 @@ public class InteractionManager : MonoBehaviour
 
    	public void OnTriggerChangeDetected(bool entered, GameObject obj)
 	{
-		Debug.Log($"[InteractionManager] Trigger {(entered ? "Enter" : "Exit")} obj={obj.name}, tag={obj.tag}, portal={obj.GetComponentInParent<SectorPortal>()}");
+		//Debug.Log($"[InteractionManager] Trigger {(entered ? "Enter" : "Exit")} obj={obj.name}, tag={obj.tag}, portal={obj.GetComponentInParent<SectorPortal>()}");
 
 		if (entered)
 			AddPotentialInteraction(obj);
@@ -188,15 +188,15 @@ public class InteractionManager : MonoBehaviour
 
 		SectorPortal portal = obj.GetComponentInParent<SectorPortal>();
 
-		Debug.Log($"[InteractionManager] TryCreateInteraction obj={obj.name}, portal={portal}, portalCanInteract={(portal != null ? portal.CanInteract.ToString() : "null")}");
+		//Debug.Log($"[InteractionManager] TryCreateInteraction obj={obj.name}, portal={portal}, portalCanInteract={(portal != null ? portal.CanInteract.ToString() : "null")}");
 
 		if (portal != null && portal.CanInteract)
 		{
 			interaction = new Interaction(InteractionType.Portal, portal.gameObject);
-			Debug.Log($"[InteractionManager] Added portal interaction. portal={portal.name}");
+			//Debug.Log($"[InteractionManager] Added portal interaction. portal={portal.name}");
 			return true;
 		}
-		Debug.Log($"[InteractionManager] No valid interaction type. obj={obj.name}");
+		//Debug.Log($"[InteractionManager] No valid interaction type. obj={obj.name}");
 		return false;
 	}
 
@@ -255,4 +255,5 @@ public class InteractionManager : MonoBehaviour
         _potentialInteractions.Clear();
         RequestUpdateUI(false);
     }
+
 }

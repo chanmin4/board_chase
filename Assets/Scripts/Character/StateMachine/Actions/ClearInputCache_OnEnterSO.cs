@@ -1,7 +1,7 @@
-﻿using UnityEngine;
+using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
-
+//interaction 전용 
 [CreateAssetMenu(fileName = "ClearInputCache_OnEnter", menuName = "State Machines/Actions/Clear Input Cache On Enter")]
 public class ClearInputCache_OnEnterSO : StateActionSO
 {

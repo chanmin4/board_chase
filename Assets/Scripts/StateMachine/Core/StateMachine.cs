@@ -18,6 +18,8 @@ namespace VSplatter.StateMachine
 		private readonly Dictionary<Type, Component> _cachedComponents = new Dictionary<Type, Component>();
 		internal State _currentState;
 
+		public ScriptableObjects.StateSO CurrentStateSO => _currentState?._originSO;
+
 		private void Awake()
 		{
 			_currentState = _transitionTableSO.GetInitialState(this);

@@ -12,12 +12,15 @@ GameObject:
   - component: {fileID: 5161108087040121004}
   - component: {fileID: 5496547999019829763}
   - component: {fileID: 4198093168263977899}
-  - component: {fileID: 657364332838397504}
   - component: {fileID: 5169388757773726872}
   - component: {fileID: 4544002800027011311}
   - component: {fileID: 8423142990140762296}
   - component: {fileID: 469768165924775885}
   - component: {fileID: 3726767803163193086}
+  - component: {fileID: 1325152393086570844}
+  - component: {fileID: 638916495726808461}
+  - component: {fileID: 8256977164061730377}
+  - component: {fileID: 2760246475410149415}
   m_Layer: 0
   m_Name: Chainling_Virus
   m_TagString: Untagged
@@ -115,24 +118,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &657364332838397504
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 348008073115985884}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1eeda163c70b3cb4ebb88ba92f608fd8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _transitionTableSO: {fileID: 11400000, guid: b44f51813c1cd7f4b91b0935e3f6dca7, type: 2}
-  _debugger:
-    debugTransitions: 0
-    appendConditionsInfo: 1
-    appendActionsInfo: 1
-    currentState: 
 --- !u!114 &5169388757773726872
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -209,6 +194,10 @@ MonoBehaviour:
   currentTarget: {fileID: 0}
   _currentSector: {fileID: 0}
   _isSpawnReady: 1
+  _searchSucceeded: 0
+  _infectionTargetValid: 0
+  _isKnockbackRequested: 0
+  _knockbackReceiver: {fileID: 2760246475410149415}
 --- !u!114 &3726767803163193086
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -227,6 +216,88 @@ MonoBehaviour:
   - {fileID: 7924136042751608502}
   _damage: 5
   _hitCooldown: 1
+--- !u!114 &1325152393086570844
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 348008073115985884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecd6d1a63112ede4bac9a904854e4205, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _modeStateMachine: {fileID: 638916495726808461}
+  _aliveStateMachine: {fileID: 8256977164061730377}
+  _forceDisableAliveOnAwake: 1
+  _defaultAliveEnabled: 0
+  _refreshEveryFrame: 1
+  _modeRules:
+  - modeState: {fileID: 11400000, guid: 6f5c7ee9dba8d7647875b89039120b5f, type: 2}
+    enableAliveStateMachine: 0
+  - modeState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
+    enableAliveStateMachine: 1
+  - modeState: {fileID: 11400000, guid: 50e946074c053a0428e92dc2e6e63ac1, type: 2}
+    enableAliveStateMachine: 0
+  - modeState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
+    enableAliveStateMachine: 0
+  _currentModeState: {fileID: 0}
+  _resolvedAliveEnabled: 0
+  _aliveStateMachineEnabled: 0
+--- !u!114 &638916495726808461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 348008073115985884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60a6b2c19999f504da354acd124867d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _transitionTableSO: {fileID: 11400000, guid: b44f51813c1cd7f4b91b0935e3f6dca7, type: 2}
+  _debugger:
+    debugTransitions: 0
+    appendConditionsInfo: 1
+    appendActionsInfo: 1
+    currentState: 
+--- !u!114 &8256977164061730377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 348008073115985884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71b601e08d84d324fbc1dff9f84f20c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _transitionTableSO: {fileID: 11400000, guid: 4a41adc711018c745b67bfe6f24151ed, type: 2}
+  _debugger:
+    debugTransitions: 0
+    appendConditionsInfo: 1
+    appendActionsInfo: 1
+    currentState: 
+--- !u!114 &2760246475410149415
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 348008073115985884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74414cdea6e70ab488d19ce9963527e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _autoConsumePendingRequest: 0
+  _stopNavMeshAgentWhileActive: 1
+  _hasPendingRequest: 0
+  _isKnockbackActive: 0
+  _remainingTime: 0
 --- !u!1 &548599628763828085
 GameObject:
   m_ObjectHideFlags: 0

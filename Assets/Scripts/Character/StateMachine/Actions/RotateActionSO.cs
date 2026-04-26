@@ -6,7 +6,7 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class RotateActionSO : StateActionSO<RotateAction>
 {
 	[Tooltip("Smoothing for rotating the character to their movement direction")]
-	public float turnSmoothTime = 0.2f;
+	public float turnSmoothTime = 0.01f;
 }
 
 public class RotateAction : StateAction

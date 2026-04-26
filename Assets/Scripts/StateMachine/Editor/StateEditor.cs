@@ -15,7 +15,15 @@ namespace VSplatter.StateMachine.Editor
 		private void OnEnable()
 		{
 			Undo.undoRedoPerformed += DoUndo;
+
+			if (target == null)
+				return;
+
 			_actions = serializedObject.FindProperty("_actions");
+
+			if (_actions == null)
+				return;
+
 			_list = new ReorderableList(serializedObject, _actions, true, true, true, true);
 			SetupActionsList(_list);
 		}
@@ -27,6 +35,9 @@ namespace VSplatter.StateMachine.Editor
 
 		public override void OnInspectorGUI()
 		{
+			if (target == null || _list == null)
+				return;
+
 			_list.DoLayoutList();
 
 			serializedObject.ApplyModifiedProperties();
@@ -34,6 +45,9 @@ namespace VSplatter.StateMachine.Editor
 
 		private void DoUndo()
 		{
+			if (target == null)
+				return;
+
 			serializedObject.UpdateIfRequiredOrScript();
 		}
 
