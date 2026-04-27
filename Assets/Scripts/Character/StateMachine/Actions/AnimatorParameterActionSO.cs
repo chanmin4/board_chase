@@ -63,19 +63,19 @@ public class AnimatorParameterAction : StateAction
 			case AnimatorParameterActionSO.ParameterType.Bool:
 				_animator.SetBool(_parameterHash, _originSO.boolValue);
 				
-				Debug.Log($"{_originSO.parameterName}: {_originSO.boolValue}");
+				//Debug.Log($"{_originSO.parameterName}: {_originSO.boolValue}");
 				break;
 			case AnimatorParameterActionSO.ParameterType.Int:
 				_animator.SetInteger(_parameterHash, _originSO.intValue);
-				Debug.Log($"{_originSO.parameterName}: {_originSO.intValue}");
+				//Debug.Log($"{_originSO.parameterName}: {_originSO.intValue}");
 				break;
 			case AnimatorParameterActionSO.ParameterType.Float:
 				_animator.SetFloat(_parameterHash, _originSO.floatValue);
-				Debug.Log($"{_originSO.parameterName}: {_originSO.floatValue}");
+				//Debug.Log($"{_originSO.parameterName}: {_originSO.floatValue}");
 				break;
 			case AnimatorParameterActionSO.ParameterType.Trigger:
 				_animator.SetTrigger(_parameterHash);
-				Debug.Log($"{_originSO.parameterName}: Triggered");
+				//Debug.Log($"{_originSO.parameterName}: Triggered");
 				break;
 		}
 	}

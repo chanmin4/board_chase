@@ -8,8 +8,14 @@ public class SectorRuntime : MonoBehaviour
     [ReadOnly] public bool is_startsector = false;
 
     public Transform cameraPoint;
+    [Tooltip("실제 적 스폰 위치")]
     public Transform[] enemySpawnPoints;
-
+    // 실제 적 생성 위치들. 기존 호환용 spawn point 배열.
+    [Tooltip("spawn point medata, additional settings for each spawn point. can be empty for basic spawning using enemySpawnPoints only.")]
+    [SerializeField] private EnemySpawnPoint[] _spawnPointMetadata;
+    //이포인트 비활성 , 이포인트 보스전용 등등 전용 설정가능
+    // 각 spawn point의 추가 설정용 메타데이터 배열.
+    // 비어 있어도 enemySpawnPoints만으로 기본 스폰은 가능.
     public SectorEdge XMin;
     public SectorEdge XMax;
     public SectorEdge ZMin;
@@ -22,6 +28,7 @@ public class SectorRuntime : MonoBehaviour
     public Vector2Int Coord => coord;
     public bool IsOpened => isOpened;
     public bool IsStartSector => is_startsector;
+    public EnemySpawnPoint[] SpawnPointMetadata => _spawnPointMetadata;
 
     public void SetRuntimeInfo(Vector2Int newCoord, bool opened, bool isStartSector)
     {
@@ -71,4 +78,22 @@ public class SectorRuntime : MonoBehaviour
                ZMin != null && ZMin.bound != null &&
                ZMax != null && ZMax.bound != null;
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if ((_spawnPointMetadata == null || _spawnPointMetadata.Length == 0) && enemySpawnPoints != null && enemySpawnPoints.Length > 0)
+        {
+            EnemySpawnPoint[] found = new EnemySpawnPoint[enemySpawnPoints.Length];
+
+            for (int i = 0; i < enemySpawnPoints.Length; i++)
+            {
+                Transform point = enemySpawnPoints[i];
+                found[i] = point != null ? point.GetComponent<EnemySpawnPoint>() : null;
+            }
+
+            _spawnPointMetadata = found;
+        }
+    }
+#endif
 }

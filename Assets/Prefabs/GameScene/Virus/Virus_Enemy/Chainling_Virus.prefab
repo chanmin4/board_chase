@@ -21,7 +21,8 @@ GameObject:
   - component: {fileID: 638916495726808461}
   - component: {fileID: 8256977164061730377}
   - component: {fileID: 2760246475410149415}
-  m_Layer: 0
+  - component: {fileID: 374727473128369670}
+  m_Layer: 6
   m_Name: Chainling_Virus
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -155,6 +156,8 @@ MonoBehaviour:
   _getHitEffectSO: {fileID: 11400000, guid: 627e1269b0538734bbd43b8e89f16d76, type: 2}
   _mainMeshRenderer: {fileID: 8011047904771457589}
   _droppableRewardSO: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
+  _invulnerabilityController: {fileID: 0}
+  _postHitInvulnerabilityConfig: {fileID: 0}
   _updateHealthUI: {fileID: 11400000, guid: 2447a760b3f9f134f8730aa53c8d2ece, type: 2}
   _deathEvent: {fileID: 11400000, guid: 0a29544909be226418bc1677ec369790, type: 2}
   _restoreHealth: {fileID: 0}
@@ -191,13 +194,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isPlayerInAlertZone: 0
   isPlayerInAttackZone: 0
+  _knockbackReceiver: {fileID: 2760246475410149415}
   currentTarget: {fileID: 0}
   _currentSector: {fileID: 0}
   _isSpawnReady: 1
   _searchSucceeded: 0
   _infectionTargetValid: 0
   _isKnockbackRequested: 0
-  _knockbackReceiver: {fileID: 2760246475410149415}
 --- !u!114 &3726767803163193086
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -228,23 +231,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecd6d1a63112ede4bac9a904854e4205, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _modeStateMachine: {fileID: 638916495726808461}
-  _aliveStateMachine: {fileID: 8256977164061730377}
-  _forceDisableAliveOnAwake: 1
-  _defaultAliveEnabled: 0
+  _parentStateMachine: {fileID: 638916495726808461}
+  _childStateMachine: {fileID: 8256977164061730377}
+  _forceDisableChildOnAwake: 1
+  _defaultChildEnabled: 0
   _refreshEveryFrame: 1
-  _modeRules:
-  - modeState: {fileID: 11400000, guid: 6f5c7ee9dba8d7647875b89039120b5f, type: 2}
-    enableAliveStateMachine: 0
-  - modeState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
-    enableAliveStateMachine: 1
-  - modeState: {fileID: 11400000, guid: 50e946074c053a0428e92dc2e6e63ac1, type: 2}
-    enableAliveStateMachine: 0
-  - modeState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
-    enableAliveStateMachine: 0
-  _currentModeState: {fileID: 0}
-  _resolvedAliveEnabled: 0
-  _aliveStateMachineEnabled: 0
+  _parentStateRules:
+  - parentState: {fileID: 11400000, guid: 6f5c7ee9dba8d7647875b89039120b5f, type: 2}
+    enableChildStateMachine: 0
+  - parentState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
+    enableChildStateMachine: 1
+  - parentState: {fileID: 11400000, guid: 50e946074c053a0428e92dc2e6e63ac1, type: 2}
+    enableChildStateMachine: 0
+  - parentState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
+    enableChildStateMachine: 0
+  _currentParentState: {fileID: 0}
+  _resolvedChildEnabled: 0
+  _childStateMachineEnabled: 0
 --- !u!114 &638916495726808461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -298,6 +301,28 @@ MonoBehaviour:
   _hasPendingRequest: 0
   _isKnockbackActive: 0
   _remainingTime: 0
+--- !u!195 &374727473128369670
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 348008073115985884}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3.5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1 &548599628763828085
 GameObject:
   m_ObjectHideFlags: 0
@@ -307,7 +332,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9178316511441145576}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Armature_Chainling
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -339,7 +364,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1013447051452280131}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body1.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -372,7 +397,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3046998627983749667}
   - component: {fileID: 8011047904771457589}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chainling_6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -469,7 +494,7 @@ GameObject:
   - component: {fileID: 3569253420938301570}
   - component: {fileID: 639816781724563392}
   - component: {fileID: 7924136042751608502}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body3.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -535,7 +560,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1351752483970342386}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body2.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -567,7 +592,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3217915496473612002}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: VisualRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -600,7 +625,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 828099500030354888}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -635,7 +660,7 @@ GameObject:
   - component: {fileID: 5504676855998866196}
   - component: {fileID: 7279580431158765858}
   - component: {fileID: 3778347207311070740}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body3.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -703,7 +728,7 @@ GameObject:
   - component: {fileID: 5645099648298914470}
   - component: {fileID: 8230126385993025838}
   - component: {fileID: 6484200342249825869}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body1.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -770,7 +795,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5592638616395258752}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body2.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}

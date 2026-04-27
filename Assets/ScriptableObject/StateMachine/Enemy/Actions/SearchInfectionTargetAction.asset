@@ -15,5 +15,18 @@ MonoBehaviour:
   description: 
   _searchRadius: 8
   _candidateCount: 6
-  _minimumScore: 0.1
+  _maxRetryCount: 2
   _searchOnEnterOnly: 1
+  _searchIntervalSeconds: 1.5
+  _minimumScore: 0.1
+  _minimumTravelDistance: 1.25
+  _sampleOffset: 0.75
+  _minimumValidSamples: 3
+  _navMeshSampleMaxDistance: 1.25
+  _vaccineScore: 1
+  _neutralScore: 0.6
+  _virusScore: 0
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _debugLogs: 1
+  _debugDraw: 1
+  _debugDrawDuration: 2

@@ -1,5 +1,38 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &430620370617259056
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3096252108195798336}
+  m_Layer: 3
+  m_Name: Controller
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3096252108195798336
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430620370617259056}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3601251521957474038}
+  - {fileID: 2145955155554159527}
+  m_Father: {fileID: 5546477128773306913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &643667284701005616
 GameObject:
   m_ObjectHideFlags: 0
@@ -46,7 +79,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _range: {fileID: 1214106833504460287}
   _weaponHolder: {fileID: 549010143910834747}
-  _projectilesRoot: {fileID: 0}
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
   _paintChannel: 0
   debugLogs: 1
   debugDraw: 1
@@ -241,7 +274,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _range: {fileID: 1214106833504460287}
   _weaponHolder: {fileID: 549010143910834747}
-  _projectilesRoot: {fileID: 0}
   debugLogs: 1
   debugDraw: 1
   debugDrawDuration: 0.15
@@ -302,6 +334,7 @@ MonoBehaviour:
     leftGunPrefab: {fileID: 0}
     rightLocalEuler: {x: 0, y: 90, z: 0}
     leftLocalEuler: {x: 0, y: 90, z: 0}
+  _projectilesRoot: {fileID: 0}
 --- !u!1 &3585897334120335587
 GameObject:
   m_ObjectHideFlags: 0
@@ -335,7 +368,7 @@ Transform:
   - {fileID: 3777769314426622244}
   - {fileID: 2743983767630248594}
   - {fileID: 6017853420671442627}
-  m_Father: {fileID: 5546477128773306913}
+  m_Father: {fileID: 3096252108195798336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &9017905057833243592
 MonoBehaviour:
@@ -408,6 +441,50 @@ MonoBehaviour:
   _hideCursorWhenNoAimPoint: 1
   _hideProgressWhenReady: 1
   _debugLogs: 1
+--- !u!1 &3979476801194045293
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2145955155554159527}
+  - component: {fileID: 9074093390072989954}
+  m_Layer: 3
+  m_Name: Invulnerability
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2145955155554159527
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3979476801194045293}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3096252108195798336}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9074093390072989954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3979476801194045293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d80e68735a897f644851eb1a27267e16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &4910035295134416631
 GameObject:
   m_ObjectHideFlags: 0
@@ -543,10 +620,10 @@ Transform:
   - {fileID: 1942560483407679044}
   - {fileID: 6270111692562515479}
   - {fileID: 1760776541870365002}
-  - {fileID: 3601251521957474038}
   - {fileID: 1297113805532342119}
   - {fileID: 5731386009013077401}
   - {fileID: 7076542028121995548}
+  - {fileID: 3096252108195798336}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &8994133820209950284
@@ -636,6 +713,8 @@ MonoBehaviour:
   _getHitEffectSO: {fileID: 11400000, guid: dcf7b20a3fc92814b8b7640e48d40d3a, type: 2}
   _mainMeshRenderer: {fileID: 0}
   _droppableRewardSO: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
+  _invulnerabilityController: {fileID: 9074093390072989954}
+  _postHitInvulnerabilityConfig: {fileID: 11400000, guid: c207ba3f9aa998a40b5eb29dd7df7eac, type: 2}
   _updateHealthUI: {fileID: 11400000, guid: 2447a760b3f9f134f8730aa53c8d2ece, type: 2}
   _deathEvent: {fileID: 11400000, guid: 0a29544909be226418bc1677ec369790, type: 2}
   _restoreHealth: {fileID: 0}
@@ -840,6 +919,8 @@ MonoBehaviour:
   _character: {fileID: 4351803592356138420}
   _config: {fileID: 11400000, guid: babb0e12fafadad4d8ac58746ac93544, type: 2}
   _dashEventChannel: {fileID: 11400000, guid: 8b32f1d6d0531294f8d38ed64edfd520, type: 2}
+  _invulnerabilityController: {fileID: 9074093390072989954}
+  _dashInvulnerabilityConfig: {fileID: 11400000, guid: a59da3c4e753578479841a7e47f28b05, type: 2}
   _isDashing: 0
   _remainingTime: 0
   _dashDirection: {x: 0, y: 0, z: 0}

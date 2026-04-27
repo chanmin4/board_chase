@@ -13,5 +13,10 @@ MonoBehaviour:
   m_Name: CastInfectionAction
   m_EditorClassIdentifier: 
   description: 
-  _infectionRadius: 1.5
+  _infectionRadius: 3
   _applyOnStateExit: 1
+  _paintPriority: 0
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _debugLogs: 1
+  _debugDraw: 1
+  _debugDrawDuration: 2

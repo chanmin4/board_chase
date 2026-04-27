@@ -10,7 +10,10 @@ public class VSplatterDashController : MonoBehaviour
     [SerializeField] private VSplatter_Character _character;
     [SerializeField] private VSplatterDashConfigSO _config;
     [SerializeField] private VSplatterDashEventChannelSO _dashEventChannel;
-
+    [Header("Invulnerability")]
+    [SerializeField] private InvulnerabilityController _invulnerabilityController;
+    [SerializeField] private InvulnerabilityConfigSO _dashInvulnerabilityConfig;
+        
     [Header("Debug")]
     [ReadOnly] [SerializeField] private bool _isDashing;
     [ReadOnly] [SerializeField] private float _remainingTime;
@@ -34,6 +37,8 @@ public class VSplatterDashController : MonoBehaviour
     {
         if (_character == null)
             TryGetComponent(out _character);
+        if (_invulnerabilityController == null)
+            TryGetComponent(out _invulnerabilityController);
     }
 
     private void OnDisable()
@@ -92,6 +97,7 @@ public class VSplatterDashController : MonoBehaviour
         _remainingTime = ResolveDashDuration();
         _character.DashInput = false;
         _suppressUntilInputRelease = true;
+        _invulnerabilityController?.Begin(_dashInvulnerabilityConfig);
         RaiseDashEvent(VSplatterDashEventType.Started);
         DashStarted?.Invoke();
         return true;
@@ -101,10 +107,13 @@ public class VSplatterDashController : MonoBehaviour
     {
         bool wasDashing = _isDashing;
         Vector3 lastDirection = _dashDirection;
+
         _isDashing = false;
         _elapsed = 0f;
         _remainingTime = 0f;
         _dashDirection = Vector3.zero;
+
+       _invulnerabilityController?.End(_dashInvulnerabilityConfig);
 
         if (wasDashing)
         {
@@ -129,6 +138,9 @@ public class VSplatterDashController : MonoBehaviour
         _isDashing = false;
         _elapsed = 0f;
         _remainingTime = 0f;
+
+       _invulnerabilityController?.End(_dashInvulnerabilityConfig);
+
         RaiseDashEvent(VSplatterDashEventType.Finished, _dashDirection);
         DashFinished?.Invoke();
     }

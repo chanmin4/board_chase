@@ -16,7 +16,11 @@ MonoBehaviour:
   speed: 50
   castRadius: 0.08
   maxLifetime: 2
-  blockHitMask:
+  spawnOffset: 0.12
+  impactMask:
     serializedVersion: 2
-    m_Bits: 0
-  triggerInteraction: 1
+    m_Bits: 192
+  triggerInteraction: 2
+  damageTargetMask:
+    serializedVersion: 2
+    m_Bits: 64

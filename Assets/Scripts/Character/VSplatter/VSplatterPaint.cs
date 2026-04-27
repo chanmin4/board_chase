@@ -7,9 +7,11 @@ public class VSplatterPaint : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private VSplatterRange _range;
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
-    [Tooltip("bullet parent object")]
-  
-    [NonSerialized] private MaskRenderManager _maskRenderManager;
+
+    [Header("Listening To")]
+[SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
+
+
 
     [Header("Options")]
     [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Vaccine;
@@ -21,13 +23,14 @@ public class VSplatterPaint : MonoBehaviour
 
     [Header("AutoRef Don't Touch")]
     [SerializeField] private Camera _aimCamera;
+    [NonSerialized] private MaskRenderManager _maskRenderManager;
 
     public event Action Fired;
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
-    private Transform FireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
-    private Vector3 FireDirection => _weaponHolder != null ? _weaponHolder.FireDirection : FireOrigin.forward;
+    private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
     private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
+
     private void Reset()
     {
         if (_range == null)
@@ -36,12 +39,8 @@ public class VSplatterPaint : MonoBehaviour
         if (_weaponHolder == null)
             _weaponHolder = GetComponent<VSplatterWeaponHolder>();
 
-        if (_maskRenderManager == null)
-            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
-
         if (_aimCamera == null)
             _aimCamera = Camera.main;
-
     }
 
     private void Awake()
@@ -52,27 +51,41 @@ public class VSplatterPaint : MonoBehaviour
         if (_weaponHolder == null)
             _weaponHolder = GetComponent<VSplatterWeaponHolder>();
 
-        if (_maskRenderManager == null)
-            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
-
         if (_aimCamera == null)
             _aimCamera = Camera.main;
+    }
+    private void OnEnable()
+    {
+        if (_maskRenderManagerReadyChannel != null)
+        {
+            _maskRenderManagerReadyChannel.OnEventRaised += OnMaskRenderManagerChanged;
 
+            if (_maskRenderManagerReadyChannel.Current != null)
+                OnMaskRenderManagerChanged(_maskRenderManagerReadyChannel.Current);
+        }
     }
 
+    private void OnDisable()
+    {
+        if (_maskRenderManagerReadyChannel != null)
+            _maskRenderManagerReadyChannel.OnEventRaised -= OnMaskRenderManagerChanged;
+
+        _maskRenderManager = null;
+    }
+
+    private void OnMaskRenderManagerChanged(MaskRenderManager manager)
+    {
+        _maskRenderManager = manager;
+    }
     public bool TryFireOnce()
     {
-        if (_maskRenderManager == null)
-            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
-
         if (_range == null || !_range.HasValidWeapon() || _maskRenderManager == null || CurrentWeapon == null)
             return false;
-        Debug.Log($"[VSplatterPaint] TryFireOnce: CurrentWeapon={CurrentWeapon.DisplayName}");
+
         PaintBulletSO bulletConfig = CurrentWeapon.PaintBullet;
-        Debug.Log($"[VSplatterPaint] TryFireOnce: bulletConfig={bulletConfig}");
         if (bulletConfig == null || bulletConfig.BulletPrefab == null)
             return false;
-        
+
         bool gotAimPoint = VSplatterAimUtility.TryGetAimPoint(
             _aimCamera,
             CurrentWeapon.AimHitMask,
@@ -80,7 +93,7 @@ public class VSplatterPaint : MonoBehaviour
             CurrentWeapon.FallbackPlaneY,
             out Vector3 aimPoint,
             out _);
-        Debug.Log($"gotAimPoint: {gotAimPoint}, aimPoint: {aimPoint}");
+
         if (!gotAimPoint)
             return false;
 
@@ -91,46 +104,56 @@ public class VSplatterPaint : MonoBehaviour
 
             return false;
         }
-        Transform fireOrigin = FireOrigin != null ? FireOrigin : transform;
+
+        Transform fireOrigin = GameplayFireOrigin != null ? GameplayFireOrigin : transform;
         Vector3 start = fireOrigin.position;
 
-        Vector3 flatAimPoint = aimPoint;
-        flatAimPoint.y = start.y;
+        Vector3 flightTarget = aimPoint;
+        flightTarget.y = start.y;
 
-        Vector3 dir = flatAimPoint - start;
+        Vector3 dir = flightTarget - start;
         dir.y = 0f;
 
         if (dir.sqrMagnitude < 0.0001f)
             return false;
 
         dir.Normalize();
+
+        start += dir * bulletConfig.SpawnOffset;
+
+        float maxDistance = Vector3.Distance(
+            new Vector3(start.x, 0f, start.z),
+            new Vector3(flightTarget.x, 0f, flightTarget.z));
+
         Quaternion bulletRotation = Quaternion.LookRotation(dir, Vector3.up);
+
         PaintBullet bullet = Instantiate(
-        bulletConfig.BulletPrefab,
-        start,
-        bulletRotation,
-        ProjectilesRoot).GetComponent<PaintBullet>();
+            bulletConfig.BulletPrefab,
+            start,
+            bulletRotation,
+            ProjectilesRoot).GetComponent<PaintBullet>();
 
         bullet.Init(
-        aimPoint,
-        bulletConfig.Speed,
-        bulletConfig.CastRadius,
-        bulletConfig.MaxLifetime,
-        bulletConfig.BlockHitMask,
-        bulletConfig.TriggerInteraction,
-        _maskRenderManager,
-        _paintChannel,
-        CurrentWeapon.PaintRadiusWorld,
-        CurrentWeapon.PaintPriority,
-        this);
+            aimPoint,
+            bulletConfig.Speed,
+            bulletConfig.CastRadius,
+            bulletConfig.MaxLifetime,
+            bulletConfig.ImpactMask,
+            bulletConfig.TriggerInteraction,
+            _maskRenderManager,
+            _paintChannel,
+            CurrentWeapon.PaintRadiusWorld,
+            CurrentWeapon.PaintPriority,
+            this);
 
         if (debugDraw)
-            Debug.DrawLine(start, aimPoint, Color.cyan, debugDrawDuration);
+            Debug.DrawLine(start, flightTarget, Color.cyan, debugDrawDuration);
 
         if (debugLogs)
             Debug.Log("[VSplatterPaint] paint bullet fired.");
-        Debug.Log($"[VSplatterPaint] weaponHolder={_weaponHolder}, projectilesRoot={ProjectilesRoot}", this);
+
         Fired?.Invoke();
         return true;
     }
+
 }

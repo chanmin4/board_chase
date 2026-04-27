@@ -13,7 +13,7 @@ public class PaintBullet : MonoBehaviour
     private float _maxLifetime;
     private float _paintRadiusWorld;
     private int _paintPriority;
-    private LayerMask _hitMask;
+    private LayerMask _impactMask;
     private QueryTriggerInteraction _triggerInteraction;
     private MaskRenderManager.PaintChannel _paintChannel;
     private float _maxDistance;
@@ -26,7 +26,7 @@ public class PaintBullet : MonoBehaviour
         float speed,
         float castRadius,
         float maxLifetime,
-        LayerMask hitMask,
+        LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
         MaskRenderManager maskRenderManager,
         MaskRenderManager.PaintChannel paintChannel,
@@ -35,11 +35,13 @@ public class PaintBullet : MonoBehaviour
         object sender)
     {
         _paintTarget = targetWorld;
+
         _flightTarget = targetWorld;
         _flightTarget.y = transform.position.y;
 
         Vector3 direction = _flightTarget - transform.position;
         direction.y = 0f;
+
         if (direction.sqrMagnitude < 0.0001f)
             direction = transform.forward;
 
@@ -48,11 +50,14 @@ public class PaintBullet : MonoBehaviour
             direction = Vector3.forward;
 
         _direction = direction.normalized;
-        _maxDistance = Mathf.Max(0f, Vector3.Distance(Flatten(transform.position), Flatten(_flightTarget)));
+        _maxDistance = Mathf.Max(0.01f, Vector3.Distance(
+            new Vector3(transform.position.x, 0f, transform.position.z),
+            new Vector3(_flightTarget.x, 0f, _flightTarget.z)));
+
         _speed = Mathf.Max(0.01f, speed);
         _castRadius = Mathf.Max(0.001f, castRadius);
         _maxLifetime = Mathf.Max(0.01f, maxLifetime);
-        _hitMask = hitMask;
+        _impactMask = impactMask;
         _triggerInteraction = triggerInteraction;
         _maskRenderManager = maskRenderManager != null ? maskRenderManager : FindAnyObjectByType<MaskRenderManager>();
         _paintChannel = paintChannel;
@@ -62,7 +67,6 @@ public class PaintBullet : MonoBehaviour
         _travelledDistance = 0f;
         _lifeTime = 0f;
         _initialized = true;
-
     }
 
     private void Update()
@@ -83,6 +87,7 @@ public class PaintBullet : MonoBehaviour
         float remainingDistance = _maxDistance - _travelledDistance;
         if (remainingDistance <= 0.001f)
         {
+            transform.position = _flightTarget;
             Stamp(_paintTarget);
             Destroy(gameObject);
             return;
@@ -92,13 +97,13 @@ public class PaintBullet : MonoBehaviour
         if (travelDistance <= 0f)
             return;
 
-        if (_hitMask.value != 0 && Physics.SphereCast(
+        if (_impactMask.value != 0 && Physics.SphereCast(
             transform.position,
             _castRadius,
             _direction,
             out RaycastHit hit,
             travelDistance,
-            _hitMask,
+            _impactMask,
             _triggerInteraction))
         {
             transform.position = hit.point;
@@ -109,13 +114,6 @@ public class PaintBullet : MonoBehaviour
 
         transform.position += _direction * travelDistance;
         _travelledDistance += travelDistance;
-
-        if (_travelledDistance >= _maxDistance - 0.001f)
-        {
-            transform.position = _flightTarget;
-            Stamp(_paintTarget);
-            Destroy(gameObject);
-        }
     }
 
     private void Stamp(Vector3 worldPoint)
@@ -132,11 +130,5 @@ public class PaintBullet : MonoBehaviour
             _paintRadiusWorld,
             _paintPriority,
             _sender ?? this);
-    }
-
-    private static Vector3 Flatten(Vector3 value)
-    {
-        value.y = 0f;
-        return value;
     }
 }

@@ -15,14 +15,19 @@ public abstract class BulletSO : ScriptableObject
     [Min(0.01f)]
     [SerializeField] private float maxLifetime = 2f;
 
+    [Min(0f)]
+    [SerializeField] private float spawnOffset = 0.12f;
+
     [Header("Collision")]
-    [SerializeField] private LayerMask blockHitMask;
+    [Tooltip("no damage but mask for stop bullet")]
+    [SerializeField] private LayerMask impactMask = 0;
     [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
 
     public GameObject BulletPrefab => bulletPrefab;
     public float Speed => speed;
     public float CastRadius => castRadius;
     public float MaxLifetime => maxLifetime;
-    public LayerMask BlockHitMask => blockHitMask;
+    public float SpawnOffset => spawnOffset;
+    public LayerMask ImpactMask => impactMask;
     public QueryTriggerInteraction TriggerInteraction => triggerInteraction;
 }

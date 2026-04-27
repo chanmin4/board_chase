@@ -37,11 +37,10 @@ public class EnemyContactDamage : MonoBehaviour
         if (damageable.gameObject == gameObject)
             return;
 
-        if (damageable.GetHit)
+        if (!damageable.CanReceiveDamage)
             return;
 
         damageable.ReceiveAnAttack(_damage);
         _nextHitTime = Time.time + _hitCooldown;
     }
-
 }

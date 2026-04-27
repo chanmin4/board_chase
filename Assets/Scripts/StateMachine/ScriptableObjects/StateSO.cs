@@ -39,7 +39,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 		{
 			if (scriptableActions[i] == null)
 			{
-				Debug.LogWarning($"State action is missing at index {i} on state machine asset.");
+				//Debug.LogWarning($"State action is missing at index {i} on state machine asset.");
 				continue;
 			}
 

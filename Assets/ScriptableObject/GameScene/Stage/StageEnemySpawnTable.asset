@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e40681e72895d2e47a8a6a49ec21a61a, type: 3}
+  m_Name: StageEnemySpawnTable
+  m_EditorClassIdentifier: 
+  _rules:
+  - stageIndex: 0
+    displayName: start_Stage
+    sectorMinAlive: 0
+    sectorMaxAlive: 2
+    spawnIntervalSeconds: 5
+    spawnEntries:
+    - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
+      weight: 1
+  - stageIndex: 1
+    displayName: 1_Stage
+    sectorMinAlive: 0
+    sectorMaxAlive: 3
+    spawnIntervalSeconds: 3
+    spawnEntries:
+    - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
+      weight: 1

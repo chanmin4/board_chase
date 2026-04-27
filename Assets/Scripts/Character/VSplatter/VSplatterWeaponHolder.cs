@@ -6,7 +6,7 @@ public class VSplatterWeaponHolder : MonoBehaviour
 {
     [Serializable]
     public struct WeaponViewEntry
-    { 
+    {
         public WeaponSO weapon;
         public GameObject rightGunPrefab;
         public GameObject leftGunPrefab;
@@ -22,19 +22,15 @@ public class VSplatterWeaponHolder : MonoBehaviour
     [SerializeField] private Transform _rightGunBone;
     [SerializeField] private Transform _leftGunBone;
 
-
     [Header("Gameplay")]
     [SerializeField] private Transform _gameplayFireOrigin;
     [SerializeField] private Transform _fallbackFireOrigin;
 
     [Header("Views")]
     [SerializeField] private WeaponViewEntry[] _weaponViews;
-    [Header("Don't Touch Auto Refs")]
 
+    [Header("Runtime Scene Refs")]
     [SerializeField] private Transform _projectilesRoot;
-    public Transform ProjectilesRoot => _projectilesRoot;
-
-
 
     private GameObject _currentRightGun;
     private GameObject _currentLeftGun;
@@ -42,13 +38,15 @@ public class VSplatterWeaponHolder : MonoBehaviour
     public event Action<WeaponSO> OnWeaponChanged;
 
     public WeaponSO CurrentWeapon => _currentWeapon;
+
     public Transform GameplayFireOrigin =>
-    _gameplayFireOrigin != null ? _gameplayFireOrigin :
-    _fallbackFireOrigin != null ? _fallbackFireOrigin :
-    transform;
-    public Transform FireOrigin => VisualFireOrigin;   
+        _gameplayFireOrigin != null ? _gameplayFireOrigin :
+        _fallbackFireOrigin != null ? _fallbackFireOrigin :
+        transform;
+
     public Transform VisualFireOrigin => FindCurrentFireOrigin();
     public Vector3 FireDirection => FindCurrentFireDirection();
+    public Transform ProjectilesRoot => _projectilesRoot;
 
     private void Awake()
     {
@@ -56,6 +54,11 @@ public class VSplatterWeaponHolder : MonoBehaviour
             _currentWeapon = _startingWeapon;
 
         Equip(_currentWeapon, force: true);
+    }
+
+    public void SetProjectilesRoot(Transform root)
+    {
+        _projectilesRoot = root;
     }
 
     public void Equip(WeaponSO newWeapon)
@@ -106,27 +109,15 @@ public class VSplatterWeaponHolder : MonoBehaviour
         return weaponView.GetComponentInChildren<VSplatterWeaponView>();
     }
 
-    private Transform FindFireOrigin(GameObject weaponView)
-    {
-        VSplatterWeaponView view = FindWeaponView(weaponView);
-        return view != null ? view.FireOrigin : null;
-    }
-
-    private Vector3 FindFireDirection(GameObject weaponView)
-    {
-        VSplatterWeaponView view = FindWeaponView(weaponView);
-        return view != null ? view.FireDirection : Vector3.zero;
-    }
-
     private Transform FindCurrentFireOrigin()
     {
-        Transform fireOrigin = FindFireOrigin(_currentRightGun);
-        if (fireOrigin != null)
-            return fireOrigin;
+        VSplatterWeaponView rightView = FindWeaponView(_currentRightGun);
+        if (rightView != null && rightView.FireOrigin != null)
+            return rightView.FireOrigin;
 
-        fireOrigin = FindFireOrigin(_currentLeftGun);
-        if (fireOrigin != null)
-            return fireOrigin;
+        VSplatterWeaponView leftView = FindWeaponView(_currentLeftGun);
+        if (leftView != null && leftView.FireOrigin != null)
+            return leftView.FireOrigin;
 
         if (_fallbackFireOrigin != null)
             return _fallbackFireOrigin;
@@ -136,15 +127,16 @@ public class VSplatterWeaponHolder : MonoBehaviour
 
     private Vector3 FindCurrentFireDirection()
     {
-        Vector3 fireDirection = FindFireDirection(_currentRightGun);
-        if (fireDirection.sqrMagnitude > 0.0001f)
-            return fireDirection.normalized;
+        VSplatterWeaponView rightView = FindWeaponView(_currentRightGun);
+        if (rightView != null && rightView.FireDirection.sqrMagnitude > 0.0001f)
+            return rightView.FireDirection.normalized;
 
-        fireDirection = FindFireDirection(_currentLeftGun);
-        if (fireDirection.sqrMagnitude > 0.0001f)
-            return fireDirection.normalized;
+        VSplatterWeaponView leftView = FindWeaponView(_currentLeftGun);
+        if (leftView != null && leftView.FireDirection.sqrMagnitude > 0.0001f)
+            return leftView.FireDirection.normalized;
 
-        return FireOrigin.forward;
+        Transform visualFireOrigin = VisualFireOrigin;
+        return visualFireOrigin != null ? visualFireOrigin.forward : transform.forward;
     }
 
     private bool TryGetWeaponView(WeaponSO weapon, out WeaponViewEntry entry)
@@ -172,10 +164,5 @@ public class VSplatterWeaponHolder : MonoBehaviour
 
         _currentRightGun = null;
         _currentLeftGun = null;
-    }
-    public void SetProjectilesRoot(Transform root)
-    {
-        _projectilesRoot = root;
-        Debug.Log($"[WeaponHolder] SetProjectilesRoot -> {_projectilesRoot}", this);
     }
 }

@@ -2,25 +2,26 @@
 
 public class Attack : MonoBehaviour
 {
-	[SerializeField] private AttackConfigSO _attackConfigSO;
+    [SerializeField] private AttackConfigSO _attackConfigSO;
 
-	public AttackConfigSO AttackConfig => _attackConfigSO;
+    public AttackConfigSO AttackConfig => _attackConfigSO;
 
-	private void Awake()
-	{
-		gameObject.SetActive(false);
-	}
+    private void Awake()
+    {
+        gameObject.SetActive(false);
+    }
 
-	private void OnTriggerEnter(Collider other)
-	{
-		// Avoid friendly fire!
-		if (!other.CompareTag(gameObject.tag))
-		{
-			if (other.TryGetComponent(out Damageable damageableComp))
-			{
-				if (!damageableComp.GetHit)
-					damageableComp.ReceiveAnAttack(_attackConfigSO.AttackStrength);
-			}
-		}
-	}
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag(gameObject.tag))
+            return;
+
+        if (!other.TryGetComponent(out Damageable damageableComp))
+            return;
+
+        if (!damageableComp.CanReceiveDamage)
+            return;
+
+        damageableComp.ReceiveAnAttack(_attackConfigSO.AttackStrength);
+    }
 }

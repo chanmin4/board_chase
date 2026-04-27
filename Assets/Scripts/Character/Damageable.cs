@@ -12,6 +12,9 @@ public class Damageable : MonoBehaviour
 	[SerializeField] private GetHitEffectConfigSO _getHitEffectSO;
 	[SerializeField] private Renderer _mainMeshRenderer;
 	[SerializeField] private DroppableRewardConfigSO _droppableRewardSO;
+	[Header("Invulnerability")]
+	[SerializeField] private InvulnerabilityController _invulnerabilityController;
+	[SerializeField] private InvulnerabilityConfigSO _postHitInvulnerabilityConfig;
 
 	[Header("Broadcasting On")]
 	[SerializeField] private VoidEventChannelSO _updateHealthUI = default;
@@ -28,7 +31,10 @@ public class Damageable : MonoBehaviour
 
 	public GetHitEffectConfigSO GetHitEffectConfig => _getHitEffectSO;
 	public Renderer MainMeshRenderer => _mainMeshRenderer; //used to apply the hit flash effect
+	public bool IsInvulnerable =>
+		_invulnerabilityController != null && _invulnerabilityController.IsInvulnerable;
 
+	public bool CanReceiveDamage => !IsDead && !IsInvulnerable;
 	public event UnityAction OnDie;
 
 	private void Awake()
@@ -41,7 +47,8 @@ public class Damageable : MonoBehaviour
 			_currentHealthSO.SetMaxHealth(_healthConfigSO.InitialHealth);
 			_currentHealthSO.SetCurrentHealth(_healthConfigSO.InitialHealth);
 		}
-
+		if (_invulnerabilityController == null)
+    		TryGetComponent(out _invulnerabilityController);
 		if (_updateHealthUI != null)
 			_updateHealthUI.RaiseEvent();
 	}
@@ -60,7 +67,7 @@ public class Damageable : MonoBehaviour
 
 	public void ReceiveAnAttack(float damage)
 	{
-		if (IsDead)
+		if (!CanReceiveDamage)
 			return;
 
 		_currentHealthSO.InflictDamage(damage);
@@ -69,6 +76,9 @@ public class Damageable : MonoBehaviour
 			_updateHealthUI.RaiseEvent();
 
 		GetHit = true;
+
+		if (!IsDead && _invulnerabilityController != null)
+			_invulnerabilityController.Begin(_postHitInvulnerabilityConfig);
 
 		if (_currentHealthSO.CurrentHealth <= 0)
 		{

@@ -10,9 +10,11 @@ public class AttackBullet : MonoBehaviour
     private float _maxDistance;
     private float _maxLifetime;
     private float _damage;
-    private LayerMask _damageHitMask;
-    private LayerMask _blockHitMask;
+    private LayerMask _damageTargetMask;
+    private LayerMask _impactMask;
     private QueryTriggerInteraction _triggerInteraction;
+    private bool _useFlatDamageHit;
+    private float _flatHitHalfHeight;
     private float _travelledDistance;
     private float _lifeTime;
     private bool _initialized;
@@ -24,9 +26,11 @@ public class AttackBullet : MonoBehaviour
         float castRadius,
         float maxLifetime,
         float damage,
-        LayerMask damageHitMask,
-        LayerMask blockHitMask,
+        LayerMask damageTargetMask,
+        LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
+        bool useFlatDamageHit,
+        float flatHitHalfHeight,
         GameObject source)
     {
         direction.y = 0f;
@@ -43,14 +47,15 @@ public class AttackBullet : MonoBehaviour
         _castRadius = Mathf.Max(0.001f, castRadius);
         _maxLifetime = Mathf.Max(0.01f, maxLifetime);
         _damage = Mathf.Max(0f, damage);
-        _damageHitMask = damageHitMask;
-        _blockHitMask = blockHitMask;
+        _damageTargetMask = damageTargetMask;
+        _impactMask = impactMask;
         _triggerInteraction = triggerInteraction;
+        _useFlatDamageHit = useFlatDamageHit;
+        _flatHitHalfHeight = Mathf.Max(_castRadius, flatHitHalfHeight);
         _source = source;
         _travelledDistance = 0f;
         _lifeTime = 0f;
         _initialized = true;
-
     }
 
     private void Update()
@@ -79,18 +84,13 @@ public class AttackBullet : MonoBehaviour
         if (travelDistance <= 0f)
             return;
 
-        int hitMask = _damageHitMask.value | _blockHitMask.value;
-        if (hitMask != 0 && Physics.SphereCast(
-            transform.position,
-            _castRadius,
-            _direction,
-            out RaycastHit hit,
-            travelDistance,
-            hitMask,
-            _triggerInteraction))
+        if (TryGetClosestHit(travelDistance, out RaycastHit hit, out bool isDamageHit))
         {
             transform.position = hit.point;
-            TryApplyDamage(hit);
+
+            if (isDamageHit)
+                TryApplyDamage(hit);
+
             Destroy(gameObject);
             return;
         }
@@ -99,22 +99,140 @@ public class AttackBullet : MonoBehaviour
         _travelledDistance += travelDistance;
     }
 
+    private bool TryGetClosestHit(float travelDistance, out RaycastHit closestHit, out bool isDamageHit)
+    {
+        closestHit = default;
+        isDamageHit = false;
+
+        bool hasClosest = false;
+        float closestDistance = float.PositiveInfinity;
+
+        if (TryGetClosestImpactHit(travelDistance, out RaycastHit impactHit))
+        {
+            hasClosest = true;
+            closestDistance = impactHit.distance;
+            closestHit = impactHit;
+            isDamageHit = false;
+        }
+
+        if (TryGetClosestDamageHit(travelDistance, out RaycastHit damageHit))
+        {
+            if (!hasClosest || damageHit.distance <= closestDistance)
+            {
+                hasClosest = true;
+                closestDistance = damageHit.distance;
+                closestHit = damageHit;
+                isDamageHit = true;
+            }
+        }
+
+        return hasClosest;
+    }
+
+    private bool TryGetClosestImpactHit(float travelDistance, out RaycastHit closestHit)
+    {
+        closestHit = default;
+
+        if (_impactMask.value == 0)
+            return false;
+
+        RaycastHit[] hits = Physics.SphereCastAll(
+            transform.position,
+            _castRadius,
+            _direction,
+            travelDistance,
+            _impactMask,
+            _triggerInteraction);
+
+        return TrySelectClosestNonSelfHit(hits, out closestHit);
+    }
+
+    private bool TryGetClosestDamageHit(float travelDistance, out RaycastHit closestHit)
+    {
+        closestHit = default;
+
+        if (_damageTargetMask.value == 0)
+            return false;
+
+        RaycastHit[] hits;
+
+        if (_useFlatDamageHit)
+        {
+            GetFlatCapsulePoints(out Vector3 point1, out Vector3 point2);
+
+            hits = Physics.CapsuleCastAll(
+                point1,
+                point2,
+                _castRadius,
+                _direction,
+                travelDistance,
+                _damageTargetMask,
+                _triggerInteraction);
+        }
+        else
+        {
+            hits = Physics.SphereCastAll(
+                transform.position,
+                _castRadius,
+                _direction,
+                travelDistance,
+                _damageTargetMask,
+                _triggerInteraction);
+        }
+
+        return TrySelectClosestNonSelfHit(hits, out closestHit);
+    }
+
+    private bool TrySelectClosestNonSelfHit(RaycastHit[] hits, out RaycastHit closestHit)
+    {
+        closestHit = default;
+
+        if (hits == null || hits.Length == 0)
+            return false;
+
+        bool found = false;
+        float closestDistance = float.PositiveInfinity;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+
+            if (hit.collider == null)
+                continue;
+
+            if (_source != null && hit.collider.transform.IsChildOf(_source.transform))
+                continue;
+
+            if (!found || hit.distance < closestDistance)
+            {
+                found = true;
+                closestDistance = hit.distance;
+                closestHit = hit;
+            }
+        }
+
+        return found;
+    }
+
+    private void GetFlatCapsulePoints(out Vector3 point1, out Vector3 point2)
+    {
+        float halfHeight = Mathf.Max(_castRadius, _flatHitHalfHeight);
+        float pointOffset = Mathf.Max(0f, halfHeight - _castRadius);
+
+        Vector3 up = Vector3.up * pointOffset;
+        point1 = transform.position + up;
+        point2 = transform.position - up;
+    }
+
     private void TryApplyDamage(RaycastHit hit)
     {
-        if (_damage <= 0f || !IsLayerInMask(hit.collider.gameObject.layer, _damageHitMask))
+        if (_damage <= 0f)
             return;
 
         Damageable damageable = hit.collider.GetComponentInParent<Damageable>();
         if (damageable == null)
             return;
 
-        if (_source != null && hit.collider.transform.IsChildOf(_source.transform))
-            return;
-
         damageable.ReceiveAnAttack(_damage);
-    }
-    private static bool IsLayerInMask(int layer, LayerMask mask)
-    {
-        return (mask.value & (1 << layer)) != 0;
     }
 }

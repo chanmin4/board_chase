@@ -143,9 +143,9 @@ public class AudioManager : MonoBehaviour
         if (audioMixer == null)
             return;
 
-        bool volumeSet = audioMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
-        if (!volumeSet)
-            Debug.LogWarning($"AudioMixer parameter not found: {parameterName}");
+//        bool volumeSet = audioMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
+        //if (!volumeSet)
+         //   Debug.LogWarning($"AudioMixer parameter not found: {parameterName}");
     }
 
     public float GetGroupVolume(string parameterName)

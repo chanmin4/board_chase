@@ -1,5 +1,4 @@
 using System;
-using UnityEditor.EditorTools;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -7,9 +6,7 @@ public class VSplatterAttack : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private VSplatterRange _range;
-    
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
-    [Tooltip("bullet parent object")]
 
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
@@ -22,9 +19,9 @@ public class VSplatterAttack : MonoBehaviour
     public event Action Fired;
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
-    private Transform FireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
-    private Vector3 FireDirection => _weaponHolder != null ? _weaponHolder.FireDirection : FireOrigin.forward;
+    private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
     private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
+
     private void Reset()
     {
         if (_range == null)
@@ -35,7 +32,6 @@ public class VSplatterAttack : MonoBehaviour
 
         if (_aimCamera == null)
             _aimCamera = Camera.main;
-
     }
 
     private void Awake()
@@ -48,7 +44,6 @@ public class VSplatterAttack : MonoBehaviour
 
         if (_aimCamera == null)
             _aimCamera = Camera.main;
-
     }
 
     public bool TryFireOnce()
@@ -59,8 +54,6 @@ public class VSplatterAttack : MonoBehaviour
         AttackBulletSO bulletConfig = CurrentWeapon.AttackBullet;
         if (bulletConfig == null || bulletConfig.BulletPrefab == null)
             return false;
-
-        Transform fireOrigin = FireOrigin != null ? FireOrigin : transform;
 
         bool gotAimPoint = VSplatterAimUtility.TryGetAimPoint(
             _aimCamera,
@@ -81,12 +74,9 @@ public class VSplatterAttack : MonoBehaviour
             return false;
         }
 
-        Vector3 start = fireOrigin.position;
+        Transform fireOrigin = GameplayFireOrigin != null ? GameplayFireOrigin : transform;
 
-        Vector3 flatAimPoint = aimPoint;
-        flatAimPoint.y = start.y;
-
-        Vector3 dir = flatAimPoint - start;
+        Vector3 dir = fireOrigin.forward;
         dir.y = 0f;
 
         if (dir.sqrMagnitude < 0.0001f)
@@ -94,22 +84,16 @@ public class VSplatterAttack : MonoBehaviour
 
         dir.Normalize();
 
+        Vector3 start = fireOrigin.position + dir * bulletConfig.SpawnOffset;
+
         float maxDistance = CurrentWeapon.MaxRange;
-        Vector3 rangeEndPoint = start + dir * maxDistance;
-
-        if (debugDraw)
-        {
-            Debug.DrawLine(start, aimPoint, Color.cyan, debugDrawDuration);
-            Debug.DrawLine(start, rangeEndPoint, Color.yellow, debugDrawDuration);
-        }
-
         Quaternion bulletRotation = Quaternion.LookRotation(dir, Vector3.up);
 
         AttackBullet bullet = Instantiate(
             bulletConfig.BulletPrefab,
             start,
             bulletRotation,
-           ProjectilesRoot ).GetComponent<AttackBullet>();
+            ProjectilesRoot).GetComponent<AttackBullet>();
 
         bullet.Init(
             dir,
@@ -118,23 +102,21 @@ public class VSplatterAttack : MonoBehaviour
             bulletConfig.CastRadius,
             bulletConfig.MaxLifetime,
             CurrentWeapon.Damage,
-            CurrentWeapon.DamageHitMask,
-            bulletConfig.BlockHitMask,
+            bulletConfig.DamageTargetMask,
+            bulletConfig.ImpactMask,
             bulletConfig.TriggerInteraction,
+            bulletConfig.UseFlatDamageHit,
+            bulletConfig.FlatHitHalfHeight,
             gameObject);
+
+        if (debugDraw)
+            Debug.DrawLine(start, start + dir * maxDistance, Color.yellow, debugDrawDuration);
 
         if (debugLogs)
             Debug.Log("[VSplatterAttack] attack bullet fired.");
-        Debug.Log($"[VSplatterAttack] weaponHolder={_weaponHolder}, projectilesRoot={ProjectilesRoot}", this);
-        Fired?.Invoke();
 
+        Fired?.Invoke();
         return true;
     }
 
-
-    private static Vector3 Flatten(Vector3 value)
-    {
-        value.y = 0f;
-        return value;
-    }
 }
