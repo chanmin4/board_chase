@@ -29,9 +29,8 @@ public class MiniMapUI : MonoBehaviour
     [SerializeField] private Sprite _namedIcon;
     [SerializeField] private Sprite _bossIcon;
     [Header("Opacity")]
-    [SerializeField] private CanvasGroup _miniMapCanvasGroup;
+    [SerializeField] private UICanvasGroupOpacity _uicanvasGroupOpacity;
     [SerializeField] private Slider _alphaSlider;
-    [SerializeField, Range(0f, 1f)] private float _defaultAlpha = 0.6f;
 
     private readonly Dictionary<Vector2Int, SectorMapCellSnapshot> _cellByCoord = new();
 
@@ -42,36 +41,40 @@ public class MiniMapUI : MonoBehaviour
 
         if (_requestMapSnapshotChannel != null)
             _requestMapSnapshotChannel.RaiseEvent();
-        if (_alphaSlider != null)
-            _alphaSlider.onValueChanged.AddListener(SetAlpha);
 
-    ApplyInitialAlpha();
+        if (_alphaSlider != null)
+            _alphaSlider.onValueChanged.AddListener(OnAlphaSliderChanged);
+
+        ApplyInitialAlpha();
     }
 
     private void OnDisable()
     {
         if (_mapSnapshotChangedChannel != null)
             _mapSnapshotChangedChannel.OnEventRaised -= OnMapSnapshotChanged;
+
         if (_alphaSlider != null)
-            _alphaSlider.onValueChanged.RemoveListener(SetAlpha);
+            _alphaSlider.onValueChanged.RemoveListener(OnAlphaSliderChanged);
     }
     private void ApplyInitialAlpha()
-    {   
-        float alpha = Mathf.Clamp01(_defaultAlpha);
+    {
+        if (_uicanvasGroupOpacity == null)
+            return;
+
+        float alpha = _uicanvasGroupOpacity.Settings != null
+            ? _uicanvasGroupOpacity.Settings.DefaultAlpha
+            : 0.6f;
 
         if (_alphaSlider != null)
             _alphaSlider.SetValueWithoutNotify(alpha);
 
-        SetAlpha(alpha);
+        _uicanvasGroupOpacity.ApplyImmediate(alpha);
     }
-
-    public void SetAlpha(float alpha)
+    private void OnAlphaSliderChanged(float alpha)
     {
-        alpha = Mathf.Clamp01(alpha);
-
-        if (_miniMapCanvasGroup != null)
-        _miniMapCanvasGroup.alpha = alpha;
+        _uicanvasGroupOpacity?.SetAlpha(alpha);
     }
+
     private void OnMapSnapshotChanged(SectorMapSnapshot snapshot)
     {
         CacheSnapshotCells(snapshot);

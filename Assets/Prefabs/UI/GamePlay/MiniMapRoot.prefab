@@ -565,6 +565,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4967644120088712324}
   - component: {fileID: 6322600361751811352}
+  - component: {fileID: 7698087768204193025}
   m_Layer: 5
   m_Name: MiniMapRoot
   m_TagString: Untagged
@@ -635,9 +636,24 @@ MonoBehaviour:
   _lockedIcon: {fileID: 21300000, guid: 91fddba97416c5a41a8bb2e1b0196ad3, type: 3}
   _namedIcon: {fileID: 21300000, guid: 1e7a5603903cad145b900ef8c0bc8d2a, type: 3}
   _bossIcon: {fileID: 21300000, guid: 91e279b40f1d1ae459cfef250c50729e, type: 3}
-  _miniMapCanvasGroup: {fileID: 1289260224455589121}
+  _uicanvasGroupOpacity: {fileID: 7698087768204193025}
   _alphaSlider: {fileID: 4330773770003763654}
-  _defaultAlpha: 0.6
+--- !u!114 &7698087768204193025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8907351185269549292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8bcece31efa5794c8b0267632e93240, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _canvasGroup: {fileID: 1289260224455589121}
+  _settings: {fileID: 11400000, guid: 9d49d09e3aad5d04a9fc081d55fd235e, type: 2}
+  _targetAlpha: 0
+  _isVisible: 1
 --- !u!1001 &3195535252501130141
 PrefabInstance:
   m_ObjectHideFlags: 0

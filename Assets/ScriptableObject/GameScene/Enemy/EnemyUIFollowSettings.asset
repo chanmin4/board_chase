@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 028df244c2350964493db5a7ba449f6d, type: 3}
+  m_Name: EnemyUIFollowSettings
+  m_EditorClassIdentifier: 
+  _worldOffset: {x: 0, y: 0.25, z: 0}
+  _screenPixelOffset: {x: 0, y: 18}
+  _hideWhenBehindCamera: 1
+  _hideWhenOffScreen: 0
+  _clampToScreen: 1
+  _screenEdgePadding: 24

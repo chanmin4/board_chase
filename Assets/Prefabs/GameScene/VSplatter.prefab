@@ -31,6 +31,7 @@ Transform:
   m_Children:
   - {fileID: 3601251521957474038}
   - {fileID: 2145955155554159527}
+  - {fileID: 8336968725340493557}
   m_Father: {fileID: 5546477128773306913}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &643667284701005616
@@ -538,6 +539,55 @@ MonoBehaviour:
   _aimCamera: {fileID: 0}
   _autoReloadOnEmpty: 1
   _debugLogs: 0
+--- !u!1 &5251625741832053205
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8336968725340493557}
+  - component: {fileID: 5490544196882287450}
+  m_Layer: 3
+  m_Name: PlayerEffect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8336968725340493557
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5251625741832053205}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3096252108195798336}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5490544196882287450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5251625741832053205}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d8f98fbc15dbe644b0838f2850bd598, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _walkingParticles: {fileID: 0}
+  _landParticles: {fileID: 0}
+  _jumpParticles: {fileID: 0}
+  _slashEffect: {fileID: 0}
+  _reverseSlashEffect: {fileID: 0}
 --- !u!1 &5565135190665026005
 GameObject:
   m_ObjectHideFlags: 0
@@ -586,7 +636,6 @@ GameObject:
   - component: {fileID: 7029684008800762381}
   - component: {fileID: 4351803592356138420}
   - component: {fileID: 1129259094068729541}
-  - component: {fileID: 7548800111824649869}
   - component: {fileID: 2096197016530632128}
   - component: {fileID: 7769268975387512119}
   - component: {fileID: 723617969344722977}
@@ -710,6 +759,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _healthConfigSO: {fileID: 11400000, guid: 4a31c5d403836f34e985dbcadd8d8453, type: 2}
   _currentHealthSO: {fileID: 11400000, guid: 53a134cbd7189844c8d61c74cd1b50ce, type: 2}
+  _destroyOnDeath: 0
+  _destroyDelay: 1
+  _debugCurrentHealth: 0
+  _debugMaxHealth: 0
+  _debugHealthNormalized: 0
   _getHitEffectSO: {fileID: 11400000, guid: dcf7b20a3fc92814b8b7640e48d40d3a, type: 2}
   _mainMeshRenderer: {fileID: 0}
   _droppableRewardSO: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
@@ -789,23 +843,6 @@ MonoBehaviour:
   _onInteractionEnded: {fileID: 11400000, guid: 6a8475f429cbabd42a27316fd920cd2b, type: 2}
   _onCutsceneStart: {fileID: 11400000, guid: 6018ba8038d5a0f418011f645241e86f, type: 2}
   currentInteractionType: 0
---- !u!114 &7548800111824649869
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6915450752968060550}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d8f98fbc15dbe644b0838f2850bd598, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _walkingParticles: {fileID: 0}
-  _landParticles: {fileID: 0}
-  _jumpParticles: {fileID: 0}
-  _slashEffect: {fileID: 0}
-  _reverseSlashEffect: {fileID: 0}
 --- !u!114 &2096197016530632128
 MonoBehaviour:
   m_ObjectHideFlags: 0

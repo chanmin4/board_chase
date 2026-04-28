@@ -9,6 +9,11 @@ namespace VSplatter.StateMachine
 		[Tooltip("Set the initial state of this StateMachine")]
 		[SerializeField] private ScriptableObjects.TransitionTableSO _transitionTableSO = default;
 
+		[Header("Debug")]
+		[SerializeField] private bool _logStateChanges = false;
+		[SerializeField] private string _debugOwnerLabel = string.Empty;
+		[SerializeField] private bool _logInitialState = true;
+
 #if UNITY_EDITOR
 		[Space]
 		[SerializeField]
@@ -19,6 +24,9 @@ namespace VSplatter.StateMachine
 		internal State _currentState;
 
 		public ScriptableObjects.StateSO CurrentStateSO => _currentState?._originSO;
+
+		private string DebugOwnerName =>
+			string.IsNullOrWhiteSpace(_debugOwnerLabel) ? gameObject.name : _debugOwnerLabel;
 
 		private void Awake()
 		{
@@ -49,6 +57,13 @@ namespace VSplatter.StateMachine
 		private void Start()
 		{
 			_currentState.OnStateEnter();
+
+			if (_logStateChanges && _logInitialState)
+			{
+				Debug.Log(
+					$"[StateMachine] owner={DebugOwnerName}, machine={GetType().Name}, start={GetStateName(_currentState)}, frame={Time.frameCount}",
+					this);
+			}
 		}
 
 		public new bool TryGetComponent<T>(out T component) where T : Component
@@ -93,9 +108,27 @@ namespace VSplatter.StateMachine
 
 		private void Transition(State transitionState)
 		{
+			string previousStateName = GetStateName(_currentState);
+			string nextStateName = GetStateName(transitionState);
+
 			_currentState.OnStateExit();
 			_currentState = transitionState;
 			_currentState.OnStateEnter();
+
+			if (_logStateChanges)
+			{
+				Debug.Log(
+					$"[StateMachine] owner={DebugOwnerName}, machine={GetType().Name}, {previousStateName} -> {nextStateName}, frame={Time.frameCount}",
+					this);
+			}
+		}
+
+		private static string GetStateName(State state)
+		{
+			if (state == null || state._originSO == null)
+				return "<null>";
+
+			return state._originSO.name;
 		}
 	}
 }

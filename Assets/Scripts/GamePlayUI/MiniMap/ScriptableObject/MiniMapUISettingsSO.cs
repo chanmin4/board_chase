@@ -3,10 +3,6 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "MiniMapUISettings", menuName = "Game/UI/Mini Map Settings")]
 public class MiniMapUISettingsSO : ScriptableObject
 {
-    [Header("Opacity")]
-    [SerializeField, Range(0f, 1f)] private float _defaultAlpha = 0.6f;
-    [SerializeField, Range(0f, 1f)] private float _minAlpha = 0f;
-    [SerializeField, Range(0f, 1f)] private float _maxAlpha = 1f;
 
     [Header("Colors")]
     [SerializeField] private Color _playerColor = new Color(0.2f, 0.75f, 1f, 0.85f);
@@ -19,9 +15,6 @@ public class MiniMapUISettingsSO : ScriptableObject
     [SerializeField] private Sprite _namedIcon;
     [SerializeField] private Sprite _bossIcon;
 
-    public float DefaultAlpha => Mathf.Clamp(_defaultAlpha, MinAlpha, MaxAlpha);
-    public float MinAlpha => Mathf.Min(_minAlpha, _maxAlpha);
-    public float MaxAlpha => Mathf.Max(_minAlpha, _maxAlpha);
 
     public Color PlayerColor => _playerColor;
     public Color NeutralColor => _neutralColor;

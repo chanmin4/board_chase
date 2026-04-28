@@ -13,5 +13,8 @@ MonoBehaviour:
   m_Name: ChasingTargetAction
   m_EditorClassIdentifier: 
   description: 
-  _targetTransform: {fileID: 0}
-  _chasingSpeed: 1
+  _targetSource: 0
+  _fallbackTarget: {fileID: 0}
+  _speedSource: 1
+  _fixedChasingSpeed: 3.5
+  _movementStats: {fileID: 11400000, guid: d081fc30d4fe20a4a86ef49d54426573, type: 2}

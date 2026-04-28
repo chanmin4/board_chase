@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-public class CameraManager : MonoBehaviour
+public class enemyscreen : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Camera mainCamera;
@@ -38,6 +38,8 @@ public class CameraManager : MonoBehaviour
     [Header("Perspective Auto Fit")]
     [SerializeField] private bool autoFitPerspectiveDistance = true;
     [SerializeField] private float perspectivePadding = 1.05f;
+    [Header("Broadcasting On")]
+    [SerializeField] private WorldCameraEventChannelSO _worldCameraReadyChannel;
 
 
     private Coroutine _moveCoroutine;
@@ -58,7 +60,14 @@ public class CameraManager : MonoBehaviour
             return null;
         }
     }
+    private void Awake()
+    {
+        if (mainCamera == null)
+            mainCamera = Camera.main;
 
+        if (cameraTarget == null && mainCamera != null)
+            cameraTarget = mainCamera.transform;
+    }
     private void Reset()
     {
         if (mainCamera == null)
@@ -75,6 +84,12 @@ public class CameraManager : MonoBehaviour
 
         if (moveSectorCameraEvent != null)
             moveSectorCameraEvent.OnEventRaised += HandleMoveSectorCamera;
+
+        if (mainCamera == null)
+            mainCamera = Camera.main;
+
+        if (_worldCameraReadyChannel != null && mainCamera != null)
+            _worldCameraReadyChannel.RaiseEvent(mainCamera);
     }
 
     private void OnDisable()
@@ -84,6 +99,9 @@ public class CameraManager : MonoBehaviour
 
         if (moveSectorCameraEvent != null)
             moveSectorCameraEvent.OnEventRaised -= HandleMoveSectorCamera;
+
+        if (_worldCameraReadyChannel != null && mainCamera != null)
+            _worldCameraReadyChannel.Clear(mainCamera);
     }
 
     /// <summary>
