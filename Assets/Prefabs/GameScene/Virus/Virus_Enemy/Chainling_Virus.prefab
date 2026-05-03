@@ -229,8 +229,7 @@ MonoBehaviour:
   - {fileID: 6305803826152806843}
   - {fileID: 4263479636838991434}
   - {fileID: 8432019948006429067}
-  _damage: 5
-  _hitCooldown: 1
+  _settings: {fileID: 11400000, guid: 82030552fe4767a48a6749d2d5cc6648, type: 2}
 --- !u!114 &1325152393086570844
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -354,7 +353,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _damageable: {fileID: 4544002800027011311}
-  _enemy: {fileID: 0}
+  _enemy: {fileID: 469768165924775885}
   _uiAnchor: {fileID: 7852430410609965579}
   _followSettings: {fileID: 11400000, guid: 825432195fee4ff46b94cceb3acce643, type: 2}
   _healthBarSettings: {fileID: 11400000, guid: 72279adc02d91294087f66449bb59eee, type: 2}

@@ -5,8 +5,10 @@ public class PaintBullet : MonoBehaviour
 {
     private MaskRenderManager _maskRenderManager;
     private Vector3 _direction;
-    private Vector3 _flightTarget;
+    private Vector3 _gameplayPosition;
+    private Vector3 _visualStartPosition;
     private Vector3 _paintTarget;
+    private Vector3 _visualTarget;
     private object _sender;
     private float _speed;
     private float _castRadius;
@@ -22,6 +24,9 @@ public class PaintBullet : MonoBehaviour
     private bool _initialized;
 
     public void Init(
+        Vector3 gameplayStartPosition,
+        Vector3 gameplayDirection,
+        Vector3 visualStartPosition,
         Vector3 targetWorld,
         float speed,
         float castRadius,
@@ -35,24 +40,22 @@ public class PaintBullet : MonoBehaviour
         object sender)
     {
         _paintTarget = targetWorld;
+        _visualTarget = targetWorld;
+        _gameplayPosition = gameplayStartPosition;
+        _visualStartPosition = visualStartPosition;
 
-        _flightTarget = targetWorld;
-        _flightTarget.y = transform.position.y;
+        gameplayDirection.y = 0f;
+        if (gameplayDirection.sqrMagnitude < 0.0001f)
+            gameplayDirection = transform.forward;
 
-        Vector3 direction = _flightTarget - transform.position;
-        direction.y = 0f;
+        gameplayDirection.y = 0f;
+        if (gameplayDirection.sqrMagnitude < 0.0001f)
+            gameplayDirection = Vector3.forward;
 
-        if (direction.sqrMagnitude < 0.0001f)
-            direction = transform.forward;
-
-        direction.y = 0f;
-        if (direction.sqrMagnitude < 0.0001f)
-            direction = Vector3.forward;
-
-        _direction = direction.normalized;
+        _direction = gameplayDirection.normalized;
         _maxDistance = Mathf.Max(0.01f, Vector3.Distance(
-            new Vector3(transform.position.x, 0f, transform.position.z),
-            new Vector3(_flightTarget.x, 0f, _flightTarget.z)));
+            new Vector3(_gameplayPosition.x, 0f, _gameplayPosition.z),
+            new Vector3(_paintTarget.x, 0f, _paintTarget.z)));
 
         _speed = Mathf.Max(0.01f, speed);
         _castRadius = Mathf.Max(0.001f, castRadius);
@@ -87,7 +90,7 @@ public class PaintBullet : MonoBehaviour
         float remainingDistance = _maxDistance - _travelledDistance;
         if (remainingDistance <= 0.001f)
         {
-            transform.position = _flightTarget;
+            transform.position = _visualTarget;
             Stamp(_paintTarget);
             Destroy(gameObject);
             return;
@@ -98,7 +101,7 @@ public class PaintBullet : MonoBehaviour
             return;
 
         if (_impactMask.value != 0 && Physics.SphereCast(
-            transform.position,
+            _gameplayPosition,
             _castRadius,
             _direction,
             out RaycastHit hit,
@@ -106,14 +109,22 @@ public class PaintBullet : MonoBehaviour
             _impactMask,
             _triggerInteraction))
         {
-            transform.position = hit.point;
+            float progress = _maxDistance > 0.001f
+                ? Mathf.Clamp01((_travelledDistance + hit.distance) / _maxDistance)
+                : 1f;
+
+            transform.position = Vector3.Lerp(_visualStartPosition, _visualTarget, progress);
             Stamp(hit.point);
             Destroy(gameObject);
             return;
         }
 
-        transform.position += _direction * travelDistance;
+        _gameplayPosition += _direction * travelDistance;
         _travelledDistance += travelDistance;
+        float visualProgress = _maxDistance > 0.001f
+            ? Mathf.Clamp01(_travelledDistance / _maxDistance)
+            : 1f;
+        transform.position = Vector3.Lerp(_visualStartPosition, _visualTarget, visualProgress);
     }
 
     private void Stamp(Vector3 worldPoint)

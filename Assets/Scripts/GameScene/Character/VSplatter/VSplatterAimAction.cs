@@ -19,6 +19,7 @@ public class VSplatterAimAction : MonoBehaviour
     [SerializeField] private Camera _aimCamera;
 
     [Header("Options")]
+    
     [SerializeField] private bool _autoReloadOnEmpty = true;
     [SerializeField] private bool _debugLogs = false;
 
@@ -45,7 +46,7 @@ public class VSplatterAimAction : MonoBehaviour
     public bool IsReloading => _isReloading;
     public bool IsOnFireCooldown => Time.time < _nextFireTime;
     public int CurrentAmmo => _currentAmmo;
-
+    public Camera AimCamera => _aimCamera;
     public WeaponSO CurrentWeapon => _range != null ? _range.CurrentWeapon : null;
 
     private float CurrentShotsPerSecond =>
@@ -185,41 +186,14 @@ public class VSplatterAimAction : MonoBehaviour
         if (_aimCamera == null || CurrentWeapon == null)
             return false;
 
-        Ray ray = _aimCamera.ScreenPointToRay(Input.mousePosition);
-
-        RaycastHit[] hits = Physics.RaycastAll(
-            ray,
-            999f,
+        return VSplatterAimUtility.TryGetAimPoint(
+            _aimCamera,
             CurrentWeapon.AimHitMask,
-            QueryTriggerInteraction.Ignore);
-
-        if (hits.Length > 0)
-        {
-            Array.Sort(hits, static (a, b) => a.distance.CompareTo(b.distance));
-
-            for (int i = 0; i < hits.Length; i++)
-            {
-                Collider collider = hits[i].collider;
-                if (collider == null)
-                    continue;
-
-                if (collider.transform.IsChildOf(transform))
-                    continue;
-
-                worldPoint = hits[i].point;
-                return true;
-            }
-        }
-
-        if (!CurrentWeapon.AllowFallbackPlane)
-            return false;
-
-        Plane plane = new Plane(Vector3.up, new Vector3(0f, CurrentWeapon.FallbackPlaneY, 0f));
-        if (!plane.Raycast(ray, out float enter))
-            return false;
-
-        worldPoint = ray.GetPoint(enter);
-        return true;
+            CurrentWeapon.AllowFallbackPlane,
+            CurrentWeapon.FallbackPlaneY,
+            transform,
+            out worldPoint,
+            out _);
     }
 
     public bool RequestReload()

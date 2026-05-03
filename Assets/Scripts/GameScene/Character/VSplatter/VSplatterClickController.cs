@@ -15,6 +15,7 @@ public class VSplatterClickController : MonoBehaviour
     [SerializeField] private VSplatterAimAction _aimAction;
     [SerializeField] private VSplatterAttack _attack;
     [SerializeField] private VSplatterPaint _paint;
+    [SerializeField] private VSplatterActionGate _actionGate;
 
     private bool _wasHoldingLastFrame;
 
@@ -23,6 +24,8 @@ public class VSplatterClickController : MonoBehaviour
 
     private void Awake()
     {
+        if (_actionGate == null)
+            _actionGate = GetComponent<VSplatterActionGate>();
     }
 
     private void OnEnable()
@@ -48,8 +51,8 @@ public class VSplatterClickController : MonoBehaviour
         if (_character == null || _animator == null || _aimAction == null)
             return;
 
-        bool holdAttack = _character.attackInput;
-        bool holdPaint = _character.paintInput;
+        bool holdAttack = _character.attackInput && (_actionGate == null || _actionGate.CanUseAttack);
+        bool holdPaint = _character.paintInput && (_actionGate == null || _actionGate.CanUsePaint);
         bool holdAny = holdAttack || holdPaint;
 
         //_animator.SetBool(IsShootingHash, holdAny);

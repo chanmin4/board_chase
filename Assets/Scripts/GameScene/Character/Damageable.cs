@@ -83,7 +83,7 @@ public class Damageable : MonoBehaviour
 			_restoreHealth.OnEventRaised -= Cure;
 	}
 
-	public void ReceiveAnAttack(float damage)
+	public void ReceiveAnAttack(float damage, GameObject attacker = null)
 	{
 		if (!CanReceiveDamage)
 			return;
@@ -104,6 +104,9 @@ public class Damageable : MonoBehaviour
 		{
 			_invulnerabilityController.Begin(_postHitInvulnerabilityConfig);
 		}
+
+		if (!diedThisHit && attacker != null && TryGetComponent(out Enemy enemy))
+			enemy.NotifyDamagedBy(attacker);
 
 		OnHealthChanged?.Invoke(this);
 

@@ -12,8 +12,8 @@ public class SearchInfectionTargetActionSO : StateActionSO
     [SerializeField] private float _searchRadius = 16f;
     [SerializeField] private int _candidateCount = 6;
     [SerializeField] private int _maxRetryCount = 3;
-    [SerializeField] private bool _searchOnEnterOnly = true;
-    [SerializeField] private float _searchIntervalSeconds = 1f;
+    [SerializeField] private bool _searchOnEnterOnly = false;
+    [SerializeField] private float _searchIntervalSeconds = 2f;
     [SerializeField] private float _minimumScore = 0.3f;
     [SerializeField] private float _minimumTravelDistance = 1.25f;
 
@@ -78,20 +78,32 @@ public class SearchInfectionTargetAction : StateAction
 
     public override void OnUpdate()
     {
+        Debug.Log("SearchInfectionTargetAction OnUpdate");
         if (_config.SearchOnEnterOnly)
             return;
 
         if (Time.time < _nextSearchTime)
             return;
-
+        Debug.Log("SearchInfectionTargetAction OnUpdate Search");
         Search();
         _nextSearchTime = Time.time + Mathf.Max(0.1f, _config.SearchIntervalSeconds);
     }
 
     private void Search()
     {
-        if (_enemy == null || _enemy.CurrentSector == null)
+        if (_enemy == null)
+        {
+            if (_config.DebugLogs)
+                Debug.Log("[SearchInfectionTarget] Search aborted: enemy is null.");
             return;
+        }
+
+        if (_enemy.CurrentSector == null)
+        {
+            if (_config.DebugLogs)
+                Debug.Log($"[SearchInfectionTarget] Search aborted: CurrentSector is null. enemy={_enemy.name}");
+            return;
+        }
 
         CacheMaskRenderManager();
 
@@ -112,7 +124,7 @@ public class SearchInfectionTargetAction : StateAction
 
             if (_config.DebugDraw)
                 DrawMarker(bestPosition, bestScore >= _config.MinimumScore ? Color.green : Color.yellow);
-
+            Debug.Log("bestscore : minimumscore " + bestScore + " : " + _config.MinimumScore);
             if (bestScore >= _config.MinimumScore)
             {
                 _enemy.SetInfectionTarget(bestPosition);
@@ -154,7 +166,7 @@ public class SearchInfectionTargetAction : StateAction
                 bestPosition = candidate;
             }
         }
-
+        Debug.Log("bestscore : " + bestScore);
         return bestScore > float.NegativeInfinity;
     }
 
@@ -162,13 +174,22 @@ public class SearchInfectionTargetAction : StateAction
     {
         candidate = default;
 
+        const float edgePadding = 0.75f;
+
+        float minX = sectorBounds.min.x + edgePadding;
+        float maxX = sectorBounds.max.x - edgePadding;
+        float minZ = sectorBounds.min.z + edgePadding;
+        float maxZ = sectorBounds.max.z - edgePadding;
+
+        if (minX >= maxX || minZ >= maxZ)
+            return false;
+
         for (int i = 0; i < 8; i++)
         {
-            Vector2 random2D = Random.insideUnitCircle * _config.SearchRadius;
-            Vector3 raw = new Vector3(origin.x + random2D.x, origin.y, origin.z + random2D.y);
-
-            if (!IsInsideBoundsXZ(sectorBounds, raw))
-                continue;
+            Vector3 raw = new Vector3(
+                Random.Range(minX, maxX),
+                origin.y,
+                Random.Range(minZ, maxZ));
 
             if (FlatDistance(origin, raw) < _config.MinimumTravelDistance)
                 continue;
@@ -248,7 +269,7 @@ public class SearchInfectionTargetAction : StateAction
 
         _maskRenderManager = Object.FindAnyObjectByType<MaskRenderManager>();
     }
-
+    //for debug
     private void DrawCandidate(Vector3 candidate, float score)
     {
         if (!_config.DebugDraw)
@@ -260,7 +281,7 @@ public class SearchInfectionTargetAction : StateAction
 
         Debug.DrawLine(candidate, candidate + Vector3.up * 0.6f, color, _config.DebugDrawDuration);
     }
-
+    //for debug
     private void DrawMarker(Vector3 point, Color color)
     {
         Debug.DrawLine(point + Vector3.left * 0.35f, point + Vector3.right * 0.35f, color, _config.DebugDrawDuration);

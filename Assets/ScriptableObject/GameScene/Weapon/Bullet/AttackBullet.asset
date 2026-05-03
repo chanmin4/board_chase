@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: AttackBullet
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 6562571228875492699, guid: 8412ee2d3eb95b041a91f37cc5e636ab, type: 3}
-  speed: 50
+  speed: 150
   castRadius: 1
-  maxLifetime: 2
+  maxLifetime: 3
   spawnOffset: 0.12
   impactMask:
     serializedVersion: 2
@@ -24,5 +24,3 @@ MonoBehaviour:
   damageTargetMask:
     serializedVersion: 2
     m_Bits: 64
-  useFlatDamageHit: 1
-  flatHitHalfHeight: 1.4

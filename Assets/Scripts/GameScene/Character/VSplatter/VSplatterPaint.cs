@@ -29,6 +29,7 @@ public class VSplatterPaint : MonoBehaviour
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
     private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
+    private Transform VisualFireOrigin => _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
     private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
 
     private void Reset()
@@ -91,6 +92,7 @@ public class VSplatterPaint : MonoBehaviour
             CurrentWeapon.AimHitMask,
             CurrentWeapon.AllowFallbackPlane,
             CurrentWeapon.FallbackPlaneY,
+            transform,
             out Vector3 aimPoint,
             out _);
 
@@ -105,35 +107,40 @@ public class VSplatterPaint : MonoBehaviour
             return false;
         }
 
-        Transform fireOrigin = GameplayFireOrigin != null ? GameplayFireOrigin : transform;
-        Vector3 start = fireOrigin.position;
+        Transform fireOrigin = VisualFireOrigin != null
+            ? VisualFireOrigin
+            : GameplayFireOrigin != null ? GameplayFireOrigin : transform;
+        Vector3 visualStart = fireOrigin.position;
+        Vector3 visualDirection = aimPoint - visualStart;
 
-        Vector3 flightTarget = aimPoint;
-        flightTarget.y = start.y;
-
-        Vector3 dir = flightTarget - start;
-        dir.y = 0f;
-
-        if (dir.sqrMagnitude < 0.0001f)
+        if (visualDirection.sqrMagnitude < 0.0001f)
             return false;
 
-        dir.Normalize();
+        visualDirection.Normalize();
 
-        start += dir * bulletConfig.SpawnOffset;
+        Vector3 gameplayDirection = aimPoint - visualStart;
+        gameplayDirection.y = 0f;
 
-        float maxDistance = Vector3.Distance(
-            new Vector3(start.x, 0f, start.z),
-            new Vector3(flightTarget.x, 0f, flightTarget.z));
+        if (gameplayDirection.sqrMagnitude < 0.0001f)
+            return false;
 
-        Quaternion bulletRotation = Quaternion.LookRotation(dir, Vector3.up);
+        gameplayDirection.Normalize();
+
+        Vector3 gameplayStart = visualStart + gameplayDirection * bulletConfig.SpawnOffset;
+        Vector3 visualSpawn = visualStart + visualDirection * bulletConfig.SpawnOffset;
+
+        Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
 
         PaintBullet bullet = Instantiate(
             bulletConfig.BulletPrefab,
-            start,
+            visualSpawn,
             bulletRotation,
             ProjectilesRoot).GetComponent<PaintBullet>();
 
         bullet.Init(
+            gameplayStart,
+            gameplayDirection,
+            visualSpawn,
             aimPoint,
             bulletConfig.Speed,
             bulletConfig.CastRadius,
@@ -147,7 +154,7 @@ public class VSplatterPaint : MonoBehaviour
             this);
 
         if (debugDraw)
-            Debug.DrawLine(start, flightTarget, Color.cyan, debugDrawDuration);
+            Debug.DrawLine(visualSpawn, aimPoint, Color.cyan, debugDrawDuration);
 
         if (debugLogs)
             Debug.Log("[VSplatterPaint] paint bullet fired.");

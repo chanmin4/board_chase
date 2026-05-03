@@ -7,6 +7,8 @@ using UnityEngine;
 public class VSplatter_Character: MonoBehaviour
 {
 	[SerializeField] private InputReader _inputReader = default;
+	[SerializeField] private Transform _feet;
+	public Transform Feet => _feet != null ? _feet : transform;
 	private Vector2 _inputVector;
 	private float _previousSpeed;
 

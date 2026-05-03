@@ -16,13 +16,14 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 320
   _triggerInteraction: 2
-  _maxChargeTime: 2
-  _baseRadius: 2
-  _maxRadius: 5
-  _applyDamage: 1
-  _baseDamage: 5
-  _maxDamage: 15
+  _maxChargeTime: 3
+  _cooldownSeconds: 1
+  _baseRadius: 5
+  _maxRadius: 10
+  _applyDamage: 0
+  _baseDamage: 0
+  _maxDamage: 0
   _applyKnockback: 1
-  _baseKnockbackDistance: 2
-  _maxKnockbackDistance: 5
-  _knockbackDuration: 0.2
+  _baseKnockbackDistance: 5
+  _maxKnockbackDistance: 10
+  _knockbackDuration: 0.3

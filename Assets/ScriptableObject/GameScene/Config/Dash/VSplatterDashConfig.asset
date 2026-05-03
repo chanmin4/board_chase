@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5d013d6a68114547ba1e3c7f5f81d1a, type: 3}
   m_Name: VSplatterDashConfig
   m_EditorClassIdentifier: 
-  _dashSpeed: 35
-  _dashDuration: 0.2
+  _dashSpeed: 20
+  _dashDuration: 0.4
+  _cooldownSeconds: 3
   _useForwardWhenNoMovementInput: 1
   _rotateTowardDashDirection: 1

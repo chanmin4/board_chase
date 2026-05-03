@@ -7,12 +7,13 @@ public class RotateActionSO : StateActionSO<RotateAction>
 {
     [Tooltip("Smoothing for rotating the character toward the aim direction")]
     public float turnSmoothTime = 0.01f;
+    [Tooltip("Padding in pixels for entering the self-lock zone.")]
+    public float selfScreenLockEnterPadding = 50f;
 
-    [Tooltip("When the aim point gets closer than this radius, rotation freezes and keeps the last valid direction.")]
-    public float aimDeadzoneEnterRadius = 0.45f;
-
-    [Tooltip("Rotation resumes only after the aim point moves outside this radius.")]
-    public float aimDeadzoneExitRadius = 0.65f;
+    [Tooltip("Padding in pixels for leaving the self-lock zone.")]
+    public float selfScreenLockExitPadding = 60f;
+    [Tooltip("Extra yaw offset applied to the body rotation, in degrees.")]
+    public float bodyYawOffsetDegrees = -5f;
 }
 
 public class RotateAction : StateAction
@@ -20,9 +21,13 @@ public class RotateAction : StateAction
     private VSplatterAimAction _aimAction;
     private VSplatterWeaponHolder _weaponHolder;
     private Transform _transform;
+    private VSplatter_Character _character;
+
+    private CharacterController _characterController;
+    private Collider[] _selfColliders;
+    private bool _isSelfScreenLockActive;
 
     private float _turnSmoothSpeed;
-    private bool _isAimLocked;
     private Vector3 _lastValidLookDirection;
 
     private const float ROTATION_THRESHOLD = 0.0001f;
@@ -34,18 +39,26 @@ public class RotateAction : StateAction
         _transform = stateMachine.GetComponent<Transform>();
         stateMachine.TryGetComponent(out _aimAction);
         stateMachine.TryGetComponent(out _weaponHolder);
+        stateMachine.TryGetComponent(out _character);
+        stateMachine.TryGetComponent(out _characterController);
 
         if (_aimAction == null)
-            _aimAction = stateMachine.GetComponentInChildren<VSplatterAimAction>();
-
-        if (_aimAction == null)
-            _aimAction = stateMachine.GetComponentInParent<VSplatterAimAction>();
+            _aimAction = stateMachine.GetComponentInChildren<VSplatterAimAction>() ??
+                        stateMachine.GetComponentInParent<VSplatterAimAction>();
 
         if (_weaponHolder == null)
-            _weaponHolder = stateMachine.GetComponentInChildren<VSplatterWeaponHolder>();
+            _weaponHolder = stateMachine.GetComponentInChildren<VSplatterWeaponHolder>() ??
+                            stateMachine.GetComponentInParent<VSplatterWeaponHolder>();
 
-        if (_weaponHolder == null)
-            _weaponHolder = stateMachine.GetComponentInParent<VSplatterWeaponHolder>();
+        if (_character == null)
+            _character = stateMachine.GetComponentInChildren<VSplatter_Character>() ??
+                         stateMachine.GetComponentInParent<VSplatter_Character>();
+
+        if (_characterController == null)
+            _characterController = stateMachine.GetComponentInChildren<CharacterController>() ??
+                                stateMachine.GetComponentInParent<CharacterController>();
+
+        _selfColliders = _transform.GetComponentsInChildren<Collider>(true);
 
         _lastValidLookDirection = _transform.forward;
         _lastValidLookDirection.y = 0f;
@@ -55,51 +68,141 @@ public class RotateAction : StateAction
 
         _lastValidLookDirection.Normalize();
     }
-
     public override void OnUpdate()
     {
-        if (_aimAction == null || !_aimAction.HasAimPoint)
+        if (_aimAction == null)
             return;
 
-        Vector3 pivotPosition = _transform.position;
-        if (_weaponHolder != null && _weaponHolder.GameplayFireOrigin != null)
-            pivotPosition = _weaponHolder.GameplayFireOrigin.position;
+        Camera aimCamera = _aimAction.AimCamera != null ? _aimAction.AimCamera : Camera.main;
+        if (aimCamera == null)
+            return;
 
-        Vector3 lookDirection = _aimAction.AimWorldPoint - pivotPosition;
-        lookDirection.y = 0f;
+        Vector3 bodyPivotPosition = _character != null && _character.Feet != null
+            ? _character.Feet.position
+            : _transform.position;
 
-        float sqrDistance = lookDirection.sqrMagnitude;
-        float enterRadius = Mathf.Max(0f, _originSO.aimDeadzoneEnterRadius);
-        float exitRadius = Mathf.Max(enterRadius, _originSO.aimDeadzoneExitRadius);
+        if (!VSplatterAimUtility.TryGetAimPointOnPlane(aimCamera, bodyPivotPosition.y, out Vector3 bodyAimPoint))
+            return;
 
-        float enterRadiusSqr = enterRadius * enterRadius;
-        float exitRadiusSqr = exitRadius * exitRadius;
+        bool insideEnter = IsMouseInsideSelfScreenBounds(aimCamera, _originSO.selfScreenLockEnterPadding);
+        bool insideExit = IsMouseInsideSelfScreenBounds(aimCamera, _originSO.selfScreenLockExitPadding);
 
-        if (_isAimLocked)
+        if (_isSelfScreenLockActive)
         {
-            if (sqrDistance > exitRadiusSqr)
-                _isAimLocked = false;
+            if (!insideExit)
+                _isSelfScreenLockActive = false;
         }
         else
         {
-            if (sqrDistance < enterRadiusSqr)
-                _isAimLocked = true;
+            if (insideEnter)
+                _isSelfScreenLockActive = true;
         }
 
-        if (!_isAimLocked && sqrDistance >= ROTATION_THRESHOLD)
-        {
-            _lastValidLookDirection = lookDirection.normalized;
-        }
-
-        if (_lastValidLookDirection.sqrMagnitude < ROTATION_THRESHOLD)
+        if (_isSelfScreenLockActive)
             return;
 
-        float targetRotation = Mathf.Atan2(_lastValidLookDirection.x, _lastValidLookDirection.z) * Mathf.Rad2Deg;
+        Vector3 lookDirection = bodyAimPoint - bodyPivotPosition;
+        lookDirection.y = 0f;
+
+        if (lookDirection.sqrMagnitude < ROTATION_THRESHOLD)
+            return;
+
+        _lastValidLookDirection = lookDirection.normalized;
+
+       float targetRotation =
+        Mathf.Atan2(_lastValidLookDirection.x, _lastValidLookDirection.z) * Mathf.Rad2Deg
+        + _originSO.bodyYawOffsetDegrees;
 
         _transform.eulerAngles = Vector3.up * Mathf.SmoothDampAngle(
             _transform.eulerAngles.y,
             targetRotation,
             ref _turnSmoothSpeed,
             _originSO.turnSmoothTime);
+
+        Vector3 visualAimPoint = _aimAction.HasAimPoint ? _aimAction.AimWorldPoint : bodyAimPoint;
+        _weaponHolder?.UpdateVisualAim(visualAimPoint);
     }
+    private bool IsMouseInsideSelfScreenBounds(Camera camera, float paddingPixels)
+    {
+        if (!TryGetSelfBounds(out Bounds bounds))
+            return false;
+
+        Vector3[] corners = new Vector3[8];
+        Vector3 min = bounds.min;
+        Vector3 max = bounds.max;
+
+        corners[0] = new Vector3(min.x, min.y, min.z);
+        corners[1] = new Vector3(max.x, min.y, min.z);
+        corners[2] = new Vector3(min.x, max.y, min.z);
+        corners[3] = new Vector3(max.x, max.y, min.z);
+        corners[4] = new Vector3(min.x, min.y, max.z);
+        corners[5] = new Vector3(max.x, min.y, max.z);
+        corners[6] = new Vector3(min.x, max.y, max.z);
+        corners[7] = new Vector3(max.x, max.y, max.z);
+
+        bool anyVisible = false;
+        float minX = float.PositiveInfinity;
+        float maxX = float.NegativeInfinity;
+        float minY = float.PositiveInfinity;
+        float maxY = float.NegativeInfinity;
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            Vector3 screen = camera.WorldToScreenPoint(corners[i]);
+            if (screen.z <= 0f)
+                continue;
+
+            anyVisible = true;
+            minX = Mathf.Min(minX, screen.x);
+            maxX = Mathf.Max(maxX, screen.x);
+            minY = Mathf.Min(minY, screen.y);
+            maxY = Mathf.Max(maxY, screen.y);
+        }
+
+        if (!anyVisible)
+            return false;
+
+        Rect rect = Rect.MinMaxRect(
+            minX - paddingPixels,
+            minY - paddingPixels,
+            maxX + paddingPixels,
+            maxY + paddingPixels);
+
+        return rect.Contains(Input.mousePosition);
+    }
+
+    private bool TryGetSelfBounds(out Bounds bounds)
+    {
+        if (_characterController != null)
+        {
+            bounds = _characterController.bounds;
+            return true;
+        }
+
+        bounds = default;
+        bool found = false;
+
+        if (_selfColliders == null)
+            return false;
+
+        for (int i = 0; i < _selfColliders.Length; i++)
+        {
+            Collider c = _selfColliders[i];
+            if (c == null || !c.enabled || c.isTrigger)
+                continue;
+
+            if (!found)
+            {
+                bounds = c.bounds;
+                found = true;
+            }
+            else
+            {
+                bounds.Encapsulate(c.bounds);
+            }
+        }
+
+        return found;
+    }
+
 }

@@ -11,33 +11,38 @@ public class VSplatterShockwaveConfigSO : ScriptableObject
 
     [Header("Charge")]
     [Min(0.01f)]
-    [SerializeField] private float _maxChargeTime = 1f;
+    [SerializeField] private float _maxChargeTime = 3f;
+
+    [Header("Cooldown")]
+    [Min(0f)]
+    [SerializeField] private float _cooldownSeconds = 5f;
 
     [Header("Radius")]
     [Min(0f)]
-    [SerializeField] private float _baseRadius = 2f;
+    [SerializeField] private float _baseRadius = 5f;
     [Min(0f)]
-    [SerializeField] private float _maxRadius = 5f;
+    [SerializeField] private float _maxRadius = 10f;
 
     [Header("Damage")]
-    [SerializeField] private bool _applyDamage = true;
+    [SerializeField] private bool _applyDamage = false;
     [Min(0f)]
-    [SerializeField] private float _baseDamage = 5f;
+    [SerializeField] private float _baseDamage = 0f;
     [Min(0f)]
-    [SerializeField] private float _maxDamage = 15f;
+    [SerializeField] private float _maxDamage = 0f;
 
     [Header("Knockback")]
     [SerializeField] private bool _applyKnockback = true;
     [Min(0f)]
-    [SerializeField] private float _baseKnockbackDistance = 2f;
+    [SerializeField] private float _baseKnockbackDistance = 5f;
     [Min(0f)]
-    [SerializeField] private float _maxKnockbackDistance = 5f;
+    [SerializeField] private float _maxKnockbackDistance = 10f;
     [Min(0f)]
-    [SerializeField] private float _knockbackDuration = 0.2f;
+    [SerializeField] private float _knockbackDuration = 0.3f;
 
     public LayerMask HitMask => _hitMask;
     public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
     public float MaxChargeTime => _maxChargeTime;
+    public float CooldownSeconds => _cooldownSeconds;
     public float BaseRadius => _baseRadius;
     public float MaxRadius => _maxRadius;
     public bool ApplyDamage => _applyDamage;

@@ -32,8 +32,14 @@ public class VSplatterWeaponHolder : MonoBehaviour
     [Header("Runtime Scene Refs")]
     [SerializeField] private Transform _projectilesRoot;
 
+    [Header("Visual Aim")]
+    [SerializeField] private Transform _visualAimRoot;
+    [SerializeField] private bool _enableVisualAim = true;
+    [SerializeField] private float _visualAimTurnSmoothTime = 0.02f;
+
     private GameObject _currentRightGun;
     private GameObject _currentLeftGun;
+    private float _visualAimTurnVelocity;
 
     public event Action<WeaponSO> OnWeaponChanged;
 
@@ -59,6 +65,32 @@ public class VSplatterWeaponHolder : MonoBehaviour
     public void SetProjectilesRoot(Transform root)
     {
         _projectilesRoot = root;
+    }
+
+    public void UpdateVisualAim(Vector3 worldTarget)
+    {
+        if (!_enableVisualAim)
+            return;
+
+        Transform aimRoot = _visualAimRoot != null ? _visualAimRoot : transform;
+        Transform fireOrigin = VisualFireOrigin != null ? VisualFireOrigin : GameplayFireOrigin != null ? GameplayFireOrigin : aimRoot;
+
+        Vector3 flatDirection = worldTarget - fireOrigin.position;
+        flatDirection.y = 0f;
+
+        if (flatDirection.sqrMagnitude < 0.0001f)
+            return;
+
+        float targetYaw = Mathf.Atan2(flatDirection.x, flatDirection.z) * Mathf.Rad2Deg;
+        Vector3 euler = aimRoot.eulerAngles;
+
+        euler.y = Mathf.SmoothDampAngle(
+            euler.y,
+            targetYaw,
+            ref _visualAimTurnVelocity,
+            Mathf.Max(0.001f, _visualAimTurnSmoothTime));
+
+        aimRoot.eulerAngles = euler;
     }
 
     public void Equip(WeaponSO newWeapon)

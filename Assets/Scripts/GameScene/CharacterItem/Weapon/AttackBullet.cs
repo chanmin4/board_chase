@@ -6,6 +6,9 @@ public class AttackBullet : MonoBehaviour
     [SerializeField] private bool _debugHit = true;
     [SerializeField] private float _debugDrawDuration = 1f;
     private Vector3 _direction;
+    private Vector3 _visualDirection;
+    private Vector3 _gameplayPosition;
+    private Vector3 _visualStartPosition;
     private GameObject _source;
     private float _speed;
     private float _castRadius;
@@ -21,7 +24,9 @@ public class AttackBullet : MonoBehaviour
     
 
     public void Init(
+        Vector3 gameplayStartPosition,
         Vector3 direction,
+        Vector3 visualDirection,
         float maxDistance,
         float speed,
         float castRadius,
@@ -40,7 +45,13 @@ public class AttackBullet : MonoBehaviour
         if (direction.sqrMagnitude < 0.0001f)
             direction = Vector3.forward;
 
+        if (visualDirection.sqrMagnitude < 0.0001f)
+            visualDirection = direction;
+
         _direction = direction.normalized;
+        _visualDirection = visualDirection.normalized;
+        _gameplayPosition = gameplayStartPosition;
+        _visualStartPosition = transform.position;
         _maxDistance = Mathf.Max(0.01f, maxDistance);
         _speed = Mathf.Max(0.01f, speed);
         _castRadius = Mathf.Max(0.001f, castRadius);
@@ -83,7 +94,10 @@ public class AttackBullet : MonoBehaviour
 
         if (TryGetClosestHit(travelDistance, out RaycastHit hit, out bool isDamageHit))
         {
-            transform.position = hit.point;
+            float travelledToHit = _travelledDistance + hit.distance;
+            _gameplayPosition += _direction * hit.distance;
+            transform.position = _visualStartPosition + _visualDirection * travelledToHit;
+            _travelledDistance = travelledToHit;
 
             if (isDamageHit)
                 TryApplyDamage(hit);
@@ -92,7 +106,8 @@ public class AttackBullet : MonoBehaviour
             return;
         }
 
-        transform.position += _direction * travelDistance;
+        _gameplayPosition += _direction * travelDistance;
+        transform.position = _visualStartPosition + _visualDirection * (_travelledDistance + travelDistance);
         _travelledDistance += travelDistance;
     }
 
@@ -134,7 +149,7 @@ public class AttackBullet : MonoBehaviour
             return false;
 
         RaycastHit[] hits = Physics.SphereCastAll(
-            transform.position,
+            _gameplayPosition,
             _castRadius,
             _direction,
             travelDistance,
@@ -166,7 +181,7 @@ public class AttackBullet : MonoBehaviour
         RaycastHit[] hits;
 
             hits = Physics.SphereCastAll(
-                transform.position,
+                _gameplayPosition,
                 _castRadius,
                 _direction,
                 travelDistance,
@@ -279,6 +294,6 @@ public class AttackBullet : MonoBehaviour
         if (_debugHit)
             Debug.Log($"[AttackBullet][Apply] success: target={damageable.name}, collider={hit.collider.name}, damage={_damage}");
 
-        damageable.ReceiveAnAttack(_damage);
+        damageable.ReceiveAnAttack(_damage, _source);
     }
 }

@@ -20,6 +20,7 @@ public class VSplatterAttack : MonoBehaviour
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
     private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
+    private Transform VisualFireOrigin => _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
     private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
 
     private void Reset()
@@ -60,6 +61,7 @@ public class VSplatterAttack : MonoBehaviour
             CurrentWeapon.AimHitMask,
             CurrentWeapon.AllowFallbackPlane,
             CurrentWeapon.FallbackPlaneY,
+            transform,
             out Vector3 aimPoint,
             out _);
 
@@ -74,29 +76,63 @@ public class VSplatterAttack : MonoBehaviour
             return false;
         }
 
-        Transform fireOrigin = GameplayFireOrigin != null ? GameplayFireOrigin : transform;
+        Vector3 rangeOrigin = _range.RangeOrigin != null
+            ? _range.RangeOrigin.position
+            : transform.position;
 
-        Vector3 dir = fireOrigin.forward;
-        dir.y = 0f;
+        Vector3 rangeDirection = aimPoint - rangeOrigin;
+        rangeDirection.y = 0f;
 
-        if (dir.sqrMagnitude < 0.0001f)
+        if (rangeDirection.sqrMagnitude < 0.0001f)
             return false;
 
-        dir.Normalize();
+        rangeDirection.Normalize();
 
-        Vector3 start = fireOrigin.position + dir * bulletConfig.SpawnOffset;
+        Vector3 rangeEndPoint = rangeOrigin + rangeDirection * CurrentWeapon.MaxRange;
+        rangeEndPoint.y = aimPoint.y;
 
-        float maxDistance = CurrentWeapon.MaxRange;
-        Quaternion bulletRotation = Quaternion.LookRotation(dir, Vector3.up);
+        Transform fireOrigin = VisualFireOrigin != null
+            ? VisualFireOrigin
+            : GameplayFireOrigin != null ? GameplayFireOrigin : transform;
+
+        Vector3 visualStart = fireOrigin.position;
+
+        Vector3 visualDirection = rangeEndPoint - visualStart;
+        if (visualDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        visualDirection.Normalize();
+
+        Vector3 gameplayDirection = rangeEndPoint - visualStart;
+        gameplayDirection.y = 0f;
+
+        if (gameplayDirection.sqrMagnitude < 0.0001f)
+            return false;
+
+        gameplayDirection.Normalize();
+
+        Vector3 gameplayStart = visualStart + gameplayDirection * bulletConfig.SpawnOffset;
+        Vector3 visualSpawn = visualStart + visualDirection * bulletConfig.SpawnOffset;
+
+        float maxDistance = Vector3.Distance(
+            new Vector3(gameplayStart.x, 0f, gameplayStart.z),
+            new Vector3(rangeEndPoint.x, 0f, rangeEndPoint.z));
+
+        if (maxDistance <= 0.01f)
+            return false;
+
+        Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
 
         AttackBullet bullet = Instantiate(
             bulletConfig.BulletPrefab,
-            start,
+            visualSpawn,
             bulletRotation,
             ProjectilesRoot).GetComponent<AttackBullet>();
 
         bullet.Init(
-            dir,
+            gameplayStart,
+            gameplayDirection,
+            visualDirection,
             maxDistance,
             bulletConfig.Speed,
             bulletConfig.CastRadius,
@@ -108,7 +144,7 @@ public class VSplatterAttack : MonoBehaviour
             gameObject);
 
         if (debugDraw)
-            Debug.DrawLine(start, start + dir * maxDistance, Color.yellow, debugDrawDuration);
+            Debug.DrawLine(visualSpawn, visualSpawn + visualDirection * maxDistance, Color.yellow, debugDrawDuration);
 
         if (debugLogs)
             Debug.Log("[VSplatterAttack] attack bullet fired.");
@@ -116,5 +152,6 @@ public class VSplatterAttack : MonoBehaviour
         Fired?.Invoke();
         return true;
     }
+
 
 }

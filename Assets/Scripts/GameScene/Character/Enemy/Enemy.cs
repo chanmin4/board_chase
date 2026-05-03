@@ -51,19 +51,55 @@ public class Enemy : MonoBehaviour
 	{
 		isPlayerInAlertZone = entered;
 
-		if (entered && who.TryGetComponent(out Damageable damageable))
+		if (who == null)
 		{
-			SetTarget(damageable);
+			if (!entered)
+				ClearTarget();
+
+			return;
 		}
-		else
+
+		Damageable damageable =
+			who.GetComponent<Damageable>() ??
+			who.GetComponentInParent<Damageable>();
+
+		if (entered)
 		{
+			if (damageable != null)
+				SetTarget(damageable);
+
+			return;
+		}
+
+		if (damageable != null && currentTarget == damageable)
 			ClearTarget();
-		}
 	}
+
 
 	public virtual void OnAttackTriggerChange(bool entered, GameObject who)
 	{
 		isPlayerInAttackZone = entered;
+	}
+
+	public void NotifyDamagedBy(GameObject attacker)
+	{
+		if (attacker == null)
+			return;
+
+		VSplatter_Character playerCharacter =
+			attacker.GetComponent<VSplatter_Character>() ??
+			attacker.GetComponentInParent<VSplatter_Character>();
+
+		if (playerCharacter == null)
+			return;
+
+		Damageable playerDamageable =
+			playerCharacter.GetComponent<Damageable>() ??
+			playerCharacter.GetComponentInParent<Damageable>();
+
+		if (playerDamageable == null || playerDamageable.IsDead)
+			return;
+		SetTarget(playerDamageable);
 	}
 
 	public void SetCurrentSector(SectorRuntime sector)

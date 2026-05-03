@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: SearchInfectionTargetAction
   m_EditorClassIdentifier: 
   description: 
-  _searchRadius: 16
-  _candidateCount: 6
-  _maxRetryCount: 3
-  _searchOnEnterOnly: 1
-  _searchIntervalSeconds: 1
+  _searchRadius: 3
+  _candidateCount: 8
+  _maxRetryCount: 4
+  _searchOnEnterOnly: 0
+  _searchIntervalSeconds: 2
   _minimumScore: 0.3
   _minimumTravelDistance: 1.25
   _sampleOffset: 0.75

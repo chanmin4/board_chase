@@ -129,7 +129,7 @@ GameObject:
   - component: {fileID: 787053453755719257}
   - component: {fileID: 8925929502957679357}
   - component: {fileID: 1265055180317365392}
-  m_Layer: 3
+  m_Layer: 10
   m_Name: InteractionDetector
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -336,6 +336,9 @@ MonoBehaviour:
     rightLocalEuler: {x: 0, y: 90, z: 0}
     leftLocalEuler: {x: 0, y: 90, z: 0}
   _projectilesRoot: {fileID: 0}
+  _visualAimRoot: {fileID: 0}
+  _enableVisualAim: 1
+  _visualAimTurnSmoothTime: 0.02
 --- !u!1 &3585897334120335587
 GameObject:
   m_ObjectHideFlags: 0
@@ -388,6 +391,7 @@ MonoBehaviour:
   _aimAction: {fileID: 488941093109917602}
   _attack: {fileID: 685610790166866661}
   _paint: {fileID: 5993180757520086435}
+  _actionGate: {fileID: 8618877116158418073}
 --- !u!1 &3610677903115402780
 GameObject:
   m_ObjectHideFlags: 0
@@ -645,6 +649,7 @@ GameObject:
   - component: {fileID: 4870898263084313753}
   - component: {fileID: 8538659386609828884}
   - component: {fileID: 7683861469152231654}
+  - component: {fileID: 8618877116158418073}
   m_Layer: 3
   m_Name: VSplatter
   m_TagString: Player
@@ -824,6 +829,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
+  _feet: {fileID: 5731386009013077401}
 --- !u!114 &1129259094068729541
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -893,6 +899,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _transitionTableSO: {fileID: 11400000, guid: bf8d159f133e2c745b6400e9dd7e4411, type: 2}
+  _logStateChanges: 0
+  _debugOwnerLabel: 
+  _logInitialState: 1
   _debugger:
     debugTransitions: 0
     appendConditionsInfo: 1
@@ -911,6 +920,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _transitionTableSO: {fileID: 11400000, guid: 4ae05b0ceaa89234186a4d7691528cfa, type: 2}
+  _logStateChanges: 0
+  _debugOwnerLabel: 
+  _logInitialState: 1
   _debugger:
     debugTransitions: 0
     appendConditionsInfo: 1
@@ -956,11 +968,14 @@ MonoBehaviour:
   _character: {fileID: 4351803592356138420}
   _config: {fileID: 11400000, guid: babb0e12fafadad4d8ac58746ac93544, type: 2}
   _dashEventChannel: {fileID: 11400000, guid: 8b32f1d6d0531294f8d38ed64edfd520, type: 2}
+  _cooldownChangedChannel: {fileID: 11400000, guid: ac940dbc1ebad82468b30f27540ea187, type: 2}
+  _requestCooldownSnapshotChannel: {fileID: 11400000, guid: 7928211a0b18c054c92ca644f4072b8c, type: 2}
   _invulnerabilityController: {fileID: 9074093390072989954}
   _dashInvulnerabilityConfig: {fileID: 11400000, guid: a59da3c4e753578479841a7e47f28b05, type: 2}
   _isDashing: 0
   _remainingTime: 0
   _dashDirection: {x: 0, y: 0, z: 0}
+  _cooldownRemaining: 0
 --- !u!114 &4870898263084313753
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -977,10 +992,14 @@ MonoBehaviour:
   _origin: {fileID: 5546477128773306913}
   _config: {fileID: 11400000, guid: f604b5997624fa54498088548265a627, type: 2}
   _shockwaveEventChannel: {fileID: 11400000, guid: d7c643960879fb34185b071518d74938, type: 2}
+  _actionGate: {fileID: 8618877116158418073}
+  _cooldownChangedChannel: {fileID: 11400000, guid: 1260f5ad472bd834e8ca6b52ef32a628, type: 2}
+  _requestCooldownSnapshotChannel: {fileID: 11400000, guid: 0c4932929068bb346b7bc4a951a538c1, type: 2}
   _isCharging: 0
   _releaseTriggeredThisFrame: 0
   _suppressUntilInputRelease: 0
   _chargeStartTime: 0
+  _cooldownRemaining: 0
 --- !u!114 &8538659386609828884
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1012,6 +1031,20 @@ MonoBehaviour:
   _hasPendingRequest: 0
   _isKnockbackActive: 0
   _remainingTime: 0
+--- !u!114 &8618877116158418073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6915450752968060550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cebb0ac6b86e9ec4eba21d8a154f007c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _dashController: {fileID: 7596797448053067780}
+  _shockwaveController: {fileID: 4870898263084313753}
 --- !u!1 &7234683804352580705
 GameObject:
   m_ObjectHideFlags: 0
@@ -1156,6 +1189,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5546477128773306913}
     m_Modifications:
+    - target: {fileID: 1112000770457627546, guid: bdbeedbeaaa880547a1c3a3b803b79c1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1112000770457627546, guid: bdbeedbeaaa880547a1c3a3b803b79c1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.2
+      objectReference: {fileID: 0}
     - target: {fileID: 8470056084066338813, guid: bdbeedbeaaa880547a1c3a3b803b79c1, type: 3}
       propertyPath: m_Name
       value: VSplatter_visual
