@@ -73,6 +73,9 @@ public class VSplatterShockwaveController : MonoBehaviour
 
     private void OnDisable()
     {
+        if (_isCharging)
+            CancelCharge(false);
+
         if (_requestCooldownSnapshotChannel != null)
             _requestCooldownSnapshotChannel.OnEventRaised -= PublishCooldownSnapshot;
 

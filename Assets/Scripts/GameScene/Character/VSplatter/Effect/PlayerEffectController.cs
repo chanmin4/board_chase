@@ -7,8 +7,8 @@ using UnityEngine;
 public class PlayerEffectController : MonoBehaviour
 {
 	[SerializeField] private ParticleSystem _dashParticles = default;
-
-
+	[SerializeField] private ParticleSystem _shockwaveChargeParticles = default;
+	[SerializeField] private ParticleSystem _shockwaveParticles = default;
 	private void Start()
 	{
 	}
@@ -34,7 +34,29 @@ public class PlayerEffectController : MonoBehaviour
 		if (_dashParticles != null)
 			_dashParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
 	}
+	public void PlayShockwaveChargeParticles()
+	{
+		if (_shockwaveChargeParticles != null)
+			_shockwaveChargeParticles.Play(true);
+	}
 
+	public void StopShockwaveChargeParticles()
+	{
+		if (_shockwaveChargeParticles != null)
+			_shockwaveChargeParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+	}
+
+	public void PlayShockwaveParticles()
+	{
+		if (_shockwaveParticles != null)
+			_shockwaveParticles.Play(true);
+	}
+
+	public void StopShockwaveParticles()
+	{
+		if (_shockwaveParticles != null)
+			_shockwaveParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+	}
 	private IEnumerator ResetMinMaxCurve(ParticleSystem ps, ParticleSystem.MinMaxCurve curve)
 	{
 		while (ps.isEmitting)

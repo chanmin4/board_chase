@@ -7,11 +7,19 @@ public class VSplatterShockwaveEffectResolver : MonoBehaviour
     [Header("References")]
     [SerializeField] private VSplatterShockwaveController _controller;
     [SerializeField] private VSplatterShockwaveEventChannelSO _shockwaveEventChannel;
+    [SerializeField] private PlayerEffectController _effects;
+    [SerializeField] private VSplatter_Character_Audio _audio;
 
     private void Awake()
     {
         if (_controller == null)
             TryGetComponent(out _controller);
+
+        if (_effects == null)
+            TryGetComponent(out _effects);
+
+        if (_audio == null)
+            TryGetComponent(out _audio);
 
         if (_shockwaveEventChannel == null && _controller != null)
             _shockwaveEventChannel = _controller.ShockwaveEventChannel;
@@ -31,6 +39,8 @@ public class VSplatterShockwaveEffectResolver : MonoBehaviour
 
     private void OnDisable()
     {
+        StopChargeFeedback();
+
         if (_shockwaveEventChannel != null)
         {
             _shockwaveEventChannel.OnEventRaised -= HandleShockwaveEvent;
@@ -43,9 +53,44 @@ public class VSplatterShockwaveEffectResolver : MonoBehaviour
 
     private void HandleShockwaveEvent(VSplatterShockwaveEvent shockwaveEvent)
     {
-        if (shockwaveEvent.eventType != VSplatterShockwaveEventType.Released)
-            return;
+        switch (shockwaveEvent.eventType)
+        {
+            case VSplatterShockwaveEventType.ChargeStarted:
+                PlayChargeFeedback();
+                break;
 
+            case VSplatterShockwaveEventType.Canceled:
+                StopChargeFeedback();
+                _audio?.PlayShockwaveCancel();
+                break;
+
+            case VSplatterShockwaveEventType.Released:
+                StopChargeFeedback();
+                PlayReleaseFeedback();
+                ResolveShockwaveHit(shockwaveEvent);
+                break;
+        }
+    }
+
+    private void PlayChargeFeedback()
+    {
+        _effects?.PlayShockwaveChargeParticles();
+        _audio?.PlayShockwaveCharge();
+    }
+
+    private void StopChargeFeedback()
+    {
+        _effects?.StopShockwaveChargeParticles();
+    }
+
+    private void PlayReleaseFeedback()
+    {
+        _effects?.PlayShockwaveParticles();
+        _audio?.PlayShockwaveRelease();
+    }
+
+    private void ResolveShockwaveHit(VSplatterShockwaveEvent shockwaveEvent)
+    {
         Collider[] hits = Physics.OverlapSphere(
             shockwaveEvent.center,
             shockwaveEvent.radius,
@@ -59,8 +104,11 @@ public class VSplatterShockwaveEffectResolver : MonoBehaviour
             ? shockwaveEvent.sender.transform.root
             : transform.root;
 
-        HashSet<Damageable> damagedTargets = shockwaveEvent.applyDamage ? new HashSet<Damageable>() : null;
-        HashSet<KnockbackReceiver> knockedTargets = shockwaveEvent.applyKnockback ? new HashSet<KnockbackReceiver>() : null;
+        HashSet<Damageable> damagedTargets =
+            shockwaveEvent.applyDamage ? new HashSet<Damageable>() : null;
+
+        HashSet<KnockbackReceiver> knockedTargets =
+            shockwaveEvent.applyKnockback ? new HashSet<KnockbackReceiver>() : null;
 
         for (int i = 0; i < hits.Length; i++)
         {
@@ -68,8 +116,11 @@ public class VSplatterShockwaveEffectResolver : MonoBehaviour
             if (hit == null)
                 continue;
 
-            Damageable damageable = shockwaveEvent.applyDamage ? hit.GetComponentInParent<Damageable>() : null;
-            KnockbackReceiver knockbackReceiver = shockwaveEvent.applyKnockback ? hit.GetComponentInParent<KnockbackReceiver>() : null;
+            Damageable damageable =
+                shockwaveEvent.applyDamage ? hit.GetComponentInParent<Damageable>() : null;
+
+            KnockbackReceiver knockbackReceiver =
+                shockwaveEvent.applyKnockback ? hit.GetComponentInParent<KnockbackReceiver>() : null;
 
             if (damageable != null && damageable.transform.root == selfRoot)
                 damageable = null;
