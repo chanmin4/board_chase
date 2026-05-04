@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-public class enemyscreen : MonoBehaviour
+public class CameraManager : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Camera mainCamera;
