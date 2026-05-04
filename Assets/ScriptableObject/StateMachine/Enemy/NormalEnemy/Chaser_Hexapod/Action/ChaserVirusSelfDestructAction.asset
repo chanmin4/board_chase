@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9435fbc16c9f57c48b4c076b493cf7f9, type: 3}
+  m_Name: ChaserVirusSelfDestructAction
+  m_EditorClassIdentifier: 
+  description: self destruct with damage and virus infection
+  _explodeDelay: 0.15
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _virusPaintRadius: 3.5
+  _paintPriority: 10
+  _damageMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _triggerInteraction: 2
+  _playerHitRadius: 3
+  _healthDamage: 10
+  _infectionDamage: 10
+  _maxOverlapHits: 32
+  _explosionVfxPrefab: {fileID: 0}
+  _destroyVfxAfter: 3
+  _cameraShakeEvent: {fileID: 0}
+  _explodedEvent: {fileID: 0}
+  _audioCueEventChannel: {fileID: 0}
+  _explosionAudioCue: {fileID: 0}
+  _audioConfiguration: {fileID: 0}
+  _stopAgentOnEnter: 1
+  _killSelfAfterExplosion: 1

@@ -21,11 +21,15 @@ MonoBehaviour:
     spawnEntries:
     - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
       weight: 1
+    - archetype: {fileID: 11400000, guid: 9525a7d165e704845acd05bfaf60c467, type: 2}
+      weight: 1
   - stageIndex: 1
     displayName: 1_Stage
     sectorMinAlive: 0
-    sectorMaxAlive: 3
+    sectorMaxAlive: 1
     spawnIntervalSeconds: 3
     spawnEntries:
     - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
+      weight: 1
+    - archetype: {fileID: 11400000, guid: 9525a7d165e704845acd05bfaf60c467, type: 2}
       weight: 1

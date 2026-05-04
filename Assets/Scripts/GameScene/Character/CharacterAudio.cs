@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class CharacterAudio : MonoBehaviour
@@ -10,7 +8,29 @@ public class CharacterAudio : MonoBehaviour
 	
 	protected void PlayAudio(AudioCueSO audioCue, AudioConfigurationSO audioConfiguration, Vector3 positionInSpace = default)
 	{
-		if (_gameState.CurrentGameState != GameState.Cutscene)
-			_sfxEventChannel.RaisePlayEvent(audioCue, audioConfiguration, positionInSpace);
+		if (!CanPlayAudio(audioCue, audioConfiguration))
+			return;
+
+		_sfxEventChannel.RaisePlayEvent(audioCue, audioConfiguration, positionInSpace);
+	}
+
+	private bool CanPlayAudio(AudioCueSO audioCue, AudioConfigurationSO audioConfiguration)
+	{
+		if (!isActiveAndEnabled)
+			return false;
+
+		if (audioCue == null)
+			return false;
+
+		if (audioConfiguration == null)
+			return false;
+
+		if (_sfxEventChannel == null)
+			return false;
+
+		if (_gameState != null && _gameState.CurrentGameState == GameState.Cutscene)
+			return false;
+
+		return true;
 	}
 }

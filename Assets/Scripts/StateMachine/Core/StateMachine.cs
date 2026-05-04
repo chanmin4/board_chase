@@ -100,12 +100,18 @@ namespace VSplatter.StateMachine
 
 		private void Update()
 		{
+			if (_currentState == null)
+			{
+				Debug.LogError($"StateMachine has no current state. owner={name}", this);
+				enabled = false;
+				return;
+			}
+
 			if (_currentState.TryGetTransition(out var transitionState))
 				Transition(transitionState);
 
 			_currentState.OnUpdate();
 		}
-
 		private void Transition(State transitionState)
 		{
 			string previousStateName = GetStateName(_currentState);

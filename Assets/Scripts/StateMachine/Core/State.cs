@@ -36,8 +36,11 @@ namespace VSplatter.StateMachine
 
 		public void OnUpdate()
 		{
+			if (_actions == null)
+				return;
+
 			for (int i = 0; i < _actions.Length; i++)
-				_actions[i].OnUpdate();
+				_actions[i]?.OnUpdate();
 		}
 
 		public void OnStateExit()
@@ -55,12 +58,17 @@ namespace VSplatter.StateMachine
 		{
 			state = null;
 
-			for (int i = 0; i < _transitions.Length; i++)
-				if (_transitions[i].TryGetTransiton(out state))
-					break;
+			if (_transitions == null)
+				return false;
 
 			for (int i = 0; i < _transitions.Length; i++)
-				_transitions[i].ClearConditionsCache();
+			{
+				if (_transitions[i] != null && _transitions[i].TryGetTransiton(out state))
+					break;
+			}
+
+			for (int i = 0; i < _transitions.Length; i++)
+				_transitions[i]?.ClearConditionsCache();
 
 			return state != null;
 		}
