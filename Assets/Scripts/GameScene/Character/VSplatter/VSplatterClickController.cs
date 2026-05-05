@@ -68,10 +68,8 @@ public class VSplatterClickController : MonoBehaviour
             _wasHoldingLastFrame = true;
             return;
         }
-
         if (!_aimAction.CanFireNow)
             return;
-
         FireMode mode = holdPaint ? FireMode.Paint : FireMode.Attack;
 
         switch (mode)

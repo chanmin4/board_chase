@@ -68,14 +68,6 @@ public class VSplatterAttack : MonoBehaviour
         if (!gotAimPoint)
             return false;
 
-        if (!_range.IsWithinRange(aimPoint))
-        {
-            if (debugLogs)
-                Debug.Log("[VSplatterAttack] out of range");
-
-            return false;
-        }
-
         Vector3 rangeOrigin = _range.RangeOrigin != null
             ? _range.RangeOrigin.position
             : transform.position;
@@ -89,7 +81,6 @@ public class VSplatterAttack : MonoBehaviour
         rangeDirection.Normalize();
 
         Vector3 rangeEndPoint = rangeOrigin + rangeDirection * CurrentWeapon.MaxRange;
-        rangeEndPoint.y = aimPoint.y;
 
         Transform fireOrigin = VisualFireOrigin != null
             ? VisualFireOrigin
@@ -97,7 +88,10 @@ public class VSplatterAttack : MonoBehaviour
 
         Vector3 visualStart = fireOrigin.position;
 
-        Vector3 visualDirection = rangeEndPoint - visualStart;
+        Vector3 visualTarget = rangeEndPoint;
+        visualTarget.y = visualStart.y;
+
+        Vector3 visualDirection = visualTarget - visualStart;
         if (visualDirection.sqrMagnitude < 0.0001f)
             return false;
 

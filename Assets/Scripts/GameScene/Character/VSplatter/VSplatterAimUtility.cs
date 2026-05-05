@@ -86,4 +86,21 @@ public static class VSplatterAimUtility
         target.y = 0f;
         return (target - origin).sqrMagnitude <= maxRange * maxRange;
     }
+    public static Vector3 ClampFlatPointToRange(Vector3 origin, Vector3 target, float maxRange)
+    {
+        maxRange = Mathf.Max(0f, maxRange);
+
+        Vector3 flatDelta = target - origin;
+        flatDelta.y = 0f;
+
+        if (flatDelta.sqrMagnitude < 0.0001f)
+            return target;
+
+        if (flatDelta.sqrMagnitude <= maxRange * maxRange)
+            return target;
+
+        Vector3 clamped = origin + flatDelta.normalized * maxRange;
+        clamped.y = target.y;
+        return clamped;
+    }
 }

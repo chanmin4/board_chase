@@ -43,7 +43,7 @@ public class PaintBullet : MonoBehaviour
         _visualTarget = targetWorld;
         _gameplayPosition = gameplayStartPosition;
         _visualStartPosition = visualStartPosition;
-
+        _visualTarget.y = _visualStartPosition.y;
         gameplayDirection.y = 0f;
         if (gameplayDirection.sqrMagnitude < 0.0001f)
             gameplayDirection = transform.forward;

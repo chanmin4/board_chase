@@ -190,6 +190,16 @@ public class VSplatterRange : MonoBehaviour
             _lineRenderer.SetPosition(i, pos);
         }
     }
+    public Vector3 ClampToRange(Vector3 worldPoint)
+    {
+        if (CurrentWeapon == null)
+            return worldPoint;
+
+        return VSplatterAimUtility.ClampFlatPointToRange(
+            RangeOrigin.position,
+            worldPoint,
+            CurrentWeapon.MaxRange);
+    }
 
     private void OnAttackStarted() => _attackHeld = true;
     private void OnAttackCanceled() => _attackHeld = false;

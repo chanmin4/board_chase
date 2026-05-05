@@ -99,26 +99,21 @@ public class VSplatterPaint : MonoBehaviour
         if (!gotAimPoint)
             return false;
 
-        if (!_range.IsWithinRange(aimPoint))
-        {
-            if (debugLogs)
-                Debug.Log("[VSplatterPaint] out of range");
-
-            return false;
-        }
+        Vector3 paintTarget = _range.ClampToRange(aimPoint);
 
         Transform fireOrigin = VisualFireOrigin != null
             ? VisualFireOrigin
             : GameplayFireOrigin != null ? GameplayFireOrigin : transform;
+
         Vector3 visualStart = fireOrigin.position;
-        Vector3 visualDirection = aimPoint - visualStart;
+        Vector3 visualDirection = paintTarget - visualStart;
 
         if (visualDirection.sqrMagnitude < 0.0001f)
             return false;
 
         visualDirection.Normalize();
 
-        Vector3 gameplayDirection = aimPoint - visualStart;
+        Vector3 gameplayDirection = paintTarget - visualStart;
         gameplayDirection.y = 0f;
 
         if (gameplayDirection.sqrMagnitude < 0.0001f)
@@ -141,7 +136,7 @@ public class VSplatterPaint : MonoBehaviour
             gameplayStart,
             gameplayDirection,
             visualSpawn,
-            aimPoint,
+            paintTarget,
             bulletConfig.Speed,
             bulletConfig.CastRadius,
             bulletConfig.MaxLifetime,
@@ -152,7 +147,6 @@ public class VSplatterPaint : MonoBehaviour
             CurrentWeapon.PaintRadiusWorld,
             CurrentWeapon.PaintPriority,
             this);
-
         if (debugDraw)
             Debug.DrawLine(visualSpawn, aimPoint, Color.cyan, debugDrawDuration);
 

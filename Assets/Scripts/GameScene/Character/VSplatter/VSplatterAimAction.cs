@@ -61,11 +61,9 @@ public class VSplatterAimAction : MonoBehaviour
     public bool CanFireNow =>
         CurrentWeapon != null &&
         _hasAimPoint &&
-        _isAimWithinRange &&
         !_isReloading &&
         _currentAmmo > 0 &&
         Time.time >= _nextFireTime;
-
     public float Cooldown01
     {
         get

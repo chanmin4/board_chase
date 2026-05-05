@@ -134,6 +134,43 @@ public class MaskRenderManager : MonoBehaviour
 
         return false;
     }
+    public bool RequestCapsuleTrail(
+    PaintChannel channel,
+    Vector3 fromWorld,
+    Vector3 toWorld,
+    float radiusWorld,
+    int priority = 0,
+    object sender = null)
+    {
+        Vector3 from = fromWorld;
+        Vector3 to = toWorld;
+
+        from.y = 0f;
+        to.y = 0f;
+
+        float distance = Vector3.Distance(from, to);
+
+        if (distance <= 0.001f)
+            return RequestCircle(channel, toWorld, radiusWorld, priority, sender);
+
+        float spacing = Mathf.Max(radiusWorld * 0.75f, 0.05f);
+        int steps = Mathf.Max(1, Mathf.CeilToInt(distance / spacing));
+
+        bool acceptedAny = false;
+
+        for (int i = 0; i <= steps; i++)
+        {
+            float t = i / (float)steps;
+            Vector3 position = Vector3.Lerp(fromWorld, toWorld, t);
+
+            if (RequestCircle(channel, position, radiusWorld, priority, sender))
+                acceptedAny = true;
+        }
+
+        return acceptedAny;
+    }
+
+    
 
     public bool RequestCircle(PaintChannel channel,Vector3 worldPos,
         float radiusWorld,int priority = 0,object sender = null)
