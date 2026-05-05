@@ -658,6 +658,8 @@ GameObject:
   - component: {fileID: 7683861469152231654}
   - component: {fileID: 8618877116158418073}
   - component: {fileID: 9158177261562338904}
+  - component: {fileID: 69354217320293197}
+  - component: {fileID: 681943115171059239}
   m_Layer: 3
   m_Name: VSplatter
   m_TagString: Player
@@ -687,6 +689,7 @@ Transform:
   - {fileID: 7076542028121995548}
   - {fileID: 3096252108195798336}
   - {fileID: 9021104806671131695}
+  - {fileID: 7673211414104050131}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &8994133820209950284
@@ -1051,6 +1054,67 @@ MonoBehaviour:
   _dashParticles: {fileID: 7580835495640183404}
   _shockwaveChargeParticles: {fileID: 3093609397552976841}
   _shockwaveParticles: {fileID: 1354689589682189977}
+--- !u!114 &69354217320293197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6915450752968060550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c95d6a2f9e1ad047b897b72770ac1d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _catalog: {fileID: 11400000, guid: 1f16ae3dba8fdba4498a2e060fa83dc8, type: 2}
+  _upgradeState: {fileID: 5839303864436758566}
+  _weaponHolder: {fileID: 549010143910834747}
+  _fallbackWeapon: {fileID: 11400000, guid: 57d2b1b8ac5f3d74887e3f23ce5b0fe8, type: 2}
+  _horizontalMoveAction: {fileID: 11400000, guid: c929b038ede507e4589a54bfae2c31ec, type: 2}
+  _healthConfig: {fileID: 11400000, guid: 4a31c5d403836f34e985dbcadd8d8453, type: 2}
+  _dashConfig: {fileID: 11400000, guid: babb0e12fafadad4d8ac58746ac93544, type: 2}
+  _shockwaveConfig: {fileID: 11400000, guid: f604b5997624fa54498088548265a627, type: 2}
+  _baseOccupationWinThreshold: 0.5
+  _statsChangedChannel: {fileID: 11400000, guid: 42bc966d68e57424095ada9dc20cbcf0, type: 2}
+  _current:
+    weapon:
+      attackDamage: 0
+      namedBossDamageMultiplier: 0
+      shotsPerSecond: 0
+      reloadSpeedMultiplier: 0
+      reloadDurationSeconds: 0
+      magazineSize: 0
+    paint:
+      paintRadius: 0
+      occupationWinThreshold: 0
+    movement:
+      moveSpeed: 0
+      dashDistanceMultiplier: 0
+    survival:
+      maxHealth: 0
+    shockwave:
+      cooldownSeconds: 0
+    features:
+      leaveVaccineOnEnemyKill: 0
+      paintBulletLeavesTrail: 0
+      shockwavePaintsVaccine: 0
+--- !u!114 &681943115171059239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6915450752968060550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b160f74c6f683f64886430f67a0a64f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
+  _catalog: {fileID: 11400000, guid: 1f16ae3dba8fdba4498a2e060fa83dc8, type: 2}
+  _upgradeStateReadyChannel: {fileID: 11400000, guid: ca501f6727f40e1409fcde06e77a8d24, type: 2}
+  _panelReadyChannel: {fileID: 11400000, guid: dca2e67dce2595f47b050c62406e7ec3, type: 2}
+  _pauseGameWhileOpen: 1
 --- !u!1 &7234683804352580705
 GameObject:
   m_ObjectHideFlags: 0
@@ -1129,6 +1193,56 @@ MonoBehaviour:
   _reward: {fileID: 11400000, guid: cf0d121e2a477d14ab7ec44ed3ab1e4d, type: 2}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
   _xpGainChannel: {fileID: 11400000, guid: ebfba834e3329e04f86812146cb2fad1, type: 2}
+--- !u!1 &8713701942454541855
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7673211414104050131}
+  - component: {fileID: 5839303864436758566}
+  m_Layer: 3
+  m_Name: PlayerUpgradeState
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7673211414104050131
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8713701942454541855}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5546477128773306913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5839303864436758566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8713701942454541855}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64b39b4b641db43468e41e1d776477f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _upgradeStateReadyChannel: {fileID: 11400000, guid: ca501f6727f40e1409fcde06e77a8d24, type: 2}
+  _unspentPoints: 0
+  _removalLevel: 0
+  _occupationLevel: 0
+  _controlLevel: 0
+  _bossUpgradePicks: []
 --- !u!1 &9046344662812657720
 GameObject:
   m_ObjectHideFlags: 0

@@ -241,10 +241,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _rules: {fileID: 11400000, guid: 0821e15d7f15fae4fbd0eb182bf6f11d, type: 2}
+  _upgradePointRules: {fileID: 11400000, guid: fbf6e2b729bf1f14f8b0cdb5dad407cc, type: 2}
   _startingLevel: 1
   _xpGainChannel: {fileID: 11400000, guid: ebfba834e3329e04f86812146cb2fad1, type: 2}
   _stageProgressChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
   _requestLevelSnapshotChannel: {fileID: 11400000, guid: b557594de7cdbcb41b8a50bb5c6a4f12, type: 2}
+  _upgradeStateReadyChannel: {fileID: 11400000, guid: ca501f6727f40e1409fcde06e77a8d24, type: 2}
   _levelSnapshotChannel: {fileID: 11400000, guid: 42df1a0bbfb57504ba696cdb2357908c, type: 2}
   _level: 0
   _currentXp: 0
@@ -1526,7 +1528,7 @@ MonoBehaviour:
   maskTextureProperty: _MaskTex
   pixelsPerUnit: 16
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
-  yOffset: 0.3
+  yOffset: 0.5
   virusAboveVaccine: 1
 --- !u!4 &1225504681
 Transform:

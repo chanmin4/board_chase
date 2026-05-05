@@ -19,6 +19,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction PaintCanceledEvent = delegate { };
 	public event UnityAction ReloadEvent=delegate{};
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
+	public event UnityAction UpgradeStatsEvent = delegate { };
+	
 	//public event UnityAction InventoryActionButtonEvent = delegate { };
 	//public event UnityAction SaveActionButtonEvent = delegate { };
 	//public event UnityAction ResetActionButtonEvent = delegate { };
@@ -120,6 +122,20 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		{
 			Debug.Log("[InputReader] InteractEvent invoked.");
 			InteractEvent.Invoke();
+		}
+	}
+	public void OnUpgradeStats(InputAction.CallbackContext context)
+	{
+		if (context.phase == InputActionPhase.Performed)
+		{
+			Debug.Log($"[InputReader] upgradestats performed. GameState={_gameStateManager.CurrentGameState}");
+		}
+
+		if ((context.phase == InputActionPhase.Performed)
+			&& (_gameStateManager.CurrentGameState == GameState.Gameplay))
+		{
+			Debug.Log("[InputReader] upgradestats event invoked.");
+			UpgradeStatsEvent.Invoke();
 		}
 	}
     public void OnShockwave(InputAction.CallbackContext context)

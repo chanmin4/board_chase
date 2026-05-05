@@ -5,12 +5,14 @@ public class PlayerLevelManager : MonoBehaviour
 {
     [Header("Rules")]
     [SerializeField] private PlayerLevelRulesSO _rules;
+    [SerializeField] private PlayerLevelUpgradePointRulesSO _upgradePointRules;
     [SerializeField] private int _startingLevel = 0;
 
     [Header("Listening To")]
     [SerializeField] private PlayerExperienceGainEventChannelSO _xpGainChannel;
     [SerializeField] private StageProgressSnapshotEventChannelSO _stageProgressChannel;
     [SerializeField] private VoidEventChannelSO _requestLevelSnapshotChannel;
+    [SerializeField] private PlayerUpgradeStateReadyEventChannelSO _upgradeStateReadyChannel;
 
     [Header("Broadcasting On")]
     [SerializeField] private PlayerLevelSnapshotEventChannelSO _levelSnapshotChannel;
@@ -20,6 +22,8 @@ public class PlayerLevelManager : MonoBehaviour
     [SerializeField] private float _currentXp;
     [SerializeField] private int _currentStageIndex;
     [SerializeField] private float _stageEarnedXp;
+
+    private PlayerUpgradeState _upgradeState;
 
     public int Level => _level;
     public float CurrentXp => _currentXp;
@@ -40,6 +44,14 @@ public class PlayerLevelManager : MonoBehaviour
         if (_requestLevelSnapshotChannel != null)
             _requestLevelSnapshotChannel.OnEventRaised += PublishSnapshot;
 
+        if (_upgradeStateReadyChannel != null)
+        {
+            _upgradeStateReadyChannel.OnEventRaised += OnUpgradeStateReady;
+
+            if (_upgradeStateReadyChannel.Current != null)
+                OnUpgradeStateReady(_upgradeStateReadyChannel.Current);
+        }
+
         PublishSnapshot();
     }
 
@@ -53,6 +65,16 @@ public class PlayerLevelManager : MonoBehaviour
 
         if (_requestLevelSnapshotChannel != null)
             _requestLevelSnapshotChannel.OnEventRaised -= PublishSnapshot;
+
+        if (_upgradeStateReadyChannel != null)
+            _upgradeStateReadyChannel.OnEventRaised -= OnUpgradeStateReady;
+
+        _upgradeState = null;
+    }
+
+    private void OnUpgradeStateReady(PlayerUpgradeState upgradeState)
+    {
+        _upgradeState = upgradeState;
     }
 
     private void OnStageProgressChanged(StageProgressSnapshot snapshot)
@@ -110,7 +132,24 @@ public class PlayerLevelManager : MonoBehaviour
 
             _currentXp -= requiredXp;
             _level++;
+
+            GrantUpgradePointsForLevel(_level);
         }
+    }
+
+    private void GrantUpgradePointsForLevel(int reachedLevel)
+    {
+        if (_upgradeState == null)
+            return;
+
+        int points = _upgradePointRules != null
+            ? _upgradePointRules.GetPointsForLevel(reachedLevel)
+            : 1;
+
+        if (points <= 0)
+            return;
+
+        _upgradeState.AddPoints(points);
     }
 
     private void PublishSnapshot()
