@@ -8,7 +8,7 @@ public abstract class BulletSO : ScriptableObject
     [Header("Flight")]
     [Min(0.1f)]
     [SerializeField] private float speed = 18f;
-
+    [Tooltip("탄환 충돌 판정 반경 총알이 벽/충돌 레이어에 얼마나 두껍게 맞는지 담당")]
     [Min(0.001f)]
     [SerializeField] private float castRadius = 0.08f;
 

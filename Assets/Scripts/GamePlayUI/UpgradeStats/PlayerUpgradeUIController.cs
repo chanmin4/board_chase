@@ -139,6 +139,15 @@ public class PlayerUpgradeUIController : MonoBehaviour
 
     private void HandlePanelReady(PlayerUpgradePanelUI panel)
     {
+        if (panel == null)
+        {
+            if (_panel != null)
+                _panel.SetCloseRequested(null);
+
+            _panel = null;
+            return;
+        }
+
         if (_panel == panel)
             return;
 
@@ -146,14 +155,11 @@ public class PlayerUpgradeUIController : MonoBehaviour
 
         _panel = panel;
 
-        if (_panel != null)
-        {
-            _panel.SetCloseRequested(Close);
-            _panel.SetVisible(_isOpen);
+        _panel.SetCloseRequested(Close);
+        _panel.SetVisible(_isOpen);
 
-            if (_isOpen)
-                Refresh();
-        }
+        if (_isOpen)
+            Refresh();
     }
 
     private void UnbindUpgradeState()
@@ -167,14 +173,10 @@ public class PlayerUpgradeUIController : MonoBehaviour
     private void UnbindPanel()
     {
         if (_panel != null)
-        {
             _panel.SetCloseRequested(null);
-            _panel.SetVisible(false);
-        }
 
         _panel = null;
     }
-
     private void PauseTime()
     {
         _previousTimeScale = Time.timeScale;

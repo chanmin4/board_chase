@@ -68,19 +68,7 @@ public class VSplatterAttack : MonoBehaviour
         if (!gotAimPoint)
             return false;
 
-        Vector3 rangeOrigin = _range.RangeOrigin != null
-            ? _range.RangeOrigin.position
-            : transform.position;
-
-        Vector3 rangeDirection = aimPoint - rangeOrigin;
-        rangeDirection.y = 0f;
-
-        if (rangeDirection.sqrMagnitude < 0.0001f)
-            return false;
-
-        rangeDirection.Normalize();
-
-        Vector3 rangeEndPoint = rangeOrigin + rangeDirection * CurrentWeapon.MaxRange;
+        Ray aimRay = _aimCamera.ScreenPointToRay(Input.mousePosition);
 
         Transform fireOrigin = VisualFireOrigin != null
             ? VisualFireOrigin
@@ -88,32 +76,40 @@ public class VSplatterAttack : MonoBehaviour
 
         Vector3 visualStart = fireOrigin.position;
 
-        Vector3 visualTarget = rangeEndPoint;
-        visualTarget.y = visualStart.y;
+        if (!VSplatterAimUtility.TryGetPointOnYPlane(
+                aimRay,
+                visualStart.y,
+                out Vector3 visualAimPoint))
+        {
+            return false;
+        }
 
-        Vector3 visualDirection = visualTarget - visualStart;
+        Vector3 visualDirection = visualAimPoint - visualStart;
+        visualDirection.y = 0f;
+
         if (visualDirection.sqrMagnitude < 0.0001f)
             return false;
 
         visualDirection.Normalize();
 
-        Vector3 gameplayDirection = rangeEndPoint - visualStart;
-        gameplayDirection.y = 0f;
+        Vector3 gameplayDirection = visualDirection;
 
-        if (gameplayDirection.sqrMagnitude < 0.0001f)
-            return false;
-
-        gameplayDirection.Normalize();
+        Vector3 rangeOrigin = _range.RangeOrigin != null
+            ? _range.RangeOrigin.position
+            : transform.position;
 
         Vector3 gameplayStart = visualStart + gameplayDirection * bulletConfig.SpawnOffset;
         Vector3 visualSpawn = visualStart + visualDirection * bulletConfig.SpawnOffset;
 
-        float maxDistance = Vector3.Distance(
-            new Vector3(gameplayStart.x, 0f, gameplayStart.z),
-            new Vector3(rangeEndPoint.x, 0f, rangeEndPoint.z));
-
-        if (maxDistance <= 0.01f)
+        if (!VSplatterAimUtility.TryGetFlatCircleExitDistance(
+                gameplayStart,
+                gameplayDirection,
+                rangeOrigin,
+                CurrentWeapon.MaxRange,
+                out float maxDistance))
+        {
             return false;
+        }
 
         Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
 

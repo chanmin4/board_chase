@@ -123,7 +123,7 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 1.5
+      scalar: 1
       minScalar: 5
       maxCurve:
         serializedVersion: 2
@@ -4922,11 +4922,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f26f9cf43dec9644a41d873e2ccc825, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
   _interactionCollider: {fileID: 253145818277744298}
   _arrivalPoint: {fileID: 8769677269065561372}
   _particleRoot: {fileID: 2008294525896661468}
-  _playerTag: Player
 --- !u!1 &650159960469670028
 GameObject:
   m_ObjectHideFlags: 0
@@ -4969,8 +4967,8 @@ ParticleSystem:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 650159960469670028}
   serializedVersion: 8
-  lengthInSec: 3
-  simulationSpeed: 1
+  lengthInSec: 5
+  simulationSpeed: 0.5
   stopAction: 0
   cullingMode: 3
   ringBufferMode: 0
@@ -9898,7 +9896,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4324722744311967769
 Transform:
   m_ObjectHideFlags: 0
@@ -24750,6 +24748,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4148223379062128469, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: playOnAwake
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7841147117130861121, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.5
@@ -24813,6 +24815,38 @@ PrefabInstance:
     - target: {fileID: 7844589437280530735, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935312067023313545, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: lengthInSec
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935312067023313545, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: playOnAwake
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935312067023313545, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: simulationSpeed
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935312067023313545, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: ColorBySpeedModule.enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935312067023313545, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: InitialModule.startLifetime.scalar
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935329487540200747, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: playOnAwake
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935329487540200747, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: simulationSpeed
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7935329487540200747, guid: 0311ec0f6dbf71a428e5d043581ebae9, type: 3}
+      propertyPath: InitialModule.startLifetime.scalar
+      value: 1.5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

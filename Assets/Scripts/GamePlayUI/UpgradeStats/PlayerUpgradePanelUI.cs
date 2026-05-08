@@ -94,7 +94,6 @@ public class PlayerUpgradePanelUI : MonoBehaviour
         if (!visible)
             _tooltip?.Hide();
 
-        gameObject.SetActive(true);
         _canvasGroup.alpha = visible ? 1f : 0f;
         _canvasGroup.interactable = visible;
         _canvasGroup.blocksRaycasts = visible;

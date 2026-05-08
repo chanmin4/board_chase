@@ -103,4 +103,56 @@ public static class VSplatterAimUtility
         clamped.y = target.y;
         return clamped;
     }
+    public static bool TryGetPointOnYPlane(Ray ray, float planeY, out Vector3 worldPoint)
+    {
+        worldPoint = default;
+
+        Plane plane = new Plane(Vector3.up, new Vector3(0f, planeY, 0f));
+
+        if (!plane.Raycast(ray, out float enter))
+            return false;
+
+        if (enter < 0f)
+            return false;
+
+        worldPoint = ray.GetPoint(enter);
+        return true;
+    }
+
+    public static bool TryGetFlatCircleExitDistance(
+        Vector3 start,
+        Vector3 direction,
+        Vector3 center,
+        float radius,
+        out float distance)
+    {
+        distance = 0f;
+
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f)
+            return false;
+
+        direction.Normalize();
+
+        Vector2 s = new Vector2(start.x - center.x, start.z - center.z);
+        Vector2 d = new Vector2(direction.x, direction.z);
+
+        float b = 2f * Vector2.Dot(s, d);
+        float c = Vector2.Dot(s, s) - radius * radius;
+        float discriminant = b * b - 4f * c;
+
+        if (discriminant < 0f)
+            return false;
+
+        float sqrt = Mathf.Sqrt(discriminant);
+        float t0 = (-b - sqrt) * 0.5f;
+        float t1 = (-b + sqrt) * 0.5f;
+
+        float exit = Mathf.Max(t0, t1);
+        if (exit <= 0.001f)
+            return false;
+
+        distance = exit;
+        return true;
+    }
 }

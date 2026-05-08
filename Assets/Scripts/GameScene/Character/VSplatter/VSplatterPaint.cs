@@ -99,6 +99,8 @@ public class VSplatterPaint : MonoBehaviour
         if (!gotAimPoint)
             return false;
 
+        Ray aimRay = _aimCamera.ScreenPointToRay(Input.mousePosition);
+
         Vector3 paintTarget = _range.ClampToRange(aimPoint);
 
         Transform fireOrigin = VisualFireOrigin != null
@@ -106,13 +108,8 @@ public class VSplatterPaint : MonoBehaviour
             : GameplayFireOrigin != null ? GameplayFireOrigin : transform;
 
         Vector3 visualStart = fireOrigin.position;
-        Vector3 visualDirection = paintTarget - visualStart;
 
-        if (visualDirection.sqrMagnitude < 0.0001f)
-            return false;
-
-        visualDirection.Normalize();
-
+        // 실제 판정/페인트는 paintTarget 방향으로 간다.
         Vector3 gameplayDirection = paintTarget - visualStart;
         gameplayDirection.y = 0f;
 
@@ -122,10 +119,38 @@ public class VSplatterPaint : MonoBehaviour
         gameplayDirection.Normalize();
 
         Vector3 gameplayStart = visualStart + gameplayDirection * bulletConfig.SpawnOffset;
+
+        // 비주얼 방향은 크로스헤어 중앙 Ray 기준으로 잡는다.
+        Vector3 visualAimPoint;
+        if (!VSplatterAimUtility.TryGetPointOnYPlane(
+                aimRay,
+                visualStart.y,
+                out visualAimPoint))
+        {
+            visualAimPoint = paintTarget;
+            visualAimPoint.y = visualStart.y;
+        }
+
+        Vector3 visualDirection = visualAimPoint - visualStart;
+        visualDirection.y = 0f;
+
+        if (visualDirection.sqrMagnitude < 0.0001f)
+            visualDirection = gameplayDirection;
+
+        visualDirection.Normalize();
+
         Vector3 visualSpawn = visualStart + visualDirection * bulletConfig.SpawnOffset;
 
-        Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
+        // 중요: visualTarget을 raw aim point로 쓰면 멀리 날아감.
+        // gameplay 탄착 거리만큼만 비주얼도 날아가게 잘라준다.
+        float maxVisualDistance = Vector3.Distance(
+            new Vector3(gameplayStart.x, 0f, gameplayStart.z),
+            new Vector3(paintTarget.x, 0f, paintTarget.z));
 
+        Vector3 visualTarget = visualSpawn + visualDirection * maxVisualDistance;
+
+        Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
+        
         PaintBullet bullet = Instantiate(
             bulletConfig.BulletPrefab,
             visualSpawn,
@@ -136,6 +161,7 @@ public class VSplatterPaint : MonoBehaviour
             gameplayStart,
             gameplayDirection,
             visualSpawn,
+            visualTarget,
             paintTarget,
             bulletConfig.Speed,
             bulletConfig.CastRadius,

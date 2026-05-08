@@ -27,7 +27,8 @@ public class PaintBullet : MonoBehaviour
         Vector3 gameplayStartPosition,
         Vector3 gameplayDirection,
         Vector3 visualStartPosition,
-        Vector3 targetWorld,
+        Vector3 visualTargetWorld,
+        Vector3 paintTargetWorld,
         float speed,
         float castRadius,
         float maxLifetime,
@@ -38,12 +39,11 @@ public class PaintBullet : MonoBehaviour
         float paintRadiusWorld,
         int paintPriority,
         object sender)
-    {
-        _paintTarget = targetWorld;
-        _visualTarget = targetWorld;
+        {
+        _paintTarget = paintTargetWorld;
+        _visualTarget = visualTargetWorld;
         _gameplayPosition = gameplayStartPosition;
         _visualStartPosition = visualStartPosition;
-        _visualTarget.y = _visualStartPosition.y;
         gameplayDirection.y = 0f;
         if (gameplayDirection.sqrMagnitude < 0.0001f)
             gameplayDirection = transform.forward;
