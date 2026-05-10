@@ -8,11 +8,11 @@ public enum SectorContestState { None, PlayerCapturing, VirusCapturing }
 public enum SectorSpecialState
 {
     None = 0,
-    NamedActive = 1 << 0,
-    BossActive = 1 << 1,
-    MonsterLocked = 1 << 2
+    NamedReserved = 1 << 0,
+    NamedActive = 1 << 1,
+    BossActive = 1 << 2,
+    MonsterLocked = 1 << 3
 }
-
 [Serializable]
 public struct SectorOccupancySnapshot
 {
@@ -48,7 +48,7 @@ public class SectorOccupancy : MonoBehaviour
     private float _contestElapsed;
 
     public SectorOccupancySnapshot CurrentSnapshot => BuildSnapshot();
-
+    public SectorSpecialState SpecialState => _specialState;
     private void Awake()
     {
         if (!_paint) _paint = GetComponent<SectorPaint>();
@@ -175,5 +175,31 @@ public class SectorOccupancy : MonoBehaviour
         }
 
         return samples > 0 ? Mathf.Clamp01(sum / (255f * samples)) : 0f;
+    }
+    public void SetSpecialState(SectorSpecialState specialState)
+    {
+        _specialState = specialState;
+        Publish();
+    }
+
+    public void AddSpecialState(SectorSpecialState specialState)
+    {
+        _specialState |= specialState;
+        Publish();
+    }
+
+    public void RemoveSpecialState(SectorSpecialState specialState)
+    {
+        _specialState &= ~specialState;
+        Publish();
+    }
+
+    public void ForceOwnerAndRatios(SectorOwner owner, float playerRatio, float virusRatio)
+    {
+        _owner = owner;
+        _playerRatio = Mathf.Clamp01(playerRatio);
+        _virusRatio = Mathf.Clamp01(virusRatio);
+        ResetContest();
+        Publish();
     }
 }

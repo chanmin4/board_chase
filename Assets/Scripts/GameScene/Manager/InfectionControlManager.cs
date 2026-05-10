@@ -6,11 +6,16 @@ public class InfectionControlManager : MonoBehaviour
     [SerializeField] private SectorOccupancySummaryEventChannelSO _summaryChangedChannel;
     [SerializeField] private InfectionControlEventChannelSO _infectionControlChangedChannel;
 
+    [Header("Named Pressure")]
+    [Tooltip("Named sector phase event. Used to add named-specific control drain.")]
+    [SerializeField] private NamedSectorPhaseEventChannelSO _namedSectorPhaseChannel;
+
     [Header("Game Over")]
     [SerializeField] private VoidEventChannelSO _gameOverChannel;
 
     private float _currentControl;
-    private float _drainPerSecond;
+    private float _sectorDrainPerSecond;
+    private float _namedDrainPerSecond;
     private bool _isDepleted;
 
     private void Awake()
@@ -24,6 +29,9 @@ public class InfectionControlManager : MonoBehaviour
         if (_summaryChangedChannel != null)
             _summaryChangedChannel.OnEventRaised += OnSectorSummaryChanged;
 
+        if (_namedSectorPhaseChannel != null)
+            _namedSectorPhaseChannel.OnEventRaised += OnNamedSectorPhaseChanged;
+
         Publish();
     }
 
@@ -31,14 +39,21 @@ public class InfectionControlManager : MonoBehaviour
     {
         if (_summaryChangedChannel != null)
             _summaryChangedChannel.OnEventRaised -= OnSectorSummaryChanged;
+
+        if (_namedSectorPhaseChannel != null)
+            _namedSectorPhaseChannel.OnEventRaised -= OnNamedSectorPhaseChanged;
     }
 
     private void Update()
     {
-        if (_rules == null || _isDepleted || _drainPerSecond <= 0f)
+        if (_rules == null || _isDepleted)
             return;
 
-        _currentControl = Mathf.Max(0f, _currentControl - _drainPerSecond * Time.deltaTime);
+        float totalDrainPerSecond = ResolveTotalDrainPerSecond();
+        if (totalDrainPerSecond <= 0f)
+            return;
+
+        _currentControl = Mathf.Max(0f, _currentControl - totalDrainPerSecond * Time.deltaTime);
 
         if (_currentControl <= 0f)
         {
@@ -57,7 +72,16 @@ public class InfectionControlManager : MonoBehaviour
         if (_rules == null)
             return;
 
-        _drainPerSecond = _rules.CalculateDrainPerSecond(summary);
+        _sectorDrainPerSecond = _rules.CalculateDrainPerSecond(summary);
+        Publish();
+    }
+
+    private void OnNamedSectorPhaseChanged(NamedSectorPhaseChange change)
+    {
+        _namedDrainPerSecond = _rules != null
+            ? _rules.GetNamedPhaseDrainPerSecond(change.Phase)
+            : 0f;
+
         Publish();
     }
 
@@ -86,17 +110,24 @@ public class InfectionControlManager : MonoBehaviour
             Recover(_rules.RecoverOnSectorExpanded);
     }
 
+    private float ResolveTotalDrainPerSecond()
+    {
+        return Mathf.Max(0f, _sectorDrainPerSecond + _namedDrainPerSecond);
+    }
+
     private void Publish()
     {
         if (_infectionControlChangedChannel == null || _rules == null)
             return;
+
+        float totalDrainPerSecond = ResolveTotalDrainPerSecond();
 
         _infectionControlChangedChannel.RaiseEvent(new InfectionControlSnapshot
         {
             current = _currentControl,
             max = _rules.MaxControl,
             normalized = _rules.MaxControl > 0f ? _currentControl / _rules.MaxControl : 0f,
-            drainPerSecond = _drainPerSecond
+            drainPerSecond = totalDrainPerSecond
         });
     }
 }

@@ -608,8 +608,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bffa7904db9cc947b3c2d239b104135, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _namedTimerSnapshotChannel: {fileID: 11400000, guid: 2f378e6ef4638754e99a1a9d3907e07f, type: 2}
   _mapSnapshotChangedChannel: {fileID: 11400000, guid: e31f5b6e4b154bb495c727d7aee3a991, type: 2}
   _requestMapSnapshotChannel: {fileID: 11400000, guid: bb92d0f6df954f13a3352283d6e5e301, type: 2}
+  _settings: {fileID: 11400000, guid: dc28bf6c979848a8849d94e11028fc91, type: 2}
   _slots:
   - offsetFromCurrent: {x: -1, y: -1}
     cell: {fileID: 5807324363957861145}

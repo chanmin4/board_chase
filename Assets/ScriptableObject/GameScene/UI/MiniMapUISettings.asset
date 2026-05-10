@@ -12,13 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79289b4d9f3941c89058812f57f17721, type: 3}
   m_Name: MiniMapUISettings
   m_EditorClassIdentifier: 
-  _defaultAlpha: 0.6
-  _minAlpha: 0
-  _maxAlpha: 1
   _playerColor: {r: 0.2, g: 0.75, b: 1, a: 0.85}
   _neutralColor: {r: 0.55, g: 0.55, b: 0.55, a: 0.65}
   _virusColor: {r: 0.9, g: 0.15, b: 0.25, a: 0.85}
   _lockedColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.75}
-  _lockedIcon: {fileID: 0}
-  _namedIcon: {fileID: 0}
-  _bossIcon: {fileID: 0}
+  _namedReservedCellAlpha: 0.45
+  _lockedIcon: {fileID: 21300000, guid: 91fddba97416c5a41a8bb2e1b0196ad3, type: 3}
+  _namedIcon: {fileID: 21300000, guid: 1e7a5603903cad145b900ef8c0bc8d2a, type: 3}
+  _bossIcon: {fileID: 21300000, guid: 91e279b40f1d1ae459cfef250c50729e, type: 3}

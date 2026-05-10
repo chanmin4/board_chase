@@ -6,6 +6,7 @@ public class SectorPortalManager : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private SectorStateManager _sectorStateManager;
+    [SerializeField] private NamedSectorController _namedSectorController;
     [Header("Events")]
     [SerializeField] private SectorRuntimeEventChannelSO _moveSectorCameraEvent;
     [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
@@ -22,6 +23,8 @@ public class SectorPortalManager : MonoBehaviour
 
         if (_sectorStateManager != null)
             _sectorStateManager.EnsureInitialized();
+        if (_namedSectorController == null)
+            _namedSectorController = FindAnyObjectByType<NamedSectorController>();
     }
 
     private void OnEnable()
@@ -203,6 +206,11 @@ public class SectorPortalManager : MonoBehaviour
            
             return false;
         }
+        if (_namedSectorController != null &&_namedSectorController.TryStartBattleFromPortal(targetSector))
+        {
+            ConsumeStartSectorIfNeeded(sourcePortal);
+            return true;
+        }
 
 
         CharacterController controller = player.GetComponent<CharacterController>();
@@ -224,7 +232,7 @@ public class SectorPortalManager : MonoBehaviour
             sourcePortal.OwnerSector != null &&
             _sectorStateManager.IsStartSector(sourcePortal.OwnerSector))
         {
-            _startSectorConsumed = true;
+            ConsumeStartSectorIfNeeded(sourcePortal);
             RefreshAllPortals();
         }
 
@@ -261,6 +269,21 @@ public class SectorPortalManager : MonoBehaviour
 
             default:
                 return null;
+        }
+    }
+    private void ConsumeStartSectorIfNeeded(SectorPortal sourcePortal)
+    {
+        if (_sectorStateManager == null ||
+            sourcePortal == null ||
+            sourcePortal.OwnerSector == null)
+        {
+            return;
+        }
+
+        if (_sectorStateManager.IsStartSector(sourcePortal.OwnerSector))
+        {
+            _startSectorConsumed = true;
+            RefreshAllPortals();
         }
     }
 }

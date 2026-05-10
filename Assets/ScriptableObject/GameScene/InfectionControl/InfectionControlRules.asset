@@ -14,6 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _maxControl: 10000
   _startControl: 10000
-  _drainPerVirusSector: 1
+  _baseDrainPerSecond: 1
+  _drainPerVirusOwnedSector: 2
+  _extraDrainEveryVirusSectorCount: 2
+  _extraDrainPerGroup: 2
   _namedDrainBonus: 2
   _bossDrainBonus: 5
+  _namedPresentDrainPerSecond: 0.1
+  _namedBattleDrainPerSecond: 0.2
+  _recoverOnNamedDefeated: 500
+  _recoverOnSectorExpanded: 1000

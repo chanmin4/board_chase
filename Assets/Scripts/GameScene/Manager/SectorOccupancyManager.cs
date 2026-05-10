@@ -22,6 +22,9 @@ public class SectorOccupancyManager : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private SectorStateManager _sectorStateManager;
+
+    [Header("Manager Ready Broadcast")]
+    [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     [Header("Map Snapshot")]
     [SerializeField] private SectorMapSnapshotEventChannelSO _mapSnapshotChangedChannel;
     [SerializeField] private VoidEventChannelSO _requestMapSnapshotChannel;
@@ -29,13 +32,18 @@ public class SectorOccupancyManager : MonoBehaviour
     [SerializeField] private SectorOccupancySummaryEventChannelSO _summaryChangedChannel;
     [Header("Current Sector")]
     [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
+    [Header("Exclusion")]
+    [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
+
+    [Tooltip("After player leaves start sector, start sector is hidden from minimap.")]
+    [SerializeField] private bool _hideStartSectorFromMapAfterLeaving = true;
     private readonly Dictionary<SectorRuntime, SectorOccupancySnapshot> _snapshots = new();
     private Vector2Int _currentSectorCoord;
     private bool _hasCurrentSectorCoord;
     public bool startSectorOpened;
     public SectorOwner startSectorOwner;
     public bool startSectorPlayerOwned;
-
+    private bool _hasLeftStartSector;
     private void Awake()
     {
         if (_sectorStateManager == null)
@@ -50,25 +58,50 @@ public class SectorOccupancyManager : MonoBehaviour
     {
         if (_sectorOccupancyChangedChannel != null)
             _sectorOccupancyChangedChannel.OnEventRaised += OnSectorOccupancyChanged;
-        if( _requestMapSnapshotChannel != null)
-            _requestMapSnapshotChannel.OnEventRaised += PublishMapSnapshot;   
-        if (_currentSectorChangedEvent != null)
-            _currentSectorChangedEvent.OnEventRaised += OnCurrentSectorChanged;  
 
-        
-        CacheInitialSnapshots();
+        if (_requestMapSnapshotChannel != null)
+            _requestMapSnapshotChannel.OnEventRaised += PublishMapSnapshot;
+
+        if (_currentSectorChangedEvent != null)
+            _currentSectorChangedEvent.OnEventRaised += OnCurrentSectorChanged;
+
+        if (_sectorStateManagerReadyChannel != null)
+        {
+            _sectorStateManagerReadyChannel.OnEventRaised += OnSectorStateManagerReady;
+
+            if (_sectorStateManagerReadyChannel.HasCurrent)
+                OnSectorStateManagerReady(_sectorStateManagerReadyChannel.Current);
+        }
+        else if (_sectorStateManager != null)
+        {
+            OnSectorStateManagerReady(_sectorStateManager);
+        }
     }
 
     private void OnDisable()
     {
         if (_sectorOccupancyChangedChannel != null)
             _sectorOccupancyChangedChannel.OnEventRaised -= OnSectorOccupancyChanged;
-        if (_requestMapSnapshotChannel != null)     
+
+        if (_requestMapSnapshotChannel != null)
             _requestMapSnapshotChannel.OnEventRaised -= PublishMapSnapshot;
+
         if (_currentSectorChangedEvent != null)
             _currentSectorChangedEvent.OnEventRaised -= OnCurrentSectorChanged;
-    }
 
+        if (_sectorStateManagerReadyChannel != null)
+            _sectorStateManagerReadyChannel.OnEventRaised -= OnSectorStateManagerReady;
+    }
+    private void OnSectorStateManagerReady(SectorStateManager manager)
+    {
+        if (manager == null)
+            return;
+
+        _sectorStateManager = manager;
+        _sectorStateManager.EnsureInitialized();
+
+        CacheInitialSnapshots();
+    }
     private void CacheInitialSnapshots()
     {
         _snapshots.Clear();
@@ -100,6 +133,11 @@ public class SectorOccupancyManager : MonoBehaviour
         if (currentSector == null)
             return;
 
+        bool isStartSector = IsStartSector(currentSector);
+
+        if (_hideStartSectorFromMapAfterLeaving && !isStartSector)
+            _hasLeftStartSector = true;
+
         _currentSectorCoord = GetSectorCoord(currentSector);
         _hasCurrentSectorCoord = true;
 
@@ -126,6 +164,9 @@ public class SectorOccupancyManager : MonoBehaviour
 
             if (sector == null || !sector.isOpened)
                 continue;
+
+            Vector2Int coord = GetSectorCoord(sector);
+
             if (IsStartSector(sector))
             {
                 summary.startSectorOpened = true;
@@ -134,6 +175,11 @@ public class SectorOccupancyManager : MonoBehaviour
                 continue;
             }
 
+            if (_sectorExclusionRules != null &&
+                _sectorExclusionRules.ExcludeFromOccupancySummary(coord))
+            {
+                continue;
+            }
 
             summary.openedCount++;
 
@@ -168,9 +214,14 @@ public class SectorOccupancyManager : MonoBehaviour
             if (sector == null)
                 continue;
 
+            Vector2Int coord = GetSectorCoord(sector);
+
+            if (ShouldHideFromMap(sector, coord))
+                continue;
+
             cells.Add(new SectorMapCellSnapshot
             {
-                coord = GetSectorCoord(sector),
+                coord = coord,
                 isOpened = sector.isOpened,
                 isLocked = !sector.isOpened,
                 owner = snapshot.owner,
@@ -204,5 +255,22 @@ public class SectorOccupancyManager : MonoBehaviour
             return _sectorStateManager.GetSectorCoord(sector);
 
         return sector != null ? sector.coord : default;
+    }
+    private bool ShouldHideFromMap(SectorRuntime sector, Vector2Int coord)
+    {
+        if (_sectorExclusionRules != null &&
+            _sectorExclusionRules.HideFromMiniMapAlways(coord))
+        {
+            return true;
+        }
+
+        if (_hideStartSectorFromMapAfterLeaving &&
+            _hasLeftStartSector &&
+            IsStartSector(sector))
+        {
+            return true;
+        }
+
+        return false;
     }
 }

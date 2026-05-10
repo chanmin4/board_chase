@@ -17,6 +17,8 @@ public class SectorEnemySpawner : MonoBehaviour
     [SerializeField] private Transform _spawnedEnemiesRoot; 
     // 실제 생성된 적들을 정리해서 붙여둘 부모.
     // 비워두면 기본적으로 해당 sector runtime 밑에 생성.
+    [Header("Exclusion")]
+    [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
 
 
     [Header("Listening To")]
@@ -27,7 +29,8 @@ public class SectorEnemySpawner : MonoBehaviour
     [SerializeField] private StageProgressSnapshotEventChannelSO _stageProgressChangedChannel; 
     // 현재 stage index 변경을 받는 채널.
     // 이를 기준으로 resolved min/max alive, spawn interval을 갱신한다.
-
+    [Header("Named Battle Lock")]
+    [SerializeField] private BoolEventChannelSO _namedBattleWorldLockedChannel;
 
     [Header("Options")]
     [SerializeField] private bool _spawnOnlyWhenOpened = true; 
@@ -58,8 +61,8 @@ public class SectorEnemySpawner : MonoBehaviour
 
     [ReadOnly] [SerializeField] private bool _isSectorActive; 
     // 현재 이 sector가 스폰 활성 상태인지.
-
-
+    
+    [ReadOnly] [SerializeField] private bool _isNamedBattleWorldLocked;
     private readonly List<Enemy> _aliveEnemies = new();
     private readonly Dictionary<Enemy, Damageable> _trackedDamageables = new();
     private readonly Dictionary<Enemy, UnityAction> _deathHandlers = new();
@@ -87,6 +90,9 @@ public class SectorEnemySpawner : MonoBehaviour
         if (_stageProgressChangedChannel != null)
             _stageProgressChangedChannel.OnEventRaised += OnStageProgressChanged;
 
+        if (_namedBattleWorldLockedChannel != null)
+            _namedBattleWorldLockedChannel.OnEventRaised += OnNamedBattleWorldLocked;
+
         _isSectorActive = _sectorRuntime != null && (!_spawnOnlyWhenOpened || _sectorRuntime.IsOpened);
         RefreshResolvedSettings();
     }
@@ -98,10 +104,14 @@ public class SectorEnemySpawner : MonoBehaviour
 
         if (_stageProgressChangedChannel != null)
             _stageProgressChangedChannel.OnEventRaised -= OnStageProgressChanged;
-
+        if (_namedBattleWorldLockedChannel != null)
+            _namedBattleWorldLockedChannel.OnEventRaised -= OnNamedBattleWorldLocked;
         UnbindAllTrackedEnemies();
     }
-
+    private void OnNamedBattleWorldLocked(bool locked)
+    {
+        _isNamedBattleWorldLocked = locked;
+    }
     private void Update()
     {
         CleanupTrackedEnemies();
@@ -200,8 +210,16 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private bool CanSpawn()
     {
+        if (_isNamedBattleWorldLocked)
+            return false;
         if (_sectorRuntime == null || _spawnTable == null)
             return false;
+
+        if (_sectorExclusionRules != null &&
+            _sectorExclusionRules.ExcludeFromEnemySpawn(_sectorRuntime.Coord))
+        {
+            return false;
+        }
 
         if (_spawnOnlyWhenOpened && !_isSectorActive)
             return false;
@@ -346,26 +364,48 @@ public class SectorEnemySpawner : MonoBehaviour
         for (int i = _aliveEnemies.Count - 1; i >= 0; i--)
         {
             Enemy enemy = _aliveEnemies[i];
+
             if (enemy == null)
             {
-                if (ReferenceEquals(enemy, null))
-                    _aliveEnemies.RemoveAt(i);
-                else
-                    UntrackEnemy(enemy);
+                RemoveDestroyedEnemyAt(i);
                 continue;
             }
 
-            if (_trackedDamageables.TryGetValue(enemy, out Damageable damageable) && damageable != null && damageable.IsDead)
+            if (_trackedDamageables.TryGetValue(enemy, out Damageable damageable) &&
+                damageable != null &&
+                damageable.IsDead)
             {
                 UntrackEnemy(enemy);
             }
         }
     }
 
+    private void RemoveDestroyedEnemyAt(int index)
+    {
+        if (index < 0 || index >= _aliveEnemies.Count)
+            return;
+
+        Enemy enemy = _aliveEnemies[index];
+
+        if (enemy != null)
+        {
+            _trackedDamageables.Remove(enemy);
+            _deathHandlers.Remove(enemy);
+        }
+
+        _aliveEnemies.RemoveAt(index);
+        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
+    }
     private void UntrackEnemy(Enemy enemy)
     {
-        if (ReferenceEquals(enemy, null))
+        if (enemy == null)
+        {
+            _aliveEnemies.Remove(enemy);
+            _nextSpawnTime = Time.time + _resolvedSpawnInterval;
             return;
+        }
+
+        string enemyName = enemy.name;
 
         if (_trackedDamageables.TryGetValue(enemy, out Damageable damageable) && damageable != null)
         {
@@ -380,10 +420,9 @@ public class SectorEnemySpawner : MonoBehaviour
         _nextSpawnTime = Time.time + _resolvedSpawnInterval;
 
         Debug.Log(
-            $"[SectorEnemySpawner] UntrackEnemy {enemy.name}, " +
+            $"[SectorEnemySpawner] UntrackEnemy {enemyName}, " +
             $"aliveCount={_aliveEnemies.Count}, nextSpawnTime={_nextSpawnTime}");
     }
-
     private void UnbindAllTrackedEnemies()
     {
         foreach (var pair in _trackedDamageables)

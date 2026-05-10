@@ -680,8 +680,10 @@ MonoBehaviour:
   _sectorRuntime: {fileID: 4825967042133263012}
   _spawnTable: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
   _spawnedEnemiesRoot: {fileID: 3433957654936252752}
+  _sectorExclusionRules: {fileID: 11400000, guid: 498279093e5b5634291755e780b4ac69, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
   _stageProgressChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
+  _namedBattleWorldLockedChannel: {fileID: 11400000, guid: 13322fa37fe3afa4eadbd823711b4d3d, type: 2}
   _spawnOnlyWhenOpened: 1
   _fillMinimumImmediately: 0
   _maxImmediateSpawnPerTick: 4
@@ -690,6 +692,7 @@ MonoBehaviour:
   _resolvedMaxAlive: 0
   _resolvedSpawnInterval: 0
   _isSectorActive: 0
+  _isNamedBattleWorldLocked: 0
 --- !u!1 &8006060086097752367
 GameObject:
   m_ObjectHideFlags: 0

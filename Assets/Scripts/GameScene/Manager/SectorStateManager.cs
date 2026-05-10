@@ -35,7 +35,7 @@ public class SectorStateManager : MonoBehaviour
     [SerializeField] private SectorRuntimeEventChannelSO _startSectorReadyEvent;
     [SerializeField] private SectorRuntimeEventChannelSO _sectorOpenedEvent;
     [SerializeField] private IntEventChannelSO _stageAppliedEvent;
-
+    [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     public int CurrentStage { get; private set; }
     public SectorRuntime StartSector { get; private set; }
 
@@ -54,6 +54,8 @@ public class SectorStateManager : MonoBehaviour
 
         if (_requestProgressNextStageEvent != null)
             _requestProgressNextStageEvent.OnEventRaised += ProgressNextStage;
+
+        EnsureInitialized();
     }
 
     private void OnDisable()
@@ -63,8 +65,10 @@ public class SectorStateManager : MonoBehaviour
 
         if (_requestProgressNextStageEvent != null)
             _requestProgressNextStageEvent.OnEventRaised -= ProgressNextStage;
-    }
 
+        if (_sectorStateManagerReadyChannel != null)
+            _sectorStateManagerReadyChannel.Clear(this);
+    }
     private void Awake()
     {
         EnsureInitialized();
@@ -74,6 +78,9 @@ public class SectorStateManager : MonoBehaviour
     {
         CurrentStage = Mathf.Max(0, _initialStage);
         ApplyInitialOpenState();
+
+        if (_sectorStateManagerReadyChannel != null)
+            _sectorStateManagerReadyChannel.RaiseEvent(this);
 
         if (_startSectorReadyEvent != null && StartSector != null)
             _startSectorReadyEvent.RaiseEvent(StartSector);

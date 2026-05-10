@@ -12,36 +12,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e40681e72895d2e47a8a6a49ec21a61a, type: 3}
   m_Name: StageEnemySpawnTable
   m_EditorClassIdentifier: 
+  _minimumNamedStageToStart: 1
   _rules:
   - stageIndex: 0
     displayName: start_Stage
     sectorMinAlive: 0
-    sectorMaxAlive: 1
+    sectorMaxAlive: 0
     spawnIntervalSeconds: 3
-    spawnEntries:
-    - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
-      weight: 1
+    normalenemyspawnEntries: []
+    namedEnemyEntries: []
+  - stageIndex: 1
+    displayName: 1_Stage
+    sectorMinAlive: 0
+    sectorMaxAlive: 2
+    spawnIntervalSeconds: 5
+    normalenemyspawnEntries:
     - archetype: {fileID: 11400000, guid: 9525a7d165e704845acd05bfaf60c467, type: 2}
       weight: 1
     - archetype: {fileID: 11400000, guid: 1cad196a9bd640d408f757c11a1f845f, type: 2}
-      weight: 20
-  - stageIndex: 1
-    displayName: 1_Stage
-    sectorMinAlive: 0
-    sectorMaxAlive: 1
-    spawnIntervalSeconds: 3
-    spawnEntries:
+      weight: 1
     - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
       weight: 1
-    - archetype: {fileID: 11400000, guid: 9525a7d165e704845acd05bfaf60c467, type: 2}
-      weight: 1
-  - stageIndex: 1
-    displayName: 1_Stage
-    sectorMinAlive: 0
-    sectorMaxAlive: 1
-    spawnIntervalSeconds: 3
-    spawnEntries:
-    - archetype: {fileID: 11400000, guid: 9b776333b2ba8664397e8e24fd361ac4, type: 2}
-      weight: 1
-    - archetype: {fileID: 11400000, guid: 9525a7d165e704845acd05bfaf60c467, type: 2}
+    namedEnemyEntries:
+    - archetype: {fileID: 11400000, guid: 1cad196a9bd640d408f757c11a1f845f, type: 2}
       weight: 1

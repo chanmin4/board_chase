@@ -665,6 +665,7 @@ GameObject:
   - component: {fileID: 69354217320293197}
   - component: {fileID: 681943115171059239}
   - component: {fileID: 4895959261900182708}
+  - component: {fileID: 9210651667087362931}
   m_Layer: 3
   m_Name: VSplatter
   m_TagString: Player
@@ -1143,6 +1144,19 @@ MonoBehaviour:
   _statsRuntime: {fileID: 69354217320293197}
   _statsChangedChannel: {fileID: 11400000, guid: 42bc966d68e57424095ada9dc20cbcf0, type: 2}
   _healToFullOnFirstApply: 1
+--- !u!114 &9210651667087362931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6915450752968060550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc143b709a4a922439bac56e2c4ba404, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _playerRuntimeReadyChannel: {fileID: 11400000, guid: 31d9f48afcfd69e41b6f414a4d32642b, type: 2}
 --- !u!1 &7234683804352580705
 GameObject:
   m_ObjectHideFlags: 0

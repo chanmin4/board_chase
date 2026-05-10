@@ -12,9 +12,11 @@ public class MiniMapUI : MonoBehaviour
     }
 
     [Header("Events")]
+    [SerializeField] private NamedSectorTimerSnapshotEventChannelSO _namedTimerSnapshotChannel;
     [SerializeField] private SectorMapSnapshotEventChannelSO _mapSnapshotChangedChannel;
     [SerializeField] private VoidEventChannelSO _requestMapSnapshotChannel;
-
+    [Header("Settings")]
+    [SerializeField] private MiniMapUISettingsSO _settings;
     [Header("Cells")]
     [SerializeField] private CellSlot[] _slots;
 
@@ -33,7 +35,10 @@ public class MiniMapUI : MonoBehaviour
     [SerializeField] private Slider _alphaSlider;
 
     private readonly Dictionary<Vector2Int, SectorMapCellSnapshot> _cellByCoord = new();
-
+    private NamedSectorTimerSnapshot _latestNamedTimerSnapshot;
+    private bool _hasNamedTimerSnapshot;
+    private Vector2Int _currentMapCenter;
+    private bool _hasCurrentMapCenter;
     private void OnEnable()
     {
         if (_mapSnapshotChangedChannel != null)
@@ -44,7 +49,8 @@ public class MiniMapUI : MonoBehaviour
 
         if (_alphaSlider != null)
             _alphaSlider.onValueChanged.AddListener(OnAlphaSliderChanged);
-
+        if (_namedTimerSnapshotChannel != null)
+        _namedTimerSnapshotChannel.OnEventRaised += OnNamedTimerSnapshotChanged;
         ApplyInitialAlpha();
     }
 
@@ -55,6 +61,8 @@ public class MiniMapUI : MonoBehaviour
 
         if (_alphaSlider != null)
             _alphaSlider.onValueChanged.RemoveListener(OnAlphaSliderChanged);
+        if (_namedTimerSnapshotChannel != null)
+            _namedTimerSnapshotChannel.OnEventRaised -= OnNamedTimerSnapshotChanged;
     }
     private void ApplyInitialAlpha()
     {
@@ -77,6 +85,9 @@ public class MiniMapUI : MonoBehaviour
 
     private void OnMapSnapshotChanged(SectorMapSnapshot snapshot)
     {
+        _currentMapCenter = snapshot.currentSectorCoord;
+        _hasCurrentMapCenter = true;
+
         CacheSnapshotCells(snapshot);
         RefreshCells(snapshot.currentSectorCoord);
     }
@@ -93,30 +104,30 @@ public class MiniMapUI : MonoBehaviour
     }
 
     private void RefreshCells(Vector2Int currentCoord)
-{
-    for (int i = 0; i < _slots.Length; i++)
     {
-        CellSlot slot = _slots[i];
-
-        if (slot.cell == null)
-            continue;
-
-        Vector2Int targetCoord = currentCoord + slot.offsetFromCurrent;
-
-        if (!_cellByCoord.TryGetValue(targetCoord, out SectorMapCellSnapshot cellSnapshot))
+        for (int i = 0; i < _slots.Length; i++)
         {
-            slot.cell.SetMissing();
-            continue;
-        }
+            CellSlot slot = _slots[i];
 
-        ApplyCell(slot.cell, cellSnapshot);
+            if (slot.cell == null)
+                continue;
+
+            Vector2Int targetCoord = currentCoord + slot.offsetFromCurrent;
+
+            if (!_cellByCoord.TryGetValue(targetCoord, out SectorMapCellSnapshot cellSnapshot))
+            {
+                slot.cell.SetMissing();
+                continue;
+            }
+
+            ApplyCell(slot.cell, cellSnapshot);
+        }
     }
-}
     private void ApplyCell(MiniMapCellUI cellUI, SectorMapCellSnapshot snapshot)
     {
         if (snapshot.isLocked)
         {
-            cellUI.SetLocked(_lockedColor, _lockedIcon);
+            cellUI.SetLocked(GetLockedColor(), GetLockedIcon());
             return;
         }
 
@@ -127,13 +138,15 @@ public class MiniMapUI : MonoBehaviour
         bool showRatio = snapshot.isOpened && !HasNamedOrBoss(snapshot);
 
         string ratioText = showRatio
-        ? $"{Mathf.RoundToInt(snapshot.playerRatio * 100f)}%"
-        : string.Empty;
+            ? $"{Mathf.RoundToInt(snapshot.playerRatio * 100f)}%"
+            : string.Empty;
 
         bool showJudgeTime = ShouldShowJudgeTime(snapshot);
         string judgeTimeText = showJudgeTime
             ? FormatJudgeTime(snapshot)
             : string.Empty;
+
+        float visibleAlpha = GetCellAlpha(snapshot);
 
         cellUI.SetOpened(
             backgroundColor,
@@ -142,37 +155,109 @@ public class MiniMapUI : MonoBehaviour
             showIcon,
             showRatio,
             judgeTimeText,
-            showJudgeTime); 
-     }
+            showJudgeTime,
+            visibleAlpha);
+        ApplyNamedTimer(cellUI, snapshot);
+    }
 
+    private void ApplyNamedTimer(MiniMapCellUI cellUI, SectorMapCellSnapshot snapshot)
+    {
+        if (!_hasNamedTimerSnapshot || _latestNamedTimerSnapshot.sector == null)
+        {
+            cellUI.SetSpecialTimer(string.Empty, false);
+            return;
+        }
+
+        if (snapshot.coord != _latestNamedTimerSnapshot.sector.coord)
+        {
+            cellUI.SetSpecialTimer(string.Empty, false);
+            return;
+        }
+
+        bool show =
+            _latestNamedTimerSnapshot.phase == NamedSectorPhase.WaitingForReservation ||
+            _latestNamedTimerSnapshot.phase == NamedSectorPhase.Reserved ||
+            _latestNamedTimerSnapshot.phase == NamedSectorPhase.DefeatedCooldown;
+
+        if (!show)
+        {
+            cellUI.SetSpecialTimer(string.Empty, false);
+            return;
+        }
+
+        string text = $"{Mathf.CeilToInt(_latestNamedTimerSnapshot.remainingSeconds)}s";
+        cellUI.SetSpecialTimer(text, true);
+    }
     private Color GetBackgroundColor(SectorMapCellSnapshot snapshot)
     {
         if (snapshot.isLocked)
-            return _lockedColor;
+            return GetLockedColor();
 
         switch (snapshot.owner)
         {
             case SectorOwner.Player:
-                return _playerColor;
+                return GetPlayerColor();
 
             case SectorOwner.Virus:
-                return _virusColor;
+                return GetVirusColor();
 
             default:
-                return _neutralColor;
+                return GetNeutralColor();
         }
+    }
+    private float GetCellAlpha(SectorMapCellSnapshot snapshot)
+    {
+        if ((snapshot.specialState & SectorSpecialState.NamedReserved) != 0)
+            return _settings != null ? _settings.NamedReservedCellAlpha : 0.45f;
+
+        return 1f;
+    }
+
+    private Color GetPlayerColor()
+    {
+        return _settings != null ? _settings.PlayerColor : _playerColor;
+    }
+
+    private Color GetNeutralColor()
+    {
+        return _settings != null ? _settings.NeutralColor : _neutralColor;
+    }
+
+    private Color GetVirusColor()
+    {
+        return _settings != null ? _settings.VirusColor : _virusColor;
+    }
+
+    private Color GetLockedColor()
+    {
+        return _settings != null ? _settings.LockedColor : _lockedColor;
+    }
+
+    private Sprite GetLockedIcon()
+    {
+        return _settings != null ? _settings.LockedIcon : _lockedIcon;
+    }
+
+    private Sprite GetNamedIcon()
+    {
+        return _settings != null ? _settings.NamedIcon : _namedIcon;
+    }
+
+    private Sprite GetBossIcon()
+    {
+        return _settings != null ? _settings.BossIcon : _bossIcon;
     }
 
     private Sprite GetIcon(SectorMapCellSnapshot snapshot)
     {
         if (snapshot.isLocked)
-            return _lockedIcon;
+            return GetLockedIcon();
 
         if ((snapshot.specialState & SectorSpecialState.BossActive) != 0)
-            return _bossIcon;
+            return GetBossIcon();
 
         if ((snapshot.specialState & SectorSpecialState.NamedActive) != 0)
-            return _namedIcon;
+            return GetNamedIcon();
 
         return null;
     }
@@ -194,5 +279,13 @@ public class MiniMapUI : MonoBehaviour
     {
         float remaining = Mathf.Max(0f, snapshot.contestRequired - snapshot.contestElapsed);
         return $"{remaining:0.0}s";
+    }
+    private void OnNamedTimerSnapshotChanged(NamedSectorTimerSnapshot snapshot)
+    {
+        _latestNamedTimerSnapshot = snapshot;
+        _hasNamedTimerSnapshot = true;
+
+        if (_hasCurrentMapCenter)
+            RefreshCells(_currentMapCenter);
     }
 }

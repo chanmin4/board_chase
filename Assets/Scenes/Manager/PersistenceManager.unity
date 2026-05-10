@@ -244,6 +244,55 @@ MonoBehaviour:
   _changeMasterVolumeEventChannel: {fileID: 11400000, guid: 6e5de3a46a1c5644f95a85a5508349ea, type: 2}
   _changeSFXVolumeEventChannel: {fileID: 11400000, guid: e72956ee834863643a4d6c5051910f98, type: 2}
   _changeMusicVolumeEventChannel: {fileID: 11400000, guid: 719d7d9fd7c635847a67ba842911982e, type: 2}
+--- !u!1 &1289854250
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1289854252}
+  - component: {fileID: 1289854251}
+  m_Layer: 0
+  m_Name: TransitionInterfaceController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1289854251
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1289854250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 732d1bfb3c548e94ba0a00ab559b3729, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _transitionRequestChannel: {fileID: 11400000, guid: 8272b8603b5f55a459631535c5f5132d, type: 2}
+  _transitionImagePrefab: {fileID: 4852114888046675387, guid: 4414e5d3286e8584ca7d55ae716d253e, type: 3}
+  _defaultEffect: {fileID: 11400000, guid: a56eaa08827be1447839547bcba78bea, type: 2}
+  _transitionCanvas: {fileID: 0}
+  _sortingOrder: 999
+--- !u!4 &1289854252
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1289854250}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1628866394
 GameObject:
   m_ObjectHideFlags: 0
@@ -383,3 +432,4 @@ SceneRoots:
   - {fileID: 355485493}
   - {fileID: 1078539313}
   - {fileID: 1628866395}
+  - {fileID: 1289854252}

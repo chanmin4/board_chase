@@ -307,6 +307,60 @@ public class MaskRenderManager : MonoBehaviour
         sector.vaccineDirty = true;
         sector.virusDirty = true;
     }
+    public bool FillSector(SectorPaint sector, PaintChannel channel, bool clearOtherChannel = true)
+    {
+        if (sector == null)
+            return false;
+
+        RefreshSector(sector);
+
+        if (sector.vaccineBuffer == null || sector.virusBuffer == null)
+            return false;
+
+        switch (channel)
+        {
+            case PaintChannel.Vaccine:
+                FillBufferAlpha(sector.vaccineBuffer, 255);
+                sector.vaccineDirty = true;
+
+                if (clearOtherChannel)
+                {
+                    FillBufferAlpha(sector.virusBuffer, 0);
+                    sector.virusDirty = true;
+                }
+
+                break;
+
+            case PaintChannel.Virus:
+                FillBufferAlpha(sector.virusBuffer, 255);
+                sector.virusDirty = true;
+
+                if (clearOtherChannel)
+                {
+                    FillBufferAlpha(sector.vaccineBuffer, 0);
+                    sector.vaccineDirty = true;
+                }
+
+                break;
+        }
+
+        sector.ClearAllStoredPaint();
+        return true;
+    }
+
+    private void FillBufferAlpha(Color32[] buffer, byte alpha)
+    {
+        if (buffer == null)
+            return;
+
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            Color32 color = buffer[i];
+            color.a = alpha;
+            buffer[i] = color;
+        }
+    }
+
 
     private CirclePaintRequest BuildCircleRequest(
         PaintChannel channel,

@@ -5,7 +5,7 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class MiniMapCellUI : MonoBehaviour
 {
-    [Header("Visibility")]
+    [Header("Visibility Don't Ref Auto")]
     [SerializeField] private CanvasGroup _cellCanvasGroup;
 
     [Header("Parts")]
@@ -13,7 +13,7 @@ public class MiniMapCellUI : MonoBehaviour
     [SerializeField] private Image _icon;
     [SerializeField] private TextMeshProUGUI _occupancyRatioText;
     [SerializeField] private TextMeshProUGUI _sectorJudgeTimeText;
-
+    [SerializeField] private TextMeshProUGUI _specialTimerText;
 
     private void Reset()
     {
@@ -28,12 +28,13 @@ public class MiniMapCellUI : MonoBehaviour
         UIVisibilityHelper.ForceActive(_icon);
         UIVisibilityHelper.ForceActive(_occupancyRatioText);
         UIVisibilityHelper.ForceActive(_sectorJudgeTimeText);
+        UIVisibilityHelper.ForceActive(_specialTimerText);
     }
 
     public void SetMissing()
     {
         SetVisible(false);
-
+        SetSpecialTimer(string.Empty, false);
         ClearIcon();
         ClearRatio();
         ClearJudgeTime();
@@ -42,17 +43,24 @@ public class MiniMapCellUI : MonoBehaviour
     public void SetLocked(Color backgroundColor, Sprite lockedIcon)
     {
         SetVisible(true);
-
+        SetSpecialTimer(string.Empty, false);
         SetBackground(backgroundColor);
         SetIcon(lockedIcon);
         ClearRatio();
         ClearJudgeTime();
     }
 
-    public void SetOpened(Color backgroundColor,Sprite iconSprite,string ratioText,bool showIcon,
-    bool showRatio,string judgeTimeText,bool showJudgeTime)
+    public void SetOpened(
+        Color backgroundColor,
+        Sprite iconSprite,
+        string ratioText,
+        bool showIcon,
+        bool showRatio,
+        string judgeTimeText,
+        bool showJudgeTime,
+        float visibleAlpha = 1f)
     {
-        SetVisible(true);
+        SetVisible(true, visibleAlpha);
 
         SetBackground(backgroundColor);
 
@@ -65,6 +73,7 @@ public class MiniMapCellUI : MonoBehaviour
             SetRatio(ratioText);
         else
             ClearRatio();
+
         if (showJudgeTime)
             SetJudgeTime(judgeTimeText);
         else
@@ -73,9 +82,13 @@ public class MiniMapCellUI : MonoBehaviour
 
     private void SetVisible(bool visible)
     {
-        UIVisibilityHelper.SetVisible(_cellCanvasGroup, visible);
+        SetVisible(visible, 1f);
     }
 
+    private void SetVisible(bool visible, float visibleAlpha)
+    {
+        UIVisibilityHelper.SetVisible(_cellCanvasGroup, visible, visibleAlpha);
+}
     private void SetBackground(Color color)
     {
         if (_background == null)
@@ -138,8 +151,17 @@ public class MiniMapCellUI : MonoBehaviour
         _sectorJudgeTimeText.text = string.Empty;
         UIVisibilityHelper.SetVisible(_sectorJudgeTimeText, false);
     }
+    public void SetSpecialTimer(string text, bool visible)
+    {
+        if (_specialTimerText == null)
+            return;
+
+        _specialTimerText.text = visible ? text : string.Empty;
+        UIVisibilityHelper.SetVisible(_specialTimerText, visible);
+    }
     private void SetRoot(GameObject root, bool active)
     {
         UIVisibilityHelper.SetVisible(root, active);
     }
+
 }
