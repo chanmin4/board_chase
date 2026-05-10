@@ -6,16 +6,23 @@ public struct PlayerWeaponStats
 {
     public float attackDamage;
     public float namedBossDamageMultiplier;
-    public float shotsPerSecond;
+
+    public float maxRange;
+
+    public float attackShotsPerSecond;
+    public float paintShotsPerSecond;
+
     public float reloadSpeedMultiplier;
     public float reloadDurationSeconds;
     public int magazineSize;
 }
 
+
 [Serializable]
 public struct PlayerPaintStats
 {
     public float paintRadius;
+    public int paintPriority;
     public float occupationWinThreshold;
 }
 
@@ -23,6 +30,7 @@ public struct PlayerPaintStats
 public struct PlayerMovementStats
 {
     public float moveSpeed;
+    public float dashCooldownSeconds;
     public float dashDistanceMultiplier;
 }
 
@@ -31,7 +39,6 @@ public struct PlayerSurvivalStats
 {
     public float maxHealth;
 }
-
 [Serializable]
 public struct PlayerShockwaveStats
 {

@@ -119,8 +119,14 @@ public class EnemyScreenSpaceUIManager : MonoBehaviour
         _widgets.Remove(anchor);
     }
 
-     private void UpdateWidget(EnemyScreenSpaceUIAnchor anchor, EnemyUIEntry entry)
+    private void UpdateWidget(EnemyScreenSpaceUIAnchor anchor, EnemyUIEntry entry)
     {
+        if (anchor.Enemy != null && !anchor.Enemy.IsSpawnReady)
+        {
+            SetEntryVisible(entry, false);
+            return;
+        }
+
         Vector3 worldPos = anchor.GetWorldUIPosition();
         Vector3 screenPos = _worldCamera.WorldToScreenPoint(worldPos);
 
@@ -128,8 +134,7 @@ public class EnemyScreenSpaceUIManager : MonoBehaviour
 
         if (follow != null && follow.HideWhenBehindCamera && screenPos.z <= 0f)
         {
-            if (entry.HealthBar != null) entry.HealthBar.gameObject.SetActive(false);
-            if (entry.CastBar != null) entry.CastBar.gameObject.SetActive(false);
+            SetEntryVisible(entry, false);
             return;
         }
 
@@ -139,10 +144,11 @@ public class EnemyScreenSpaceUIManager : MonoBehaviour
 
         if (follow != null && follow.HideWhenOffScreen && isOffScreen)
         {
-            if (entry.HealthBar != null) entry.HealthBar.gameObject.SetActive(false);
-            if (entry.CastBar != null) entry.CastBar.gameObject.SetActive(false);
+            SetEntryVisible(entry, false);
             return;
         }
+
+        SetEntryVisible(entry, true);
 
         Vector2 finalScreen = new Vector2(screenPos.x, screenPos.y);
 
@@ -164,16 +170,26 @@ public class EnemyScreenSpaceUIManager : MonoBehaviour
 
         if (entry.HealthBar != null)
         {
-            entry.HealthBar.gameObject.SetActive(true);
             entry.HealthBar.SetScreenPosition(localPoint);
             entry.HealthBar.TickVisualState();
         }
 
         if (entry.CastBar != null)
         {
-            entry.CastBar.gameObject.SetActive(true);
             entry.CastBar.SetScreenPosition(localPoint);
             entry.CastBar.TickVisualState();
         }
+    }
+
+    private static void SetEntryVisible(EnemyUIEntry entry, bool visible)
+    {
+        if (entry == null)
+            return;
+
+        if (entry.HealthBar != null)
+            entry.HealthBar.SetManagerVisible(visible);
+
+        if (entry.CastBar != null)
+            entry.CastBar.SetManagerVisible(visible);
     }
 }

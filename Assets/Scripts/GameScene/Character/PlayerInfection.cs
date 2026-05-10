@@ -27,8 +27,27 @@ public class PlayerInfection : MonoBehaviour
     public float CurrentInfection => _currentInfection;
     public bool IsDead => _isDead;
 
-    private float MaxHealth => _healthSO != null ? _healthSO.MaxHealth : 0f;
-    private float CurrentHealth => _healthSO != null ? _healthSO.CurrentHealth : 0f;
+    private float MaxHealth
+    {
+        get
+        {
+            if (_damageable != null)
+                return _damageable.MaxHealth;
+
+            return _healthSO != null ? _healthSO.MaxHealth : 0f;
+        }
+    }
+
+    private float CurrentHealth
+    {
+        get
+        {
+            if (_damageable != null)
+                return _damageable.CurrentHealth;
+
+            return _healthSO != null ? _healthSO.CurrentHealth : 0f;
+        }
+    }
 
     private float InfectionGainMultiplier =>
         _difficultyRules != null ? _difficultyRules.PlayerInfectionGainMultiplier : 1f;
@@ -47,7 +66,7 @@ public class PlayerInfection : MonoBehaviour
         if (_damageable == null)
             _damageable = GetComponent<Damageable>();
 
-        _currentInfection = Mathf.Clamp(_currentInfection, 0f, MaxHealth);
+        ClampInfectionToMaxHealth();
         PublishSnapshot();
     }
 
@@ -55,6 +74,7 @@ public class PlayerInfection : MonoBehaviour
     {
         if (_updateHealthUI != null)
             _updateHealthUI.OnEventRaised += OnHealthChanged;
+
         if (_playerInfectionReadyChannel != null)
             _playerInfectionReadyChannel.RaiseEvent(this);
     }
@@ -63,6 +83,7 @@ public class PlayerInfection : MonoBehaviour
     {
         if (_updateHealthUI != null)
             _updateHealthUI.OnEventRaised -= OnHealthChanged;
+
         if (_playerInfectionReadyChannel != null)
             _playerInfectionReadyChannel.Clear(this);
     }
@@ -120,7 +141,9 @@ public class PlayerInfection : MonoBehaviour
         if (_isDead || amount <= 0f)
             return;
 
-        _currentInfection = Mathf.Clamp(_currentInfection + amount, 0f, MaxHealth);
+        _currentInfection += amount;
+        ClampInfectionToMaxHealth();
+
         CheckInfectionDeath();
         PublishSnapshot();
     }
@@ -130,7 +153,9 @@ public class PlayerInfection : MonoBehaviour
         if (_isDead || amount <= 0f)
             return;
 
-        _currentInfection = Mathf.Clamp(_currentInfection - amount, 0f, MaxHealth);
+        _currentInfection -= amount;
+        ClampInfectionToMaxHealth();
+
         PublishSnapshot();
     }
 
@@ -142,16 +167,19 @@ public class PlayerInfection : MonoBehaviour
 
     private void OnHealthChanged()
     {
+        ClampInfectionToMaxHealth();
         CheckInfectionDeath();
         PublishSnapshot();
+    }
+
+    private void ClampInfectionToMaxHealth()
+    {
+        _currentInfection = Mathf.Clamp(_currentInfection, 0f, MaxHealth);
     }
 
     private void CheckInfectionDeath()
     {
         if (_isDead)
-            return;
-
-        if (_healthSO == null)
             return;
 
         if (CurrentHealth <= 0f)
@@ -170,7 +198,7 @@ public class PlayerInfection : MonoBehaviour
 
     private void PublishSnapshot()
     {
-        if (_playerHealthChanged == null || _healthSO == null)
+        if (_playerHealthChanged == null)
             return;
 
         _playerHealthChanged.RaiseEvent(new PlayerHealthSnapshot(

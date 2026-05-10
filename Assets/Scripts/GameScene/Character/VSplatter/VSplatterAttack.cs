@@ -7,7 +7,7 @@ public class VSplatterAttack : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private VSplatterRange _range;
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
-
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
     [SerializeField] private bool debugDraw = false;
@@ -22,7 +22,15 @@ public class VSplatterAttack : MonoBehaviour
     private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
     private Transform VisualFireOrigin => _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
     private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
+    private float CurrentMaxRange =>
+    _statsRuntime != null
+        ? Mathf.Max(0.1f, _statsRuntime.Weapon.maxRange)
+        : CurrentWeapon != null ? CurrentWeapon.MaxRange : 0f;
 
+    private float CurrentDamage =>
+        _statsRuntime != null
+            ? Mathf.Max(0f, _statsRuntime.Weapon.attackDamage)
+            : CurrentWeapon != null ? CurrentWeapon.Damage : 0f;
     private void Reset()
     {
         if (_range == null)
@@ -33,6 +41,8 @@ public class VSplatterAttack : MonoBehaviour
 
         if (_aimCamera == null)
             _aimCamera = Camera.main;
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
     }
 
     private void Awake()
@@ -45,10 +55,14 @@ public class VSplatterAttack : MonoBehaviour
 
         if (_aimCamera == null)
             _aimCamera = Camera.main;
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
     }
 
     public bool TryFireOnce()
     {
+        float maxRange = CurrentMaxRange;
+        float damage = CurrentDamage;       
         if (_range == null || !_range.HasValidWeapon() || CurrentWeapon == null)
             return false;
 
@@ -105,7 +119,7 @@ public class VSplatterAttack : MonoBehaviour
                 gameplayStart,
                 gameplayDirection,
                 rangeOrigin,
-                CurrentWeapon.MaxRange,
+                maxRange,
                 out float maxDistance))
         {
             return false;
@@ -127,7 +141,7 @@ public class VSplatterAttack : MonoBehaviour
             bulletConfig.Speed,
             bulletConfig.CastRadius,
             bulletConfig.MaxLifetime,
-            CurrentWeapon.Damage,
+            damage,
             bulletConfig.DamageTargetMask,
             bulletConfig.ImpactMask,
             bulletConfig.TriggerInteraction,

@@ -23,6 +23,7 @@ GameObject:
   - component: {fileID: 374727473128369670}
   - component: {fileID: 1173679188114776229}
   - component: {fileID: 4351927234332679625}
+  - component: {fileID: 7673970504876859734}
   m_Layer: 6
   m_Name: Chaser_Virus
   m_TagString: Untagged
@@ -356,6 +357,19 @@ MonoBehaviour:
   _deathParticles: {fileID: 4100955826332663835}
   _selfDestructExplosionParticles: {fileID: 2093594922426981412}
   _selfDestructChargeParticles: {fileID: 0}
+--- !u!114 &7673970504876859734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 348008073115985884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cde804633b8bc440840a686e9815ec7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _movementStats: {fileID: 11400000, guid: 706444edfd6fbe3438035ad719fc2c05, type: 2}
 --- !u!1 &713717843054254003
 GameObject:
   m_ObjectHideFlags: 0
@@ -611,6 +625,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _damageable: {fileID: 4544002800027011311}
+  _hurtColliders:
+  - {fileID: 3930254440218742930}
 --- !u!136 &3930254440218742930
 CapsuleCollider:
   m_ObjectHideFlags: 0

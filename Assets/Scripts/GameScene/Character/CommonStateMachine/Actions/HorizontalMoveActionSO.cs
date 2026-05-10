@@ -11,19 +11,24 @@ public class HorizontalMoveActionSO : StateActionSO<HorizontalMoveAction>
 
 public class HorizontalMoveAction : StateAction
 {
-	//Component references
-	private VSplatter_Character _vsplatterScript;
-	private HorizontalMoveActionSO _originSO => (HorizontalMoveActionSO)base.OriginSO; // The SO this StateAction spawned from
+    private VSplatter_Character _vsplatterScript;
+    private PlayerStatsRuntime _statsRuntime;
 
-	public override void Awake(StateMachine stateMachine)
-	{
-		_vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
-	}
+    private HorizontalMoveActionSO _originSO => (HorizontalMoveActionSO)base.OriginSO;
 
-	public override void OnUpdate()
-	{
-		//delta.Time is used when the movement is applied (ApplyMovementVectorAction)
-		_vsplatterScript.movementVector.x = _vsplatterScript.movementInput.x * _originSO.speed;
-		_vsplatterScript.movementVector.z = _vsplatterScript.movementInput.z * _originSO.speed;
-	}
+    public override void Awake(StateMachine stateMachine)
+    {
+        _vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
+        stateMachine.TryGetComponent(out _statsRuntime);
+    }
+
+    public override void OnUpdate()
+    {
+        float speed = _statsRuntime != null
+            ? _statsRuntime.Movement.moveSpeed
+            : _originSO.speed;
+
+        _vsplatterScript.movementVector.x = _vsplatterScript.movementInput.x * speed;
+        _vsplatterScript.movementVector.z = _vsplatterScript.movementInput.z * speed;
+    }
 }

@@ -1975,6 +1975,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1775271296}
+  - component: {fileID: 1775271297}
   m_Layer: 0
   m_Name: ProjectileRoot
   m_TagString: Untagged
@@ -1997,6 +1998,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1775271297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1775271295}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cca5b6a43f6fc44894f11a9de7f3c79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &7518838868532991246 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7518838868959679074, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}

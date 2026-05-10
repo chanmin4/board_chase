@@ -89,6 +89,6 @@ public class PlayerHealthHUD : MonoBehaviour
         if (_healthText != null)
             _healthText.text = $"{Mathf.CeilToInt(currentHealth)} / {Mathf.CeilToInt(maxHealth)}";
         if (_infectionText != null)
-            _infectionText.text = $"{Mathf.CeilToInt(currentInfection)} / {Mathf.CeilToInt(maxHealth)}";
+            _infectionText.text = $"{Mathf.CeilToInt(currentInfection)} / {Mathf.CeilToInt(currentHealth)}";
     }
 }

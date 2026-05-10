@@ -168,4 +168,27 @@ public class Damageable : MonoBehaviour
 		_debugMaxHealth = MaxHealth;
 		_debugHealthNormalized = HealthNormalized;
 	}
+	public void ApplyMaxHealthFromStats(float maxHealth, bool healToFull)
+	{
+		if (_currentHealthSO == null)
+			return;
+
+		maxHealth = Mathf.Max(1f, maxHealth);
+
+		float previousNormalized = HealthNormalized;
+
+		_currentHealthSO.SetMaxHealth(maxHealth);
+
+		float nextHealth = healToFull
+			? maxHealth
+			: Mathf.Clamp(previousNormalized * maxHealth, 0f, maxHealth);
+
+		_currentHealthSO.SetCurrentHealth(nextHealth);
+
+		SyncRuntimeHealthDebug();
+		OnHealthChanged?.Invoke(this);
+
+		if (_updateHealthUI != null)
+			_updateHealthUI.RaiseEvent();
+	}
 }

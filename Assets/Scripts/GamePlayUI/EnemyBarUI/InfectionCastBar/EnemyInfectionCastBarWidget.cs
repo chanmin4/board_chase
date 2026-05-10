@@ -14,7 +14,7 @@ public class EnemyInfectionCastBarWidget : MonoBehaviour
 
     private Enemy _enemy;
     private float _fillFullWidth;
-
+    private bool _managerVisible = true;
     public RectTransform Root => _root != null ? _root : (RectTransform)transform;
 
     private void Awake()
@@ -52,6 +52,13 @@ public class EnemyInfectionCastBarWidget : MonoBehaviour
     {
         if (_enemy == null || _uicanvasgroupopacity == null)
             return;
+
+        if (!_managerVisible)
+        {
+            _uicanvasgroupopacity.Hide();
+            RefreshImmediate();
+            return;
+        }
 
         if (!_enemy.IsInfectionCasting)
         {
@@ -96,5 +103,15 @@ public class EnemyInfectionCastBarWidget : MonoBehaviour
 
         if (_fillImage.fillOrigin != (int)Image.OriginHorizontal.Left)
             _fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+    }
+    public void SetManagerVisible(bool visible)
+    {
+        _managerVisible = visible;
+
+        if (_uicanvasgroupopacity == null)
+            return;
+
+        if (!visible)
+            _uicanvasgroupopacity.Hide();
     }
 }

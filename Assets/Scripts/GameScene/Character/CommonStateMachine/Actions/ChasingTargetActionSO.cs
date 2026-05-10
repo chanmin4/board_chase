@@ -45,14 +45,14 @@ public class ChasingTargetAction : StateAction
     private ChasingTargetActionSO _config;
     private NavMeshAgent _agent;
     private Enemy _enemy;
-
+    private EnemyMovementStatsProvider _movementStatsProvider;
     public override void Awake(StateMachine stateMachine)
     {
         _config = (ChasingTargetActionSO)OriginSO;
         _agent = stateMachine.GetComponent<NavMeshAgent>();
         _enemy = stateMachine.GetComponent<Enemy>();
+        stateMachine.TryGetComponent(out _movementStatsProvider);
     }
-
     public override void OnStateEnter()
     {
         if (!CanUseAgent())
@@ -111,8 +111,8 @@ public class ChasingTargetAction : StateAction
         switch (_config.SpeedMode)
         {
             case ChasingTargetActionSO.SpeedSource.MovementStatsSO:
-                if (_config.MovementStats != null)
-                    return _config.MovementStats.ChaseSpeed;
+                if (_movementStatsProvider != null)
+                    return _movementStatsProvider.PlayerChaseMovementSpeed;
                 break;
 
             case ChasingTargetActionSO.SpeedSource.AgentCurrentValue:
@@ -121,4 +121,5 @@ public class ChasingTargetAction : StateAction
 
         return _config.FixedChasingSpeed;
     }
+
 }

@@ -12,7 +12,11 @@ public enum PlayerStatId
 {
     AttackDamage,
     NamedBossDamageMultiplier,
-    ShotsPerSecond,
+
+    MaxRange,
+    AttackShotsPerSecond,
+    PaintShotsPerSecond,
+
     ReloadSpeedMultiplier,
     MagazineSize,
 
@@ -22,7 +26,7 @@ public enum PlayerStatId
     MoveSpeed,
     MaxHealth,
     DashDistanceMultiplier,
-
+    DashCooldownSeconds,
     ShockwaveCooldownSeconds,
     VaccineZoneInfectionRecoveryMultiplier
 }

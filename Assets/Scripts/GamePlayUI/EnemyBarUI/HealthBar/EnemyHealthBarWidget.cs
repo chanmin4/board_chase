@@ -14,7 +14,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
     private EnemyHealthBarSettingsSO _settings;
     private float _emphasisUntilTime;
     private float _fillFullWidth;
-
+    private bool _managerVisible = true;
     public RectTransform Root => _root != null ? _root : (RectTransform)transform;
 
     private void Awake()
@@ -67,6 +67,14 @@ public class EnemyHealthBarWidget : MonoBehaviour
     {
         if (_damageable == null || _uicanvasgroupopacity == null)
             return;
+
+        RefreshImmediate();
+
+        if (!_managerVisible)
+        {
+            _uicanvasgroupopacity.Hide();
+            return;
+        }
 
         if (_settings != null && _settings.HideWhenDead && _damageable.IsDead)
         {
@@ -141,5 +149,15 @@ public class EnemyHealthBarWidget : MonoBehaviour
 
         if (_fillImage.fillOrigin != (int)Image.OriginHorizontal.Left)
             _fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+    }
+    public void SetManagerVisible(bool visible)
+    {
+        _managerVisible = visible;
+
+        if (_uicanvasgroupopacity == null)
+            return;
+
+        if (!visible)
+            _uicanvasgroupopacity.Hide();
     }
 }

@@ -4,11 +4,17 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class VSplatterAimAction : MonoBehaviour
 {
+    public enum FireKind
+    {
+        Attack,
+        Paint
+    }
     [Header("Refs")]
     [SerializeField] private VSplatterRange _range;
     [SerializeField] private InputReader _inputReader;
     [SerializeField] private VSplatterAttack _attack;
     [SerializeField] private VSplatterPaint _paint;
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
     [Header("Broadcasting")]
     [SerializeField] private WeaponAmmoEventChannelSO _weaponAmmoEventChannel;
 
@@ -17,7 +23,7 @@ public class VSplatterAimAction : MonoBehaviour
 
     [Header("Auto Refs Don't Touch")]
     [SerializeField] private Camera _aimCamera;
-
+    [SerializeField] private VSplatter_Character _character;
     [Header("Options")]
     
     [SerializeField] private bool _autoReloadOnEmpty = true;
@@ -28,7 +34,8 @@ public class VSplatterAimAction : MonoBehaviour
     private bool _hasAimPoint;
     private bool _isAimWithinRange;
 
-    private float _nextFireTime;
+    private float _nextAttackFireTime;
+    private float _nextPaintFireTime;
     private bool _isReloading;
     private float _reloadStartTime;
     private float _reloadEndTime;
@@ -44,38 +51,35 @@ public class VSplatterAimAction : MonoBehaviour
     public bool HasAimPoint => _hasAimPoint;
     public bool IsAimWithinRange => _isAimWithinRange;
     public bool IsReloading => _isReloading;
-    public bool IsOnFireCooldown => Time.time < _nextFireTime;
+    public bool IsOnFireCooldown =>
+    Time.time < _nextAttackFireTime || Time.time < _nextPaintFireTime;
     public int CurrentAmmo => _currentAmmo;
     public Camera AimCamera => _aimCamera;
     public WeaponSO CurrentWeapon => _range != null ? _range.CurrentWeapon : null;
 
-    private float CurrentShotsPerSecond =>
-        CurrentWeapon != null ? Mathf.Max(0.01f, CurrentWeapon.ShotsPerSecond) : 0.01f;
+    private float CurrentAttackShotsPerSecond =>
+        _statsRuntime != null ? Mathf.Max(0.01f, _statsRuntime.Weapon.attackShotsPerSecond) : 0.01f;
+
+    private float CurrentPaintShotsPerSecond =>
+        _statsRuntime != null ? Mathf.Max(0.01f, _statsRuntime.Weapon.paintShotsPerSecond) : 0.01f;
 
     private int CurrentMagazineSize =>
-        CurrentWeapon != null ? Mathf.Max(1, CurrentWeapon.MagazineSize) : 1;
+        _statsRuntime != null ? Mathf.Max(1, _statsRuntime.Weapon.magazineSize) : 1;
 
     private float CurrentReloadDuration =>
-        CurrentWeapon != null ? Mathf.Max(0.01f, CurrentWeapon.ReloadDuration) : 0.01f;
-
-    public bool CanFireNow =>
-        CurrentWeapon != null &&
-        _hasAimPoint &&
-        !_isReloading &&
-        _currentAmmo > 0 &&
-        Time.time >= _nextFireTime;
-    public float Cooldown01
+        _statsRuntime != null ? Mathf.Max(0.01f, _statsRuntime.Weapon.reloadDurationSeconds) : 0.01f;
+    public bool CanFireNow => CanFireNowFor(FireKind.Attack);
+    public bool CanFireNowFor(FireKind kind)
     {
-        get
-        {
-            float duration = 1f / CurrentShotsPerSecond;
-            if (Time.time >= _nextFireTime)
-                return 1f;
+        if (CurrentWeapon == null)
+            return false;
 
-            float start = _nextFireTime - duration;
-            return Mathf.Clamp01((Time.time - start) / duration);
-        }
+        if (!_hasAimPoint || _isReloading || _currentAmmo <= 0)
+            return false;
+
+        return Time.time >= GetNextFireTime(kind);
     }
+    public float Cooldown01 => GetCooldown01(GetActiveFireKind());
 
     public float Reload01
     {
@@ -89,6 +93,7 @@ public class VSplatterAimAction : MonoBehaviour
         }
     }
 
+    
     public float ActiveProgress01
     {
         get
@@ -96,8 +101,10 @@ public class VSplatterAimAction : MonoBehaviour
             if (_isReloading)
                 return Reload01;
 
-            if (Time.time < _nextFireTime)
-                return Cooldown01;
+            FireKind kind = GetActiveFireKind();
+
+            if (Time.time < GetNextFireTime(kind))
+                return GetCooldown01(kind);
 
             return 1f;
         }
@@ -116,6 +123,8 @@ public class VSplatterAimAction : MonoBehaviour
 
         if (_paint == null)
             _paint = GetComponent<VSplatterPaint>();
+        if (_character == null)
+            _character = GetComponent<VSplatter_Character>();
     }
 
     private void Awake()
@@ -131,6 +140,8 @@ public class VSplatterAimAction : MonoBehaviour
 
         if (_paint == null)
             _paint = GetComponent<VSplatterPaint>();
+        if (_character == null)
+            _character = GetComponent<VSplatter_Character>();
 
         EnsureAimCamera();
 
@@ -144,13 +155,12 @@ public class VSplatterAimAction : MonoBehaviour
             _inputReader.ReloadEvent += OnReloadRequested;
 
         if (_attack != null)
-            _attack.Fired += OnShotExecuted;
+            _attack.Fired += OnAttackShotExecuted;
 
         if (_paint != null)
-            _paint.Fired += OnShotExecuted;
+            _paint.Fired += OnPaintShotExecuted;
         if (_requestWeaponAmmoSnapshotChannel != null)
-        _requestWeaponAmmoSnapshotChannel.OnEventRaised += PublishAmmoSnapshot;
-
+            _requestWeaponAmmoSnapshotChannel.OnEventRaised += PublishAmmoSnapshot;
         PublishAmmoSnapshot();
     }
 
@@ -160,10 +170,10 @@ public class VSplatterAimAction : MonoBehaviour
             _inputReader.ReloadEvent -= OnReloadRequested;
 
         if (_attack != null)
-            _attack.Fired -= OnShotExecuted;
+            _attack.Fired -= OnAttackShotExecuted;
 
         if (_paint != null)
-            _paint.Fired -= OnShotExecuted;
+            _paint.Fired -= OnPaintShotExecuted;
         if (_requestWeaponAmmoSnapshotChannel != null)
             _requestWeaponAmmoSnapshotChannel.OnEventRaised -= PublishAmmoSnapshot;
     }
@@ -175,8 +185,34 @@ public class VSplatterAimAction : MonoBehaviour
         UpdateAimPoint();
         UpdateReloadState();
     }
+    private void OnAttackShotExecuted()
+    {
+        OnShotExecuted(FireKind.Attack);
+    }
 
+    private void OnPaintShotExecuted()
+    {
+        OnShotExecuted(FireKind.Paint);
+    }
+    private void OnShotExecuted(FireKind kind)
+    {
+        if (_isReloading || _currentAmmo <= 0 || CurrentWeapon == null)
+            return;
 
+        _currentAmmo = Mathf.Max(0, _currentAmmo - 1);
+
+        float shotsPerSecond = GetShotsPerSecond(kind);
+        SetNextFireTime(kind, Time.time + (1f / shotsPerSecond));
+
+        OnShotConsumed?.Invoke();
+        PublishAmmoSnapshot();
+
+        if (_debugLogs)
+            Debug.Log($"[VSplatterAimAction] {kind} shot consumed. Ammo={_currentAmmo}/{CurrentMagazineSize}");
+
+        if (_autoReloadOnEmpty && _currentAmmo <= 0)
+            RequestReload();
+    }
     public bool TryGetAimPoint(out Vector3 worldPoint)
     {
         worldPoint = default;
@@ -233,23 +269,6 @@ public class VSplatterAimAction : MonoBehaviour
         RequestReload();
     }
 
-    private void OnShotExecuted()
-    {
-        if (_isReloading || _currentAmmo <= 0 || CurrentWeapon == null)
-            return;
-
-        _currentAmmo = Mathf.Max(0, _currentAmmo - 1);
-        _nextFireTime = Time.time + (1f / CurrentShotsPerSecond);
-
-        OnShotConsumed?.Invoke();
-        PublishAmmoSnapshot();
-
-        if (_debugLogs)
-            Debug.Log($"[VSplatterAimAction] Shot consumed. Ammo={_currentAmmo}/{CurrentMagazineSize}");
-
-        if (_autoReloadOnEmpty && _currentAmmo <= 0)
-            RequestReload();
-    }
 
     private void SyncWeaponState()
     {
@@ -315,5 +334,45 @@ public class VSplatterAimAction : MonoBehaviour
             CurrentMagazineSize,
             _isReloading,
             Reload01));
+    }
+    private float GetNextFireTime(FireKind kind)
+    {
+        return kind == FireKind.Paint
+            ? _nextPaintFireTime
+            : _nextAttackFireTime;
+    }
+
+    private float GetShotsPerSecond(FireKind kind)
+    {
+        return kind == FireKind.Paint
+            ? CurrentPaintShotsPerSecond
+            : CurrentAttackShotsPerSecond;
+    }
+
+    private void SetNextFireTime(FireKind kind, float value)
+    {
+        if (kind == FireKind.Paint)
+            _nextPaintFireTime = value;
+        else
+            _nextAttackFireTime = value;
+    }
+    private FireKind GetActiveFireKind()
+    {
+        if (_character != null && _character.paintInput)
+            return FireKind.Paint;
+
+        return FireKind.Attack;
+    }
+
+    private float GetCooldown01(FireKind kind)
+    {
+        float duration = 1f / GetShotsPerSecond(kind);
+        float nextFireTime = GetNextFireTime(kind);
+
+        if (Time.time >= nextFireTime)
+            return 1f;
+
+        float start = nextFireTime - duration;
+        return Mathf.Clamp01((Time.time - start) / duration);
     }
 }

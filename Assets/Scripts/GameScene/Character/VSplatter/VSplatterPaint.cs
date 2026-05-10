@@ -9,13 +9,13 @@ public class VSplatterPaint : MonoBehaviour
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
 
     [Header("Listening To")]
-[SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
+    [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
 
 
     [Header("Options")]
     [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Vaccine;
-
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
     [SerializeField] private bool debugDraw = false;
@@ -31,7 +31,15 @@ public class VSplatterPaint : MonoBehaviour
     private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
     private Transform VisualFireOrigin => _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
     private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
+    private float CurrentPaintRadius =>
+    _statsRuntime != null
+        ? Mathf.Max(0.01f, _statsRuntime.Paint.paintRadius)
+        : CurrentWeapon != null ? CurrentWeapon.PaintRadiusWorld : 1f;
 
+    private int CurrentPaintPriority =>
+        _statsRuntime != null
+            ? _statsRuntime.Paint.paintPriority
+            : CurrentWeapon != null ? CurrentWeapon.PaintPriority : 0;
     private void Reset()
     {
         if (_range == null)
@@ -42,6 +50,8 @@ public class VSplatterPaint : MonoBehaviour
 
         if (_aimCamera == null)
             _aimCamera = Camera.main;
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
     }
 
     private void Awake()
@@ -54,6 +64,8 @@ public class VSplatterPaint : MonoBehaviour
 
         if (_aimCamera == null)
             _aimCamera = Camera.main;
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
     }
     private void OnEnable()
     {
@@ -157,6 +169,9 @@ public class VSplatterPaint : MonoBehaviour
             bulletRotation,
             ProjectilesRoot).GetComponent<PaintBullet>();
 
+        float paintRadius = CurrentPaintRadius;
+        int paintPriority = CurrentPaintPriority;
+
         bullet.Init(
             gameplayStart,
             gameplayDirection,
@@ -170,8 +185,8 @@ public class VSplatterPaint : MonoBehaviour
             bulletConfig.TriggerInteraction,
             _maskRenderManager,
             _paintChannel,
-            CurrentWeapon.PaintRadiusWorld,
-            CurrentWeapon.PaintPriority,
+            paintRadius,
+            paintPriority,  
             this);
         if (debugDraw)
             Debug.DrawLine(visualSpawn, aimPoint, Color.cyan, debugDrawDuration);

@@ -7,7 +7,7 @@ public class VSplatterRange : MonoBehaviour
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
     [SerializeField] private InputReader _inputReader;
     [SerializeField] private Transform _rangeOrigin;
-
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
     [Header("Runtime Visual")]
     [SerializeField] private bool showRuntimeRange = true;
     [SerializeField] private bool showOnlyWhileHoldingAimInput = false;
@@ -27,8 +27,10 @@ public class VSplatterRange : MonoBehaviour
 
     public Transform RangeOrigin => _rangeOrigin != null ? _rangeOrigin : transform;
     public WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
-    public float MaxRange => CurrentWeapon != null ? CurrentWeapon.MaxRange : 0f;
-
+    public float MaxRange =>
+    _statsRuntime != null
+        ? _statsRuntime.Weapon.maxRange
+        : CurrentWeapon != null ? CurrentWeapon.MaxRange : 0f;
     private void Reset()
     {
         if (_rangeOrigin == null)
@@ -36,6 +38,8 @@ public class VSplatterRange : MonoBehaviour
 
         if (_inputReader == null)
             _inputReader = FindAnyObjectByType<InputReader>();
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
     }
 
     private void Awake()
@@ -45,7 +49,8 @@ public class VSplatterRange : MonoBehaviour
 
         if (_inputReader == null)
             _inputReader = FindAnyObjectByType<InputReader>();
-
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
         EnsureLineRenderer();
         RefreshVisualImmediate();
     }
@@ -94,7 +99,7 @@ public class VSplatterRange : MonoBehaviour
         return VSplatterAimUtility.IsWithinFlatRange(
             RangeOrigin.position,
             worldPoint,
-            CurrentWeapon.MaxRange);
+            MaxRange);
     }
 
     public bool IsShowingRangeNow()
@@ -198,7 +203,7 @@ public class VSplatterRange : MonoBehaviour
         return VSplatterAimUtility.ClampFlatPointToRange(
             RangeOrigin.position,
             worldPoint,
-            CurrentWeapon.MaxRange);
+           MaxRange);
     }
 
     private void OnAttackStarted() => _attackHeld = true;

@@ -10,7 +10,7 @@ public class VSplatterDashController : MonoBehaviour
     [SerializeField] private VSplatter_Character _character;
     [SerializeField] private VSplatterDashConfigSO _config;
     [SerializeField] private VSplatterDashEventChannelSO _dashEventChannel;
-
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
     [Header("Broadcasting")]
     [SerializeField] private CooldownSnapshotEventChannelSO _cooldownChangedChannel;
 
@@ -38,7 +38,7 @@ public class VSplatterDashController : MonoBehaviour
     public Vector3 DashDirection => _dashDirection;
     public float DashSpeed => _config != null ? _config.DashSpeed : 14f;
     public float CooldownRemaining => Mathf.Max(0f, _nextDashReadyTime - Time.time);
-    public float CooldownDuration => _config != null ? _config.CooldownSeconds : 0f;
+    public float CooldownDuration => ResolveDashCooldown();
     public float Cooldown01 =>
         CooldownDuration > 0f
             ? Mathf.Clamp01(CooldownRemaining / CooldownDuration)
@@ -58,6 +58,8 @@ public class VSplatterDashController : MonoBehaviour
             TryGetComponent(out _character);
         if (_invulnerabilityController == null)
             TryGetComponent(out _invulnerabilityController);
+        if (_statsRuntime == null)
+            TryGetComponent(out _statsRuntime);
     }
 
     private void OnEnable()
@@ -244,6 +246,9 @@ public class VSplatterDashController : MonoBehaviour
 
     private float ResolveDashCooldown()
     {
+        if (_statsRuntime != null)
+            return Mathf.Max(0f, _statsRuntime.Movement.dashCooldownSeconds);
+
         return _config != null ? _config.CooldownSeconds : 0f;
     }
 }

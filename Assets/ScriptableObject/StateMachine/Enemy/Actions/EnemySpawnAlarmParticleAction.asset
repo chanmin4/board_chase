@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c343b09fda9e5bf44a73801d633c2f75, type: 3}
+  m_Name: EnemySpawnAlarmParticleAction
+  m_EditorClassIdentifier: 
+  description: 
+  _warningParticlePrefab: {fileID: 6091258378792214739, guid: 855e49d32aeab7e45a2b18bc39fc47c0, type: 3}
+  _warningOffset: {x: 0, y: 0, z: 0}
+  _parentWarningToEnemy: 0
+  _destroyWarningOnExit: 1
+  _hideRenderers: 1
+  _disableColliders: 1
+  _stopNavMeshAgent: 1
+  _spawnParticlePrefab: {fileID: 6095646110099345579, guid: 0a9802911b76199419f0d0cf37d0ee93, type: 3}
+  _spawnOffset: {x: 0, y: 0, z: 0}
+  _parentSpawnToEnemy: 0
+  _destroySpawnAfterDelay: 1
+  _spawnDestroyDelay: 4

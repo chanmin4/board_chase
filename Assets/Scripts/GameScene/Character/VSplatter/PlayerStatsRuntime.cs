@@ -4,6 +4,8 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class PlayerStatsRuntime : MonoBehaviour
 {
+    [Header("Base Player Stats")]
+    [SerializeField] private PlayerBaseStatsConfigSO _baseStatsConfig;
     [Header("Upgrade Runtime")]
     [SerializeField] private UpgradeCatalogSO _catalog;
     [SerializeField] private PlayerUpgradeState _upgradeState;
@@ -95,35 +97,76 @@ public class PlayerStatsRuntime : MonoBehaviour
         WeaponSO weapon = CurrentWeapon;
 
         float baseDamage = weapon != null ? weapon.Damage : 0f;
-        float baseShotsPerSecond = weapon != null ? weapon.ShotsPerSecond : 1f;
+        float baseRange = weapon != null ? weapon.MaxRange : 1f;
+        float baseAttackSps = weapon != null ? weapon.AttackShotsPerSecond : 1f;
+        float basePaintSps = weapon != null ? weapon.PaintShotsPerSecond : baseAttackSps * 0.5f;
         float baseReloadDuration = weapon != null ? weapon.ReloadDuration : 1f;
         float basePaintRadius = weapon != null ? weapon.PaintRadiusWorld : 1f;
         int baseMagazineSize = weapon != null ? weapon.MagazineSize : 1;
+        int basePaintPriority = weapon != null ? weapon.PaintPriority : 0;
 
         float reloadSpeed = Resolve(PlayerStatId.ReloadSpeedMultiplier, 1f, 0.01f);
 
         _current.weapon.attackDamage = Resolve(PlayerStatId.AttackDamage, baseDamage, 0f);
         _current.weapon.namedBossDamageMultiplier = Resolve(PlayerStatId.NamedBossDamageMultiplier, 1f, 0f);
-        _current.weapon.shotsPerSecond = Resolve(PlayerStatId.ShotsPerSecond, baseShotsPerSecond, 0.01f);
+        _current.weapon.maxRange = Resolve(PlayerStatId.MaxRange, baseRange, 0.1f);
+        _current.weapon.attackShotsPerSecond = Resolve(PlayerStatId.AttackShotsPerSecond, baseAttackSps, 0.01f);
+        _current.weapon.paintShotsPerSecond = Resolve(PlayerStatId.PaintShotsPerSecond, basePaintSps, 0.01f);
         _current.weapon.reloadSpeedMultiplier = reloadSpeed;
         _current.weapon.reloadDurationSeconds = Mathf.Max(0.01f, baseReloadDuration / reloadSpeed);
         _current.weapon.magazineSize = Mathf.Max(1, Mathf.RoundToInt(Resolve(PlayerStatId.MagazineSize, baseMagazineSize, 1f)));
 
         _current.paint.paintRadius = Resolve(PlayerStatId.PaintRadius, basePaintRadius, 0.01f);
-        _current.paint.occupationWinThreshold = Mathf.Clamp01(
+        _current.paint.paintPriority = basePaintPriority; _current.paint.occupationWinThreshold = Mathf.Clamp01(
             Resolve(PlayerStatId.OccupationWinThreshold, _baseOccupationWinThreshold, 0f));
+        
+        float baseOccupationWinThreshold =
+         _baseStatsConfig != null
+        ? _baseStatsConfig.OccupationWinThreshold
+        : _baseOccupationWinThreshold;
 
-        float baseMoveSpeed = _horizontalMoveAction != null ? _horizontalMoveAction.speed : 8f;
+        _current.paint.occupationWinThreshold = Mathf.Clamp01(
+            Resolve(PlayerStatId.OccupationWinThreshold, baseOccupationWinThreshold, 0f));
+        
+        float baseMoveSpeed =
+        _baseStatsConfig != null
+        ? _baseStatsConfig.MoveSpeed
+        : _horizontalMoveAction != null ? _horizontalMoveAction.speed : 8f;
         _current.movement.moveSpeed = Resolve(PlayerStatId.MoveSpeed, baseMoveSpeed, 0f);
         _current.movement.dashDistanceMultiplier = Resolve(PlayerStatId.DashDistanceMultiplier, 1f, 0f);
 
-        float baseMaxHealth = _healthConfig != null ? _healthConfig.InitialHealth : 100f;
+        float baseMaxHealth =
+        _baseStatsConfig != null
+            ? _baseStatsConfig.MaxHealth
+            : _healthConfig != null ? _healthConfig.InitialHealth : 100f;
+
         _current.survival.maxHealth = Resolve(PlayerStatId.MaxHealth, baseMaxHealth, 1f);
+        
+        float baseShockwaveCooldown =
+            _baseStatsConfig != null
+                ? _baseStatsConfig.ShockwaveCooldownSeconds
+                : _shockwaveConfig != null ? _shockwaveConfig.CooldownSeconds : 0f;
 
-        float baseShockwaveCooldown = _shockwaveConfig != null ? _shockwaveConfig.CooldownSeconds : 0f;
-        _current.shockwave.cooldownSeconds = Resolve(PlayerStatId.ShockwaveCooldownSeconds, baseShockwaveCooldown, 0f);
-
+        _current.shockwave.cooldownSeconds = Resolve(
+            PlayerStatId.ShockwaveCooldownSeconds,
+            baseShockwaveCooldown,
+            0f);
         _current.features = flags;
+
+        float baseDashCooldown =
+        _baseStatsConfig != null
+            ? _baseStatsConfig.DashCooldownSeconds
+            : _dashConfig != null ? _dashConfig.CooldownSeconds : 0f;
+
+        _current.movement.dashCooldownSeconds = Resolve(
+            PlayerStatId.DashCooldownSeconds,
+            baseDashCooldown,
+            0f);
+
+        _current.movement.dashDistanceMultiplier = Resolve(
+            PlayerStatId.DashDistanceMultiplier,
+            1f,
+            0f);
     }
 
     private void ApplyTrackEffects(PlayerUpgradeTrack track, ref PlayerFeatureFlags flags)

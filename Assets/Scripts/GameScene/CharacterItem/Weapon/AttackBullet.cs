@@ -232,7 +232,7 @@ public class AttackBullet : MonoBehaviour
                 continue;
             }
 
-            if (requireProjectileHurtbox && collider.GetComponent<EnemyProjectileHurtbox>() == null)
+            if (requireProjectileHurtbox && !TryGetProjectileHurtbox(collider, out _))
             {
                 if (_debugHit)
                     Debug.Log($"[AttackBullet][Select] skip no hurtbox: {collider.name}");
@@ -270,10 +270,10 @@ public class AttackBullet : MonoBehaviour
         }
 
         EnemyProjectileHurtbox hurtbox = hit.collider.GetComponent<EnemyProjectileHurtbox>();
-        if (hurtbox == null)
+        if (!TryGetProjectileHurtbox(hit.collider, out EnemyProjectileHurtbox _hurtColliders))
         {
             if (_debugHit)
-                Debug.Log($"[AttackBullet][Apply] blocked: no EnemyProjectileHurtbox on {hit.collider.name}");
+                Debug.Log($"[AttackBullet][Apply] blocked: no EnemyProjectileHurtbox accepting {hit.collider.name}");
             return;
         }
 
@@ -295,5 +295,33 @@ public class AttackBullet : MonoBehaviour
             Debug.Log($"[AttackBullet][Apply] success: target={damageable.name}, collider={hit.collider.name}, damage={_damage}");
 
         damageable.ReceiveAnAttack(_damage, _source);
+    }
+    private bool TryGetProjectileHurtbox(Collider collider, out EnemyProjectileHurtbox hurtbox)
+    {
+        hurtbox = null;
+
+        if (collider == null)
+            return false;
+
+        EnemyProjectileHurtbox direct = collider.GetComponent<EnemyProjectileHurtbox>();
+        if (direct != null && direct.AcceptsCollider(collider))
+        {
+            hurtbox = direct;
+            return true;
+        }
+
+        EnemyProjectileHurtbox[] parentHurtboxes = collider.GetComponentsInParent<EnemyProjectileHurtbox>(true);
+        for (int i = 0; i < parentHurtboxes.Length; i++)
+        {
+            EnemyProjectileHurtbox candidate = parentHurtboxes[i];
+
+            if (candidate != null && candidate.AcceptsCollider(collider))
+            {
+                hurtbox = candidate;
+                return true;
+            }
+        }
+
+        return false;
     }
 }

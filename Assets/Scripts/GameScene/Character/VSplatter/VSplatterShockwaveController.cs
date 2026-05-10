@@ -11,6 +11,7 @@ public class VSplatterShockwaveController : MonoBehaviour
     [SerializeField] private VSplatterShockwaveConfigSO _config;
     [SerializeField] private VSplatterShockwaveEventChannelSO _shockwaveEventChannel;
     [SerializeField] private VSplatterActionGate _actionGate;
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
     
     [Header("Broadcasting")]
     [SerializeField] private CooldownSnapshotEventChannelSO _cooldownChangedChannel;
@@ -35,7 +36,7 @@ public class VSplatterShockwaveController : MonoBehaviour
     public float ChargeDuration => _isCharging ? Mathf.Max(0f, Time.time - _chargeStartTime) : 0f;
     public float ChargeNormalized => ResolveMaxChargeTime() <= 0f ? 1f : Mathf.Clamp01(ChargeDuration / ResolveMaxChargeTime());
     public float CooldownRemaining => Mathf.Max(0f, _nextReadyTime - Time.time);
-    public float CooldownDuration => _config != null ? _config.CooldownSeconds : 0f;
+    public float CooldownDuration => ResolveCooldownSeconds();
     public float Cooldown01 =>
         CooldownDuration > 0f
             ? Mathf.Clamp01(CooldownRemaining / CooldownDuration)
@@ -61,6 +62,8 @@ public class VSplatterShockwaveController : MonoBehaviour
             gameObject.AddComponent<VSplatterShockwaveEffectResolver>();
         if (_actionGate == null)
             TryGetComponent(out _actionGate);
+        if (_statsRuntime == null)
+            TryGetComponent(out _statsRuntime);
     }
 
     private void OnEnable()
@@ -236,7 +239,13 @@ public class VSplatterShockwaveController : MonoBehaviour
     }
 
     private float ResolveMaxChargeTime() => _config != null ? _config.MaxChargeTime : 1f;
-    private float ResolveCooldownSeconds() => _config != null ? _config.CooldownSeconds : 0f;
+    private float ResolveCooldownSeconds()
+    {
+        if (_statsRuntime != null)
+            return Mathf.Max(0f, _statsRuntime.Shockwave.cooldownSeconds);
+
+        return _config != null ? _config.CooldownSeconds : 0f;
+    }
     private float ResolveBaseRadius() => _config != null ? _config.BaseRadius : 2f;
     private float ResolveMaxRadius() => _config != null ? _config.MaxRadius : 5f;
     private float ResolveBaseDamage() => _config != null ? _config.BaseDamage : 5f;

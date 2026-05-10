@@ -10,8 +10,13 @@ public class WeaponSO : ScriptableObject
     [SerializeField] private Sprite icon;
 
     [Header("Shared")]
+    [Tooltip("Left click attack shots per second.")]
     [Min(0.01f)]
     [SerializeField] private float shotsPerSecond = 2f;
+
+    [Tooltip("Right click paint shots per second. 0이면 좌클릭 공속의 1/2을 사용합니다.")]
+    [Min(0f)]
+    [SerializeField] private float paintShotsPerSecondOverride = 0f;
 
     [Min(0.1f)]
     [SerializeField] private float maxRange = 12f;
@@ -45,6 +50,11 @@ public class WeaponSO : ScriptableObject
     public Sprite Icon => icon;
 
     public float ShotsPerSecond => shotsPerSecond;
+    public float AttackShotsPerSecond => shotsPerSecond;
+    public float PaintShotsPerSecond =>
+    paintShotsPerSecondOverride > 0f
+        ? paintShotsPerSecondOverride
+        : shotsPerSecond * 0.5f;
     public float MaxRange => maxRange;
     public int MagazineSize => magazineSize;
     public float ReloadDuration => reloadDuration;

@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
-
+//only face on update!! 
 [CreateAssetMenu(fileName = "CreatureFacePlayer", menuName = "State Machines/Actions/Creature Face Player")]
 public class CreatureFacePlayerSO : StateActionSO
 {

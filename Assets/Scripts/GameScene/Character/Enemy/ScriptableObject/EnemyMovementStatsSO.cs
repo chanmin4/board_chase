@@ -5,7 +5,10 @@ using UnityEngine;
     menuName = "Game/Enemy/Enemy Movement Stats")]
 public class EnemyMovementStatsSO : ScriptableObject
 {
-    [SerializeField] private float _chaseSpeed = 3.5f;
+    [Header("Movement")]
+    [SerializeField] private float _normalMovementSpeed = 2.2f;
+    [SerializeField] private float _playerChaseMovementSpeed = 3.5f;
 
-    public float ChaseSpeed => _chaseSpeed;
+    public float NormalMovementSpeed => _normalMovementSpeed;
+    public float PlayerChaseMovementSpeed => _playerChaseMovementSpeed;
 }

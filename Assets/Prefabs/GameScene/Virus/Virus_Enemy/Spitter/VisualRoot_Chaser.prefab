@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8596589174281604444}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Armature_Bubblet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -42,9 +42,9 @@ GameObject:
   m_Component:
   - component: {fileID: 3420165518137472021}
   - component: {fileID: 8926917458919264001}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: VisualRoot_Chaser
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -64,6 +64,7 @@ Transform:
   m_Children:
   - {fileID: 8596589174281604444}
   - {fileID: 5365617929963236839}
+  - {fileID: 800539160965642000}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!64 &8926917458919264001
@@ -88,6 +89,37 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!1 &3699362723079761273
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 800539160965642000}
+  m_Layer: 6
+  m_Name: FireOrigin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &800539160965642000
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3699362723079761273}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3420165518137472021}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3823685299713905696
 GameObject:
   m_ObjectHideFlags: 0
@@ -97,7 +129,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7955105359621721781}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Tail_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -131,7 +163,7 @@ GameObject:
   - component: {fileID: 1895497748381411706}
   - component: {fileID: 2380769391854676152}
   - component: {fileID: 1041064108100385415}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Tail_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -167,6 +199,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _damageable: {fileID: 0}
+  _hurtColliders: []
 --- !u!114 &2380769391854676152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -198,7 +231,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 10, y: 3.3, z: 1.2}
+  m_Size: {x: 10, y: 3, z: 1.2}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5587711530567317833
 GameObject:
@@ -209,7 +242,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8766175038923663998}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -242,7 +275,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5365617929963236839}
   - component: {fileID: 8504638650315331417}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Bubblet_7
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -333,7 +366,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7504874318912479395}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
