@@ -38,6 +38,8 @@ public class NamedSectorController : MonoBehaviour
     [SerializeField] private int _stageOverride = -1;
     [SerializeField] private Transform _namedSpawnPoint;
     [SerializeField] private Transform _namedRoot;
+    [Header("Named Spawn InfoBroadcasting")]
+    [SerializeField] private NamedEnemySpawnInfoEventChannelSO _namedEnemySpawnInfoChannel;
 
     [Header("Sector Hooks")]
     [SerializeField] private NamedSectorRuntimeUnityEvent _onSectorReserved;
@@ -427,6 +429,19 @@ public class NamedSectorController : MonoBehaviour
         );
 
         _namedInstance = instance.gameObject;
+
+        if (instance.TryGetComponent(out NamedEnemy namedEnemy))
+        {
+            _namedEnemySpawnInfoChannel?.RaiseEvent(new NamedEnemySpawnInfo(
+                namedEnemy,
+                _selectedSector,
+                _namedSpawnPoint
+            ));
+        }
+        else
+        {
+            Debug.LogWarning("[NamedSectorController] Spawned named prefab has no NamedEnemy component.", this);
+        }
     }
 
     private int ResolveCurrentStage()

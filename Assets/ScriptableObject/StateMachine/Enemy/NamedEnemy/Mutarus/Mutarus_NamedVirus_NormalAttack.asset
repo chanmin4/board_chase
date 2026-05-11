@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 872cbaa965d1f6e4e98365d74e2060df, type: 3}
+  m_Name: Mutarus_NamedVirus_NormalAttack
+  m_EditorClassIdentifier: 
+  _transitions:
+  - FromState: {fileID: 11400000, guid: f2384d94a3722764b80d2610fdb0c284, type: 2}
+    ToState: {fileID: 11400000, guid: d43ac3451577aac4db76965be82ec790, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 2a2973088e7641040bc2b56b1b7f3bc5, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: d43ac3451577aac4db76965be82ec790, type: 2}
+    ToState: {fileID: 11400000, guid: f5977f453dc32784ab4f1bca022c4fe1, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 8ab725df69688654ea03f69ab89ba3fe, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: 428dfa8ea87688945bc661f29b1089fa, type: 2}
+    ToState: {fileID: 11400000, guid: f5977f453dc32784ab4f1bca022c4fe1, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 8ab725df69688654ea03f69ab89ba3fe, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: 13f74261ba503a846a65ec81858d8934, type: 2}
+    ToState: {fileID: 11400000, guid: f5977f453dc32784ab4f1bca022c4fe1, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 8ab725df69688654ea03f69ab89ba3fe, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: f2384d94a3722764b80d2610fdb0c284, type: 2}
+    ToState: {fileID: 11400000, guid: 428dfa8ea87688945bc661f29b1089fa, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: e720c6dcfe705814ba644dddeb2fa6ad, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: f2384d94a3722764b80d2610fdb0c284, type: 2}
+    ToState: {fileID: 11400000, guid: 13f74261ba503a846a65ec81858d8934, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 67d848ffaaf26624985504daa0ca6a89, type: 2}
+      Operator: 0

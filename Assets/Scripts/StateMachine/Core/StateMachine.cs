@@ -68,26 +68,42 @@ namespace VSplatter.StateMachine
 
 		public new bool TryGetComponent<T>(out T component) where T : Component
 		{
-			var type = typeof(T);
-			if (!_cachedComponents.TryGetValue(type, out var value))
-			{
-				if (base.TryGetComponent<T>(out component))
-					_cachedComponents.Add(type, component);
+			Type type = typeof(T);
 
-				return component != null;
+			if (_cachedComponents.TryGetValue(type, out Component cached))
+			{
+				component = cached as T;
+
+				if (component != null)
+					return true;
+
+				_cachedComponents.Remove(type);
 			}
 
-			component = (T)value;
-			return true;
+			if (base.TryGetComponent(out component))
+			{
+				_cachedComponents[type] = component;
+				return true;
+			}
+
+			component = GetComponentInParent<T>();
+
+			if (component != null)
+			{
+				_cachedComponents[type] = component;
+				return true;
+			}
+
+			return false;
 		}
 
 		public T GetOrAddComponent<T>() where T : Component
 		{
-			if (!TryGetComponent<T>(out var component))
-			{
-				component = gameObject.AddComponent<T>();
-				_cachedComponents.Add(typeof(T), component);
-			}
+			if (TryGetComponent(out T component))
+				return component;
+
+			component = gameObject.AddComponent<T>();
+			_cachedComponents[typeof(T)] = component;
 
 			return component;
 		}
@@ -95,7 +111,9 @@ namespace VSplatter.StateMachine
 		public new T GetComponent<T>() where T : Component
 		{
 			return TryGetComponent(out T component)
-				? component : throw new InvalidOperationException($"{typeof(T).Name} not found in {name}.");
+				? component
+				: throw new InvalidOperationException(
+					$"{typeof(T).Name} not found on {name} or its parent hierarchy.");
 		}
 
 		private void Update()

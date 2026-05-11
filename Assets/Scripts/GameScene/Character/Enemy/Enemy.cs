@@ -46,7 +46,6 @@ public class Enemy : MonoBehaviour
 			return Mathf.Clamp01((Time.time - _infectionCastStartTime) / _infectionCastDuration);
 		}
 	}
-
 	public virtual void OnAlertTriggerChange(bool entered, GameObject who)
 	{
 		isPlayerInAlertZone = entered;

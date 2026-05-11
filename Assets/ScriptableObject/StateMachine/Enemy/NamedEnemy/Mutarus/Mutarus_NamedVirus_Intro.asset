@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 872cbaa965d1f6e4e98365d74e2060df, type: 3}
+  m_Name: Mutarus_NamedVirus_Intro
+  m_EditorClassIdentifier: 
+  _transitions:
+  - FromState: {fileID: 11400000, guid: 6f2b8491df8643e44bfa1a48185cc5cf, type: 2}
+    ToState: {fileID: 11400000, guid: 981d36d81e07d1349ab96572ac94cb62, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 0938f65686dd91542a11e2bc56af2e62, type: 2}
+      Operator: 0
+  - FromState: {fileID: 11400000, guid: 981d36d81e07d1349ab96572ac94cb62, type: 2}
+    ToState: {fileID: 11400000, guid: b3ac167614746af48ab313785f4a8f84, type: 2}
+    Conditions:
+    - ExpectedResult: 0
+      Condition: {fileID: 11400000, guid: 9b2289e40a9faff43b2ebcc301136570, type: 2}
+      Operator: 0
