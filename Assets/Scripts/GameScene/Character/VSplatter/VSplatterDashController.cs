@@ -32,7 +32,7 @@ public class VSplatterDashController : MonoBehaviour
     private float _nextDashReadyTime;
     private float _lastPublishedRemaining = -1f;
     private bool _lastPublishedDashing;
-
+    public VSplatterDashConfigSO Config => _config;
     public bool IsDashing => _isDashing;
     public bool IsDashReady => !_isDashing && CooldownRemaining <= 0.0001f;
     public Vector3 DashDirection => _dashDirection;
