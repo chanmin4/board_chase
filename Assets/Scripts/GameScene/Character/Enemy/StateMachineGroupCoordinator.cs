@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
@@ -19,6 +18,9 @@ public class StateMachineGroupCoordinator : MonoBehaviour
 
         [Tooltip("Usually true. Set false only if you want this rule to explicitly keep a child disabled.")]
         public bool enableChild;
+
+        [Tooltip("If true, this child state machine returns to its Transition Table initial state when this rule enables it.")]
+        public bool resetOnEnable;
     }
 
     [Header("References")]
@@ -62,8 +64,16 @@ public class StateMachineGroupCoordinator : MonoBehaviour
     [ContextMenu("Refresh Children")]
     public void RefreshChildren()
     {
-        _currentParentState = GetCurrentParentState();
         _enabledChildCount = 0;
+
+        if (_parentStateMachine == null || !_parentStateMachine.enabled)
+        {
+            _currentParentState = null;
+            SetAllManagedChildren(false);
+            return;
+        }
+
+        _currentParentState = GetCurrentParentState();
 
         if (_childRules == null)
             return;
@@ -75,7 +85,7 @@ public class StateMachineGroupCoordinator : MonoBehaviour
                 continue;
 
             bool shouldEnable = ResolveChildEnabled(_childRules[i], _currentParentState);
-            ApplyChildStateMachineState(child, shouldEnable);
+            ApplyChildStateMachineState(_childRules[i], shouldEnable);
 
             if (child.enabled)
                 _enabledChildCount++;
@@ -104,17 +114,25 @@ public class StateMachineGroupCoordinator : MonoBehaviour
 
         for (int i = 0; i < _childRules.Length; i++)
         {
-            ChildStateMachine child = _childRules[i].childStateMachine;
-            if (child == null)
+            if (_childRules[i].childStateMachine == null)
                 continue;
 
-            ApplyChildStateMachineState(child, enabled);
+            ApplyChildStateMachineState(_childRules[i], enabled);
         }
     }
 
-    private void ApplyChildStateMachineState(ChildStateMachine child, bool shouldEnable)
+    private void ApplyChildStateMachineState(ChildRule rule, bool shouldEnable)
     {
-        if (child.enabled != shouldEnable)
+        ChildStateMachine child = rule.childStateMachine;
+        if (child == null)
+            return;
+
+        bool wasEnabled = child.enabled;
+
+        if (wasEnabled != shouldEnable)
             child.enabled = shouldEnable;
+
+        if (!wasEnabled && shouldEnable && rule.resetOnEnable)
+            child.ResetToInitialState(true, false);
     }
 }

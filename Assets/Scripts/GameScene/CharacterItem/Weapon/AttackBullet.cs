@@ -195,7 +195,7 @@ public class AttackBullet : MonoBehaviour
                 if (c == null)
                     continue;
 
-                bool hasProjectileHurtbox = c.GetComponent<EnemyProjectileHurtbox>() != null;
+                bool hasProjectileHurtbox = TryGetProjectileHurtbox(c, out _);
                 bool hasDamageableInParent = c.GetComponentInParent<Damageable>() != null;
 
                 Debug.Log(
@@ -269,8 +269,7 @@ public class AttackBullet : MonoBehaviour
             return;
         }
 
-        EnemyProjectileHurtbox hurtbox = hit.collider.GetComponent<EnemyProjectileHurtbox>();
-        if (!TryGetProjectileHurtbox(hit.collider, out EnemyProjectileHurtbox _hurtColliders))
+        if (!TryGetProjectileHurtbox(hit.collider, out EnemyProjectileHurtbox hurtbox))
         {
             if (_debugHit)
                 Debug.Log($"[AttackBullet][Apply] blocked: no EnemyProjectileHurtbox accepting {hit.collider.name}");
@@ -292,10 +291,11 @@ public class AttackBullet : MonoBehaviour
         }
 
         if (_debugHit)
-            Debug.Log($"[AttackBullet][Apply] success: target={damageable.name}, collider={hit.collider.name}, damage={_damage}");
+            Debug.Log($"[AttackBullet][Apply] success: target={damageable.name}, collider={hit.collider.name}, hurtbox={hurtbox.name}, damage={_damage}");
 
         damageable.ReceiveAnAttack(_damage, _source);
     }
+
     private bool TryGetProjectileHurtbox(Collider collider, out EnemyProjectileHurtbox hurtbox)
     {
         hurtbox = null;
@@ -304,24 +304,47 @@ public class AttackBullet : MonoBehaviour
             return false;
 
         EnemyProjectileHurtbox direct = collider.GetComponent<EnemyProjectileHurtbox>();
-        if (direct != null && direct.AcceptsCollider(collider))
-        {
-            hurtbox = direct;
+        if (IsAcceptedHurtbox(direct, collider, out hurtbox))
             return true;
-        }
 
         EnemyProjectileHurtbox[] parentHurtboxes = collider.GetComponentsInParent<EnemyProjectileHurtbox>(true);
         for (int i = 0; i < parentHurtboxes.Length; i++)
         {
-            EnemyProjectileHurtbox candidate = parentHurtboxes[i];
-
-            if (candidate != null && candidate.AcceptsCollider(collider))
-            {
-                hurtbox = candidate;
+            if (IsAcceptedHurtbox(parentHurtboxes[i], collider, out hurtbox))
                 return true;
-            }
+        }
+
+        Damageable damageable = collider.GetComponentInParent<Damageable>();
+        if (damageable == null)
+            return false;
+
+        EnemyProjectileHurtbox[] damageableHurtboxes =
+            damageable.GetComponentsInChildren<EnemyProjectileHurtbox>(true);
+
+        for (int i = 0; i < damageableHurtboxes.Length; i++)
+        {
+            if (IsAcceptedHurtbox(damageableHurtboxes[i], collider, out hurtbox))
+                return true;
         }
 
         return false;
     }
+
+    private static bool IsAcceptedHurtbox(
+        EnemyProjectileHurtbox candidate,
+        Collider collider,
+        out EnemyProjectileHurtbox hurtbox)
+    {
+        hurtbox = null;
+
+        if (candidate == null)
+            return false;
+
+        if (!candidate.AcceptsCollider(collider))
+            return false;
+
+        hurtbox = candidate;
+        return true;
+    }
+
 }

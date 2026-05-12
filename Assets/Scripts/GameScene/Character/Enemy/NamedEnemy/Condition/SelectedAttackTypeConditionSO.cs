@@ -8,7 +8,7 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class SelectedAttackTypeConditionSO : StateConditionSO<SelectedAttackTypeCondition>
 {
     [Tooltip("Transition is true when blackboard.selectedAttack equals this value.")]
-    public NamedEnemyAttackType expectedAttack = NamedEnemyAttackType.Bite;
+    public NamedEnemyAttackType expectedAttack = NamedEnemyAttackType.None;
 }
 
 public class SelectedAttackTypeCondition : Condition

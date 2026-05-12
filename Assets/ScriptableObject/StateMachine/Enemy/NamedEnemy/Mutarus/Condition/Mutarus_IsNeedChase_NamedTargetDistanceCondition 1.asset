@@ -9,7 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eeec911366acbf64893956ea7d60fa1c, type: 3}
-  m_Name: PoisionPuddleBombAttackTypeCondition
+  m_Script: {fileID: 11500000, guid: 3aeda5286558dd540a70f1369f7a6b42, type: 3}
+  m_Name: Mutarus_IsNeedChase_NamedTargetDistanceCondition 1
   m_EditorClassIdentifier: 
-  expectedAttack: 4
+  _mode: 1
+  _distance: 25
+  _minDistance: 0
+  _maxDistance: 0

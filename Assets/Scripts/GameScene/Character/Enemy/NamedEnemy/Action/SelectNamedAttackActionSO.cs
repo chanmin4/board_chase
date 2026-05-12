@@ -1,106 +1,65 @@
-using System;
 using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
-
-[Serializable]
-public struct NamedAttackWeight
-{
-    public NamedEnemyAttackType attackType;
-    [Min(1)] public int weight;
-}
 
 [CreateAssetMenu(
     fileName = "SelectNamedAttackAction",
     menuName = "State Machines/Named Enemy Actions/Select Attack")]
 public class SelectNamedAttackActionSO : StateActionSO<SelectNamedAttackAction>
 {
-    [SerializeField] private NamedAttackWeight[] _attacks =
-    {
-        new NamedAttackWeight { attackType = NamedEnemyAttackType.Bite, weight = 1 },
-        new NamedAttackWeight { attackType = NamedEnemyAttackType.Charge, weight = 1 },
-        new NamedAttackWeight { attackType = NamedEnemyAttackType.Projectile, weight = 1 },
-        new NamedAttackWeight { attackType = NamedEnemyAttackType.PoisonPuddle, weight = 1 }
-    };
+    [SerializeField] private NamedNormalAttackConfigSO _config;
 
-    [SerializeField] private bool _selectOnEnter = true;
-    [SerializeField] private bool _setAttackUnfinished = true;
-
-    public NamedAttackWeight[] Attacks => _attacks;
-    public bool SelectOnEnter => _selectOnEnter;
-    public bool SetAttackUnfinished => _setAttackUnfinished;
+    public NamedNormalAttackConfigSO Config => _config;
 }
 
 public class SelectNamedAttackAction : StateAction
 {
-    private SelectNamedAttackActionSO _config;
+    private SelectNamedAttackActionSO _origin;
     private NamedEnemyBlackboard _blackboard;
-
+    private Enemy _enemy;
+    public override void OnUpdate()
+    {
+    }
     public override void Awake(StateMachine stateMachine)
     {
-        _config = (SelectNamedAttackActionSO)OriginSO;
+        _origin = (SelectNamedAttackActionSO)OriginSO;
         _blackboard = stateMachine.GetComponentInParent<NamedEnemyBlackboard>();
+        _enemy = stateMachine.GetComponentInParent<Enemy>();
     }
 
     public override void OnStateEnter()
     {
-        if (_config.SelectOnEnter)
-            TrySelect();
-    }
-
-    public override void OnUpdate()
-    {
-        if (!_config.SelectOnEnter)
-            TrySelect();
+        TrySelect();
     }
 
     private void TrySelect()
     {
-        if (_blackboard == null || _blackboard.HasSelectedAttack)
+        if (_blackboard == null || _enemy == null)
             return;
 
-        NamedEnemyAttackType selected = PickWeightedAttack();
-        if (selected == NamedEnemyAttackType.None)
+        if (_blackboard.HasSelectedAttack)
             return;
 
-        _blackboard.selectedAttack = selected;
+        if (_enemy.currentTarget == null)
+            return;
 
-        if (_config.SetAttackUnfinished)
-            _blackboard.attackFinished = false;
+        if (_origin.Config == null)
+            return;
+
+        float distance = GetFlatDistance(
+            _enemy.transform.position,
+            _enemy.currentTarget.transform.position);
+
+        if (!_origin.Config.TryPickAttack(distance, out NamedEnemyAttackType selected))
+            return;
+
+        _blackboard.SelectNormalAttack(selected);
     }
 
-    private NamedEnemyAttackType PickWeightedAttack()
+    private static float GetFlatDistance(Vector3 a, Vector3 b)
     {
-        NamedAttackWeight[] attacks = _config.Attacks;
-        if (attacks == null || attacks.Length == 0)
-            return NamedEnemyAttackType.None;
-
-        int totalWeight = 0;
-
-        for (int i = 0; i < attacks.Length; i++)
-        {
-            if (attacks[i].attackType == NamedEnemyAttackType.None)
-                continue;
-
-            totalWeight += Mathf.Max(1, attacks[i].weight);
-        }
-
-        if (totalWeight <= 0)
-            return NamedEnemyAttackType.None;
-
-        int roll = UnityEngine.Random.Range(0, totalWeight);
-
-        for (int i = 0; i < attacks.Length; i++)
-        {
-            if (attacks[i].attackType == NamedEnemyAttackType.None)
-                continue;
-
-            roll -= Mathf.Max(1, attacks[i].weight);
-
-            if (roll < 0)
-                return attacks[i].attackType;
-        }
-
-        return NamedEnemyAttackType.None;
+        a.y = 0f;
+        b.y = 0f;
+        return Vector3.Distance(a, b);
     }
 }

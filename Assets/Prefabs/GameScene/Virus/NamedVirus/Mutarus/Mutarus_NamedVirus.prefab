@@ -122,6 +122,7 @@ MonoBehaviour:
   - parentState: {fileID: 11400000, guid: 4aa45e751a79b9f4cbbb53d0ca72fa16, type: 2}
     childStateMachine: {fileID: 6344569642270059791}
     enableChild: 1
+    resetOnEnable: 1
   _currentParentState: {fileID: 0}
   _enabledChildCount: 0
 --- !u!1 &2861040140774834685
@@ -440,9 +441,11 @@ MonoBehaviour:
   - parentState: {fileID: 11400000, guid: b203f6baa23ac6d4fb5f6818e4407275, type: 2}
     childStateMachine: {fileID: 193938946775873400}
     enableChild: 1
+    resetOnEnable: 0
   - parentState: {fileID: 11400000, guid: 2f753ccac5ef82d4fb82767129ce3b1f, type: 2}
     childStateMachine: {fileID: 1433936229122083345}
     enableChild: 1
+    resetOnEnable: 0
   _currentParentState: {fileID: 0}
   _enabledChildCount: 0
 --- !u!1 &7336873541716980481
@@ -455,7 +458,6 @@ GameObject:
   m_Component:
   - component: {fileID: 7969716789031528891}
   - component: {fileID: 2781641922960641137}
-  - component: {fileID: 3261232486595518174}
   - component: {fileID: 6577242947603206006}
   - component: {fileID: 6776257839015320626}
   - component: {fileID: 1576421538366897253}
@@ -466,6 +468,8 @@ GameObject:
   - component: {fileID: 827249899246056843}
   - component: {fileID: 7708284510925619237}
   - component: {fileID: 2399849270425247512}
+  - component: {fileID: 9062329107324774728}
+  - component: {fileID: 6524844678541358022}
   m_Layer: 6
   m_Name: Mutarus_NamedVirus
   m_TagString: Untagged
@@ -525,29 +529,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!136 &3261232486595518174
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7336873541716980481}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 1
-  m_Direction: 2
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!95 &6577242947603206006
 Animator:
   serializedVersion: 7
@@ -741,6 +722,43 @@ MonoBehaviour:
   _infectionTargetValid: 0
   _isKnockbackRequested: 0
   _spawnInfoChannel: {fileID: 11400000, guid: ff79521b2954f79488afd276853459fb, type: 2}
+--- !u!114 &9062329107324774728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7336873541716980481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e94a762c10c984549b1c281b5ffab5a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnInitialized: 0
+  introFinished: 0
+  canEnterPattern: 1
+  shouldStopChase: 0
+  attackFinished: 1
+  selectedAttack: 0
+  nextNormalAttackTime: 0
+--- !u!114 &6524844678541358022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7336873541716980481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab0d779002dcef34890a32c69ca86e5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  patternReady: 0
+  prepareFinished: 0
+  activeFinished: 0
+  resolved: 0
+  sequenceFinished: 0
+  result: 0
 --- !u!1 &7484673373181919606
 GameObject:
   m_ObjectHideFlags: 0
@@ -819,7 +837,7 @@ Transform:
   m_GameObject: {fileID: 7557658625323303790}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalPosition: {x: 0, y: 12, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -901,9 +919,11 @@ MonoBehaviour:
   - parentState: {fileID: 11400000, guid: ecaf844838c9b8c49893ebc7e2cbb38c, type: 2}
     childStateMachine: {fileID: 231932972298840259}
     enableChild: 1
+    resetOnEnable: 0
   - parentState: {fileID: 11400000, guid: b3ac167614746af48ab313785f4a8f84, type: 2}
     childStateMachine: {fileID: 5164724308034258742}
     enableChild: 1
+    resetOnEnable: 0
   _currentParentState: {fileID: 0}
   _enabledChildCount: 0
 --- !u!1 &8597666726441953397

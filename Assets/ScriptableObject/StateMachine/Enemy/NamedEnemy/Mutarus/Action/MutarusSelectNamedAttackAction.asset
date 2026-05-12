@@ -13,12 +13,4 @@ MonoBehaviour:
   m_Name: MutarusSelectNamedAttackAction
   m_EditorClassIdentifier: 
   description: 
-  _attacks:
-  - attackType: 2
-    weight: 1
-  - attackType: 3
-    weight: 1
-  - attackType: 4
-    weight: 1
-  _selectOnEnter: 1
-  _setAttackUnfinished: 1
+  _config: {fileID: 11400000, guid: 5beeaae6b8194b64b89a712c7b724dec, type: 2}
