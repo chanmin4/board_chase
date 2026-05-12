@@ -441,11 +441,11 @@ MonoBehaviour:
   - parentState: {fileID: 11400000, guid: b203f6baa23ac6d4fb5f6818e4407275, type: 2}
     childStateMachine: {fileID: 193938946775873400}
     enableChild: 1
-    resetOnEnable: 0
+    resetOnEnable: 1
   - parentState: {fileID: 11400000, guid: 2f753ccac5ef82d4fb82767129ce3b1f, type: 2}
     childStateMachine: {fileID: 1433936229122083345}
     enableChild: 1
-    resetOnEnable: 0
+    resetOnEnable: 1
   _currentParentState: {fileID: 0}
   _enabledChildCount: 0
 --- !u!1 &7336873541716980481
@@ -739,8 +739,7 @@ MonoBehaviour:
   canEnterPattern: 1
   shouldStopChase: 0
   attackFinished: 1
-  selectedAttack: 0
-  nextNormalAttackTime: 0
+  _selectedAttack: {fileID: 0}
 --- !u!114 &6524844678541358022
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -753,12 +752,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab0d779002dcef34890a32c69ca86e5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _schedule: {fileID: 11400000, guid: 7be34156129c3f942bc09f418e6b48d4, type: 2}
   patternReady: 0
   prepareFinished: 0
   activeFinished: 0
   resolved: 0
   sequenceFinished: 0
   result: 0
+  _scheduleRunning: 0
+  _scheduleTimer: 0
+  _patternActive: 0
 --- !u!1 &7484673373181919606
 GameObject:
   m_ObjectHideFlags: 0

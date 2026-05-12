@@ -9,7 +9,11 @@ public class SelectNamedAttackActionSO : StateActionSO<SelectNamedAttackAction>
 {
     [SerializeField] private NamedNormalAttackConfigSO _config;
 
+    [Tooltip("If true, does not replace an already selected attack.")]
+    [SerializeField] private bool _keepExistingSelection = true;
+
     public NamedNormalAttackConfigSO Config => _config;
+    public bool KeepExistingSelection => _keepExistingSelection;
 }
 
 public class SelectNamedAttackAction : StateAction
@@ -17,14 +21,14 @@ public class SelectNamedAttackAction : StateAction
     private SelectNamedAttackActionSO _origin;
     private NamedEnemyBlackboard _blackboard;
     private Enemy _enemy;
-    public override void OnUpdate()
-    {
-    }
+    private Transform _owner;
+
     public override void Awake(StateMachine stateMachine)
     {
         _origin = (SelectNamedAttackActionSO)OriginSO;
         _blackboard = stateMachine.GetComponentInParent<NamedEnemyBlackboard>();
         _enemy = stateMachine.GetComponentInParent<Enemy>();
+        _owner = _enemy != null ? _enemy.transform : stateMachine.transform.root;
     }
 
     public override void OnStateEnter()
@@ -32,34 +36,38 @@ public class SelectNamedAttackAction : StateAction
         TrySelect();
     }
 
+    public override void OnUpdate()
+    {
+        TrySelect();
+    }
+
     private void TrySelect()
     {
-        if (_blackboard == null || _enemy == null)
+        if (_origin.Config == null || _blackboard == null || _enemy == null)
             return;
 
-        if (_blackboard.HasSelectedAttack)
+        if (_origin.KeepExistingSelection && _blackboard.HasSelectedAttack)
             return;
 
         if (_enemy.currentTarget == null)
             return;
 
-        if (_origin.Config == null)
+        float distance = ResolveTargetDistance();
+
+        if (!_origin.Config.TryPickAttack(distance, out NamedAttackIdSO attackId))
             return;
 
-        float distance = GetFlatDistance(
-            _enemy.transform.position,
-            _enemy.currentTarget.transform.position);
-
-        if (!_origin.Config.TryPickAttack(distance, out NamedEnemyAttackType selected))
-            return;
-
-        _blackboard.SelectNormalAttack(selected);
+        _blackboard.SelectAttack(attackId);
     }
 
-    private static float GetFlatDistance(Vector3 a, Vector3 b)
+    private float ResolveTargetDistance()
     {
-        a.y = 0f;
-        b.y = 0f;
-        return Vector3.Distance(a, b);
+        Vector3 from = _owner.position;
+        Vector3 to = _enemy.currentTarget.transform.position;
+
+        from.y = 0f;
+        to.y = 0f;
+
+        return Vector3.Distance(from, to);
     }
 }

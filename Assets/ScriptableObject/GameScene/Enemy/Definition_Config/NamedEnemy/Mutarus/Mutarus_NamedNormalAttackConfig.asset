@@ -12,17 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 169f2d4df6ec35142b4dd84aa94a599e, type: 3}
   m_Name: Mutarus_NamedNormalAttackConfig
   m_EditorClassIdentifier: 
-  _normalAttackCooldown: 5
-  _attacks:
-  - attackType: 1
+  _options:
+  - attackId: {fileID: 11400000, guid: e9770ecd888eb6b4b9d4aefcf8e09bcc, type: 2}
+    displayName: Charge
     minRange: 0
-    maxRange: 100
+    maxRange: 15
     weight: 1
-  - attackType: 2
+    enabled: 1
+  - attackId: {fileID: 11400000, guid: eff4f9b9d5649ef40a91a3b508c03cde, type: 2}
+    displayName: Projectile
     minRange: 0
-    maxRange: 100
+    maxRange: 20
     weight: 1
-  - attackType: 3
+    enabled: 1
+  - attackId: {fileID: 11400000, guid: 50a5565dc0987d9428f60c0d62541e2a, type: 2}
+    displayName: PoisonPuddle
     minRange: 0
-    maxRange: 100
+    maxRange: 25
     weight: 1
+    enabled: 1
+  _preferredMinRange: 7
+  _preferredMaxRange: 15

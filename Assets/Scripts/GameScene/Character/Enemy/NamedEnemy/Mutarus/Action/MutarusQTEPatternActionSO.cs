@@ -10,9 +10,6 @@ public class MutarusQTEPatternActionSO : StateActionSO<MutarusQTEPatternAction>
     [Header("QTE")]
     [SerializeField] private MutarusQTEPatternControllerEventChannelSO _controllerReadyChannel;
 
-    [Tooltip("Pattern time limit. If QTE stations are not completed before this, pattern fails.")]
-    [SerializeField, Min(0.01f)] private float _duration = 20f;
-
     [Header("Periodic Arc Bomb")]
     [Tooltip("If true, Mutarus fires arc bombs periodically while this pattern state is active.")]
     [SerializeField] private bool _usePeriodicArcBomb = true;
@@ -63,7 +60,6 @@ public class MutarusQTEPatternActionSO : StateActionSO<MutarusQTEPatternAction>
     [SerializeField] private string _bombAnimatorTrigger = "PatternBomb";
 
     public MutarusQTEPatternControllerEventChannelSO ControllerReadyChannel => _controllerReadyChannel;
-    public float Duration => _duration;
 
     public bool UsePeriodicArcBomb => _usePeriodicArcBomb;
     public EnemyArcBombProjectile ArcBombPrefab => _arcBombPrefab;
@@ -152,7 +148,8 @@ public class MutarusQTEPatternAction : StateAction
             return;
         }
 
-        _qteController.BeginPattern(_config.Duration, HandlePatternResult);
+        float duration = _pattern != null ? _pattern.PatternActiveDuration : 20f;
+        _qteController.BeginPattern(duration, HandlePatternResult);
     }
 
     public override void OnUpdate()

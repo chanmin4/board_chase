@@ -14,12 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   description: 
   _controllerReadyChannel: {fileID: 11400000, guid: 6c19d2b5397c6ba4e8fe94fae545822c, type: 2}
-  _duration: 20
   _usePeriodicArcBomb: 1
   _arcBombPrefab: {fileID: -2512961943983989550, guid: 49cb5a675738a75408f64dc02476a312, type: 3}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
   _fireBombOnEnter: 0
-  _firstBombDelay: 5
+  _firstBombDelay: 4
   _bombInterval: 4
   _maxBombCount: 1
   _bombTravelTime: 1.5
@@ -36,5 +35,7 @@ MonoBehaviour:
     m_Bits: 8
   _triggerInteraction: 2
   _paintChannel: 1
-  _paintRadiusWorld: 5
+  _paintRadiusWorld: 10
   _paintPriority: 0
+  _triggerAnimatorOnBomb: 1
+  _bombAnimatorTrigger: PatternBomb

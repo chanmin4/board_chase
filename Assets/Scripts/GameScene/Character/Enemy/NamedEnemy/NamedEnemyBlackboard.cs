@@ -1,13 +1,5 @@
 using UnityEngine;
 
-public enum NamedEnemyAttackType
-{
-    None,
-    Charge,
-    Projectile,
-    PoisonPuddle
-}
-
 public class NamedEnemyBlackboard : MonoBehaviour
 {
     [Header("Runtime Lifecycle")]
@@ -18,32 +10,26 @@ public class NamedEnemyBlackboard : MonoBehaviour
     public bool canEnterPattern = true;
     public bool shouldStopChase;
     public bool attackFinished = true;
-    public NamedEnemyAttackType selectedAttack = NamedEnemyAttackType.None;
-    public float nextNormalAttackTime;
 
-    public bool HasSelectedAttack => selectedAttack != NamedEnemyAttackType.None;
-    public bool IsNormalAttackCooldownReady => Time.time >= nextNormalAttackTime;
+    [Header("Runtime Selected Attack")]
+    [SerializeField, ReadOnly] private NamedAttackIdSO _selectedAttack;
 
-    public void BeginNormalAttackWindow()
+    public NamedAttackIdSO SelectedAttack => _selectedAttack;
+    public bool HasSelectedAttack => _selectedAttack != null;
+
+    public void SelectAttack(NamedAttackIdSO attackId)
     {
-        selectedAttack = NamedEnemyAttackType.None;
+        _selectedAttack = attackId;
         attackFinished = false;
-    }
-    public void SelectNormalAttack(NamedEnemyAttackType attackType)
-    {
-        selectedAttack = attackType;
-        attackFinished = false;
-    }
-
-    public void FinishNormalAttack(float cooldown)
-    {
-        selectedAttack = NamedEnemyAttackType.None;
-        attackFinished = true;
-        nextNormalAttackTime = Time.time + Mathf.Max(0f, cooldown);
     }
 
     public void ClearSelectedAttack()
     {
-        selectedAttack = NamedEnemyAttackType.None;
+        _selectedAttack = null;
+    }
+
+    public bool SelectedAttackIs(NamedAttackIdSO attackId)
+    {
+        return _selectedAttack != null && _selectedAttack == attackId;
     }
 }

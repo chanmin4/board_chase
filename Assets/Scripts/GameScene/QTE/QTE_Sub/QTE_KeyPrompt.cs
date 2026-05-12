@@ -38,9 +38,12 @@ public class QTE_KeyPrompt : QTEBase
         BuildUI();
     }
 
-    private void Update()
+   private void Update()
     {
         if (!IsRunning)
+            return;
+
+        if (ShouldIgnoreInputThisFrame())
             return;
 
         if (IsKeyboardCancelPressed())

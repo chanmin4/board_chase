@@ -15,8 +15,10 @@ public class ZoneTriggerController : MonoBehaviour
 
 	private void OnTriggerEnter(Collider other)
 	{
+
 		if ((1 << other.gameObject.layer & _layers) != 0)
 		{
+			//Debug.Log("[ZoneTriggerController] Detected object entering zone. obj=" + other.gameObject.name);
 			_enterZone.Invoke(true, other.gameObject);
 		}
 	}

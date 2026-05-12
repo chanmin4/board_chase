@@ -11,15 +11,17 @@ public class QTE_Timing : QTEBase
     [SerializeField] private RectTransform _barContainer;
     [SerializeField] private RectTransform _marker;
     [SerializeField] private Image _successZone;
-    [SerializeField] private Image _greatZone;
 
     [Header("Motion")]
-    [SerializeField] private Vector2 _speedRange = new Vector2(0.8f, 1.2f);
+    [SerializeField, Min(0.01f)] private float _speed = 0.5f;
     [SerializeField] private bool _randomStartDirection = true;
 
+    [Tooltip("Keeps the marker fully inside the bar instead of allowing half of it to overflow.")]
+    [SerializeField] private bool _keepMarkerInsideBar = true;
+
+    private readonly Vector3[] _worldCorners = new Vector3[4];
 
     private float _progress01;
-    private float _speed;
     private int _direction;
 
     public override void Begin(Action<QTEResult> onComplete)
@@ -27,7 +29,6 @@ public class QTE_Timing : QTEBase
         BeginInternal(onComplete);
 
         _progress01 = 0f;
-        _speed = UnityEngine.Random.Range(_speedRange.x, _speedRange.y);
         _direction = _randomStartDirection && UnityEngine.Random.value > 0.5f ? -1 : 1;
 
         if (_direction < 0)
@@ -41,13 +42,16 @@ public class QTE_Timing : QTEBase
         if (!IsRunning)
             return;
 
+        TickMarker();
+
+        if (ShouldIgnoreInputThisFrame())
+            return;
+
         if (IsKeyboardCancelPressed())
         {
             Cancel();
             return;
         }
-
-        TickMarker();
 
         if (Input.GetKeyDown(_confirmKey))
             EvaluateAndFinish();
@@ -76,29 +80,42 @@ public class QTE_Timing : QTEBase
         if (_barContainer == null || _marker == null)
             return;
 
-        Rect rect = _barContainer.rect;
+        RectTransform markerParent = _marker.parent as RectTransform;
+        if (markerParent == null)
+            return;
 
-        float left = -rect.width * _barContainer.pivot.x;
-        float right = rect.width * (1f - _barContainer.pivot.x);
+        GetLocalXRange(_barContainer, markerParent, out float left, out float right);
+
+        if (_keepMarkerInsideBar)
+        {
+            float markerHalfWidth = GetMarkerHalfWidth(markerParent);
+            left += markerHalfWidth;
+            right -= markerHalfWidth;
+
+            if (left > right)
+            {
+                float center = (left + right) * 0.5f;
+                left = center;
+                right = center;
+            }
+        }
+
         float x = Mathf.Lerp(left, right, _progress01);
 
-        Vector2 position = _marker.anchoredPosition;
-        position.x = x;
-        _marker.anchoredPosition = position;
+        Vector3 localPosition = _marker.localPosition;
+        localPosition.x = x;
+        _marker.localPosition = localPosition;
     }
 
     private void EvaluateAndFinish()
     {
-        if (_marker == null)
+        if (_barContainer == null || _marker == null || _successZone == null)
         {
             Finish(QTEResult.Fail);
             return;
         }
 
-        float markerX = _marker.anchoredPosition.x;
-
-
-        if (IsInsideZone(markerX, _successZone))
+        if (IsMarkerInsideSuccessZone())
         {
             Finish(QTEResult.Success);
             return;
@@ -107,16 +124,38 @@ public class QTE_Timing : QTEBase
         Finish(QTEResult.Fail);
     }
 
-    private bool IsInsideZone(float markerX, Image zone)
+    private bool IsMarkerInsideSuccessZone()
     {
-        if (zone == null)
+        RectTransform markerParent = _marker.parent as RectTransform;
+        if (markerParent == null)
             return false;
 
-        RectTransform zoneRect = zone.rectTransform;
+        RectTransform zoneRect = _successZone.rectTransform;
 
-        float left = zoneRect.anchoredPosition.x - zoneRect.rect.width * zoneRect.pivot.x;
-        float right = left + zoneRect.rect.width;
+        GetLocalXRange(zoneRect, markerParent, out float zoneLeft, out float zoneRight);
 
-        return markerX >= left && markerX <= right;
+        float markerX = _marker.localPosition.x;
+        return markerX >= zoneLeft && markerX <= zoneRight;
+    }
+
+    private void GetLocalXRange(RectTransform source, RectTransform targetParent, out float left, out float right)
+    {
+        source.GetWorldCorners(_worldCorners);
+
+        float x0 = targetParent.InverseTransformPoint(_worldCorners[0]).x;
+        float x2 = targetParent.InverseTransformPoint(_worldCorners[2]).x;
+
+        left = Mathf.Min(x0, x2);
+        right = Mathf.Max(x0, x2);
+    }
+
+    private float GetMarkerHalfWidth(RectTransform markerParent)
+    {
+        _marker.GetWorldCorners(_worldCorners);
+
+        float x0 = markerParent.InverseTransformPoint(_worldCorners[0]).x;
+        float x2 = markerParent.InverseTransformPoint(_worldCorners[2]).x;
+
+        return Mathf.Abs(x2 - x0) * 0.5f;
     }
 }

@@ -7,7 +7,8 @@ public enum InteractionType
     None = 0,
     PickUp,
     Talk,
-    Portal
+    Portal,
+    QTE
 }
 
 public class InteractionManager : MonoBehaviour
@@ -111,6 +112,9 @@ public class InteractionManager : MonoBehaviour
 
 			case InteractionType.Talk:
 				break;
+            case InteractionType.QTE:
+                TryUseQTEStation(interaction);
+                break;
 		}
 	}
 
@@ -135,7 +139,28 @@ public class InteractionManager : MonoBehaviour
             RequestUpdateUI(false);
         }
     }
+    private void TryUseQTEStation(Interaction interaction)
+    {
+        if (interaction.interactableObject == null)
+            return;
 
+        MutarusQTEStation station =
+            interaction.interactableObject.GetComponent<MutarusQTEStation>() ??
+            interaction.interactableObject.GetComponentInParent<MutarusQTEStation>();
+
+        if (station == null)
+            return;
+        Debug.Log($"[InteractionManager] Trying to use QTE station. station={station.name}");
+        bool started = station.TryInteract();
+
+        if (started)
+        {
+            Debug.Log($"[InteractionManager] Started QTE station. station={station.name}");
+            currentInteractionType = InteractionType.None;
+            _potentialInteractions.Clear();
+            RequestUpdateUI(false);
+        }
+    }
    	public void OnTriggerChangeDetected(bool entered, GameObject obj)
 	{
 		//Debug.Log($"[InteractionManager] Trigger {(entered ? "Enter" : "Exit")} obj={obj.name}, tag={obj.tag}, portal={obj.GetComponentInParent<SectorPortal>()}");
@@ -196,6 +221,13 @@ public class InteractionManager : MonoBehaviour
 			//Debug.Log($"[InteractionManager] Added portal interaction. portal={portal.name}");
 			return true;
 		}
+        MutarusQTEStation qteStation = obj.GetComponentInParent<MutarusQTEStation>();
+
+        if (qteStation != null && qteStation.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.QTE, qteStation.gameObject);
+            return true;
+        }
 		//Debug.Log($"[InteractionManager] No valid interaction type. obj={obj.name}");
 		return false;
 	}
@@ -208,6 +240,10 @@ public class InteractionManager : MonoBehaviour
         SectorPortal portal = obj.GetComponentInParent<SectorPortal>();
         if (portal != null)
             return portal.gameObject;
+
+        MutarusQTEStation qteStation = obj.GetComponentInParent<MutarusQTEStation>();
+        if (qteStation != null)
+            return qteStation.gameObject;
 
         return obj;
     }

@@ -15,11 +15,16 @@ public class NamedPatternSequenceFinishedCondition : Condition
 
     public override void Awake(StateMachine stateMachine)
     {
-        _pattern = stateMachine.GetComponent<NamedPatternController>();
+        _pattern = stateMachine.GetComponentInParent<NamedPatternController>();
     }
 
     protected override bool Statement()
     {
-        return _pattern != null && _pattern.sequenceFinished;
+        bool result = _pattern != null && _pattern.sequenceFinished;
+
+        if (result)
+            Debug.Log("[NamedPatternSequenceFinishedCondition] true", _pattern);
+
+        return result;
     }
 }

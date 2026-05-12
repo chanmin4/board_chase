@@ -8,6 +8,7 @@ public enum NamedBlackboardBoolField
     IntroFinished,
     CanEnterPattern,
     ShouldStopChase,
+    AttackFinished
 }
 
 [CreateAssetMenu(
@@ -95,6 +96,9 @@ public class SetNamedBlackboardBoolAction : StateAction
                 break;
             case NamedBlackboardBoolField.ShouldStopChase:
                 _blackboard.shouldStopChase = _config.Value;
+                break;
+            case NamedBlackboardBoolField.AttackFinished:
+                _blackboard.attackFinished = _config.Value;
                 break;
         }
 

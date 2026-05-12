@@ -23,11 +23,13 @@ public class NamedSectorController : MonoBehaviour
     [SerializeField] private NamedSectorTimingSO _timing;
 
     [Header("Listening")]
+    [SerializeField] private NamedEnemyKilledEventChannelSO _namedEnemyKilledEvent;
     [SerializeField] private SectorRuntimeEventChannelSO _currentsectorchangedEvent;
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     [SerializeField] private IntEventChannelSO _stageAppliedEvent;
 
     [Header("Broadcasting")]
+    [SerializeField] private BossRewardRequestEventChannelSO _bossRewardRequestEvent;
     [SerializeField] private NamedSectorPhaseEventChannelSO _phaseChangedEvent;
     [SerializeField] private NamedSectorTimerSnapshotEventChannelSO _timerSnapshotEvent;
     [SerializeField] private NamedBattleSignalEventChannelSO _battleStartedEvent;
@@ -79,7 +81,8 @@ public class NamedSectorController : MonoBehaviour
     {
         if (_currentsectorchangedEvent != null)
             _currentsectorchangedEvent.OnEventRaised += HandlePlayerEnteredSector;
-
+        if (_namedEnemyKilledEvent != null)
+            _namedEnemyKilledEvent.OnEventRaised += HandleNamedEnemyKilled;
         if (_sectorStateManagerReadyChannel != null)
         {
             _sectorStateManagerReadyChannel.OnEventRaised += HandleSectorStateManagerReady;
@@ -100,7 +103,8 @@ public class NamedSectorController : MonoBehaviour
     {
         if (_currentsectorchangedEvent != null)
             _currentsectorchangedEvent.OnEventRaised -= HandlePlayerEnteredSector;
-
+        if (_namedEnemyKilledEvent != null)
+            _namedEnemyKilledEvent.OnEventRaised -= HandleNamedEnemyKilled;
         if (_sectorStateManagerReadyChannel != null)
             _sectorStateManagerReadyChannel.OnEventRaised -= HandleSectorStateManagerReady;
 
@@ -191,7 +195,21 @@ public class NamedSectorController : MonoBehaviour
         if (_phase != NamedSectorPhase.Battle || _battleRoutineRunning)
             return;
 
+        NamedEnemy namedEnemy = _namedInstance != null
+            ? _namedInstance.GetComponent<NamedEnemy>()
+            : null;
+
         SetPhase(NamedSectorPhase.RewardPending, _selectedSector);
+
+        Debug.Log(
+            $"[NamedSectorController] Named killed. Reward pending. " +
+            $"sector={_selectedSector?.name}, named={namedEnemy?.name}",
+            this);
+
+        _bossRewardRequestEvent?.RaiseEvent(new BossRewardRequest(
+            _selectedSector,
+            namedEnemy
+        ));
     }
 
     public void ConfirmNamedRewardAndEndBattle()
@@ -201,7 +219,16 @@ public class NamedSectorController : MonoBehaviour
 
         StartCoroutine(FinishBattleRoutine());
     }
+    private void HandleNamedEnemyKilled(NamedEnemy namedEnemy)
+    {
+        if (namedEnemy == null)
+            return;
 
+        if (_namedInstance != null && namedEnemy.gameObject != _namedInstance)
+            return;
+
+        NotifyNamedKilled();
+    }
     private void HandleSectorStateManagerReady(SectorStateManager manager)
     {
         if (manager == null)
