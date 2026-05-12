@@ -17,7 +17,9 @@ public class NamedSectorController : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private NamedSectorTransitionController _transitionController;
     [SerializeField] private SectorNamedStateApplier _namedStateApplier;
-
+    [Header("Battle Sector Reset")]
+    [SerializeField] private NamedBattleSectorResetter _battleSectorResetter;
+    
     [Header("Rules")]
     [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
     [SerializeField] private NamedSectorTimingSO _timing;
@@ -409,6 +411,9 @@ public class NamedSectorController : MonoBehaviour
             Destroy(_namedInstance);
             _namedInstance = null;
         }
+
+        if (_battleSectorResetter != null)
+            _battleSectorResetter.ResetBattleSector();
 
         _onApplyNamedReward?.Invoke(sourceSector);
 

@@ -11,7 +11,6 @@ public class NamedPatternController : MonoBehaviour
 {
     [Header("Schedule")]
     [SerializeField] private NamedPatternScheduleSO _schedule;
-
     [Header("Runtime")]
     public bool patternReady;
     public bool prepareFinished;

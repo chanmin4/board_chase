@@ -412,6 +412,7 @@ GameObject:
   - component: {fileID: 1541815409933280638}
   - component: {fileID: 6428929091562553416}
   - component: {fileID: 505728945098439358}
+  - component: {fileID: 4417905691366674065}
   m_Layer: 9
   m_Name: Sector_Named
   m_TagString: Untagged
@@ -495,6 +496,7 @@ MonoBehaviour:
   _sectorStateManager: {fileID: 0}
   _transitionController: {fileID: 1541815409933280638}
   _namedStateApplier: {fileID: 3321280048417220109}
+  _battleSectorResetter: {fileID: 0}
   _sectorExclusionRules: {fileID: 11400000, guid: 498279093e5b5634291755e780b4ac69, type: 2}
   _timing: {fileID: 11400000, guid: d0b143c7ed9796f4b9f54c7903af177d, type: 2}
   _namedEnemyKilledEvent: {fileID: 11400000, guid: cb217ea5230895a45af7bc60ed8eae29, type: 2}
@@ -622,8 +624,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00fcc61ee0154384dbebbcbada5e6bcf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _namedSectorController: {fileID: 0}
+  _namedSectorController: {fileID: 3019453464138125349}
   _rewardSelectedChannel: {fileID: 11400000, guid: 8675013b6198abf4b8c98ddd2800a3cb, type: 2}
+--- !u!114 &4417905691366674065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4551268453619387072}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3594d9120253c094f982d48d20b9677c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _battleSector: {fileID: 1399724844744912947}
+  _qtePatternController: {fileID: 0}
+  _qteStationGroup: {fileID: 0}
+  _runtimeObjectRoots:
+  - {fileID: 8019063675666989520}
+  - {fileID: 8761316128307464955}
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _clearBattleSectorPaint: 1
 --- !u!1 &5101801208439262102
 GameObject:
   m_ObjectHideFlags: 0
