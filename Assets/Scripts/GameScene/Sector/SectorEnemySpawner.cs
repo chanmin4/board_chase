@@ -8,7 +8,10 @@ public class SectorEnemySpawner : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private SectorRuntime _sectorRuntime; 
     // 이 스포너가 관리할 sector runtime.
-    // spawn point 목록, opened 상태, sector 좌표 등의 기준이 된다.
+    // spawn point 목록, opened 상태, sector 좌표 등의 기준이 된다
+    [Tooltip("Enemies spawned by this spawner will put their projectiles under this root. Add this root to SectorRuntime CleanupRoots if it should be cleared.")]
+    [SerializeField] private Transform _projectileRoot;
+
 
     [SerializeField] private StageEnemySpawnTableSO _spawnTable; 
     // 현재 stage 기준으로
@@ -278,10 +281,23 @@ public class SectorEnemySpawner : MonoBehaviour
         Debug.Log($"[SectorEnemySpawner] TrySpawnOne success: instantiated {enemyInstance.name}");
 
         enemyInstance.SetCurrentSector(_sectorRuntime);
+        BindProjectileRoot(enemyInstance);
         TrackEnemy(enemyInstance);
         return true;
     }
+    private void BindProjectileRoot(Enemy enemy)
+    {
+        if (enemy == null || _projectileRoot == null)
+            return;
 
+        EnemyAttackRig[] rigs = enemy.GetComponentsInChildren<EnemyAttackRig>(true);
+
+        for (int i = 0; i < rigs.Length; i++)
+        {
+            if (rigs[i] != null)
+                rigs[i].SetProjectileRoot(_projectileRoot);
+        }
+    }
     private bool TryGetSpawnPoint(out Transform spawnPoint)
     {
         spawnPoint = null;

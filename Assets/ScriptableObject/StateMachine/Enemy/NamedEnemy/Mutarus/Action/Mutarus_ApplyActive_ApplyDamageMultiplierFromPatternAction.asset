@@ -9,12 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 028df244c2350964493db5a7ba449f6d, type: 3}
-  m_Name: EnemyUIFollowSettings
+  m_Script: {fileID: 11500000, guid: 28685fa1c0a3e2c478cf2b3d16a80f4b, type: 3}
+  m_Name: Mutarus_ApplyActive_ApplyDamageMultiplierFromPatternAction
   m_EditorClassIdentifier: 
-  _worldOffset: {x: 0, y: 0, z: 0}
-  _screenPixelOffset: {x: 0, y: 0}
-  _hideWhenBehindCamera: 1
-  _hideWhenOffScreen: 0
-  _clampToScreen: 1
-  _screenEdgePadding: 24
+  description: 
+  _config: {fileID: 11400000, guid: 7be34156129c3f942bc09f418e6b48d4, type: 2}
+  _command: 0
+  _moment: 0

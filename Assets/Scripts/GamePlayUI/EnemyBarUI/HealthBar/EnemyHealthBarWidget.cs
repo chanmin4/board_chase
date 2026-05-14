@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-
+using TMPro;
 public class EnemyHealthBarWidget : MonoBehaviour
 {
     [Header("Refs")]
@@ -8,7 +8,9 @@ public class EnemyHealthBarWidget : MonoBehaviour
     [SerializeField] private RectTransform _fillRect;
     [SerializeField] private Image _fillImage;
     [SerializeField] private UICanvasGroupOpacity _uicanvasgroupopacity;
-
+    [Header("Multiplier")]
+    [SerializeField] private TextMeshProUGUI _multiplierText;
+    [SerializeField] private string _multiplierFormat = "x{0:0.00}";
     private EnemyScreenSpaceUIAnchor _anchor;
     private Damageable _damageable;
     private EnemyHealthBarSettingsSO _settings;
@@ -46,9 +48,11 @@ public class EnemyHealthBarWidget : MonoBehaviour
         _damageable = anchor != null ? anchor.Damageable : null;
         _settings = anchor != null ? anchor.HealthBarSettings : null;
 
-        if (_damageable != null)
+       if (_damageable != null)
+        {
             _damageable.OnHealthChanged += OnHealthChanged;
-
+            _damageable.OnDamageMultiplierChanged += OnDamageMultiplierChanged;
+        }
         EnsureFillImageMode();
         RefreshImmediate();
     }
@@ -56,11 +60,17 @@ public class EnemyHealthBarWidget : MonoBehaviour
     public void Unbind()
     {
         if (_damageable != null)
+        {
             _damageable.OnHealthChanged -= OnHealthChanged;
-
+            _damageable.OnDamageMultiplierChanged -= OnDamageMultiplierChanged;
+        }
         _anchor = null;
         _damageable = null;
         _settings = null;
+    }
+    private void OnDamageMultiplierChanged(Damageable damageable)
+    {
+        RefreshImmediate();
     }
 
     public void TickVisualState()
@@ -129,6 +139,8 @@ public class EnemyHealthBarWidget : MonoBehaviour
             size.x = _fillFullWidth * normalized;
             _fillRect.sizeDelta = size;
         }
+        if (_multiplierText != null)
+            _multiplierText.text = string.Format(_multiplierFormat, _damageable.DamageTakenMultiplier);
     }
 
     private void OnDisable()

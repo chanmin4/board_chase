@@ -5,11 +5,12 @@ public class NamedBattleSectorResetter : MonoBehaviour
     [Header("Battle Sector")]
     [Tooltip("The dedicated named battle sector to reset after the named battle ends.")]
     [SerializeField] private SectorRuntime _battleSector;
+    [Header("Broadcasting On")]
+    [Tooltip("Requests the Mutarus QTE pattern controller in another scene to cancel/reset its current runtime.")]
+    [SerializeField] private MutarusQTEPatternResetRequestEventChannelSO _qtePatternResetRequestChannel;
 
-    [Header("Pattern Runtime")]
-    [Tooltip("Stops the current QTE/pattern runtime state if it is still running.")]
-    [SerializeField] private MutarusQTEPatternController _qtePatternController;
-
+    [Header("Listening")]
+    [SerializeField] private NamedBattleSectorResetRequestEventChannelSO _battleSectorResetRequestChannel;
     [Tooltip("Clears all QTE stations back to inactive/uncompleted state.")]
     [SerializeField] private MutarusQTEStationGroup _qteStationGroup;
 
@@ -23,7 +24,6 @@ public class NamedBattleSectorResetter : MonoBehaviour
 
     [Tooltip("If true, battle sector paint/mask is cleared back to neutral.")]
     [SerializeField] private bool _clearBattleSectorPaint = true;
-
     private MaskRenderManager _maskRenderManager;
 
     private void OnEnable()
@@ -35,20 +35,29 @@ public class NamedBattleSectorResetter : MonoBehaviour
             if (_maskRenderManagerReadyChannel.Current != null)
                 HandleMaskRenderManagerReady(_maskRenderManagerReadyChannel.Current);
         }
+        if (_battleSectorResetRequestChannel != null)
+            _battleSectorResetRequestChannel.OnEventRaised += HandleBattleSectorResetRequested;
     }
 
     private void OnDisable()
     {
         if (_maskRenderManagerReadyChannel != null)
             _maskRenderManagerReadyChannel.OnEventRaised -= HandleMaskRenderManagerReady;
+        if (_battleSectorResetRequestChannel != null)
+            _battleSectorResetRequestChannel.OnEventRaised -= HandleBattleSectorResetRequested;
+    
     }
-
+    private void HandleBattleSectorResetRequested()
+    {
+        ResetBattleSector();
+    }
     public void ResetBattleSector()
     {
         CancelPatternRuntime();
         ClearQTEStations();
-        DestroyRuntimeObjects();
         ClearBattleSectorPaint();
+        DestroyRuntimeObjects();
+
     }
 
     private void HandleMaskRenderManagerReady(MaskRenderManager manager)
@@ -58,8 +67,8 @@ public class NamedBattleSectorResetter : MonoBehaviour
 
     private void CancelPatternRuntime()
     {
-        if (_qtePatternController != null)
-            _qtePatternController.CancelPatternWithoutResult();
+        if (_qtePatternResetRequestChannel != null)
+            _qtePatternResetRequestChannel.RaiseEvent();
     }
 
     private void ClearQTEStations()
@@ -81,7 +90,13 @@ public class NamedBattleSectorResetter : MonoBehaviour
                 continue;
 
             for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
-                Destroy(root.GetChild(childIndex).gameObject);
+            {
+                GameObject child = root.GetChild(childIndex).gameObject;
+
+                // Destroy는 프레임 끝에 처리되므로 먼저 꺼서 데미지/Update/Trigger를 즉시 멈춘다.
+                child.SetActive(false);
+                Destroy(child);
+            }
         }
     }
 

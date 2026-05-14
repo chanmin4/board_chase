@@ -10,7 +10,8 @@ public enum NamedPatternResult
 public class NamedPatternController : MonoBehaviour
 {
     [Header("Schedule")]
-    [SerializeField] private NamedPatternScheduleSO _schedule;
+    [SerializeField] private NamedPatternConfigSO _config;
+    public NamedPatternConfigSO Config => _config;
     [Header("Runtime")]
     public bool patternReady;
     public bool prepareFinished;
@@ -35,31 +36,20 @@ public class NamedPatternController : MonoBehaviour
 
     public void StartFirstPatternSchedule()
     {
-        float delay = _schedule != null ? _schedule.FirstPatternDelay : 30f;
+        float delay = _config != null ? _config.FirstPatternDelay : 30f;
         StartSchedule(delay);
     }
 
     public void StartRepeatPatternSchedule()
     {
-        if (_schedule == null)
-        {
-            Debug.Log("[NamedPatternController] Repeat schedule skipped. schedule=null", this);
+        if (_config == null)
             return;
-        }
 
-        if (!_schedule.RepeatPattern)
-        {
-            Debug.Log("[NamedPatternController] Repeat schedule skipped. RepeatPattern=false", this);
+        if (!_config.RepeatPattern)
             return;
-        }
 
-        Debug.Log(
-            $"[NamedPatternController] Repeat schedule started. delay={_schedule.RepeatPatternDelay}",
-            this);
-
-        StartSchedule(_schedule.RepeatPatternDelay);
+        StartSchedule(_config.RepeatPatternDelay);
     }
-
     public void StopSchedule()
     {
         _scheduleRunning = false;
@@ -156,8 +146,8 @@ public class NamedPatternController : MonoBehaviour
     {
         get
         {
-            if (_schedule != null)
-                return _schedule.PatternActiveDuration;
+            if (_config != null)
+                return _config.PatternActiveDuration;
 
             return 20f;
         }

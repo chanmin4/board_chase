@@ -70,7 +70,9 @@ public class SpitterFireProjectileAction : StateAction
         }
 
         Transform fireOrigin = _rig != null ? _rig.FireOrigin : _enemy.transform;
-        Transform projectileRoot = ProjectileRootRegistry.Root;
+        Transform projectileRoot = _rig != null && _rig.ProjectileRoot != null
+        ? _rig.ProjectileRoot
+        : ProjectileRootRegistry.Root;
 
         Vector3 spawnPosition = fireOrigin.position;
         spawnPosition.y += _origin.Config.ProjectileSpawnYOffset;

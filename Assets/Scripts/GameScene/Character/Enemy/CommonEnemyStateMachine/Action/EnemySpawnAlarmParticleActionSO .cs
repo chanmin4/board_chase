@@ -43,7 +43,7 @@ public class EnemySpawnAlarmParticleActionSO : StateActionSO<EnemySpawnTelegraph
 public class EnemySpawnTelegraphAction : StateAction
 {
     private EnemySpawnAlarmParticleActionSO _origin;
-
+    private Enemy _enemy;
     private Transform _transform;
     private NavMeshAgent _agent;
 
@@ -55,13 +55,16 @@ public class EnemySpawnTelegraphAction : StateAction
 
     private bool _agentWasStopped;
     private ParticleSystem _warningInstance;
-
+    private SectorRuntime _sectorRuntime;
     public override void Awake(StateMachine stateMachine)
     {
         _origin = (EnemySpawnAlarmParticleActionSO)OriginSO;
         _transform = stateMachine.transform;
 
         stateMachine.TryGetComponent(out _agent);
+        stateMachine.TryGetComponent(out _enemy);
+
+        _sectorRuntime = stateMachine.GetComponentInParent<SectorRuntime>();
 
         _renderers = stateMachine.GetComponentsInChildren<Renderer>(true);
         _colliders = stateMachine.GetComponentsInChildren<Collider>(true);
@@ -176,7 +179,7 @@ public class EnemySpawnTelegraphAction : StateAction
 
         Vector3 position = _transform.position + _origin.WarningOffset;
         Quaternion rotation = Quaternion.identity;
-        Transform parent = _origin.ParentWarningToEnemy ? _transform : null;
+        Transform parent = ResolveEffectParent(_origin.ParentWarningToEnemy);
 
         _warningInstance = Object.Instantiate(prefab, position, rotation, parent);
         _warningInstance.Play(true);
@@ -189,12 +192,27 @@ public class EnemySpawnTelegraphAction : StateAction
 
         Vector3 position = _transform.position + _origin.SpawnOffset;
         Quaternion rotation = Quaternion.identity;
-        Transform parent = _origin.ParentSpawnToEnemy ? _transform : null;
+        Transform parent = ResolveEffectParent(_origin.ParentSpawnToEnemy);
 
         ParticleSystem instance = Object.Instantiate(prefab, position, rotation, parent);
         instance.Play(true);
 
         if (_origin.DestroySpawnAfterDelay)
             Object.Destroy(instance.gameObject, _origin.SpawnDestroyDelay);
+    }
+    private Transform ResolveEffectParent(bool parentToEnemy)
+    {
+        if (parentToEnemy)
+            return _transform;
+
+        SectorRuntime sector =
+            _enemy != null && _enemy.CurrentSector != null
+                ? _enemy.CurrentSector
+                : _sectorRuntime;
+
+        if (sector != null && sector.PatternObjectRoot != null)
+            return sector.PatternObjectRoot;
+
+        return _transform;
     }
 }

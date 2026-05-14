@@ -2,6 +2,12 @@ using UnityEngine;
 
 public class SectorRuntime : MonoBehaviour
 {
+    [Header("NeedRef Roots")]
+    [SerializeField] private Transform _PatternObjectRoot;
+    [SerializeField] private Transform[] _cleanupRoots;
+    
+
+    
     [Header("Ref Don't Touch")]
     [ReadOnly] public Vector2Int coord;
     [ReadOnly] public bool isOpened;
@@ -29,7 +35,8 @@ public class SectorRuntime : MonoBehaviour
     public bool IsOpened => isOpened;
     public bool IsStartSector => is_startsector;
     public EnemySpawnPoint[] SpawnPointMetadata => _spawnPointMetadata;
-
+    public Transform PatternObjectRoot => _PatternObjectRoot != null ? _PatternObjectRoot : transform;
+    public Transform[] CleanupRoots => _cleanupRoots;
     public void SetRuntimeInfo(Vector2Int newCoord, bool opened, bool isStartSector)
     {
         coord = newCoord;

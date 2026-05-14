@@ -17,6 +17,10 @@ public class NamedSectorController : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private NamedSectorTransitionController _transitionController;
     [SerializeField] private SectorNamedStateApplier _namedStateApplier;
+    [Header("Named Runtime Roots")]
+    [Tooltip("Projectiles spawned by the named enemy are parented here so battle reset can clear them before reward popup.")]
+    [SerializeField] private Transform _namedProjectileRoot;
+        
     [Header("Battle Sector Reset")]
     [SerializeField] private NamedBattleSectorResetter _battleSectorResetter;
     
@@ -202,7 +206,8 @@ public class NamedSectorController : MonoBehaviour
             : null;
 
         SetPhase(NamedSectorPhase.RewardPending, _selectedSector);
-
+        if (_battleSectorResetter != null)
+            _battleSectorResetter.ResetBattleSector();
         Debug.Log(
             $"[NamedSectorController] Named killed. Reward pending. " +
             $"sector={_selectedSector?.name}, named={namedEnemy?.name}",
@@ -372,6 +377,9 @@ public class NamedSectorController : MonoBehaviour
 
     private void PrepareBattleWhileCovered(SectorRuntime sourceSector)
     {
+        if (_battleSectorResetter != null)
+            _battleSectorResetter.ResetBattleSector();
+
         _onBeforeBattleSetup?.Invoke(sourceSector);
         SpawnNamed();
     }
@@ -461,7 +469,10 @@ public class NamedSectorController : MonoBehaviour
         );
 
         _namedInstance = instance.gameObject;
-
+        EnemyAttackRig attackRig = instance.GetComponentInChildren<EnemyAttackRig>(true);
+        if (attackRig != null && _namedProjectileRoot != null)
+            attackRig.SetProjectileRoot(_namedProjectileRoot);
+        
         if (instance.TryGetComponent(out NamedEnemy namedEnemy))
         {
             _namedEnemySpawnInfoChannel?.RaiseEvent(new NamedEnemySpawnInfo(
@@ -572,4 +583,5 @@ public class NamedSectorController : MonoBehaviour
             $"selected={(_selectedSector != null ? _selectedSector.name : "null")}",
             this);
     }
+    
 }

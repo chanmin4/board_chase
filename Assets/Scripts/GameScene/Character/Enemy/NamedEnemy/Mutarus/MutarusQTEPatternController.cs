@@ -17,7 +17,9 @@ private bool _qteInputLocked;
     [Header("Broadcasting On")]
     [Tooltip("Runtime channel used by MutarusQTEPatternActionSO to find this controller.")]
     [SerializeField] private MutarusQTEPatternControllerEventChannelSO _readyChannel;
-
+    [Header("Listening To")]
+    [Tooltip("Raised by the named battle sector resetter when the battle sector is reset from another scene.")]
+    [SerializeField] private MutarusQTEPatternResetRequestEventChannelSO _resetRequestChannel;
     [Header("Canvas")]
     [Tooltip("Optional root object for the whole pattern canvas/root. It is enabled while the pattern is running.")]
     [SerializeField] private GameObject _patternRoot;
@@ -59,6 +61,8 @@ private bool _qteInputLocked;
 
         if (_readyChannel != null)
             _readyChannel.RaiseEvent(this);
+        if (_resetRequestChannel != null)
+            _resetRequestChannel.OnEventRaised += HandleResetRequest;
     }
 
     private void OnDisable()
@@ -69,6 +73,8 @@ private bool _qteInputLocked;
 
         if (_readyChannel != null)
             _readyChannel.Clear(this);
+        if (_resetRequestChannel != null)
+            _resetRequestChannel.OnEventRaised -= HandleResetRequest;
     }
 
     private void Update()
@@ -81,6 +87,12 @@ private bool _qteInputLocked;
         if (_timeRemaining <= 0f)
             Finish(NamedPatternResult.PlayerFailed);
     }
+
+    private void HandleResetRequest()
+    {
+        CancelPatternWithoutResult();
+    }
+
     private void EnsureQTEPanelsReady()
     {
         if (_qtePanels == null)

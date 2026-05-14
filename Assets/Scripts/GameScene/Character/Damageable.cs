@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Events;
-
+using System.Collections;
 public class Damageable : MonoBehaviour
 {
 	[Header("Health")]
@@ -8,14 +8,18 @@ public class Damageable : MonoBehaviour
 	[Tooltip("this feature is allocated automatically if healthConfigSO is provided")] 
 	[SerializeField] private HealthSO _currentHealthSO;
 	[Header("Death")]
-	[SerializeField] private bool _destroyOnDeath = true;
+	[SerializeField] private bool _destroyOnDeath = false;
 	[SerializeField] private float _destroyDelay = 1f;
-
+	[Header("Damage Multiplier")]
+	[SerializeField, Min(0f)] private float _defaultDamageTakenMultiplier = 1f;
+	[SerializeField, Min(0f)] private float _damageTakenMultiplier = 1f;
+	[SerializeField, Min(0f)] private float _minDamageTakenMultiplier = 0f;
+	[SerializeField, Min(0f)] private float _maxDamageTakenMultiplier = 99f;
 	[Header("Runtime Debug")]
 	[ReadOnly] [SerializeField] private float _debugCurrentHealth;
 	[ReadOnly] [SerializeField] private float _debugMaxHealth;
 	[ReadOnly] [SerializeField] private float _debugHealthNormalized;
-
+	[ReadOnly] [SerializeField] private float _debugDamageTakenMultiplier = 1f;
 
 	[Header("Combat")]
 	[SerializeField] private GetHitEffectConfigSO _getHitEffectSO;
@@ -41,7 +45,9 @@ public class Damageable : MonoBehaviour
 	public float CurrentHealth => _currentHealthSO != null ? _currentHealthSO.CurrentHealth : 0f;
 	public float HealthNormalized => MaxHealth > 0f ? Mathf.Clamp01(CurrentHealth / MaxHealth) : 0f;
 
-
+	public float DamageTakenMultiplier => _damageTakenMultiplier;
+	private Coroutine _damageMultiplierRoutine;
+	public event UnityAction<Damageable> OnDamageMultiplierChanged;
  	public event UnityAction<Damageable> OnHealthChanged;
 
 	public GetHitEffectConfigSO GetHitEffectConfig => _getHitEffectSO;
@@ -88,7 +94,8 @@ public class Damageable : MonoBehaviour
 		if (!CanReceiveDamage)
 			return;
 
-		_currentHealthSO.InflictDamage(damage);
+		float finalDamage = damage * _damageTakenMultiplier;
+		_currentHealthSO.InflictDamage(finalDamage);
 		SyncRuntimeHealthDebug();
 
 		GetHit = true;
@@ -116,17 +123,14 @@ public class Damageable : MonoBehaviour
 		if (!diedThisHit)
 			return;
 
-		if (OnDie != null)
-			OnDie.Invoke();
+		OnDie?.Invoke();
 
 		if (_deathEvent != null)
 			_deathEvent.RaiseEvent();
 
 		if (_destroyOnDeath)
-		{
 			Destroy(gameObject, Mathf.Max(0f, _destroyDelay));
-		}
-}
+	}
 
 	public void Kill()
 	{
@@ -167,6 +171,7 @@ public class Damageable : MonoBehaviour
 		_debugCurrentHealth = CurrentHealth;
 		_debugMaxHealth = MaxHealth;
 		_debugHealthNormalized = HealthNormalized;
+		_debugDamageTakenMultiplier = _damageTakenMultiplier;
 	}
 	public void ApplyMaxHealthFromStats(float maxHealth, bool healToFull)
 	{
@@ -191,4 +196,56 @@ public class Damageable : MonoBehaviour
 		if (_updateHealthUI != null)
 			_updateHealthUI.RaiseEvent();
 	}
+	public void SetDamageTakenMultiplier(float multiplier)
+	{
+		StopDamageMultiplierTimer();
+
+		_damageTakenMultiplier = Mathf.Max(0f, multiplier);
+		NotifyDamageMultiplierChanged();
+	}
+	public void SetDamageTakenMultiplierForSeconds(float multiplier, float duration)
+	{
+		StopDamageMultiplierTimer();
+
+		_damageTakenMultiplier = Mathf.Max(0f, multiplier);
+		NotifyDamageMultiplierChanged();
+
+		if (duration > 0f)
+			_damageMultiplierRoutine = StartCoroutine(ResetDamageMultiplierAfter(duration));
+	}
+
+	public void ResetDamageTakenMultiplier()
+	{
+		StopDamageMultiplierTimer();
+
+		_damageTakenMultiplier = Mathf.Max(0f, _defaultDamageTakenMultiplier);
+		NotifyDamageMultiplierChanged();
+	}
+	private IEnumerator ResetDamageMultiplierAfter(float seconds)
+	{
+		yield return new WaitForSeconds(seconds);
+
+		_damageMultiplierRoutine = null;
+		_damageTakenMultiplier = Mathf.Max(0f, _defaultDamageTakenMultiplier);
+		NotifyDamageMultiplierChanged();
+	}
+	private void StopDamageMultiplierTimer()
+	{
+		if (_damageMultiplierRoutine == null)
+			return;
+
+		StopCoroutine(_damageMultiplierRoutine);
+		_damageMultiplierRoutine = null;
+	}
+
+	private void NotifyDamageMultiplierChanged()
+	{
+		OnDamageMultiplierChanged?.Invoke(this);
+		OnHealthChanged?.Invoke(this);
+
+		if (_updateHealthUI != null)
+			_updateHealthUI.RaiseEvent();
+	}
+
+
 }

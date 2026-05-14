@@ -565,11 +565,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _healthConfigSO: {fileID: 11400000, guid: 277c9f80901aeeb48bfaf6d2492c7046, type: 2}
   _currentHealthSO: {fileID: 0}
-  _destroyOnDeath: 1
-  _destroyDelay: 2
+  _destroyOnDeath: 0
+  _destroyDelay: 999
+  _defaultDamageTakenMultiplier: 1
+  _damageTakenMultiplier: 1
+  _minDamageTakenMultiplier: 0
+  _maxDamageTakenMultiplier: 99
   _debugCurrentHealth: 0
   _debugMaxHealth: 0
   _debugHealthNormalized: 0
+  _debugDamageTakenMultiplier: 1
   _getHitEffectSO: {fileID: 11400000, guid: 627e1269b0538734bbd43b8e89f16d76, type: 2}
   _mainMeshRenderer: {fileID: 0}
   _droppableRewardSO: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
@@ -752,7 +757,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab0d779002dcef34890a32c69ca86e5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _schedule: {fileID: 11400000, guid: 7be34156129c3f942bc09f418e6b48d4, type: 2}
+  _config: {fileID: 11400000, guid: 7be34156129c3f942bc09f418e6b48d4, type: 2}
   patternReady: 0
   prepareFinished: 0
   activeFinished: 0
@@ -840,7 +845,7 @@ Transform:
   m_GameObject: {fileID: 7557658625323303790}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 12, z: 0}
+  m_LocalPosition: {x: 0, y: 15, z: 7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
