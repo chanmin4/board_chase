@@ -625,10 +625,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1125776569134726502}
     m_Modifications:
-    - target: {fileID: 1895497748381411706, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
-      propertyPath: _damageable
-      value: 
-      objectReference: {fileID: 4544002800027011311}
     - target: {fileID: 2611259604242263727, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
       propertyPath: m_Name
       value: VisualRoot_Chaser
@@ -671,26 +667,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3420165518137472021, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5365617929963236839, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5365617929963236839, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5365617929963236839, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5365617929963236839, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5365617929963236839, guid: 6f964808f1d62774cb12cfacc71abbdd, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

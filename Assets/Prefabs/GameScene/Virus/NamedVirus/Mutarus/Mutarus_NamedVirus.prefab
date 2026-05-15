@@ -470,6 +470,7 @@ GameObject:
   - component: {fileID: 2399849270425247512}
   - component: {fileID: 9062329107324774728}
   - component: {fileID: 6524844678541358022}
+  - component: {fileID: -4341573185867700752}
   m_Layer: 6
   m_Name: Mutarus_NamedVirus
   m_TagString: Untagged
@@ -767,9 +768,24 @@ MonoBehaviour:
   result: 0
   _activeDuration: 0
   _activeRemaining: 0
+  _objectiveRequiredCount: 0
+  _objectiveCompletedCount: 0
   _scheduleRunning: 0
   _scheduleTimer: 0
   _patternActive: 0
+--- !u!114 &-4341573185867700752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7336873541716980481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e22ae5b45f63287448a1fa1e533f23aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _qtePatternResetRequestChannel: {fileID: 11400000, guid: 4af125ca88f460948949b4919f57be0f, type: 2}
 --- !u!1 &7484673373181919606
 GameObject:
   m_ObjectHideFlags: 0

@@ -221,4 +221,24 @@ public class NamedPatternController : MonoBehaviour
         if (_patternActive)
             PublishPatternDurationUI(true);
     }
+    public void ForceStopPattern()
+    {
+        StopSchedule();
+
+        patternReady = false;
+        prepareFinished = false;
+        activeFinished = false;
+        resolved = false;
+        sequenceFinished = false;
+        result = NamedPatternResult.None;
+
+        _patternActive = false;
+        _activeDuration = 0f;
+        _activeRemaining = 0f;
+
+        _objectiveRequiredCount = 0;
+        _objectiveCompletedCount = 0;
+
+        PublishPatternDurationUI(false);
+    }
 }
