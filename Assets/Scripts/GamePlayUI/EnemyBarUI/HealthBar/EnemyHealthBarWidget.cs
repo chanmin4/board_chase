@@ -11,7 +11,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
     [Header("Multiplier")]
     [SerializeField] private TextMeshProUGUI _multiplierText;
     [SerializeField] private string _multiplierFormat = "x{0:0.00}";
-    private EnemyScreenSpaceUIAnchor _anchor;
+    private EnemyScreenSpaceHPUIAnchor _anchor;
     private Damageable _damageable;
     private EnemyHealthBarSettingsSO _settings;
     private float _emphasisUntilTime;
@@ -40,7 +40,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
         EnsureFillImageMode();
     }
 
-    public void Bind(EnemyScreenSpaceUIAnchor anchor)
+    public void Bind(EnemyScreenSpaceHPUIAnchor anchor)
     {
         Unbind();
 

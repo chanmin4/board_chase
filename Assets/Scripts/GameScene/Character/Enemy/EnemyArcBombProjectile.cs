@@ -3,14 +3,18 @@ using UnityEngine;
 
 public class EnemyArcBombProjectile : MonoBehaviour
 {
+    [Header("Impact Visual")]
+    [SerializeField] private ParticleSystem _impactParticlePrefab;
+    [SerializeField] private Vector3 _impactParticleOffset = Vector3.zero;
+
     private Vector3 _start;
     private Vector3 _target;
     private float _travelTime;
     private float _arcHeight;
 
     private float _damageRadius;
-    private float _healthDamage;
-    private float _infectionDamage;
+    private float _impactHealthDamage;
+    private float _impactInfectionDamage;
     private LayerMask _damageTargetMask;
     private QueryTriggerInteraction _triggerInteraction;
 
@@ -18,6 +22,7 @@ public class EnemyArcBombProjectile : MonoBehaviour
     private MaskRenderManager.PaintChannel _paintChannel;
     private float _paintRadiusWorld;
     private int _paintPriority;
+    private PoisonPuddleDamageConfigSO _poisonPuddleDamageConfig;
 
     private GameObject _source;
     private float _elapsed;
@@ -32,14 +37,15 @@ public class EnemyArcBombProjectile : MonoBehaviour
         float travelTime,
         float arcHeight,
         float damageRadius,
-        float healthDamage,
-        float infectionDamage,
+        float impactHealthDamage,
+        float impactInfectionDamage,
         LayerMask damageTargetMask,
         QueryTriggerInteraction triggerInteraction,
         MaskRenderManagerEventChannelSO maskRenderManagerReadyChannel,
         MaskRenderManager.PaintChannel paintChannel,
         float paintRadiusWorld,
         int paintPriority,
+        PoisonPuddleDamageConfigSO poisonPuddleDamageConfig,
         GameObject source)
     {
         _start = start;
@@ -48,8 +54,8 @@ public class EnemyArcBombProjectile : MonoBehaviour
         _arcHeight = Mathf.Max(0f, arcHeight);
 
         _damageRadius = Mathf.Max(0f, damageRadius);
-        _healthDamage = Mathf.Max(0f, healthDamage);
-        _infectionDamage = Mathf.Max(0f, infectionDamage);
+        _impactHealthDamage = Mathf.Max(0f, impactHealthDamage);
+        _impactInfectionDamage = Mathf.Max(0f, impactInfectionDamage);
         _damageTargetMask = damageTargetMask;
         _triggerInteraction = triggerInteraction;
 
@@ -57,6 +63,7 @@ public class EnemyArcBombProjectile : MonoBehaviour
         _paintChannel = paintChannel;
         _paintRadiusWorld = Mathf.Max(0f, paintRadiusWorld);
         _paintPriority = paintPriority;
+        _poisonPuddleDamageConfig = poisonPuddleDamageConfig;
 
         _source = source;
         _elapsed = 0f;
@@ -90,11 +97,12 @@ public class EnemyArcBombProjectile : MonoBehaviour
 
     private void Explode()
     {
-        StampVirus();
-        ApplyDamage();
+        StampPaint();
+        SpawnImpactParticle();
+        ApplyImpactDamage();
     }
 
-    private void StampVirus()
+    private void StampPaint()
     {
         if (_paintRadiusWorld <= 0f)
             return;
@@ -108,16 +116,43 @@ public class EnemyArcBombProjectile : MonoBehaviour
 
         if (manager == null)
             return;
-
-        manager.RequestCircle(
-            _paintChannel,
-            _target,
-            _paintRadiusWorld,
-            _paintPriority,
-            _source != null ? _source : this);
+            
+        if (_paintChannel == MaskRenderManager.PaintChannel.PoisonPuddle)
+        {
+            manager.RequestCircle(
+                _paintChannel,
+                _target,
+                _paintRadiusWorld,
+                _paintPriority,
+                _source != null ? _source : this,
+                _poisonPuddleDamageConfig);
+        }
+        else
+        {
+            manager.RequestCircle(
+                _paintChannel,
+                _target,
+                _paintRadiusWorld,
+                _paintPriority,
+                _source != null ? _source : this);
+        }
     }
 
-    private void ApplyDamage()
+    private void SpawnImpactParticle()
+    {
+        if (_impactParticlePrefab == null)
+            return;
+
+        ParticleSystem particle = Instantiate(
+            _impactParticlePrefab,
+            _target + _impactParticleOffset,
+            Quaternion.identity,
+            transform.parent);
+
+        particle.Play(true);
+    }
+
+    private void ApplyImpactDamage()
     {
         if (_damageRadius <= 0f || _damageTargetMask.value == 0)
             return;
@@ -147,16 +182,16 @@ public class EnemyArcBombProjectile : MonoBehaviour
 
             if (damageable != null && _damaged.Add(damageable))
             {
-                if (_healthDamage > 0f && damageable.CanReceiveDamage)
-                    damageable.ReceiveAnAttack(_healthDamage, _source);
+                if (_impactHealthDamage > 0f && damageable.CanReceiveDamage)
+                    damageable.ReceiveAnAttack(_impactHealthDamage, _source);
             }
 
             PlayerInfection infection =
                 hit.GetComponent<PlayerInfection>() ??
                 hit.GetComponentInParent<PlayerInfection>();
 
-            if (infection != null && _infectionDamage > 0f)
-                infection.AddInfection(_infectionDamage);
+            if (infection != null && _impactInfectionDamage > 0f)
+                infection.AddInfection(_impactInfectionDamage);
         }
     }
 }

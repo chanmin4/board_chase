@@ -7,8 +7,15 @@ public class VSplatterDashConfigSO : ScriptableObject
 {
     [Header("Dash")]
     [Min(0f)]
-    [SerializeField] private float _dashSpeed = 20f;
+    [SerializeField] private bool _useMoveSpeedBasedDash = true;
 
+    [Tooltip("Dash speed = current player move speed * this multiplier.")]
+    [Min(0f)]
+    [SerializeField] private float _dashSpeedMultiplier = 2.5f;
+
+    [Tooltip("Used only when move-speed based dash is disabled or PlayerStatsRuntime is missing.")]
+    [Min(0f)]
+    [SerializeField] private float _fixedDashSpeed = 20f;
     [Min(0.01f)]
     [SerializeField] private float _dashDuration = 0.4f;
 
@@ -30,7 +37,9 @@ public class VSplatterDashConfigSO : ScriptableObject
     [Min(0f)]
     [SerializeField] private float _dashVisualLeanOutSpeed = 12f;
 
-    public float DashSpeed => _dashSpeed;
+    public bool UseMoveSpeedBasedDash => _useMoveSpeedBasedDash;
+    public float DashSpeedMultiplier => _dashSpeedMultiplier;
+    public float FixedDashSpeed => _fixedDashSpeed;
     public float DashDuration => _dashDuration;
     public float CooldownSeconds => _cooldownSeconds;
     public bool UseForwardWhenNoMovementInput => _useForwardWhenNoMovementInput;

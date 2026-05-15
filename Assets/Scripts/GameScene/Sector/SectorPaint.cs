@@ -14,6 +14,7 @@ public class SectorPaint : MonoBehaviour
         public int priority;
         public float appliedTime;
         public object sender;
+        public PoisonPuddleDamageConfigSO poisonPuddleDamageConfig;
     }
 
     [Header("Refs")]
@@ -31,22 +32,23 @@ public class SectorPaint : MonoBehaviour
 
     [HideInInspector] public Texture2D vaccineMask;
     [HideInInspector] public Texture2D virusMask;
-
+    [HideInInspector] public Texture2D poisonPuddleMask;
     [HideInInspector] public Color32[] vaccineBuffer;
     [HideInInspector] public Color32[] virusBuffer;
+    [HideInInspector] public Color32[] poisonPuddleBuffer;
 
     [HideInInspector] public bool vaccineDirty;
     [HideInInspector] public bool virusDirty;
-
+    [HideInInspector] public bool poisonPuddleDirty;
     [HideInInspector] public Material vaccineMaterialInstance;
     [HideInInspector] public Material virusMaterialInstance;
-
+    [HideInInspector] public Material poisonPuddleMaterialInstance;
     [HideInInspector] public MeshRenderer vaccineRenderer;
     [HideInInspector] public MeshRenderer virusRenderer;
-
+    [HideInInspector] public MeshRenderer poisonPuddleRenderer;
     [HideInInspector] public MeshFilter vaccineFilter;
     [HideInInspector] public MeshFilter virusFilter;
-
+    [HideInInspector] public MeshFilter poisonPuddleFilter;
     [HideInInspector] public int textureWidth;
     [HideInInspector] public int textureHeight;
 
@@ -54,7 +56,7 @@ public class SectorPaint : MonoBehaviour
     private readonly List<StoredCirclePaint> _enemyPaints = new();
 
     public event Action<SectorPaint, StoredCirclePaint> OnCircleApplied;
-
+    
     public int PlayerPaintCount => _playerPaints.Count;
     public int EnemyPaintCount => _enemyPaints.Count;
     public SectorRuntime Runtime => runtime;
@@ -146,15 +148,16 @@ public class SectorPaint : MonoBehaviour
         if (MaskRenderManager == null)
             return;
 
-        StoredCirclePaint stored = new StoredCirclePaint
-        {
-            channel = request.channel,
-            worldPos = request.worldPos,
-            radiusWorld = request.radiusWorld,
-            priority = request.priority,
-            appliedTime = Time.time,
-            sender = request.sender
-        };
+     StoredCirclePaint stored = new StoredCirclePaint
+    {
+        channel = request.channel,
+        worldPos = request.worldPos,
+        radiusWorld = request.radiusWorld,
+        priority = request.priority,
+        appliedTime = Time.time,
+        sender = request.sender,
+        poisonPuddleDamageConfig = request.poisonPuddleDamageConfig
+    };
 
         if (request.channel == MaskRenderManager.PaintChannel.Vaccine)
             _playerPaints.Add(stored);
@@ -202,6 +205,12 @@ public class SectorPaint : MonoBehaviour
         virusRenderer = null;
         vaccineFilter = null;
         virusFilter = null;
+        poisonPuddleMask = null;
+        poisonPuddleBuffer = null;
+        poisonPuddleDirty = false;
+        poisonPuddleMaterialInstance = null;
+        poisonPuddleRenderer = null;
+        poisonPuddleFilter = null;
         textureWidth = 0;
         textureHeight = 0;
     }

@@ -65,6 +65,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3801788720309236659}
   - component: {fileID: 2627841035454135135}
+  - component: {fileID: 6725715528661227165}
   m_Layer: 9
   m_Name: Mutarus_QTEstation
   m_TagString: Untagged
@@ -87,6 +88,7 @@ Transform:
   m_Children:
   - {fileID: 1783275657507146857}
   - {fileID: 943201456284859219}
+  - {fileID: 6149597008154149750}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2627841035454135135
@@ -104,7 +106,22 @@ MonoBehaviour:
   _visualRoot: {fileID: 943201456284859219}
   _activeVisualPrefab: {fileID: 5580613917051316867, guid: 92c24695ef6e09c4688fb3f89b98d21f, type: 3}
   _completedVisualPrefab: {fileID: 5709185437779396517, guid: 057a9d3a1a5df4347872951b8569bbdd, type: 3}
+  _timingSuccessRequired: 3
+  _timingSuccessCount: 0
   _controllerReadyChannel: {fileID: 11400000, guid: 6c19d2b5397c6ba4e8fe94fae545822c, type: 2}
+--- !u!114 &6725715528661227165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1140253250756100434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 657290ec1a9f4a447a2a7464a876b859, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 6149597008154149750}
 --- !u!1 &4125670428065405823
 GameObject:
   m_ObjectHideFlags: 0
@@ -131,6 +148,37 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3801788720309236659}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &4336637933045345498
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6149597008154149750}
+  m_Layer: 9
+  m_Name: UIAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6149597008154149750
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4336637933045345498}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.2, z: 6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

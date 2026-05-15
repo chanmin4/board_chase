@@ -36,7 +36,7 @@ public class VSplatterDashController : MonoBehaviour
     public bool IsDashing => _isDashing;
     public bool IsDashReady => !_isDashing && CooldownRemaining <= 0.0001f;
     public Vector3 DashDirection => _dashDirection;
-    public float DashSpeed => _config != null ? _config.DashSpeed : 14f;
+    public float DashSpeed => ResolveDashSpeed();
     public float CooldownRemaining => Mathf.Max(0f, _nextDashReadyTime - Time.time);
     public float CooldownDuration => ResolveDashCooldown();
     public float Cooldown01 =>
@@ -250,5 +250,21 @@ public class VSplatterDashController : MonoBehaviour
             return Mathf.Max(0f, _statsRuntime.Movement.dashCooldownSeconds);
 
         return _config != null ? _config.CooldownSeconds : 0f;
+    }
+    private float ResolveDashSpeed()
+    {
+        float fixedSpeed = _config != null ? _config.FixedDashSpeed : 14f;
+
+        if (_statsRuntime == null)
+            return fixedSpeed;
+
+        if (_config != null && !_config.UseMoveSpeedBasedDash)
+            return fixedSpeed;
+
+        float moveSpeed = Mathf.Max(0.01f, _statsRuntime.Movement.moveSpeed);
+        float dashMultiplier = _config != null ? Mathf.Max(0f, _config.DashSpeedMultiplier) : 2.5f;
+        float distanceMultiplier = Mathf.Max(0f, _statsRuntime.Movement.dashDistanceMultiplier);
+
+        return moveSpeed * dashMultiplier * distanceMultiplier;
     }
 }

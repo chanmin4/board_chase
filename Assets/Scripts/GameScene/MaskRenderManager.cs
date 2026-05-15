@@ -8,7 +8,8 @@ public class MaskRenderManager : MonoBehaviour
     public enum PaintChannel
     {
         Vaccine,
-        Virus
+        Virus,
+        PoisonPuddle
     }
 
     public enum PaintState
@@ -26,6 +27,7 @@ public class MaskRenderManager : MonoBehaviour
         public float radiusWorld;
         public int priority;
         public object sender;
+        public PoisonPuddleDamageConfigSO poisonPuddleDamageConfig;
     }
 
     [Serializable]
@@ -53,6 +55,7 @@ public class MaskRenderManager : MonoBehaviour
     [Header("Base Materials")]
     [SerializeField] private Material vaccineBaseMaterial;
     [SerializeField] private Material virusBaseMaterial;
+    [SerializeField] private Material poisonPuddleBaseMaterial;
 
     [Header("Material Property")]
     [SerializeField] private string maskTextureProperty = "_MaskTex";
@@ -120,8 +123,8 @@ public class MaskRenderManager : MonoBehaviour
         float radiusWorld,
         object sender = null)
     {
-        CirclePaintRequest request = BuildCircleRequest(channel, worldPos, radiusWorld, 0, sender);
-
+        CirclePaintRequest request = BuildCircleRequest(
+        channel,worldPos,radiusWorld,0,sender,null);
         for (int i = 0; i < _registeredSectors.Count; i++)
         {
             SectorPaint sector = _registeredSectors[i];
@@ -172,13 +175,46 @@ public class MaskRenderManager : MonoBehaviour
 
     
 
-    public bool RequestCircle(PaintChannel channel,Vector3 worldPos,
-        float radiusWorld,int priority = 0,object sender = null)
+    public bool RequestCircle(
+        PaintChannel channel,
+        Vector3 worldPos,
+        float radiusWorld,
+        int priority = 0,
+        object sender = null)
     {
-        CirclePaintRequest request = BuildCircleRequest(channel, worldPos, radiusWorld, priority, sender);
+        CirclePaintRequest request = BuildCircleRequest(
+            channel,
+            worldPos,
+            radiusWorld,
+            priority,
+            sender,
+            null);
 
+        return RequestCircleInternal(request);
+    }
+
+    public bool RequestCircle(
+        PaintChannel channel,
+        Vector3 worldPos,
+        float radiusWorld,
+        int priority,
+        object sender,
+        PoisonPuddleDamageConfigSO poisonPuddleDamageConfig)
+    {
+        CirclePaintRequest request = BuildCircleRequest(
+            channel,
+            worldPos,
+            radiusWorld,
+            priority,
+            sender,
+            poisonPuddleDamageConfig);
+
+        return RequestCircleInternal(request);
+    }
+
+    private bool RequestCircleInternal(CirclePaintRequest request)
+    {
         bool accepted = false;
-
         CirclePaintImpact totalImpact = CreateEmptyImpact(request);
 
         for (int i = 0; i < _registeredSectors.Count; i++)
@@ -252,16 +288,18 @@ public class MaskRenderManager : MonoBehaviour
             case PaintChannel.Virus:
                 StampVirusCircle(sector, request.worldPos, request.radiusWorld, true);
                 break;
+            case PaintChannel.PoisonPuddle:
+                StampPoisonPuddleCircle(sector, request.worldPos, request.radiusWorld, true);
+                break;
+
         }
     }
-
-    public bool TryGetStateAtWorld(Vector3 worldPos, out PaintState state, bool requireOpened = true)
+    public bool TryGetPoisonPuddleAtWorld(Vector3 worldPos, bool requireOpened = true)
     {
-        state = PaintState.Neutral;
-
         for (int i = 0; i < _registeredSectors.Count; i++)
         {
             SectorPaint sector = _registeredSectors[i];
+
             if (sector == null)
                 continue;
 
@@ -272,13 +310,126 @@ public class MaskRenderManager : MonoBehaviour
                 continue;
 
             RefreshSector(sector);
-            state = GetStateAtWorld(sector, worldPos);
+
+            if (!TryWorldToPixel(sector, worldPos, out int px, out int py))
+                return false;
+
+            int index = py * sector.textureWidth + px;
+
+            return sector.poisonPuddleBuffer != null &&
+                sector.poisonPuddleBuffer[index].a > 0;
+        }
+
+        return false;
+    }
+
+    public bool TryGetPoisonPuddleAtWorld(
+        Vector3 worldPos,
+        out PoisonPuddleDamageConfigSO poisonPuddleDamageConfig,
+        bool requireOpened = true)
+    {
+        poisonPuddleDamageConfig = null;
+
+        for (int i = 0; i < _registeredSectors.Count; i++)
+        {
+            SectorPaint sector = _registeredSectors[i];
+
+            if (sector == null)
+                continue;
+
+            if (requireOpened && !sector.CanPaintNow())
+                continue;
+
+            if (!sector.ContainsPoint(worldPos))
+                continue;
+
+            RefreshSector(sector);
+
+            if (!TryWorldToPixel(sector, worldPos, out int px, out int py))
+                return false;
+
+            int index = py * sector.textureWidth + px;
+
+            bool hasPoisonPuddle =
+                sector.poisonPuddleBuffer != null &&
+                sector.poisonPuddleBuffer[index].a > 0;
+
+            if (!hasPoisonPuddle)
+                return false;
+
+            poisonPuddleDamageConfig = ResolvePoisonPuddleDamageConfig(sector, worldPos);
             return true;
         }
 
         return false;
     }
 
+    private PoisonPuddleDamageConfigSO ResolvePoisonPuddleDamageConfig(
+        SectorPaint sector,
+        Vector3 worldPos)
+    {
+        IReadOnlyList<SectorPaint.StoredCirclePaint> paints =
+            sector.GetStoredPaints(PaintChannel.PoisonPuddle);
+
+        PoisonPuddleDamageConfigSO bestConfig = null;
+        int bestPriority = int.MinValue;
+        float bestAppliedTime = float.MinValue;
+
+        for (int i = 0; i < paints.Count; i++)
+        {
+            SectorPaint.StoredCirclePaint paint = paints[i];
+
+            if (paint.channel != PaintChannel.PoisonPuddle)
+                continue;
+
+            Vector3 delta = worldPos - paint.worldPos;
+            delta.y = 0f;
+
+            if (delta.sqrMagnitude > paint.radiusWorld * paint.radiusWorld)
+                continue;
+
+            bool better =
+                paint.priority > bestPriority ||
+                paint.priority == bestPriority && paint.appliedTime > bestAppliedTime;
+
+            if (!better)
+                continue;
+
+            bestConfig = paint.poisonPuddleDamageConfig;
+            bestPriority = paint.priority;
+            bestAppliedTime = paint.appliedTime;
+        }
+
+        return bestConfig;
+    }
+    public bool TryGetStateAtWorld(
+        Vector3 worldPos,
+        out PaintState state,
+        bool requireOpened = true)
+    {
+        state = PaintState.Neutral;
+
+        for (int i = 0; i < _registeredSectors.Count; i++)
+        {
+            SectorPaint sector = _registeredSectors[i];
+
+            if (sector == null)
+                continue;
+
+            if (requireOpened && !sector.CanPaintNow())
+                continue;
+
+            if (!sector.ContainsPoint(worldPos))
+                continue;
+
+            RefreshSector(sector);
+
+            state = GetStateAtWorld(sector, worldPos);
+            return true;
+        }
+
+        return false;
+    }
     public PaintState GetStateAtWorld(SectorPaint sector, Vector3 worldPos)
     {
         if (sector == null || !sector.initialized)
@@ -304,8 +455,11 @@ public class MaskRenderManager : MonoBehaviour
 
         ClearBuffer(sector.vaccineBuffer);
         ClearBuffer(sector.virusBuffer);
+        ClearBuffer(sector.poisonPuddleBuffer);
+
         sector.vaccineDirty = true;
         sector.virusDirty = true;
+        sector.poisonPuddleDirty = true;
     }
     public bool FillSector(SectorPaint sector, PaintChannel channel, bool clearOtherChannel = true)
     {
@@ -362,12 +516,13 @@ public class MaskRenderManager : MonoBehaviour
     }
 
 
-    private CirclePaintRequest BuildCircleRequest(
-        PaintChannel channel,
-        Vector3 worldPos,
-        float radiusWorld,
-        int priority,
-        object sender)
+   private CirclePaintRequest BuildCircleRequest(
+    PaintChannel channel,
+    Vector3 worldPos,
+    float radiusWorld,
+    int priority,
+    object sender,
+    PoisonPuddleDamageConfigSO poisonPuddleDamageConfig)
     {
         CirclePaintRequest request = new CirclePaintRequest
         {
@@ -375,7 +530,8 @@ public class MaskRenderManager : MonoBehaviour
             worldPos = worldPos,
             radiusWorld = Mathf.Max(0.001f, radiusWorld),
             priority = priority,
-            sender = sender
+            sender = sender,
+            poisonPuddleDamageConfig = poisonPuddleDamageConfig
         };
 
         return request;
@@ -407,17 +563,26 @@ public class MaskRenderManager : MonoBehaviour
             ref sector.virusMaterialInstance,
             virusBaseMaterial);
 
+        CreateOverlayIfNeeded(
+            sector,
+            "PoisonPuddleOverlay",
+            out sector.poisonPuddleRenderer,
+            out sector.poisonPuddleFilter,
+            ref sector.poisonPuddleMaterialInstance,
+            poisonPuddleBaseMaterial);
+
         UpdateOverlayTransform(sector.vaccineRenderer.transform, sector.worldBounds, yOffset);
         UpdateOverlayTransform(sector.virusRenderer.transform, sector.worldBounds, yOffset + 0.001f);
+        UpdateOverlayTransform(sector.poisonPuddleRenderer.transform, sector.worldBounds, yOffset + 0.002f);
 
-        if (sector.vaccineMaterialInstance != null && sector.virusMaterialInstance != null)
-        {
-            int vaccineQueue = Mathf.Max(sector.vaccineMaterialInstance.renderQueue, 3600);
-            int virusQueue = Mathf.Max(sector.virusMaterialInstance.renderQueue, virusAboveVaccine ? 3700 : 3599);
+        if (sector.vaccineMaterialInstance != null)
+            sector.vaccineMaterialInstance.renderQueue = Mathf.Max(sector.vaccineMaterialInstance.renderQueue, 3600);
 
-            sector.vaccineMaterialInstance.renderQueue = vaccineQueue;
-            sector.virusMaterialInstance.renderQueue = virusQueue;
-        }
+        if (sector.virusMaterialInstance != null)
+            sector.virusMaterialInstance.renderQueue = Mathf.Max(sector.virusMaterialInstance.renderQueue, virusAboveVaccine ? 3700 : 3599);
+
+        if (sector.poisonPuddleMaterialInstance != null)
+            sector.poisonPuddleMaterialInstance.renderQueue = Mathf.Max(sector.poisonPuddleMaterialInstance.renderQueue, 3710);
     }
 
     private void BuildOrRebuildMaskTextures(SectorPaint sector)
@@ -427,15 +592,16 @@ public class MaskRenderManager : MonoBehaviour
 
         ReleaseObject(sector.vaccineMask);
         ReleaseObject(sector.virusMask);
-
+        ReleaseObject(sector.poisonPuddleMask);
         sector.vaccineMask = CreateMaskTexture(sector.textureWidth, sector.textureHeight, "VaccineMask");
         sector.virusMask = CreateMaskTexture(sector.textureWidth, sector.textureHeight, "VirusMask");
-
+        sector.poisonPuddleMask = CreateMaskTexture(sector.textureWidth, sector.textureHeight, "PoisonPuddleMask");
         sector.vaccineBuffer = CreateClearBuffer(sector.textureWidth, sector.textureHeight);
         sector.virusBuffer = CreateClearBuffer(sector.textureWidth, sector.textureHeight);
-
+        sector.poisonPuddleBuffer = CreateClearBuffer(sector.textureWidth, sector.textureHeight);
         sector.vaccineDirty = true;
         sector.virusDirty = true;
+        sector.poisonPuddleDirty = true;
     }
 
     private void BindTexturesToMaterials(SectorPaint sector)
@@ -445,6 +611,8 @@ public class MaskRenderManager : MonoBehaviour
 
         if (sector.virusMaterialInstance != null && sector.virusMaterialInstance.HasProperty(maskTextureProperty))
             sector.virusMaterialInstance.SetTexture(maskTextureProperty, sector.virusMask);
+        if (sector.poisonPuddleMaterialInstance != null && sector.poisonPuddleMaterialInstance.HasProperty(maskTextureProperty))
+            sector.poisonPuddleMaterialInstance.SetTexture(maskTextureProperty, sector.poisonPuddleMask);
     }
 
     private void StampVaccineCircle(SectorPaint sector, Vector3 centerWorld, float radiusWorld, bool overwriteOther = true)
@@ -452,7 +620,10 @@ public class MaskRenderManager : MonoBehaviour
         StampCircleAlpha(sector, sector.vaccineBuffer, centerWorld, radiusWorld, 255, markVaccineDirty: true);
 
         if (overwriteOther)
+        {
             StampCircleAlpha(sector, sector.virusBuffer, centerWorld, radiusWorld, 0, markVirusDirty: true);
+            StampCircleAlpha(sector, sector.poisonPuddleBuffer, centerWorld, radiusWorld, 0, markPoisonPuddleDirty: true);
+        }
     }
 
     private void StampVirusCircle(SectorPaint sector, Vector3 centerWorld, float radiusWorld, bool overwriteOther = true)
@@ -462,6 +633,11 @@ public class MaskRenderManager : MonoBehaviour
         if (overwriteOther)
             StampCircleAlpha(sector, sector.vaccineBuffer, centerWorld, radiusWorld, 0, markVaccineDirty: true);
     }
+    private void StampPoisonPuddleCircle(SectorPaint sector, Vector3 centerWorld, float radiusWorld, bool overwriteOther = true)
+    {
+        StampVirusCircle(sector, centerWorld, radiusWorld, overwriteOther);
+        StampCircleAlpha(sector, sector.poisonPuddleBuffer, centerWorld, radiusWorld, 255, markPoisonPuddleDirty: true);
+    }
 
     private void StampCircleAlpha(
         SectorPaint sector,
@@ -470,7 +646,9 @@ public class MaskRenderManager : MonoBehaviour
         float radiusWorld,
         byte alpha,
         bool markVaccineDirty = false,
-        bool markVirusDirty = false)
+        bool markVirusDirty = false,
+        bool markPoisonPuddleDirty = false
+        )
     {
         if (sector == null || buffer == null)
             return;
@@ -511,6 +689,7 @@ public class MaskRenderManager : MonoBehaviour
 
         if (markVaccineDirty) sector.vaccineDirty = true;
         if (markVirusDirty) sector.virusDirty = true;
+        if (markPoisonPuddleDirty) sector.poisonPuddleDirty = true;
     }
 
     private void ApplyDirtyMasks(SectorPaint sector)
@@ -530,6 +709,12 @@ public class MaskRenderManager : MonoBehaviour
             sector.virusMask.SetPixels32(sector.virusBuffer);
             sector.virusMask.Apply(false, false);
             sector.virusDirty = false;
+        }
+        if (sector.poisonPuddleDirty && sector.poisonPuddleMask != null && sector.poisonPuddleBuffer != null)
+        {
+            sector.poisonPuddleMask.SetPixels32(sector.poisonPuddleBuffer);
+            sector.poisonPuddleMask.Apply(false, false);
+            sector.poisonPuddleDirty = false;
         }
     }
 
@@ -732,7 +917,8 @@ public class MaskRenderManager : MonoBehaviour
                         impact.alreadyVaccineArea += pixelArea;
                     }
                 }
-                else if (request.channel == PaintChannel.Virus)
+                else if (request.channel == PaintChannel.Virus ||
+                    request.channel == PaintChannel.PoisonPuddle)
                 {
                     if (hasVaccine)
                     {

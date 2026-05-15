@@ -12,8 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5d013d6a68114547ba1e3c7f5f81d1a, type: 3}
   m_Name: VSplatterDashConfig
   m_EditorClassIdentifier: 
-  _dashSpeed: 40
+  _useMoveSpeedBasedDash: 1
+  _dashSpeedMultiplier: 1.5
+  _fixedDashSpeed: 0
   _dashDuration: 0.3
-  _cooldownSeconds: 5
+  _cooldownSeconds: 4
   _useForwardWhenNoMovementInput: 1
   _rotateTowardDashDirection: 1
+  _useDashVisualLean: 1
+  _dashVisualLeanEuler: {x: 18, y: 0, z: 0}
+  _dashVisualLeanInSpeed: 18
+  _dashVisualLeanOutSpeed: 12

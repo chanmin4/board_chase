@@ -8,7 +8,7 @@ public class MutarusQTEPatternController : MonoBehaviour
     [SerializeField] private QTEBase[] _qtePanels;
     [Header("Input Lock")]
     [SerializeField] private InputReader _inputReader;
-
+    
 private bool _qteInputLocked;
     [Header("Station Listening")]
     [Tooltip("Runtime channel used to receive stations from the current battle sector.")]
@@ -30,7 +30,7 @@ private bool _qteInputLocked;
     [Header("Runtime Debug")]
     [SerializeField, ReadOnly] private bool _isRunning;
     [SerializeField, ReadOnly] private float _timeRemaining;
-
+    [SerializeField, ReadOnly] private bool _timerRunning;
     private MutarusQTEStationGroup _stationGroup;
     private MutarusQTEStation[] _stations;
 
@@ -41,7 +41,12 @@ private bool _qteInputLocked;
 
     public bool IsRunning => _isRunning;
     public float TimeRemaining => _timeRemaining;
-
+    private Action _onRuntimeReady;
+    private bool _runtimeReadyNotified;
+    private bool _useObjectiveCounter;
+    private int _requiredObjectiveCount;
+    private int _completedObjectiveCount;
+    private Action<int, int> _onObjectiveProgress;
     private void Awake()
     {
         EnsureQTEPanelsReady();
@@ -79,7 +84,7 @@ private bool _qteInputLocked;
 
     private void Update()
     {
-        if (!_isRunning)
+        if (!_isRunning || !_timerRunning)
             return;
 
         _timeRemaining -= Time.deltaTime;
@@ -87,7 +92,6 @@ private bool _qteInputLocked;
         if (_timeRemaining <= 0f)
             Finish(NamedPatternResult.PlayerFailed);
     }
-
     private void HandleResetRequest()
     {
         CancelPatternWithoutResult();
@@ -119,20 +123,39 @@ private bool _qteInputLocked;
             group.blocksRaycasts = false;
         }
     }
-    public void BeginPattern(float duration, Action<NamedPatternResult> onComplete)
+    public void BeginPattern(
+        float duration,
+        Action<NamedPatternResult> onComplete,
+        bool useObjectiveCounter = false,
+        int requiredObjectiveCount = 0,
+        Action<int, int> onObjectiveProgress = null,
+        Action onRuntimeReady = null)
     {
         CancelPatternWithoutResult();
 
         _isRunning = true;
+        _timerRunning = false;
+        _runtimeReadyNotified = false;
+
         _finishing = false;
         _timeRemaining = Mathf.Max(0.01f, duration);
         _onComplete = onComplete;
 
+        _useObjectiveCounter = useObjectiveCounter;
+        _requiredObjectiveCount = Mathf.Max(0, requiredObjectiveCount);
+        _completedObjectiveCount = 0;
+        _onObjectiveProgress = onObjectiveProgress;
+        _onRuntimeReady = onRuntimeReady;
+
+        if (_useObjectiveCounter && _requiredObjectiveCount <= 0)
+            _requiredObjectiveCount = _stations != null ? _stations.Length : 0;
+
+        PublishObjectiveProgress();
+
         SetPatternRootVisible(true);
         HideAllQTEPanels();
 
-        if (_stationGroup != null)
-            _stationGroup.SetPatternActive(true);
+        TryActivateStationsAndStartTimer();
     }
 
     public void CancelPatternWithoutResult()
@@ -145,9 +168,15 @@ private bool _qteInputLocked;
         _activeQTE = null;
         _activeStation = null;
         _isRunning = false;
+        _timerRunning = false;
+        _runtimeReadyNotified = false;
+        _onRuntimeReady = null;
         _finishing = false;
         _onComplete = null;
-
+        _onObjectiveProgress = null;
+        _useObjectiveCounter = false;
+        _requiredObjectiveCount = 0;
+        _completedObjectiveCount = 0;
         HideAllQTEPanels();
 
         if (_stationGroup != null)
@@ -161,8 +190,8 @@ private bool _qteInputLocked;
         _stationGroup = group;
         _stations = group != null ? group.Stations : null;
 
-        if (_isRunning && _stationGroup != null)
-            _stationGroup.SetPatternActive(true);
+        if (_isRunning)
+            TryActivateStationsAndStartTimer();
     }
 
     private void HandleInteract()
@@ -218,8 +247,19 @@ private bool _qteInputLocked;
             return;
         }
 
-        if (completedStation != null)
+       if (completedStation != null && !completedStation.IsCompleted)
             completedStation.MarkCompleted();
+
+        _completedObjectiveCount++;
+        PublishObjectiveProgress();
+
+        if (_useObjectiveCounter)
+        {
+            if (_completedObjectiveCount >= _requiredObjectiveCount)
+                Finish(NamedPatternResult.PlayerSucceeded);
+
+            return;
+        }
 
         if (AreAllStationsCompleted())
             Finish(NamedPatternResult.PlayerSucceeded);
@@ -252,7 +292,13 @@ private bool _qteInputLocked;
         UnlockGameplayInputForQTE();
         _finishing = true;
         _isRunning = false;
-
+        _timerRunning = false;
+        _runtimeReadyNotified = false;
+        _onRuntimeReady = null;
+        _onObjectiveProgress = null;
+        _useObjectiveCounter = false;
+        _requiredObjectiveCount = 0;
+        _completedObjectiveCount = 0;
         if (_activeQTE != null && _activeQTE.Running){
             _activeQTE.Cancel();     
         }
@@ -411,7 +457,53 @@ private bool _qteInputLocked;
 
         Debug.Log($"[MutarusQTEPatternController] QTE started. qte={_activeQTE.name}, station={station.name}", this);
 
-        _activeQTE.Begin(HandleQTEResult);
+        if (_activeQTE is QTE_Timing timingQTE)
+            timingQTE.BeginForStation(_activeStation, HandleQTEResult);
+        else
+            _activeQTE.Begin(HandleQTEResult);
         return true;
     }
+    private void PublishObjectiveProgress()
+    {
+        if (!_useObjectiveCounter || _onObjectiveProgress == null)
+            return;
+
+        _onObjectiveProgress.Invoke(_completedObjectiveCount, _requiredObjectiveCount);
+    }
+    private void TryActivateStationsAndStartTimer()
+    {
+        if (!_isRunning || _stationGroup == null)
+            return;
+
+        _stationGroup.SetPatternActive(true);
+        NotifyRuntimeReady();
+    }
+
+    private void NotifyRuntimeReady()
+    {
+        if (_runtimeReadyNotified)
+            return;
+
+        _runtimeReadyNotified = true;
+        _timerRunning = true;
+
+        Action callback = _onRuntimeReady;
+        _onRuntimeReady = null;
+
+        callback?.Invoke();
+    }
+    public bool TryGetPlayerPosition(out Vector3 position)
+    {
+        if (_playerAnchor != null &&
+            _playerAnchor.isSet &&
+            _playerAnchor.Value != null)
+        {
+            position = _playerAnchor.Value.position;
+            return true;
+        }
+
+        position = default;
+        return false;
+    }
+
 }

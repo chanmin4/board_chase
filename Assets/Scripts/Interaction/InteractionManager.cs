@@ -27,7 +27,9 @@ public class InteractionManager : MonoBehaviour
     [SerializeField] private PlayableDirectorChannelSO _onCutsceneStart = default;
 
     [ReadOnly] public InteractionType currentInteractionType;
-
+    [Header("Interaction Prompt")]
+    [SerializeField] private InteractionPromptEventChannelSO _interactionPromptChannel;
+    [SerializeField] private string _interactionKeyLabel = "E";
     private LinkedList<Interaction> _potentialInteractions = new LinkedList<Interaction>();
 
     private Transform InteractionActor
@@ -157,7 +159,7 @@ public class InteractionManager : MonoBehaviour
         {
             Debug.Log($"[InteractionManager] Started QTE station. station={station.name}");
             currentInteractionType = InteractionType.None;
-            _potentialInteractions.Clear();
+            //_potentialInteractions.Clear();
             RequestUpdateUI(false);
         }
     }
@@ -264,15 +266,21 @@ public class InteractionManager : MonoBehaviour
 
     private void RequestUpdateUI(bool visible)
     {
-        if (_toggleInteractionUI == null)
-            return;
+        if (visible)
+            RefreshPotentialInteractions();
 
-        if (visible && _potentialInteractions.Count > 0)
-            _toggleInteractionUI.RaiseEvent(true, _potentialInteractions.First.Value.type);
-        else
-            _toggleInteractionUI.RaiseEvent(false, InteractionType.None);
+        bool shouldShow = visible && _potentialInteractions.Count > 0;
+
+        if (_toggleInteractionUI != null)
+        {
+            if (shouldShow)
+                _toggleInteractionUI.RaiseEvent(true, _potentialInteractions.First.Value.type);
+            else
+                _toggleInteractionUI.RaiseEvent(false, InteractionType.None);
+        }
+
+        PublishInteractionPrompt(shouldShow);
     }
-
     private void OnInteractionEnd()
     {
         switch (currentInteractionType)
@@ -290,6 +298,86 @@ public class InteractionManager : MonoBehaviour
     {
         _potentialInteractions.Clear();
         RequestUpdateUI(false);
+    }
+
+    private void PublishInteractionPrompt(bool visible)
+    {
+        if (_interactionPromptChannel == null)
+            return;
+
+        if (!visible || _potentialInteractions.Count <= 0)
+        {
+            _interactionPromptChannel.Clear();
+            return;
+        }
+
+        Interaction interaction = _potentialInteractions.First.Value;
+        Transform anchor = ResolvePromptAnchor(interaction.interactableObject);
+
+        if (anchor == null)
+        {
+            _interactionPromptChannel.Clear();
+            return;
+        }
+
+        _interactionPromptChannel.RaiseEvent(new InteractionPromptSnapshot(
+            true,
+            interaction.type,
+            anchor,
+            ResolveInteractionKeyLabel(),
+            ResolveActionLabel(interaction.type)));
+    }
+
+    private Transform ResolvePromptAnchor(GameObject obj)
+    {
+        if (obj == null)
+            return null;
+
+        InteractionPromptAnchor anchor =
+            obj.GetComponentInChildren<InteractionPromptAnchor>(true) ??
+            obj.GetComponentInParent<InteractionPromptAnchor>();
+
+        if (anchor != null)
+            return anchor.Anchor;
+
+        return obj.transform;
+    }
+
+    private string ResolveInteractionKeyLabel()
+    {
+        return string.IsNullOrWhiteSpace(_interactionKeyLabel)
+            ? "E"
+            : _interactionKeyLabel;
+    }
+
+    private string ResolveActionLabel(InteractionType type)
+    {
+        return type switch
+        {
+            InteractionType.Portal => "이동",
+            InteractionType.QTE => "상호작용",
+            InteractionType.PickUp => "획득",
+            InteractionType.Talk => "대화",
+            _ => "상호작용"
+        };
+    }
+
+    private void RefreshPotentialInteractions()
+    {
+        LinkedListNode<Interaction> node = _potentialInteractions.First;
+
+        while (node != null)
+        {
+            LinkedListNode<Interaction> next = node.Next;
+            GameObject obj = node.Value.interactableObject;
+
+            if (obj == null || !TryCreateInteraction(obj, out Interaction refreshedInteraction))
+                _potentialInteractions.Remove(node);
+            else
+                node.Value = refreshedInteraction;
+
+            node = next;
+        }
     }
 
 }

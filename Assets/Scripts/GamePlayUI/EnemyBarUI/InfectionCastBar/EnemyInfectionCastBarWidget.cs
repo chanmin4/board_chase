@@ -37,7 +37,7 @@ public class EnemyInfectionCastBarWidget : MonoBehaviour
         RefreshImmediate();
     }
 
-    public void Bind(EnemyScreenSpaceUIAnchor anchor)
+    public void Bind(EnemyScreenSpaceHPUIAnchor anchor)
     {
         _enemy = anchor != null ? anchor.Enemy : null;
         RefreshImmediate();

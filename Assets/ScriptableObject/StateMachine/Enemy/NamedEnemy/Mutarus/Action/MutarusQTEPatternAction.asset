@@ -20,22 +20,22 @@ MonoBehaviour:
   _fireBombOnEnter: 0
   _firstBombDelay: 4
   _bombInterval: 4
-  _maxBombCount: 1
-  _bombTravelTime: 1.5
-  _bombArcHeight: 10
+  _bombTravelTime: 2.5
+  _bombArcHeight: 20
   _bombSpawnYOffset: 0.5
   _bombTargetYOffset: 0
   _fallbackTargetDistance: 6
   _targetRandomRadius: 0
   _damageRadius: 1.5
-  _healthDamage: 10
-  _infectionDamage: 5
+  _impactHealthDamage: 15
+  _impactInfectionDamage: 15
   _damageTargetMask:
     serializedVersion: 2
     m_Bits: 8
   _triggerInteraction: 2
-  _paintChannel: 1
-  _paintRadiusWorld: 10
+  _paintChannel: 2
+  _paintRadiusWorld: 7
   _paintPriority: 0
+  _poisonPuddleDamageConfig: {fileID: 11400000, guid: ac1b15ddde24d5a48b3f50d2702b5b79, type: 2}
   _triggerAnimatorOnBomb: 1
   _bombAnimatorTrigger: PatternBomb

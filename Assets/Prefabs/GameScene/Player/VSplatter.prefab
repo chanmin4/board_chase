@@ -753,9 +753,14 @@ MonoBehaviour:
   _currentHealthSO: {fileID: 11400000, guid: 53a134cbd7189844c8d61c74cd1b50ce, type: 2}
   _destroyOnDeath: 0
   _destroyDelay: 1
+  _defaultDamageTakenMultiplier: 1
+  _damageTakenMultiplier: 1
+  _minDamageTakenMultiplier: 0
+  _maxDamageTakenMultiplier: 99
   _debugCurrentHealth: 0
   _debugMaxHealth: 0
   _debugHealthNormalized: 0
+  _debugDamageTakenMultiplier: 1
   _getHitEffectSO: {fileID: 11400000, guid: dcf7b20a3fc92814b8b7640e48d40d3a, type: 2}
   _mainMeshRenderer: {fileID: 0}
   _droppableRewardSO: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
@@ -816,6 +821,8 @@ MonoBehaviour:
   _onInteractionEnded: {fileID: 11400000, guid: 6a8475f429cbabd42a27316fd920cd2b, type: 2}
   _onCutsceneStart: {fileID: 11400000, guid: 6018ba8038d5a0f418011f645241e86f, type: 2}
   currentInteractionType: 0
+  _interactionPromptChannel: {fileID: 11400000, guid: 8e74a59fe2d982145a9637a20a7653aa, type: 2}
+  _interactionKeyLabel: E
 --- !u!114 &2096197016530632128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -850,7 +857,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _playerInfection: {fileID: 2096197016530632128}
+  _damageable: {fileID: 3725409875933228798}
   _samplePoint: {fileID: 5493001281733607703}
+  _poisonPuddleHealthTickInterval: 0.5
   _maskRenderManager: {fileID: 0}
   _requireOpenedSector: 1
 --- !u!114 &723617969344722977

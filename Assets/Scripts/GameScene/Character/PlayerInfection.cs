@@ -23,7 +23,8 @@ public class PlayerInfection : MonoBehaviour
     [SerializeField] private float _currentInfection;
 
     private bool _isDead;
-
+    public float PoisonPuddleHealthDamagePerSecond =>
+        _infectionRules != null ? _infectionRules.PoisonPuddleHealthDamagePerSecond : 0f;
     public float CurrentInfection => _currentInfection;
     public bool IsDead => _isDead;
 
@@ -94,6 +95,13 @@ public class PlayerInfection : MonoBehaviour
             return;
 
         AddInfection(_infectionRules.VirusZoneGainPerSecond * InfectionGainMultiplier * deltaTime);
+    }
+    public void AddPoisonPuddleZoneExposure(float deltaTime)
+    {
+        if (_infectionRules == null)
+            return;
+
+        AddInfection(_infectionRules.PoisonPuddleInfectionGainPerSecond * InfectionGainMultiplier * deltaTime);
     }
 
     public void AddVaccineZoneRecovery(float deltaTime)

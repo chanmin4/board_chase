@@ -8,13 +8,18 @@ public class NamedPatternConfigSO : ScriptableObject
     [Header("Start Delay")]
     [Tooltip("Seconds after named combat starts before the first pattern becomes ready.")]
     [SerializeField, Min(0f)] private float _firstPatternDelay = 30f;
-
+    
     [Header("Repeat")]
     [Tooltip("If true, pattern timer restarts after PatternResolve.")]
     [SerializeField] private bool _repeatPattern = true;
-
+    [Header("Objective UI")]
+    [SerializeField] private bool _showObjectiveCounter;
+    [SerializeField, Min(0)] private int _objectiveRequiredCount = 0;
     [Tooltip("Seconds after PatternResolve before the next pattern becomes ready.")]
     [SerializeField, Min(0f)] private float _repeatPatternDelay = 45f;
+    [Header("UI")]
+    [SerializeField] private string _displayPatternName = "Named Pattern";
+
 
     [Header("Active Duration")]
     [Tooltip("Time limit while PatternActive state is running.")]
@@ -38,7 +43,8 @@ public class NamedPatternConfigSO : ScriptableObject
     public bool RepeatPattern => _repeatPattern;
     public float RepeatPatternDelay => _repeatPatternDelay;
     public float PatternActiveDuration => _patternActiveDuration;
-
+    public string DisplayName =>
+    string.IsNullOrWhiteSpace(_displayPatternName) ? name : _displayPatternName;
     public bool ApplyActiveDamageMultiplier => _applyActiveDamageMultiplier;
     public float ActiveDamageTakenMultiplier => _activeDamageTakenMultiplier;
 
@@ -49,4 +55,8 @@ public class NamedPatternConfigSO : ScriptableObject
     public bool ApplyFailureDamageMultiplier => _applyFailureDamageMultiplier;
     public float FailureDamageTakenMultiplier => _failureDamageTakenMultiplier;
     public float FailureMultiplierDuration => _failureMultiplierDuration;
+    
+    public bool ShowObjectiveCounter => _showObjectiveCounter;
+    public int ObjectiveRequiredCount => _objectiveRequiredCount;
+
 }

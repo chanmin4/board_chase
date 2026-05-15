@@ -8,7 +8,10 @@ public class MutarusQTEStation : MonoBehaviour
     [Header("Visual Prefabs")]
     [SerializeField] private GameObject _activeVisualPrefab;
     [SerializeField] private GameObject _completedVisualPrefab;
-
+    [Header("Timing QTE Setting")]
+    [SerializeField, Min(1)] private int _timingSuccessRequired = 3;
+    [Header("Timing QTE Runtime")]
+    [SerializeField, ReadOnly] private int _timingSuccessCount;
     [Header("Listening")]
     [SerializeField] private MutarusQTEPatternControllerEventChannelSO _controllerReadyChannel;
 
@@ -18,7 +21,9 @@ public class MutarusQTEStation : MonoBehaviour
 
     public bool IsActive { get; private set; }
     public bool IsCompleted { get; private set; }
-
+    public int TimingSuccessRequired => Mathf.Max(1, _timingSuccessRequired);
+    public int TimingSuccessCount => _timingSuccessCount;
+    public int TimingSuccessRemaining => Mathf.Max(0, TimingSuccessRequired - _timingSuccessCount);
     private Transform VisualRoot => _visualRoot != null ? _visualRoot : transform;
 
     private void Awake()
@@ -61,6 +66,7 @@ public class MutarusQTEStation : MonoBehaviour
 
         IsActive = active;
         IsCompleted = false;
+        _timingSuccessCount = 0;
 
         SetVisualVisible(_activeVisualInstance, active);
         SetVisualVisible(_completedVisualInstance, false);
@@ -69,6 +75,7 @@ public class MutarusQTEStation : MonoBehaviour
     public void MarkCompleted()
     {
         IsCompleted = true;
+        _timingSuccessCount = TimingSuccessRequired;
 
         SetVisualVisible(_activeVisualInstance, false);
         SetVisualVisible(_completedVisualInstance, true);
@@ -78,6 +85,7 @@ public class MutarusQTEStation : MonoBehaviour
     {
         IsActive = false;
         IsCompleted = false;
+        _timingSuccessCount = 0;
 
         SetVisualVisible(_activeVisualInstance, false);
         SetVisualVisible(_completedVisualInstance, false);
@@ -138,5 +146,28 @@ public class MutarusQTEStation : MonoBehaviour
             else
                 particles[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
+    }
+    public bool RegisterTimingSuccess()
+    {
+        if (IsCompleted)
+            return true;
+
+        _timingSuccessCount = Mathf.Clamp(
+            _timingSuccessCount + 1,
+            0,
+            TimingSuccessRequired);
+
+        if (_timingSuccessCount >= TimingSuccessRequired)
+        {
+            MarkCompleted();
+            return true;
+        }
+
+        return false;
+    }
+
+    public void ResetTimingProgress()
+    {
+        _timingSuccessCount = 0;
     }
 }

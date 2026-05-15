@@ -92,8 +92,7 @@ public class NamedBattleSectorResetter : MonoBehaviour
             for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
             {
                 GameObject child = root.GetChild(childIndex).gameObject;
-
-                // Destroy는 프레임 끝에 처리되므로 먼저 꺼서 데미지/Update/Trigger를 즉시 멈춘다.
+                
                 child.SetActive(false);
                 Destroy(child);
             }
