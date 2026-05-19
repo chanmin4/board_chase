@@ -391,16 +391,22 @@ MonoBehaviour:
   initialized: 0
   vaccineMask: {fileID: 0}
   virusMask: {fileID: 0}
+  poisonPuddleMask: {fileID: 0}
   vaccineBuffer: []
   virusBuffer: []
+  poisonPuddleBuffer: []
   vaccineDirty: 0
   virusDirty: 0
+  poisonPuddleDirty: 0
   vaccineMaterialInstance: {fileID: 0}
   virusMaterialInstance: {fileID: 0}
+  poisonPuddleMaterialInstance: {fileID: 0}
   vaccineRenderer: {fileID: 0}
   virusRenderer: {fileID: 0}
+  poisonPuddleRenderer: {fileID: 0}
   vaccineFilter: {fileID: 0}
   virusFilter: {fileID: 0}
+  poisonPuddleFilter: {fileID: 0}
   textureWidth: 0
   textureHeight: 0
 --- !u!1 &4298802476802647868
@@ -631,6 +637,8 @@ MonoBehaviour:
   _exitEffect: {fileID: 11400000, guid: a56eaa08827be1447839547bcba78bea, type: 2}
   _coveredHoldSeconds: 0.2
   _playerRuntimeReadyChannel: {fileID: 11400000, guid: 31d9f48afcfd69e41b6f414a4d32642b, type: 2}
+  _currentSectorChangedEvent: {fileID: 11400000, guid: cb39fc0f8d034346a9164254d2f477d7, type: 2}
+  _battleSector: {fileID: 1399724844744912947}
   _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
   _playerRoot: {fileID: 8019063675666989520}
   _battlePlayerSpawnPoint: {fileID: 2204794366556446804}

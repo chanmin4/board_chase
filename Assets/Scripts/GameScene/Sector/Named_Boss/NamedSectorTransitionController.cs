@@ -14,7 +14,9 @@ public class NamedSectorTransitionController : MonoBehaviour
     [SerializeField] private float _coveredHoldSeconds = 0.1f;
     [Header("Listening")]
     [SerializeField] private PlayerRuntimeReadyEventChannelSO _playerRuntimeReadyChannel;
-
+    [Header("Sector Tracking")]
+    [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
+    [SerializeField] private SectorRuntime _battleSector;
     [Header("Player")]
     [SerializeField] private InputReader _inputReader;
     [SerializeField] private Transform _playerRoot;
@@ -146,6 +148,9 @@ public class NamedSectorTransitionController : MonoBehaviour
         }
 
         TeleportPlayer(_battlePlayerSpawnPoint.position, _battlePlayerSpawnPoint.rotation);
+        if (_currentSectorChangedEvent != null && _battleSector != null)
+            _currentSectorChangedEvent.RaiseEvent(_battleSector);
+    
     }
     private bool TryResolvePlayerRoot()
     {
@@ -171,6 +176,8 @@ public class NamedSectorTransitionController : MonoBehaviour
         targetPosition.y = _playerRoot.position.y;
 
         TeleportPlayer(targetPosition, _playerRoot.rotation);
+        if (_currentSectorChangedEvent != null && sourceSector != null)
+            _currentSectorChangedEvent.RaiseEvent(sourceSector);
     }
     private void TeleportPlayer(Vector3 position, Quaternion rotation)
     {

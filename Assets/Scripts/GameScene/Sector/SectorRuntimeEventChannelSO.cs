@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(
@@ -8,11 +7,26 @@ using UnityEngine;
 public class SectorRuntimeEventChannelSO : ScriptableObject
 {
     public event Action<SectorRuntime> OnEventRaised;
-    /// <summary>
-    /// SectorRuntime 하나를 이벤트로 전달한다.
-    /// </summary>
+
+    [SerializeField, ReadOnly] private SectorRuntime _current;
+
+    public SectorRuntime Current => _current;
+    public bool HasCurrent => _current != null;
+
     public void RaiseEvent(SectorRuntime sector)
     {
+        _current = sector;
         OnEventRaised?.Invoke(sector);
+    }
+
+    public void Clear(SectorRuntime sector)
+    {
+        if (_current == sector)
+            _current = null;
+    }
+
+    public void Clear()
+    {
+        _current = null;
     }
 }

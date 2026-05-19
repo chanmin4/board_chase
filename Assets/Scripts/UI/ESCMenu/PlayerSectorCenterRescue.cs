@@ -31,7 +31,12 @@ public class PlayerSectorCenterRescue : MonoBehaviour
         }
 
         if (_currentSectorChangedEvent != null)
+        {
             _currentSectorChangedEvent.OnEventRaised += HandleCurrentSectorChanged;
+
+            if (_currentSectorChangedEvent.Current != null)
+                HandleCurrentSectorChanged(_currentSectorChangedEvent.Current);
+        }
     }
 
     private void OnDisable()

@@ -1225,6 +1225,7 @@ MonoBehaviour:
   _openOnlyStartSectorOnBoot: 1
   _requestUnlockStageEvent: {fileID: 11400000, guid: 5bdd9abfafb6a1348ad71870dcd4133b, type: 2}
   _requestProgressNextStageEvent: {fileID: 11400000, guid: 100a7f585768ad947aaf1ec572ade37a, type: 2}
+  _currentSectorChangedEvent: {fileID: 11400000, guid: cb39fc0f8d034346a9164254d2f477d7, type: 2}
   _startSectorReadyEvent: {fileID: 11400000, guid: d67983433baabf2489d0f5dec4b948ec, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
   _stageAppliedEvent: {fileID: 11400000, guid: 94f3608815ef6464d9c3bf167a67f34f, type: 2}
@@ -2102,14 +2103,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1987385153465026167, guid: 78d71b9d1e7ebb6418acacce9f9d0099, type: 3}
-      propertyPath: _infectionControlManager
-      value: 
-      objectReference: {fileID: 955038335}
-    - target: {fileID: 3321280048417220109, guid: 78d71b9d1e7ebb6418acacce9f9d0099, type: 3}
-      propertyPath: _maskRenderManager
-      value: 
-      objectReference: {fileID: 1225504680}
     - target: {fileID: 4551268453619387072, guid: 78d71b9d1e7ebb6418acacce9f9d0099, type: 3}
       propertyPath: m_Name
       value: Sector_Named
