@@ -1,146 +1,214 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class UIMenuManager : MonoBehaviour
 {
-	[SerializeField] private UIPopup _popupPanel = default;
-	[SerializeField] private UISettingsController _settingsPanel = default;
-	[SerializeField] private UIMainMenu _mainMenuPanel = default;
+    [Header("Panels")]
+    [SerializeField] private UIPopup _popupPanel;
+    [SerializeField] private CanvasGroup _popupGroup;
 
-	[SerializeField] private SaveSystem _saveSystem = default;
+    [SerializeField] private UISettingsController _settingsPanel;
+    [SerializeField] private CanvasGroup _settingsGroup;
 
-	[SerializeField] private InputReader _inputReader = default;
+    [SerializeField] private UIMainMenu _mainMenuPanel;
+    [SerializeField] private CanvasGroup _mainMenuGroup;
 
+    [Header("Refs")]
+    [SerializeField] private SaveSystem _saveSystem;
+    [SerializeField] private InputReader _inputReader;
 
-	[Header("Broadcasting on")]
-	[SerializeField]
-	private VoidEventChannelSO _startNewGameEvent = default;
-	[SerializeField]
-	private VoidEventChannelSO _continueGameEvent = default;
+    [Header("Broadcasting On")]
+    [SerializeField] private VoidEventChannelSO _startNewGameEvent;
+    [SerializeField] private VoidEventChannelSO _continueGameEvent;
 
+    private bool _hasSaveData;
 
+    private void Awake()
+    {
+        SetVisible(_mainMenuGroup, true);
+        SetVisible(_settingsGroup, false);
+        SetVisible(_popupGroup, false);
+    }
 
-	private bool _hasSaveData;
+    private IEnumerator Start()
+    {
+        if (_inputReader != null)
+            _inputReader.EnableMenuInput();
 
-	private IEnumerator Start()
-	{
-		_inputReader.EnableMenuInput();
-		yield return new WaitForSeconds(0.4f); //waiting time for all scenes to be loaded 
-		SetMenuScreen();
-	}
-	void SetMenuScreen()
-	{
-		_hasSaveData = _saveSystem.LoadSaveDataFromDisk();
-		_mainMenuPanel.SetMenuScreen(_hasSaveData);
-		_mainMenuPanel.ContinueButtonAction += _continueGameEvent.RaiseEvent;
-		_mainMenuPanel.NewGameButtonAction += ButtonStartNewGameClicked;
-		_mainMenuPanel.SettingsButtonAction += OpenSettingsScreen;
-		_mainMenuPanel.ExitButtonAction += ShowExitConfirmationPopup;
+        yield return new WaitForSeconds(0.4f);
 
-	}
+        RefreshMenuScreen();
+    }
 
-	void ButtonStartNewGameClicked()
-	{
-		if (!_hasSaveData)
-		{
-			ConfirmStartNewGame();
+    private void OnEnable()
+    {
+        if (_mainMenuPanel == null)
+            return;
 
-		}
-		else
-		{
-			ShowStartNewGameConfirmationPopup();
+        _mainMenuPanel.ContinueButtonAction += ContinueGame;
+        _mainMenuPanel.NewGameButtonAction += ButtonStartNewGameClicked;
+        _mainMenuPanel.AchievementButtonAction += OpenAchievementScreen;
+        _mainMenuPanel.SettingsButtonAction += OpenSettingsScreen;
+        _mainMenuPanel.QuitButtonAction += ShowExitConfirmationPopup;
+    }
 
-		}
+    private void OnDisable()
+    {
+        if (_mainMenuPanel == null)
+            return;
 
-	}
+        _mainMenuPanel.ContinueButtonAction -= ContinueGame;
+        _mainMenuPanel.NewGameButtonAction -= ButtonStartNewGameClicked;
+        _mainMenuPanel.AchievementButtonAction -= OpenAchievementScreen;
+        _mainMenuPanel.SettingsButtonAction -= OpenSettingsScreen;
+        _mainMenuPanel.QuitButtonAction -= ShowExitConfirmationPopup;
+    }
 
-	void ConfirmStartNewGame()
-	{
-		_startNewGameEvent.RaiseEvent();
-	}
+    private void RefreshMenuScreen()
+    {
+        _hasSaveData = _saveSystem != null && _saveSystem.LoadSaveDataFromDisk();
 
-	void ShowStartNewGameConfirmationPopup()
-	{
-		_popupPanel.ConfirmationResponseAction += StartNewGamePopupResponse;
-		_popupPanel.ClosePopupAction += HidePopup;
+        if (_mainMenuPanel != null)
+            _mainMenuPanel.SetMenuScreen(_hasSaveData);
+    }
 
-		_popupPanel.gameObject.SetActive(true);
-		_popupPanel.SetPopup(PopupType.NewGame);
+    private void ContinueGame()
+    {
+        if (!_hasSaveData)
+            return;
 
-	}
+        if (_continueGameEvent != null)
+            _continueGameEvent.RaiseEvent();
+    }
 
-	void StartNewGamePopupResponse(bool startNewGameConfirmed)
-	{
+    private void ButtonStartNewGameClicked()
+    {
+        if (!_hasSaveData)
+        {
+            ConfirmStartNewGame();
+            return;
+        }
 
-		_popupPanel.ConfirmationResponseAction -= StartNewGamePopupResponse;
-		_popupPanel.ClosePopupAction -= HidePopup;
+        ShowStartNewGameConfirmationPopup();
+    }
 
-		_popupPanel.gameObject.SetActive(false);
+    private void ConfirmStartNewGame()
+    {
+        if (_startNewGameEvent != null)
+            _startNewGameEvent.RaiseEvent();
+    }
 
-		if (startNewGameConfirmed)
-		{
-			ConfirmStartNewGame();
-		}
-		else
-		{
-			_continueGameEvent.RaiseEvent();
-		}
+    private void ShowStartNewGameConfirmationPopup()
+    {
+        if (_popupPanel == null)
+            return;
 
-		_mainMenuPanel.SetMenuScreen(_hasSaveData);
+        _popupPanel.ConfirmationResponseAction += StartNewGamePopupResponse;
+        _popupPanel.ClosePopupAction += HidePopup;
 
-	}
+        _popupPanel.SetPopup(PopupType.NewGame);
+        SetVisible(_popupGroup, true);
+    }
 
-	void HidePopup()
-	{
-		_popupPanel.ClosePopupAction -= HidePopup;
-		_popupPanel.gameObject.SetActive(false);
-		_mainMenuPanel.SetMenuScreen(_hasSaveData);
+    private void StartNewGamePopupResponse(bool startNewGameConfirmed)
+    {
+        if (_popupPanel != null)
+        {
+            _popupPanel.ConfirmationResponseAction -= StartNewGamePopupResponse;
+            _popupPanel.ClosePopupAction -= HidePopup;
+        }
 
-	}
+        SetVisible(_popupGroup, false);
+
+        if (startNewGameConfirmed)
+            ConfirmStartNewGame();
+
+        RefreshMenuScreen();
+    }
+
+    private void HidePopup()
+    {
+        if (_popupPanel != null)
+            _popupPanel.ClosePopupAction -= HidePopup;
+
+        SetVisible(_popupGroup, false);
+        RefreshMenuScreen();
+    }
+
+    public void OpenAchievementScreen()
+    {
+        // TODO: Achievement panel도 CanvasGroup 방식으로 연결.
+    }
 
 	public void OpenSettingsScreen()
 	{
-		_settingsPanel.gameObject.SetActive(true);
-		_settingsPanel.Closed += CloseSettingsScreen;
-
-	}
-	public void CloseSettingsScreen()
-	{
-		_settingsPanel.Closed -= CloseSettingsScreen;
-		_settingsPanel.gameObject.SetActive(false);
-		_mainMenuPanel.SetMenuScreen(_hasSaveData);
-
-	}
-
-	public void ShowExitConfirmationPopup()
-	{
-		_popupPanel.ConfirmationResponseAction += HideExitConfirmationPopup;
-		_popupPanel.gameObject.SetActive(true);
-		_popupPanel.SetPopup(PopupType.Quit);
-
-
-
-	}
-	void HideExitConfirmationPopup(bool quitConfirmed)
-	{
-		_popupPanel.ConfirmationResponseAction -= HideExitConfirmationPopup;
-		_popupPanel.gameObject.SetActive(false);
-		if (quitConfirmed)
+		if (_settingsPanel == null)
 		{
-			Application.Quit();
+			Debug.LogError("[UIMenuManager] Settings panel is missing.", this);
+			return;
 		}
-		_mainMenuPanel.SetMenuScreen(_hasSaveData);
 
+		SetVisible(_mainMenuGroup, false);
+		SetVisible(_settingsGroup, true);
 
+		_settingsPanel.Closed -= CloseSettingsScreen;
+		_settingsPanel.Closed += CloseSettingsScreen;
+		_settingsPanel.OpenSettingsScreen();
 	}
-	private void OnDestroy()
+
+    public void CloseSettingsScreen()
 	{
-		_popupPanel.ConfirmationResponseAction -= HideExitConfirmationPopup;
-		_popupPanel.ConfirmationResponseAction -= StartNewGamePopupResponse;
+		if (_settingsPanel != null)
+			_settingsPanel.Closed -= CloseSettingsScreen;
 
+		SetVisible(_settingsGroup, false);
+		SetVisible(_mainMenuGroup, true);
+
+		RefreshMenuScreen();
 	}
 
 
+    public void ShowExitConfirmationPopup()
+    {
+        if (_popupPanel == null)
+            return;
+
+        _popupPanel.ConfirmationResponseAction += HideExitConfirmationPopup;
+
+        _popupPanel.SetPopup(PopupType.Quit);
+        SetVisible(_popupGroup, true);
+    }
+
+    private void HideExitConfirmationPopup(bool quitConfirmed)
+    {
+        if (_popupPanel != null)
+            _popupPanel.ConfirmationResponseAction -= HideExitConfirmationPopup;
+
+        SetVisible(_popupGroup, false);
+
+        if (quitConfirmed)
+            Application.Quit();
+
+        RefreshMenuScreen();
+    }
+
+    private void OnDestroy()
+    {
+        if (_popupPanel == null)
+            return;
+
+        _popupPanel.ConfirmationResponseAction -= HideExitConfirmationPopup;
+        _popupPanel.ConfirmationResponseAction -= StartNewGamePopupResponse;
+        _popupPanel.ClosePopupAction -= HidePopup;
+    }
+
+	private static void SetVisible(CanvasGroup group, bool visible)
+	{
+		if (group == null)
+			return;
+
+		group.alpha = visible ? 1f : 0f;
+		group.interactable = visible;
+		group.blocksRaycasts = visible;
+	}
 }

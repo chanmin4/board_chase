@@ -71,8 +71,8 @@ public class SpitterAttackConfigSO : ScriptableObject
     public float TooCloseDistance => _tooCloseDistance;
     public float TooFarDistance => _tooFarDistance;
 
-    public float WindupMoveSpeed => _windupMoveSpeed;
-    public float RecoverMoveSpeed => _recoverMoveSpeed;
+    public float WindupMoveSpeed => DifficultyRuntime.ApplyEnemyNormalMoveSpeed(_windupMoveSpeed);
+    public float RecoverMoveSpeed => DifficultyRuntime.ApplyEnemyNormalMoveSpeed(_recoverMoveSpeed);
     public float StrafeDistance => _strafeDistance;
     public float DestinationRefreshInterval => _destinationRefreshInterval;
     public float NavMeshSampleDistance => _navMeshSampleDistance;
@@ -85,19 +85,19 @@ public class SpitterAttackConfigSO : ScriptableObject
     public float RandomSpreadAngle => _randomSpreadAngle;
 
     public EnemyProjectile ProjectilePrefab => _projectilePrefab;
-    public float ProjectileSpeed => _projectileSpeed;
+    public float ProjectileSpeed => DifficultyRuntime.ApplyEnemyProjectileSpeed(_projectileSpeed);
     public float ProjectileLifetime => _projectileLifetime;
     public float ProjectileCastRadius => _projectileCastRadius;
     public float ProjectileSpawnYOffset => _projectileSpawnYOffset;
-    public float HealthDamage => _healthDamage;
-    public float InfectionDamage => _infectionDamage;
+    public float HealthDamage => DifficultyRuntime.ApplyEnemyDamage(_healthDamage);
+    public float InfectionDamage => DifficultyRuntime.ApplyPlayerInfectionGain(_infectionDamage);
 
     public LayerMask DamageTargetMask => _damageTargetMask;
     public LayerMask ImpactMask => _impactMask;
     public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
 
     public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
-    public float PaintRadiusWorld => _paintRadiusWorld;
+    public float PaintRadiusWorld => DifficultyRuntime.ApplyEnemyVirusPaintRadius(_paintRadiusWorld);
     public int PaintPriority => _paintPriority;
 
     public bool DebugDrawRecoverDistances => _debugDrawRecoverDistances;

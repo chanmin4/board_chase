@@ -751,6 +751,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _healthConfigSO: {fileID: 11400000, guid: 4a31c5d403836f34e985dbcadd8d8453, type: 2}
   _currentHealthSO: {fileID: 11400000, guid: 53a134cbd7189844c8d61c74cd1b50ce, type: 2}
+  _keepAliveAtMinimumHealth: 1
+  _minimumAliveHealth: 1
   _destroyOnDeath: 0
   _destroyDelay: 1
   _defaultDamageTakenMultiplier: 1
@@ -840,7 +842,7 @@ MonoBehaviour:
   _infectionRules: {fileID: 11400000, guid: f61396243b933164e84206035bff1bfe, type: 2}
   _difficultyRules: {fileID: 11400000, guid: b3062c3ca54a07c499c92c9e2152d48f, type: 2}
   _playerHealthChanged: {fileID: 11400000, guid: c52ec27763e26ec4c89491ceccae6fbc, type: 2}
-  _deathEvent: {fileID: 11400000, guid: 0a29544909be226418bc1677ec369790, type: 2}
+  _gameOverEvent: {fileID: 11400000, guid: c56424f07189cca4cac1bea2fce2534d, type: 2}
   _playerInfectionReadyChannel: {fileID: 11400000, guid: a72fde196ac2ba442adf03fc32ccfc1c, type: 2}
   _updateHealthUI: {fileID: 11400000, guid: 2447a760b3f9f134f8730aa53c8d2ece, type: 2}
   _currentInfection: 0
@@ -859,7 +861,6 @@ MonoBehaviour:
   _playerInfection: {fileID: 2096197016530632128}
   _damageable: {fileID: 3725409875933228798}
   _samplePoint: {fileID: 5493001281733607703}
-  _poisonPuddleHealthTickInterval: 0.5
   _maskRenderManager: {fileID: 0}
   _requireOpenedSector: 1
 --- !u!114 &723617969344722977

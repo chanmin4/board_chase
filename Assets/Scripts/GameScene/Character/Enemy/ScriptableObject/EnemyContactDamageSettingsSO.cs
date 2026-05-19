@@ -10,7 +10,7 @@ public class EnemyContactDamageSettingsSO : ScriptableObject
     [SerializeField] private float _infectionDamage = 10f;
     [SerializeField] private float _hitCooldown = 1f;
 
-    public float HealthDamage => Mathf.Max(0f, _healthDamage);
-    public float InfectionDamage => Mathf.Max(0f, _infectionDamage);
+    public float HealthDamage => DifficultyRuntime.ApplyEnemyDamage(_healthDamage);
+    public float InfectionDamage => DifficultyRuntime.ApplyPlayerInfectionGain(_infectionDamage);
     public float HitCooldown => Mathf.Max(0f, _hitCooldown);
 }

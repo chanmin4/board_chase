@@ -8,10 +8,12 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Enemy Actions/Move To Infection Target")]
 public class MoveToInfectionTargetActionSO : StateActionSO
 {
-    [SerializeField] private float _moveSpeed = 3.5f;
-    [SerializeField] private float _stoppingDistance = 0.8f;
-    public float MoveSpeed => _moveSpeed;
-    public float StoppingDistance => _stoppingDistance;
+    [Header("Definition Config")]
+    [SerializeField] private NormalEnemyMoveToInfectionTargetConfigSO _definitionConfig;
+
+    public bool HasDefinitionConfig => _definitionConfig != null;
+    public float MoveSpeed => _definitionConfig.MoveSpeed;
+    public float StoppingDistance => _definitionConfig.StoppingDistance;
     protected override StateAction CreateAction() => new MoveToInfectionTargetAction();
 }
 
@@ -22,6 +24,7 @@ public class MoveToInfectionTargetAction : StateAction
     private MoveToInfectionTargetActionSO _config;
     private bool _isActiveAgent;
     private EnemyMovementStatsProvider _movementStatsProvider;
+    private bool _hasConfig;
     public override void Awake(StateMachine stateMachine)
     {
         _enemy = stateMachine.GetComponent<Enemy>();
@@ -33,6 +36,14 @@ public class MoveToInfectionTargetAction : StateAction
     }
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[MoveToInfectionTargetAction] Definition Config is missing.", _enemy);
+            return;
+        }
+
         if (!_isActiveAgent)
             return;
         float speed = _movementStatsProvider != null
@@ -48,6 +59,9 @@ public class MoveToInfectionTargetAction : StateAction
     }
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         if (!_isActiveAgent || _enemy == null)
             return;
 

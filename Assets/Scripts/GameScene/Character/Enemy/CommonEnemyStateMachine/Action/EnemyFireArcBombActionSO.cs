@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
@@ -8,73 +7,36 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Enemy Actions/Fire Arc Bomb")]
 public class EnemyFireArcBombActionSO : StateActionSO<EnemyFireArcBombAction>
 {
-    [Header("Projectile")]
-    [SerializeField] private EnemyArcBombProjectile _projectilePrefab;
-    [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
+    [Header("Definition Config")]
+    [SerializeField] private EnemyArcBombAttackConfigSO _definitionConfig;
 
-    [Header("Arc")]
-    [SerializeField, Min(0.01f)] private float _travelTime = 1.2f;
-    [SerializeField, Min(0f)] private float _arcHeight = 4f;
-    [SerializeField] private float _spawnYOffset = 0.5f;
-    [SerializeField] private float _targetYOffset = 0f;
-    [SerializeField, Min(0f)] private float _fallbackDistance = 6f;
+    public bool HasDefinitionConfig => _definitionConfig != null;
 
-    [Header("Cycle")]
-    [SerializeField] private bool _fireOnEnter = true;
-    [SerializeField, Min(1)] private int _shotsPerCycle = 1;
-    [SerializeField, Min(0f)] private float _shotInterval = 0.15f;
+    public EnemyArcBombProjectile ProjectilePrefab => _definitionConfig.ProjectilePrefab;
+    public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _definitionConfig.MaskRenderManagerReadyChannel;
 
-    [Tooltip("0 means infinite while the state is active.")]
-    [SerializeField, Min(0)] private int _maxCycles = 1;
+    public float TravelTime => _definitionConfig.TravelTime;
+    public float ArcHeight => _definitionConfig.ArcHeight;
+    public float SpawnYOffset => _definitionConfig.SpawnYOffset;
+    public float TargetYOffset => _definitionConfig.TargetYOffset;
+    public float FallbackDistance => _definitionConfig.FallbackDistance;
 
-    [SerializeField, Min(0f)] private float _cycleInterval = 5f;
+    public bool FireOnEnter => _definitionConfig.FireOnEnter;
+    public int ShotsPerCycle => _definitionConfig.ShotsPerCycle;
+    public float ShotInterval => _definitionConfig.ShotInterval;
+    public int MaxCycles => _definitionConfig.MaxCycles;
+    public float CycleInterval => _definitionConfig.CycleInterval;
 
-    [Header("Impact Damage")]
-    [SerializeField, Min(0f)] private float _damageRadius = 1.5f;
+    public float DamageRadius => _definitionConfig.DamageRadius;
+    public float ImpactHealthDamage => _definitionConfig.ImpactHealthDamage;
+    public float ImpactInfectionDamage => _definitionConfig.ImpactInfectionDamage;
+    public LayerMask DamageTargetMask => _definitionConfig.DamageTargetMask;
+    public QueryTriggerInteraction TriggerInteraction => _definitionConfig.TriggerInteraction;
 
-    [FormerlySerializedAs("_healthDamage")]
-    [SerializeField, Min(0f)] private float _impactHealthDamage = 10f;
-
-    [FormerlySerializedAs("_infectionDamage")]
-    [SerializeField, Min(0f)] private float _impactInfectionDamage = 5f;
-
-    [Header("Damage Target")]
-    [SerializeField] private LayerMask _damageTargetMask;
-    [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Collide;
-
-    [Header("Paint")]
-    [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Virus;
-    [SerializeField, Min(0f)] private float _paintRadiusWorld = 1.5f;
-    [SerializeField] private int _paintPriority = 0;
-
-    [Header("Poison Puddle Damage Config")]
-    [SerializeField] private PoisonPuddleDamageConfigSO _poisonPuddleDamageConfig;
-
-    public EnemyArcBombProjectile ProjectilePrefab => _projectilePrefab;
-    public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
-
-    public float TravelTime => _travelTime;
-    public float ArcHeight => _arcHeight;
-    public float SpawnYOffset => _spawnYOffset;
-    public float TargetYOffset => _targetYOffset;
-    public float FallbackDistance => _fallbackDistance;
-
-    public bool FireOnEnter => _fireOnEnter;
-    public int ShotsPerCycle => Mathf.Max(1, _shotsPerCycle);
-    public float ShotInterval => Mathf.Max(0f, _shotInterval);
-    public int MaxCycles => Mathf.Max(0, _maxCycles);
-    public float CycleInterval => Mathf.Max(0f, _cycleInterval);
-
-    public float DamageRadius => Mathf.Max(0f, _damageRadius);
-    public float ImpactHealthDamage => Mathf.Max(0f, _impactHealthDamage);
-    public float ImpactInfectionDamage => Mathf.Max(0f, _impactInfectionDamage);
-    public LayerMask DamageTargetMask => _damageTargetMask;
-    public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
-
-    public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
-    public float PaintRadiusWorld => Mathf.Max(0f, _paintRadiusWorld);
-    public int PaintPriority => _paintPriority;
-    public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _poisonPuddleDamageConfig;
+    public MaskRenderManager.PaintChannel PaintChannel => _definitionConfig.PaintChannel;
+    public float PaintRadiusWorld => _definitionConfig.PaintRadiusWorld;
+    public int PaintPriority => _definitionConfig.PaintPriority;
+    public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _definitionConfig.PoisonPuddleDamageConfig;
 }
 
 public class EnemyFireArcBombAction : StateAction
@@ -88,6 +50,7 @@ public class EnemyFireArcBombAction : StateAction
     private float _shotTimer;
     private float _cycleTimer;
     private bool _cycleActive;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -98,11 +61,18 @@ public class EnemyFireArcBombAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
         _cycleCount = 0;
         _shotsInCurrentCycle = 0;
         _shotTimer = 0f;
         _cycleTimer = 0f;
         _cycleActive = false;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[EnemyFireArcBombAction] Definition Config is missing.", _enemy);
+            return;
+        }
 
         if (_config.FireOnEnter)
             StartCycle();
@@ -110,6 +80,9 @@ public class EnemyFireArcBombAction : StateAction
 
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         if (_cycleActive)
         {
             TickCycle();

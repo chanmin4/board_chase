@@ -8,36 +8,23 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Named Enemy Actions/Mutarus/Charge Move")]
 public class MutarusChargeMoveActionSO : StateActionSO<MutarusChargeMoveAction>
 {
-    [Header("Charge")]
-    [SerializeField, Min(1)] private int _chargeCount = 1;
-    [SerializeField, Min(0.1f)] private float _chargeDistance = 8f;
-    [SerializeField, Min(0.1f)] private float _chargeSpeed = 14f;
-    [SerializeField, Min(0f)] private float _startDelay = 0.15f;
-    [SerializeField, Min(0f)] private float _pauseBetweenCharges = 0.25f;
-    [SerializeField] private bool _reAimBeforeEachCharge = true;
+    [Header("Definition Config")]
+    [SerializeField] private MutarusChargeConfigSO _definitionConfig;
 
-    [Header("Prediction")]
-    [SerializeField, Range(0f, 2f)] private float _predictionFactor = 0.65f;
-    [SerializeField, Min(0f)] private float _maxPredictionSeconds = 0.75f;
-    [SerializeField, Range(0f, 45f)] private float _randomAngleDeg = 8f;
+    public bool HasDefinitionConfig => _definitionConfig != null;
 
-    [Header("Rotation")]
-    [SerializeField] private bool _snapRotationOnChargeStart = true;
-    [SerializeField] private bool _rotateWhileCharging = true;
-    [SerializeField, Min(1f)] private float _rotationSpeedDegPerSec = 720f;
-
-    public int ChargeCount => _chargeCount;
-    public float ChargeDistance => _chargeDistance;
-    public float ChargeSpeed => _chargeSpeed;
-    public float StartDelay => _startDelay;
-    public float PauseBetweenCharges => _pauseBetweenCharges;
-    public bool ReAimBeforeEachCharge => _reAimBeforeEachCharge;
-    public float PredictionFactor => _predictionFactor;
-    public float MaxPredictionSeconds => _maxPredictionSeconds;
-    public float RandomAngleDeg => _randomAngleDeg;
-    public bool SnapRotationOnChargeStart => _snapRotationOnChargeStart;
-    public bool RotateWhileCharging => _rotateWhileCharging;
-    public float RotationSpeedDegPerSec => _rotationSpeedDegPerSec;
+    public int ChargeCount => _definitionConfig.ChargeCount;
+    public float ChargeDistance => _definitionConfig.ChargeDistance;
+    public float ChargeSpeed => _definitionConfig.ChargeSpeed;
+    public float StartDelay => _definitionConfig.StartDelay;
+    public float PauseBetweenCharges => _definitionConfig.PauseBetweenCharges;
+    public bool ReAimBeforeEachCharge => _definitionConfig.ReAimBeforeEachCharge;
+    public float PredictionFactor => _definitionConfig.PredictionFactor;
+    public float MaxPredictionSeconds => _definitionConfig.MaxPredictionSeconds;
+    public float RandomAngleDeg => _definitionConfig.RandomAngleDeg;
+    public bool SnapRotationOnChargeStart => _definitionConfig.SnapRotationOnChargeStart;
+    public bool RotateWhileCharging => _definitionConfig.RotateWhileCharging;
+    public float RotationSpeedDegPerSec => _definitionConfig.RotationSpeedDegPerSec;
 }
 
 public class MutarusChargeMoveAction : StateAction
@@ -61,6 +48,7 @@ public class MutarusChargeMoveAction : StateAction
     private float _remainingDistance;
     private Vector3 _chargeDirection;
     private bool _done;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -74,11 +62,18 @@ public class MutarusChargeMoveAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _origin.HasDefinitionConfig;
         _currentChargeIndex = 0;
         _timer = 0f;
         _remainingDistance = 0f;
         _chargeDirection = Vector3.zero;
         _done = false;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[MutarusChargeMoveAction] Definition Config is missing.", _owner);
+            return;
+        }
 
         StopAgent();
 
@@ -90,6 +85,9 @@ public class MutarusChargeMoveAction : StateAction
 
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         if (_done || _owner == null)
             return;
 

@@ -135,10 +135,14 @@ public class MiniMapUI : MonoBehaviour
         Sprite iconSprite = GetIcon(snapshot);
 
         bool showIcon = iconSprite != null;
-        bool showRatio = snapshot.isOpened && !HasNamedOrBoss(snapshot);
+        bool showRatios = snapshot.isOpened && !HasNamedOrBoss(snapshot);
 
-        string ratioText = showRatio
-            ? $"{Mathf.RoundToInt(snapshot.playerRatio * 100f)}%"
+        string playerRatioText = showRatios
+            ? $"{Mathf.RoundToInt(snapshot.playerRatio * 100f)}"
+            : string.Empty;
+
+        string virusRatioText = showRatios
+            ? $"{Mathf.RoundToInt(snapshot.virusRatio * 100f)}"
             : string.Empty;
 
         bool showJudgeTime = ShouldShowJudgeTime(snapshot);
@@ -151,9 +155,10 @@ public class MiniMapUI : MonoBehaviour
         cellUI.SetOpened(
             backgroundColor,
             iconSprite,
-            ratioText,
+            playerRatioText,
+            virusRatioText,
             showIcon,
-            showRatio,
+            showRatios,
             judgeTimeText,
             showJudgeTime,
             visibleAlpha);

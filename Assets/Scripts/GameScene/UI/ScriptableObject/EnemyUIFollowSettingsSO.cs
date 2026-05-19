@@ -13,8 +13,8 @@ public class EnemyUIFollowSettingsSO : ScriptableObject
 
     [Header("Visibility")]
     [SerializeField] private bool _hideWhenBehindCamera = true;
-    [SerializeField] private bool _hideWhenOffScreen = false;
-    [SerializeField] private bool _clampToScreen = true;
+    [SerializeField] private bool _hideWhenOffScreen = true;
+    [SerializeField] private bool _clampToScreen = false;
     [SerializeField] private float _screenEdgePadding = 24f;
 
     public Vector3 WorldOffset => _worldOffset;

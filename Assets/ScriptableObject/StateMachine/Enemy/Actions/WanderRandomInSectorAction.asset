@@ -13,12 +13,4 @@ MonoBehaviour:
   m_Name: WanderRandomInSectorAction
   m_EditorClassIdentifier: 
   description: wander sector
-  _moveSpeed: 2.2
-  _minTravelDistance: 1.25
-  _edgePadding: 0.75
-  _navMeshSampleMaxDistance: 1.25
-  _candidateCount: 8
-  _maxRepickCount: 2
-  _debugLogs: 0
-  _debugDraw: 0
-  _debugDrawDuration: 1.5
+  _definitionConfig: {fileID: 11400000, guid: bc6a3d4d8ef04b1fa22b93a3d71e46a0, type: 2}

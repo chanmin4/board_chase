@@ -13,8 +13,8 @@ public class PoisonPuddleDamageConfigSO : ScriptableObject
     [SerializeField, Min(0f)] private float _infectionGainPerSecond = 12f;
 
     public float TickInterval => Mathf.Max(0.01f, _tickInterval);
-    public float HealthDamagePerSecond => Mathf.Max(0f, _healthDamagePerSecond);
-    public float InfectionGainPerSecond => Mathf.Max(0f, _infectionGainPerSecond);
+    public float HealthDamagePerSecond => DifficultyRuntime.ApplyEnemyDamage(_healthDamagePerSecond);
+    public float InfectionGainPerSecond => DifficultyRuntime.ApplyPlayerInfectionGain(_infectionGainPerSecond);
 
     public bool HasDamage =>
         HealthDamagePerSecond > 0f ||

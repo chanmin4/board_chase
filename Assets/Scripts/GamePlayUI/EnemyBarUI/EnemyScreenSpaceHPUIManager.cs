@@ -2,17 +2,21 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-
 public class EnemyScreenSpaceHPUIManager : MonoBehaviour
 {
     public static EnemyScreenSpaceHPUIManager Instance { get; private set; }
-    
 
     [Header("Refs")]
-    [Tooltip("enemy health bars will be spawned as children of this transform")]
+    [Tooltip("Enemy health bars will be spawned as children of this transform.")]
     [SerializeField] private RectTransform _widgetRoot;
     [SerializeField] private EnemyHealthBarWidget _healthBarPrefab;
     [SerializeField] private EnemyInfectionCastBarWidget _castBarPrefab;
+
+
+    [Tooltip("Viewport margin for off-screen hiding. 0 means exact screen edge. 0.03 gives a small buffer.")]
+    [SerializeField, Min(0f)] private float _viewportHideMargin = 0.03f;
+
+    [SerializeField, Min(0f)] private float _screenEdgePadding = 24f;
 
     [Header("Listening To")]
     [SerializeField] private WorldCameraEventChannelSO _worldCameraReadyChannel;
@@ -27,6 +31,7 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
     }
 
     private readonly Dictionary<EnemyScreenSpaceHPUIAnchor, EnemyUIEntry> _widgets = new();
+
     private void Awake()
     {
         Instance = this;
@@ -102,7 +107,7 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
         _widgets.Add(anchor, entry);
     }
 
-      public void Unregister(EnemyScreenSpaceHPUIAnchor anchor)
+    public void Unregister(EnemyScreenSpaceHPUIAnchor anchor)
     {
         if (anchor == null)
             return;
@@ -118,7 +123,7 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
 
         _widgets.Remove(anchor);
     }
- 
+
     private void UpdateWidget(EnemyScreenSpaceHPUIAnchor anchor, EnemyUIEntry entry)
     {
         if (anchor.Enemy != null && !anchor.Enemy.IsSpawnReady)
@@ -128,45 +133,61 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
         }
 
         Vector3 worldPos = anchor.GetWorldUIPosition();
-        Vector3 screenPos = _worldCamera.WorldToScreenPoint(worldPos);
 
         EnemyUIFollowSettingsSO follow = anchor.FollowSettings;
 
-        if (follow != null && follow.HideWhenBehindCamera && screenPos.z <= 0f)
+        bool hideWhenBehindCamera = follow.HideWhenBehindCamera;
+
+        bool hideWhenOffScreen =  follow.HideWhenOffScreen;
+
+        bool clampToScreen = follow.ClampToScreen;
+
+        float screenEdgePadding = follow != null
+            ? follow.ScreenEdgePadding
+            : _screenEdgePadding;
+
+        Vector2 screenPixelOffset = follow != null
+            ? follow.ScreenPixelOffset
+            : Vector2.zero;
+
+        Vector3 viewportPos = _worldCamera.WorldToViewportPoint(worldPos);
+
+        if (hideWhenBehindCamera && viewportPos.z <= 0f)
         {
             SetEntryVisible(entry, false);
             return;
         }
 
         bool isOffScreen =
-            screenPos.x < 0f || screenPos.x > Screen.width ||
-            screenPos.y < 0f || screenPos.y > Screen.height;
+            viewportPos.x < -_viewportHideMargin ||
+            viewportPos.x > 1f + _viewportHideMargin ||
+            viewportPos.y < -_viewportHideMargin ||
+            viewportPos.y > 1f + _viewportHideMargin;
 
-        if (follow != null && follow.HideWhenOffScreen && isOffScreen)
+        if (hideWhenOffScreen && isOffScreen)
         {
             SetEntryVisible(entry, false);
             return;
         }
 
-        SetEntryVisible(entry, true);
-
+        Vector3 screenPos = _worldCamera.WorldToScreenPoint(worldPos);
         Vector2 finalScreen = new Vector2(screenPos.x, screenPos.y);
 
-        if (follow != null && follow.ClampToScreen)
+        if (clampToScreen)
         {
-            float pad = follow.ScreenEdgePadding;
-            finalScreen.x = Mathf.Clamp(finalScreen.x, pad, Screen.width - pad);
-            finalScreen.y = Mathf.Clamp(finalScreen.y, pad, Screen.height - pad);
+            finalScreen.x = Mathf.Clamp(finalScreen.x, screenEdgePadding, Screen.width - screenEdgePadding);
+            finalScreen.y = Mathf.Clamp(finalScreen.y, screenEdgePadding, Screen.height - screenEdgePadding);
         }
 
-        if (follow != null)
-            finalScreen += follow.ScreenPixelOffset;
+        finalScreen += screenPixelOffset;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             _widgetRoot,
             finalScreen,
             null,
             out Vector2 localPoint);
+
+        SetEntryVisible(entry, true);
 
         if (entry.HealthBar != null)
         {

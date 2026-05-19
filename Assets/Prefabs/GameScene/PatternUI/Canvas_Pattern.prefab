@@ -171,6 +171,7 @@ MonoBehaviour:
   _playerAnchor: {fileID: 11400000, guid: 63ffdafda9b80b445b1a5cf3220e1c5c, type: 2}
   _isRunning: 0
   _timeRemaining: 0
+  _timerRunning: 0
 --- !u!1 &3238941683043126126
 GameObject:
   m_ObjectHideFlags: 0
@@ -313,9 +314,9 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5031723919742367816}
   m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
 --- !u!1 &7204924942427843805
 GameObject:
@@ -711,6 +712,18 @@ PrefabInstance:
       propertyPath: _stationGroupReadyChannel
       value: 
       objectReference: {fileID: 11400000, guid: dab8dc0a43ad45a498c569d477cb5df1, type: 2}
+    - target: {fileID: 2949042122367418322, guid: 9f5c1788b75b6644dbfbb4b8d64d3afa, type: 3}
+      propertyPath: m_Alpha
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2949042122367418322, guid: 9f5c1788b75b6644dbfbb4b8d64d3afa, type: 3}
+      propertyPath: m_Interactable
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2949042122367418322, guid: 9f5c1788b75b6644dbfbb4b8d64d3afa, type: 3}
+      propertyPath: m_BlocksRaycasts
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5219549711827876805, guid: 9f5c1788b75b6644dbfbb4b8d64d3afa, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0

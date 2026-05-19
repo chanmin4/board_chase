@@ -13,15 +13,4 @@ MonoBehaviour:
   m_Name: MutarusChargeMoveAction
   m_EditorClassIdentifier: 
   description: 
-  _chargeCount: 3
-  _chargeDistance: 15
-  _chargeSpeed: 20
-  _startDelay: 0.15
-  _pauseBetweenCharges: 0.3
-  _reAimBeforeEachCharge: 1
-  _predictionFactor: 0.65
-  _maxPredictionSeconds: 0.75
-  _randomAngleDeg: 8
-  _snapRotationOnChargeStart: 1
-  _rotateWhileCharging: 1
-  _rotationSpeedDegPerSec: 720
+  _definitionConfig: {fileID: 11400000, guid: f2b67d76c65c49d79066aee8d78ce9ac, type: 2}

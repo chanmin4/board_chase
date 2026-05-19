@@ -1,53 +1,136 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Localization.Tables;
+using UnityEngine.Localization.Components;
 using UnityEngine.UI;
 
 public class UIMainMenu : MonoBehaviour
 {
-	[SerializeField] private Button _continueButton = default;
-	[SerializeField] private Button _NewGameButton = default;
+    [Header("Buttons")]
+    [SerializeField] private Button _continueButton;
+    [SerializeField] private Button _newGameButton;
+    [SerializeField] private Button _settingsButton;
+    [SerializeField] private Button _achievementButton;
+    [SerializeField] private Button _quitButton;
 
-	public UnityAction NewGameButtonAction;
-	public UnityAction ContinueButtonAction;
-	public UnityAction SettingsButtonAction;
-	public UnityAction CreditsButtonAction;
-	public UnityAction ExitButtonAction;
+    [Header("Text Localization")]
+    [Tooltip("메인메뉴 버튼 텍스트가 들어있는 String Table Collection입니다. 예: UI_MainMenu")]
+    [SerializeField] private TableReference _mainMenuStringTable = "UI_MainMenu";
 
-	public void SetMenuScreen(bool hasSaveData)
-	{
-		_continueButton.interactable = hasSaveData;
-		if (hasSaveData)
-		{
-			_continueButton.Select();
-		}
-		else
-		{
-			_NewGameButton.Select();
-		}
-	}
+    [SerializeField] private LocalizeStringEvent _continueText;
+    [SerializeField] private LocalizeStringEvent _newGameText;
+    [SerializeField] private LocalizeStringEvent _settingsText;
+    [SerializeField] private LocalizeStringEvent _achievementText;
+    [SerializeField] private LocalizeStringEvent _quitText;
 
-	public void NewGameButton()
-	{
-		NewGameButtonAction.Invoke();
-	}
+    [Header("Localization Keys")]
+    [SerializeField] private string _continueKey = "MainMenu_Continue";
+    [SerializeField] private string _newGameKey = "MainMenu_NewGame";
+    [SerializeField] private string _settingsKey = "MainMenu_Settings";
+    [SerializeField] private string _achievementKey = "MainMenu_Achievement";
+    [SerializeField] private string _quitKey = "MainMenu_Quit";
 
-	public void ContinueButton()
-	{
-		ContinueButtonAction.Invoke();
-	}
+    public event UnityAction NewGameButtonAction = delegate { };
+    public event UnityAction ContinueButtonAction = delegate { };
+    public event UnityAction SettingsButtonAction = delegate { };
+    public event UnityAction AchievementButtonAction = delegate { };
+    public event UnityAction QuitButtonAction = delegate { };
 
-	public void SettingsButton()
-	{
-		SettingsButtonAction.Invoke();
-	}
+    private void Awake()
+    {
+        ApplyTextKeys();
+    }
 
-	public void CreditsButton()
-	{
-		CreditsButtonAction.Invoke();
-	}
+    private void OnEnable()
+    {
+        if (_newGameButton != null)
+            _newGameButton.onClick.AddListener(HandleNewGameClicked);
 
-	public void ExitButton()
-	{
-		ExitButtonAction.Invoke();
-	}
+        if (_continueButton != null)
+            _continueButton.onClick.AddListener(HandleContinueClicked);
+
+        if (_settingsButton != null)
+            _settingsButton.onClick.AddListener(HandleSettingsClicked);
+
+        if (_achievementButton != null)
+            _achievementButton.onClick.AddListener(HandleAchievementClicked);
+
+        if (_quitButton != null)
+            _quitButton.onClick.AddListener(HandleQuitClicked);
+
+        ApplyTextKeys();
+    }
+
+    private void OnDisable()
+    {
+        if (_newGameButton != null)
+            _newGameButton.onClick.RemoveListener(HandleNewGameClicked);
+
+        if (_continueButton != null)
+            _continueButton.onClick.RemoveListener(HandleContinueClicked);
+
+        if (_settingsButton != null)
+            _settingsButton.onClick.RemoveListener(HandleSettingsClicked);
+
+        if (_achievementButton != null)
+            _achievementButton.onClick.RemoveListener(HandleAchievementClicked);
+
+        if (_quitButton != null)
+            _quitButton.onClick.RemoveListener(HandleQuitClicked);
+    }
+
+    public void SetMenuScreen(bool hasSaveData)
+    {
+        if (_continueButton != null)
+            _continueButton.interactable = hasSaveData;
+
+        if (hasSaveData && _continueButton != null)
+            _continueButton.Select();
+        else if (_newGameButton != null)
+            _newGameButton.Select();
+    }
+
+    private void ApplyTextKeys()
+    {
+        ApplyTextKey(_continueText, _continueKey);
+        ApplyTextKey(_newGameText, _newGameKey);
+        ApplyTextKey(_settingsText, _settingsKey);
+        ApplyTextKey(_achievementText, _achievementKey);
+        ApplyTextKey(_quitText, _quitKey);
+    }
+
+    private void ApplyTextKey(LocalizeStringEvent localizeEvent, string key)
+    {
+        if (localizeEvent == null || string.IsNullOrWhiteSpace(key))
+            return;
+
+        localizeEvent.StringReference.TableReference = _mainMenuStringTable;
+        localizeEvent.StringReference.TableEntryReference = key;
+        localizeEvent.RefreshString();
+    }
+
+    private void HandleNewGameClicked()
+    {
+        NewGameButtonAction.Invoke();
+    }
+
+    private void HandleContinueClicked()
+    {
+        ContinueButtonAction.Invoke();
+    }
+
+    private void HandleSettingsClicked()
+    {
+        SettingsButtonAction.Invoke();
+    }
+
+    private void HandleAchievementClicked()
+    {
+        AchievementButtonAction.Invoke();
+    }
+
+    private void HandleQuitClicked()
+    {
+        QuitButtonAction.Invoke();
+    }
 }

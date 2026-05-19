@@ -17,35 +17,41 @@ MonoBehaviour:
     displayName: Start_Stage
     timerSeconds: 0.5
     requiredPlayerOwnedCount: 1
+    infectionControlRecoverOnComplete: 50
     resetTimerWhenRequirementLost: 0
     useStartSectorAsRequirement: 1
   - stageIndex: 1
     displayName: 1_Stage
     timerSeconds: 5
     requiredPlayerOwnedCount: 1
+    infectionControlRecoverOnComplete: 60
     resetTimerWhenRequirementLost: 0
     useStartSectorAsRequirement: 0
   - stageIndex: 2
     displayName: 2_Stage
     timerSeconds: 60
     requiredPlayerOwnedCount: 2
+    infectionControlRecoverOnComplete: 70
     resetTimerWhenRequirementLost: 0
     useStartSectorAsRequirement: 0
   - stageIndex: 3
     displayName: 3_Stage
     timerSeconds: 120
     requiredPlayerOwnedCount: 3
+    infectionControlRecoverOnComplete: 0
     resetTimerWhenRequirementLost: 0
     useStartSectorAsRequirement: 0
   - stageIndex: 4
     displayName: 4_Stage
     timerSeconds: 180
     requiredPlayerOwnedCount: 4
+    infectionControlRecoverOnComplete: 0
     resetTimerWhenRequirementLost: 0
     useStartSectorAsRequirement: 0
   - stageIndex: 5
     displayName: 5_Stage
     timerSeconds: 240
     requiredPlayerOwnedCount: 5
+    infectionControlRecoverOnComplete: 0
     resetTimerWhenRequirementLost: 0
     useStartSectorAsRequirement: 0

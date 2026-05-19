@@ -27,7 +27,11 @@ public class UIGenericButton : MonoBehaviour
 
 	public void SetButton(LocalizedString localizedString, bool isSelected)
 	{
-		_buttonText.StringReference = localizedString;
+		if (_buttonText != null)
+		{
+			_buttonText.StringReference = localizedString;
+			_buttonText.RefreshString();
+		}
 
 		if (isSelected)
 			SelectButton();

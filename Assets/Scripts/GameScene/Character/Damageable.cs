@@ -7,6 +7,11 @@ public class Damageable : MonoBehaviour
 	[SerializeField] private HealthConfigSO _healthConfigSO;
 	[Tooltip("this feature is allocated automatically if healthConfigSO is provided")] 
 	[SerializeField] private HealthSO _currentHealthSO;
+	[Header("Player Health Floor")]
+	[Tooltip("If true, this Damageable never drops below Minimum Alive Health by normal damage.")]
+	[SerializeField] private bool _keepAliveAtMinimumHealth = false;
+
+	[SerializeField, Min(0f)] private float _minimumAliveHealth = 1f;
 	[Header("Death")]
 	[SerializeField] private bool _destroyOnDeath = false;
 	[SerializeField] private float _destroyDelay = 1f;
@@ -65,8 +70,9 @@ public class Damageable : MonoBehaviour
 		if (_currentHealthSO == null)
 		{
 			_currentHealthSO = ScriptableObject.CreateInstance<HealthSO>();
-			_currentHealthSO.SetMaxHealth(_healthConfigSO.InitialHealth);
-			_currentHealthSO.SetCurrentHealth(_healthConfigSO.InitialHealth);
+			float initialHealth = ResolveInitialHealth();
+			_currentHealthSO.SetMaxHealth(initialHealth);
+			_currentHealthSO.SetCurrentHealth(initialHealth);
 		}
 		if (_invulnerabilityController == null)
     		TryGetComponent(out _invulnerabilityController);
@@ -91,16 +97,30 @@ public class Damageable : MonoBehaviour
 
 	public void ReceiveAnAttack(float damage, GameObject attacker = null)
 	{
-		if (!CanReceiveDamage)
+		if (!CanReceiveDamage || _currentHealthSO == null)
 			return;
 
-		float finalDamage = damage * _damageTakenMultiplier;
-		_currentHealthSO.InflictDamage(finalDamage);
+		float finalDamage = Mathf.Max(0f, damage * _damageTakenMultiplier);
+		if (finalDamage <= 0f)
+			return;
+
+		float minAliveHealth = Mathf.Min(
+			Mathf.Max(0f, _minimumAliveHealth),
+			MaxHealth);
+
+		bool useHealthFloor = _keepAliveAtMinimumHealth && MaxHealth > 0f;
+		float nextHealth = CurrentHealth - finalDamage;
+
+		if (useHealthFloor && nextHealth <= minAliveHealth)
+			_currentHealthSO.SetCurrentHealth(minAliveHealth);
+		else
+			_currentHealthSO.InflictDamage(finalDamage);
+
 		SyncRuntimeHealthDebug();
 
 		GetHit = true;
 
-		bool diedThisHit = _currentHealthSO.CurrentHealth <= 0f;
+		bool diedThisHit = !useHealthFloor && _currentHealthSO.CurrentHealth <= 0f;
 
 		if (diedThisHit)
 		{
@@ -173,6 +193,17 @@ public class Damageable : MonoBehaviour
 		_debugHealthNormalized = HealthNormalized;
 		_debugDamageTakenMultiplier = _damageTakenMultiplier;
 	}
+
+	private float ResolveInitialHealth()
+	{
+		float initialHealth = _healthConfigSO != null ? _healthConfigSO.InitialHealth : 1f;
+
+		if (TryGetComponent(out Enemy _))
+			initialHealth = DifficultyRuntime.ApplyEnemyHealth(initialHealth);
+
+		return Mathf.Max(1f, initialHealth);
+	}
+
 	public void ApplyMaxHealthFromStats(float maxHealth, bool healToFull)
 	{
 		if (_currentHealthSO == null)

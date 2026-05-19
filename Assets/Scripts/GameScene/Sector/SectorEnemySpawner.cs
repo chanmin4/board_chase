@@ -205,7 +205,7 @@ public class SectorEnemySpawner : MonoBehaviour
 
         _resolvedMinAlive = Mathf.Max(0, rule.sectorMinAlive);
         _resolvedMaxAlive = Mathf.Max(_resolvedMinAlive, rule.sectorMaxAlive);
-        _resolvedSpawnInterval = Mathf.Max(0.01f, rule.spawnIntervalSeconds);
+        _resolvedSpawnInterval = DifficultyRuntime.ApplyEnemySpawnInterval(rule.spawnIntervalSeconds);
 
         _nextSpawnTime = Time.time + _resolvedSpawnInterval;
 

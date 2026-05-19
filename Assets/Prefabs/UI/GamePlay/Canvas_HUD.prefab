@@ -228,7 +228,7 @@ MonoBehaviour:
   _screenPixelOffset: {x: 0, y: 36}
   _hideWhenBehindCamera: 1
   _hideWhenOffScreen: 1
-  _clampToScreen: 1
+  _clampToScreen: 0
   _screenEdgePadding: 32
 --- !u!1 &6731192883436813487
 GameObject:
@@ -240,7 +240,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8054934487480857491}
   m_Layer: 5
-  m_Name: Manager
+  m_Name: BarManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -277,7 +277,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8283091602194995014}
   m_Layer: 5
-  m_Name: UIRoot
+  m_Name: BarUIRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -355,5 +355,7 @@ MonoBehaviour:
   _widgetRoot: {fileID: 8365004764754446527}
   _healthBarPrefab: {fileID: 1205997790045614179, guid: 9c8873e1322fd34499a72e4ff0c540a3, type: 3}
   _castBarPrefab: {fileID: 5713519939159147236, guid: 34491f79fb137fe468a1c27bd438f14e, type: 3}
+  _viewportHideMargin: 0.03
+  _screenEdgePadding: 24
   _worldCameraReadyChannel: {fileID: 11400000, guid: 146996504b565444db1e3e08729b6a6f, type: 2}
   _worldCamera: {fileID: 0}

@@ -8,25 +8,19 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Enemy Actions/Wander Random In Sector")]
 public class WanderRandomInSectorActionSO : StateActionSO
 {
-    [SerializeField] private float _moveSpeed = 2.2f;
-    [SerializeField] private float _minTravelDistance = 1.25f;
-    [SerializeField] private float _edgePadding = 0.75f;
-    [SerializeField] private float _navMeshSampleMaxDistance = 1.25f;
-    [SerializeField] private int _candidateCount = 8;
-    [SerializeField] private int _maxRepickCount = 2;
-    [SerializeField] private bool _debugLogs = false;
-    [SerializeField] private bool _debugDraw = false;
-    [SerializeField] private float _debugDrawDuration = 1.5f;
-    [SerializeField] private EnemyMovementStatsSO _movementStats;
-    public float MoveSpeed => _moveSpeed;
-    public float MinTravelDistance => _minTravelDistance;
-    public float EdgePadding => _edgePadding;
-    public float NavMeshSampleMaxDistance => _navMeshSampleMaxDistance;
-    public int CandidateCount => _candidateCount;
-    public int MaxRepickCount => _maxRepickCount;
-    public bool DebugLogs => _debugLogs;
-    public bool DebugDraw => _debugDraw;
-    public float DebugDrawDuration => _debugDrawDuration;
+    [Header("Definition Config")]
+    [SerializeField] private NormalEnemyWanderConfigSO _definitionConfig;
+
+    public bool HasDefinitionConfig => _definitionConfig != null;
+    public float MoveSpeed => _definitionConfig.MoveSpeed;
+    public float MinTravelDistance => _definitionConfig.MinTravelDistance;
+    public float EdgePadding => _definitionConfig.EdgePadding;
+    public float NavMeshSampleMaxDistance => _definitionConfig.NavMeshSampleMaxDistance;
+    public int CandidateCount => _definitionConfig.CandidateCount;
+    public int MaxRepickCount => _definitionConfig.MaxRepickCount;
+    public bool DebugLogs => _definitionConfig.DebugLogs;
+    public bool DebugDraw => _definitionConfig.DebugDraw;
+    public float DebugDrawDuration => _definitionConfig.DebugDrawDuration;
     
     protected override StateAction CreateAction() => new WanderRandomInSectorAction();
 }
@@ -41,6 +35,7 @@ public class WanderRandomInSectorAction : StateAction
     private bool _hasDestination;
     private int _repickCount;
     private Vector3 _destination;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -52,9 +47,16 @@ public class WanderRandomInSectorAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
         _isActiveAgent = _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
         _hasDestination = false;
         _repickCount = 0;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[WanderRandomInSectorAction] Definition Config is missing.", _enemy);
+            return;
+        }
 
         if (!_isActiveAgent || _enemy == null || _enemy.CurrentSector == null)
             return;
@@ -71,6 +73,9 @@ public class WanderRandomInSectorAction : StateAction
 
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         if (!_isActiveAgent || !_hasDestination)
             return;
 

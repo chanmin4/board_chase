@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -11,7 +12,12 @@ public class MiniMapCellUI : MonoBehaviour
     [Header("Parts")]
     [SerializeField] private Image _background;
     [SerializeField] private Image _icon;
-    [SerializeField] private TextMeshProUGUI _occupancyRatioText;
+
+    [FormerlySerializedAs("_occupancyRatioText")]
+    [SerializeField] private TextMeshProUGUI _playerOccupancyRatioText;
+
+    [SerializeField] private TextMeshProUGUI _virusOccupancyRatioText;
+
     [SerializeField] private TextMeshProUGUI _sectorJudgeTimeText;
     [SerializeField] private TextMeshProUGUI _specialTimerText;
 
@@ -26,7 +32,8 @@ public class MiniMapCellUI : MonoBehaviour
 
         UIVisibilityHelper.ForceActive(_background);
         UIVisibilityHelper.ForceActive(_icon);
-        UIVisibilityHelper.ForceActive(_occupancyRatioText);
+        UIVisibilityHelper.ForceActive(_playerOccupancyRatioText);
+        UIVisibilityHelper.ForceActive(_virusOccupancyRatioText);
         UIVisibilityHelper.ForceActive(_sectorJudgeTimeText);
         UIVisibilityHelper.ForceActive(_specialTimerText);
     }
@@ -36,7 +43,7 @@ public class MiniMapCellUI : MonoBehaviour
         SetVisible(false);
         SetSpecialTimer(string.Empty, false);
         ClearIcon();
-        ClearRatio();
+        ClearRatios();
         ClearJudgeTime();
     }
 
@@ -46,22 +53,22 @@ public class MiniMapCellUI : MonoBehaviour
         SetSpecialTimer(string.Empty, false);
         SetBackground(backgroundColor);
         SetIcon(lockedIcon);
-        ClearRatio();
+        ClearRatios();
         ClearJudgeTime();
     }
 
     public void SetOpened(
         Color backgroundColor,
         Sprite iconSprite,
-        string ratioText,
+        string playerRatioText,
+        string virusRatioText,
         bool showIcon,
-        bool showRatio,
+        bool showRatios,
         string judgeTimeText,
         bool showJudgeTime,
         float visibleAlpha = 1f)
     {
         SetVisible(true, visibleAlpha);
-
         SetBackground(backgroundColor);
 
         if (showIcon)
@@ -69,10 +76,10 @@ public class MiniMapCellUI : MonoBehaviour
         else
             ClearIcon();
 
-        if (showRatio)
-            SetRatio(ratioText);
+        if (showRatios)
+            SetRatios(playerRatioText, virusRatioText);
         else
-            ClearRatio();
+            ClearRatios();
 
         if (showJudgeTime)
             SetJudgeTime(judgeTimeText);
@@ -88,7 +95,8 @@ public class MiniMapCellUI : MonoBehaviour
     private void SetVisible(bool visible, float visibleAlpha)
     {
         UIVisibilityHelper.SetVisible(_cellCanvasGroup, visible, visibleAlpha);
-}
+    }
+
     private void SetBackground(Color color)
     {
         if (_background == null)
@@ -116,22 +124,34 @@ public class MiniMapCellUI : MonoBehaviour
         UIVisibilityHelper.SetVisible(_icon, false);
     }
 
-    private void SetRatio(string text)
+    private void SetRatios(string playerText, string virusText)
     {
-        if (_occupancyRatioText == null)
-            return;
+        if (_playerOccupancyRatioText != null)
+        {
+            _playerOccupancyRatioText.text = playerText;
+            UIVisibilityHelper.SetVisible(_playerOccupancyRatioText, true);
+        }
 
-        _occupancyRatioText.text = text;
-        UIVisibilityHelper.SetVisible(_occupancyRatioText, true);
+        if (_virusOccupancyRatioText != null)
+        {
+            _virusOccupancyRatioText.text = virusText;
+            UIVisibilityHelper.SetVisible(_virusOccupancyRatioText, true);
+        }
     }
 
-    private void ClearRatio()
+    private void ClearRatios()
     {
-        if (_occupancyRatioText == null)
-            return;
+        if (_playerOccupancyRatioText != null)
+        {
+            _playerOccupancyRatioText.text = string.Empty;
+            UIVisibilityHelper.SetVisible(_playerOccupancyRatioText, false);
+        }
 
-        _occupancyRatioText.text = string.Empty;
-        UIVisibilityHelper.SetVisible(_occupancyRatioText, false);
+        if (_virusOccupancyRatioText != null)
+        {
+            _virusOccupancyRatioText.text = string.Empty;
+            UIVisibilityHelper.SetVisible(_virusOccupancyRatioText, false);
+        }
     }
 
     private void SetJudgeTime(string text)
@@ -151,6 +171,7 @@ public class MiniMapCellUI : MonoBehaviour
         _sectorJudgeTimeText.text = string.Empty;
         UIVisibilityHelper.SetVisible(_sectorJudgeTimeText, false);
     }
+
     public void SetSpecialTimer(string text, bool visible)
     {
         if (_specialTimerText == null)
@@ -159,9 +180,9 @@ public class MiniMapCellUI : MonoBehaviour
         _specialTimerText.text = visible ? text : string.Empty;
         UIVisibilityHelper.SetVisible(_specialTimerText, visible);
     }
+
     private void SetRoot(GameObject root, bool active)
     {
         UIVisibilityHelper.SetVisible(root, active);
     }
-
 }

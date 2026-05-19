@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI_Settings Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: UI_Settings
+  m_TableCollectionNameGuidString: c61d86dbef3ee1143b0754c881c3de59
+  m_Entries:
+  - m_Id: 40962580480
+    m_Key: Settings_Tab_General
+    m_Metadata:
+      m_Items: []
+  - m_Id: 42724188160
+    m_Key: Settings_Tab_Audio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 44297052160
+    m_Key: Settings_Tab_Graphic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 46125768704
+    m_Key: Settings_Tab_KeyBindings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 327450320896
+    m_Key: Settings_Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 369909260288
+    m_Key: Settings_Content_LanguageTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 550247555072
+    m_Key: Settings_Content_LanguageEnglish
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3022500356096
+    m_Key: Settings_Content_LanguageKorean
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14942209007616
+    m_Key: Settings_Content_AimSensivityTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14959716032512
+    m_Key: Settings_Content_ResolutionTitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14962106785792
+    m_Key: Settings_Content_DisplaymodeTitle
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 2095968666835747033
+  references:
+    version: 2
+    RefIds:
+    - rid: 2095968666835747033
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1779177421786

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
@@ -11,86 +10,40 @@ public class MutarusQTEPatternActionSO : StateActionSO<MutarusQTEPatternAction>
     [Header("QTE")]
     [SerializeField] private MutarusQTEPatternControllerEventChannelSO _controllerReadyChannel;
 
-    [Header("Periodic Arc Bomb")]
-    [SerializeField] private bool _usePeriodicArcBomb = true;
-    [SerializeField] private EnemyArcBombProjectile _arcBombPrefab;
-    [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
-
-    [Tooltip("If true, fires one bomb as soon as QTE stations are active.")]
-    [SerializeField] private bool _fireBombOnEnter = false;
-
-    [Tooltip("Delay before the first bomb if Fire Bomb On Enter is false.")]
-    [SerializeField, Min(0f)] private float _firstBombDelay = 2f;
-
-    [Tooltip("Bomb interval during PatternActive. Bomb count is controlled only by pattern duration and this interval.")]
-    [SerializeField, Min(0.01f)] private float _bombInterval = 5f;
-
-    [Header("Arc Bomb Trajectory")]
-    [SerializeField, Min(0.01f)] private float _bombTravelTime = 1.2f;
-    [SerializeField, Min(0f)] private float _bombArcHeight = 4f;
-    [SerializeField] private float _bombSpawnYOffset = 0.5f;
-    [SerializeField] private float _bombTargetYOffset = 0f;
-
-    [Tooltip("Used only if runtime player position and currentTarget are both missing.")]
-    [SerializeField, Min(0f)] private float _fallbackTargetDistance = 6f;
-
-    [Tooltip("Random offset around target position. 0 means exact target position.")]
-    [SerializeField, Min(0f)] private float _targetRandomRadius = 0f;
-
-    [Header("Arc Bomb Impact Damage")]
-    [SerializeField, Min(0f)] private float _damageRadius = 1.5f;
-
-    [FormerlySerializedAs("_healthDamage")]
-    [SerializeField, Min(0f)] private float _impactHealthDamage = 10f;
-
-    [FormerlySerializedAs("_infectionDamage")]
-    [SerializeField, Min(0f)] private float _impactInfectionDamage = 5f;
-
-    [SerializeField] private LayerMask _damageTargetMask;
-    [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Collide;
-
-    [Header("Arc Bomb Paint")]
-    [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.PoisonPuddle;
-    [SerializeField, Min(0f)] private float _paintRadiusWorld = 1.5f;
-    [SerializeField] private int _paintPriority = 0;
-
-    [Header("Poison Puddle Damage Config")]
-    [SerializeField] private PoisonPuddleDamageConfigSO _poisonPuddleDamageConfig;
-
-    [Header("Periodic Bomb Animator")]
-    [SerializeField] private bool _triggerAnimatorOnBomb = true;
-    [SerializeField] private string _bombAnimatorTrigger = "PatternBomb";
+    [Header("Definition Config")]
+    [SerializeField] private MutarusQTEPatternBombConfigSO _bombConfig;
 
     public MutarusQTEPatternControllerEventChannelSO ControllerReadyChannel => _controllerReadyChannel;
 
-    public bool UsePeriodicArcBomb => _usePeriodicArcBomb;
-    public EnemyArcBombProjectile ArcBombPrefab => _arcBombPrefab;
-    public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
+    public bool HasBombConfig => _bombConfig != null;
+    public bool UsePeriodicArcBomb => _bombConfig.UsePeriodicArcBomb;
+    public EnemyArcBombProjectile ArcBombPrefab => _bombConfig.ArcBombPrefab;
+    public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _bombConfig.MaskRenderManagerReadyChannel;
 
-    public bool FireBombOnEnter => _fireBombOnEnter;
-    public float FirstBombDelay => Mathf.Max(0f, _firstBombDelay);
-    public float BombInterval => Mathf.Max(0.01f, _bombInterval);
+    public bool FireBombOnEnter => _bombConfig.FireBombOnEnter;
+    public float FirstBombDelay => _bombConfig.FirstBombDelay;
+    public float BombInterval => _bombConfig.BombInterval;
 
-    public float BombTravelTime => Mathf.Max(0.01f, _bombTravelTime);
-    public float BombArcHeight => Mathf.Max(0f, _bombArcHeight);
-    public float BombSpawnYOffset => _bombSpawnYOffset;
-    public float BombTargetYOffset => _bombTargetYOffset;
-    public float FallbackTargetDistance => Mathf.Max(0f, _fallbackTargetDistance);
-    public float TargetRandomRadius => Mathf.Max(0f, _targetRandomRadius);
+    public float BombTravelTime => _bombConfig.BombTravelTime;
+    public float BombArcHeight => _bombConfig.BombArcHeight;
+    public float BombSpawnYOffset => _bombConfig.BombSpawnYOffset;
+    public float BombTargetYOffset => _bombConfig.BombTargetYOffset;
+    public float FallbackTargetDistance => _bombConfig.FallbackTargetDistance;
+    public float TargetRandomRadius => _bombConfig.TargetRandomRadius;
 
-    public float DamageRadius => Mathf.Max(0f, _damageRadius);
-    public float ImpactHealthDamage => Mathf.Max(0f, _impactHealthDamage);
-    public float ImpactInfectionDamage => Mathf.Max(0f, _impactInfectionDamage);
-    public LayerMask DamageTargetMask => _damageTargetMask;
-    public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
+    public float DamageRadius => _bombConfig.DamageRadius;
+    public float ImpactHealthDamage => _bombConfig.ImpactHealthDamage;
+    public float ImpactInfectionDamage => _bombConfig.ImpactInfectionDamage;
+    public LayerMask DamageTargetMask => _bombConfig.DamageTargetMask;
+    public QueryTriggerInteraction TriggerInteraction => _bombConfig.TriggerInteraction;
 
-    public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
-    public float PaintRadiusWorld => Mathf.Max(0f, _paintRadiusWorld);
-    public int PaintPriority => _paintPriority;
-    public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _poisonPuddleDamageConfig;
+    public MaskRenderManager.PaintChannel PaintChannel => _bombConfig.PaintChannel;
+    public float PaintRadiusWorld => _bombConfig.PaintRadiusWorld;
+    public int PaintPriority => _bombConfig.PaintPriority;
+    public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _bombConfig.PoisonPuddleDamageConfig;
 
-    public bool TriggerAnimatorOnBomb => _triggerAnimatorOnBomb;
-    public string BombAnimatorTrigger => _bombAnimatorTrigger;
+    public bool TriggerAnimatorOnBomb => _bombConfig.TriggerAnimatorOnBomb;
+    public string BombAnimatorTrigger => _bombConfig.BombAnimatorTrigger;
 }
 
 public class MutarusQTEPatternAction : StateAction
@@ -110,6 +63,7 @@ public class MutarusQTEPatternAction : StateAction
 
     private float _bombTimer;
     private float _nextBombDelay;
+    private bool _hasBombConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -126,7 +80,7 @@ public class MutarusQTEPatternAction : StateAction
         if (_qteController == null)
             _qteController = Object.FindAnyObjectByType<MutarusQTEPatternController>();
 
-        if (!string.IsNullOrWhiteSpace(_config.BombAnimatorTrigger))
+        if (_config.HasBombConfig && !string.IsNullOrWhiteSpace(_config.BombAnimatorTrigger))
             _bombTriggerHash = Animator.StringToHash(_config.BombAnimatorTrigger);
     }
 
@@ -134,9 +88,21 @@ public class MutarusQTEPatternAction : StateAction
     {
         _completed = false;
         _runtimeReady = false;
+        _hasBombConfig = _config.HasBombConfig;
 
         _bombTimer = 0f;
-        _nextBombDelay = _config.FirstBombDelay;
+        _nextBombDelay = _hasBombConfig ? _config.FirstBombDelay : 0f;
+
+        if (!_hasBombConfig)
+        {
+            Debug.LogError("[MutarusQTEPatternAction] Bomb Config is missing.");
+
+            if (_pattern != null)
+                _pattern.MarkActiveFinished(NamedPatternResult.PlayerFailed);
+
+            _completed = true;
+            return;
+        }
 
         if (_qteController == null)
         {

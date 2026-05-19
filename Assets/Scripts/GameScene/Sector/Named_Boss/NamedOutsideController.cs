@@ -62,10 +62,12 @@ public class NamedOutsideController : MonoBehaviour
 
         _outsidePressureTimer = _outsidePressureTickSeconds;
 
+        float pressureMultiplier = DifficultyRuntime.NamedOutsidePressureMultiplier;
+
         NamedOutsidePressureRequest request = new NamedOutsidePressureRequest(
             _activeNamedSector,
-            _outsidePressureMinPercent,
-            _outsidePressureMaxPercent
+            Mathf.Clamp01(_outsidePressureMinPercent * pressureMultiplier),
+            Mathf.Clamp01(_outsidePressureMaxPercent * pressureMultiplier)
         );
 
         _outsidePressureRequestChannel.RaiseEvent(request);

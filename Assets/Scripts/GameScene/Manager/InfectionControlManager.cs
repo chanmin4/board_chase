@@ -9,7 +9,8 @@ public class InfectionControlManager : MonoBehaviour
     [Header("Named Pressure")]
     [Tooltip("Named sector phase event. Used to add named-specific control drain.")]
     [SerializeField] private NamedSectorPhaseEventChannelSO _namedSectorPhaseChannel;
-
+    [Header("Listening To")]
+    [SerializeField] private FloatEventChannelSO _stageInfectionControlRecoverChannel;
     [Header("Game Over")]
     [SerializeField] private VoidEventChannelSO _gameOverChannel;
 
@@ -31,7 +32,8 @@ public class InfectionControlManager : MonoBehaviour
 
         if (_namedSectorPhaseChannel != null)
             _namedSectorPhaseChannel.OnEventRaised += OnNamedSectorPhaseChanged;
-
+        if (_stageInfectionControlRecoverChannel != null)
+            _stageInfectionControlRecoverChannel.OnEventRaised += Recover;
         Publish();
     }
 
@@ -42,6 +44,9 @@ public class InfectionControlManager : MonoBehaviour
 
         if (_namedSectorPhaseChannel != null)
             _namedSectorPhaseChannel.OnEventRaised -= OnNamedSectorPhaseChanged;
+    
+        if (_stageInfectionControlRecoverChannel != null)
+            _stageInfectionControlRecoverChannel.OnEventRaised -= Recover;
     }
 
     private void Update()

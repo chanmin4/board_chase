@@ -13,24 +13,7 @@ MonoBehaviour:
   m_Name: ChaserVirusSelfDestructAction
   m_EditorClassIdentifier: 
   description: self destruct with damage and virus infection
-  _explodeDelay: 0.15
+  _definitionConfig: {fileID: 11400000, guid: 5593b6913535736449020287949c7410, type: 2}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
-  _virusPaintRadius: 3.5
-  _paintPriority: 10
-  _damageMask:
-    serializedVersion: 2
-    m_Bits: 8
-  _triggerInteraction: 2
-  _playerHitRadius: 3
-  _healthDamage: 10
-  _infectionDamage: 10
-  _maxOverlapHits: 32
-  _explosionVfxPrefab: {fileID: 0}
-  _destroyVfxAfter: 3
-  _cameraShakeEvent: {fileID: 0}
-  _explodedEvent: {fileID: 0}
-  _audioCueEventChannel: {fileID: 0}
-  _explosionAudioCue: {fileID: 0}
-  _audioConfiguration: {fileID: 0}
   _stopAgentOnEnter: 1
   _killSelfAfterExplosion: 1

@@ -8,53 +8,32 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Enemy Actions/Search Infection Target")]
 public class SearchInfectionTargetActionSO : StateActionSO
 {
-    [Header("Search")]
-    [SerializeField] private float _searchRadius = 16f;
-    [SerializeField] private int _candidateCount = 6;
-    [SerializeField] private int _maxRetryCount = 3;
-    [SerializeField] private bool _searchOnEnterOnly = false;
-    [SerializeField] private float _searchIntervalSeconds = 2f;
-    [SerializeField] private float _minimumScore = 0.3f;
-    [SerializeField] private float _minimumTravelDistance = 1.25f;
-    [SerializeField] private bool _preferNearestOnTie = true;
-    [SerializeField] private float _distanceScoreWeight = 0.25f;
-    [Header("Sampling")]
-    [SerializeField] private float _sampleOffset = 0.75f;
-    [SerializeField] private int _minimumValidSamples = 3;
-    [SerializeField] private float _navMeshSampleMaxDistance = 1.25f;
-
-    [Header("Contaminate Score")]
-    [Range(0f, 1f)] [SerializeField] private float _vaccineScore = 1f;
-    [Range(0f, 1f)] [SerializeField] private float _neutralScore = 0.6f;
-    [Range(0f, 1f)] [SerializeField] private float _virusScore = 0f;
+    [Header("Definition Config")]
+    [SerializeField] private NormalEnemySearchInfectionTargetConfigSO _definitionConfig;
 
     [Header("Refs")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
-    [Header("Debug")]
-    [SerializeField] private bool _debugLogs = true;
-    [SerializeField] private bool _debugDraw = true;
-    [SerializeField] private float _debugDrawDuration = 2f;
-
-    public float SearchRadius => _searchRadius;
-    public int CandidateCount => _candidateCount;
-    public int MaxRetryCount => _maxRetryCount;
-    public bool SearchOnEnterOnly => _searchOnEnterOnly;
-    public float SearchIntervalSeconds => _searchIntervalSeconds;
-    public float MinimumScore => _minimumScore;
-    public float MinimumTravelDistance => _minimumTravelDistance;
-    public float SampleOffset => _sampleOffset;
-    public int MinimumValidSamples => _minimumValidSamples;
-    public float NavMeshSampleMaxDistance => _navMeshSampleMaxDistance;
-    public float VaccineScore => _vaccineScore;
-    public float NeutralScore => _neutralScore;
-    public float VirusScore => _virusScore;
+    public bool HasDefinitionConfig => _definitionConfig != null;
+    public float SearchRadius => _definitionConfig.SearchRadius;
+    public int CandidateCount => _definitionConfig.CandidateCount;
+    public int MaxRetryCount => _definitionConfig.MaxRetryCount;
+    public bool SearchOnEnterOnly => _definitionConfig.SearchOnEnterOnly;
+    public float SearchIntervalSeconds => _definitionConfig.SearchIntervalSeconds;
+    public float MinimumScore => _definitionConfig.MinimumScore;
+    public float MinimumTravelDistance => _definitionConfig.MinimumTravelDistance;
+    public float SampleOffset => _definitionConfig.SampleOffset;
+    public int MinimumValidSamples => _definitionConfig.MinimumValidSamples;
+    public float NavMeshSampleMaxDistance => _definitionConfig.NavMeshSampleMaxDistance;
+    public float VaccineScore => _definitionConfig.VaccineScore;
+    public float NeutralScore => _definitionConfig.NeutralScore;
+    public float VirusScore => _definitionConfig.VirusScore;
     public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
-    public bool DebugLogs => _debugLogs;
-    public bool DebugDraw => _debugDraw;
-    public float DebugDrawDuration => _debugDrawDuration;
-    public bool PreferNearestOnTie => _preferNearestOnTie;
-    public float DistanceScoreWeight => _distanceScoreWeight;
+    public bool DebugLogs => _definitionConfig.DebugLogs;
+    public bool DebugDraw => _definitionConfig.DebugDraw;
+    public float DebugDrawDuration => _definitionConfig.DebugDrawDuration;
+    public bool PreferNearestOnTie => _definitionConfig.PreferNearestOnTie;
+    public float DistanceScoreWeight => _definitionConfig.DistanceScoreWeight;
 
     protected override StateAction CreateAction() => new SearchInfectionTargetAction();
 }
@@ -65,6 +44,7 @@ public class SearchInfectionTargetAction : StateAction
     private SearchInfectionTargetActionSO _config;
     private MaskRenderManager _maskRenderManager;
     private float _nextSearchTime;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -75,12 +55,23 @@ public class SearchInfectionTargetAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[SearchInfectionTargetAction] Definition Config is missing.", _enemy);
+            return;
+        }
+
         Search();
         _nextSearchTime = Time.time + Mathf.Max(0.1f, _config.SearchIntervalSeconds);
     }
 
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         Debug.Log("SearchInfectionTargetAction OnUpdate");
         if (_config.SearchOnEnterOnly)
             return;

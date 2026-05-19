@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f2efffbc62393d43bbb120d7cd83c5c, type: 3}
+  m_Name: VeryHardDifficultyRules 2
+  m_EditorClassIdentifier: 
+  difficulty: 2
+  displayName: VeryHard
+  playerInfectionGainMultiplier: 1
+  playerInfectionRecoverMultiplier: 1
+  playerDamageMultiplier: 1
+  playerMoveSpeedMultiplier: 1
+  playerDashCooldownMultiplier: 1
+  enemyHealthMultiplier: 1
+  enemyDamageMultiplier: 1
+  enemyNormalMoveSpeedMultiplier: 1
+  enemyChaseMoveSpeedMultiplier: 1
+  enemyProjectileSpeedMultiplier: 1
+  enemySpawnRateMultiplier: 1
+  enemySpawnIntervalMinSeconds: 0.25
+  enemyInfectionCastSpeedMultiplier: 1
+  enemyVirusPaintRadiusMultiplier: 1
+  playerVaccinePaintRadiusMultiplier: 1
+  infectionControlDrainMultiplier: 1
+  namedFirstReservationDelayMultiplier: 1
+  namedFirstReservationDelayAddSeconds: 0
+  namedFirstReservationDelayMinSeconds: 0
+  namedReservationDurationMultiplier: 1
+  namedReservationDurationAddSeconds: 0
+  namedReservationDurationMinSeconds: 5
+  namedRespawnCooldownMultiplier: 1
+  namedRespawnCooldownAddSeconds: 0
+  namedRespawnCooldownMinSeconds: 10
+  namedRetryDelayMultiplier: 1
+  namedRetryDelayAddSeconds: 0
+  namedRetryDelayMinSeconds: 1
+  namedPatternFirstDelayMultiplier: 1
+  namedPatternFirstDelayAddSeconds: 0
+  namedPatternFirstDelayMinSeconds: 0
+  namedPatternRepeatDelayMultiplier: 1
+  namedPatternRepeatDelayAddSeconds: 0
+  namedPatternRepeatDelayMinSeconds: 0
+  namedPatternActiveDurationMultiplier: 1
+  namedPatternActiveDurationAddSeconds: 0
+  namedPatternActiveDurationMinSeconds: 3
+  namedOutsidePressureMultiplier: 1

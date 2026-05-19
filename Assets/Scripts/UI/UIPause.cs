@@ -1,58 +1,182 @@
+using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Localization.Settings;
+using UnityEngine.Localization.Tables;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 public class UIPause : MonoBehaviour
 {
-	[SerializeField] private InputReader _inputReader = default;
-	[SerializeField] private UIGenericButton _resumeButton = default;
-	[SerializeField] private UIGenericButton _settingsButton = default;
-	[SerializeField] private UIGenericButton _backToMenuButton = default;
+    [Header("Buttons")]
+    [SerializeField] private UIGenericButton _resumeButton;
+    [SerializeField] private UIGenericButton _settingsButton;
+    [SerializeField] private UIGenericButton _backToMenuButton;
+    [SerializeField] private UIGenericButton _quitButton;
+    [SerializeField] private UIGenericButton _sectorCenterRescueButton;
 
-	[Header("Listening to")]
-	[SerializeField] private BoolEventChannelSO _onPauseOpened = default;
+    [Header("Button Texts")]
+    [SerializeField] private TextMeshProUGUI _resumeText;
+    [SerializeField] private TextMeshProUGUI _settingsText;
+    [SerializeField] private TextMeshProUGUI _backToMenuText;
+    [SerializeField] private TextMeshProUGUI _quitText;
+    [SerializeField] private TextMeshProUGUI _sectorCenterRescueText;
 
-	public event UnityAction Resumed = default;
-	public event UnityAction SettingsScreenOpened = default;
-	public event UnityAction BackToMainRequested = default;
+    [Header("Localization")]
+    [SerializeField] private TableReference _stringTable = "UI_Settings";
+    [SerializeField] private string _resumeKey = "Pause_Resume";
+    [SerializeField] private string _settingsKey = "Pause_Settings";
+    [SerializeField] private string _mainMenuKey = "Pause_MainMenu";
+    [SerializeField] private string _quitKey = "Pause_Quit";
+    [SerializeField] private string _sectorCenterRescueKey = "Pause_SectorCenterRescue";
 
-	private void OnEnable()
-	{
-		_onPauseOpened.RaiseEvent(true);
+    [Header("Broadcasting On")]
+    [SerializeField] private BoolEventChannelSO _onPauseOpened;
 
-		_resumeButton.SetButton(true);
-		//_inputReader.MenuCloseEvent += Resume;
-		_resumeButton.Clicked += Resume;
-		_settingsButton.Clicked += OpenSettingsScreen;
-		_backToMenuButton.Clicked += BackToMainMenuConfirmation;
-	}
+    public event UnityAction Resumed = delegate { };
+    public event UnityAction SettingsScreenOpened = delegate { };
+    public event UnityAction BackToMainRequested = delegate { };
+    public event UnityAction QuitRequested = delegate { };
+    public event UnityAction SectorCenterRescueRequested = delegate { };
 
-	private void OnDisable()
-	{
-		_onPauseOpened.RaiseEvent(false);
-		
-		//_inputReader.MenuCloseEvent -= Resume;
-		_resumeButton.Clicked -= Resume;
-		_settingsButton.Clicked -= OpenSettingsScreen;
-		_backToMenuButton.Clicked -= BackToMainMenuConfirmation;
-	}
+    private Coroutine _refreshTextRoutine;
 
-	void Resume()
-	{
-		Resumed.Invoke();
-	}
+    private void OnEnable()
+    {
+        if (_onPauseOpened != null)
+            _onPauseOpened.RaiseEvent(true);
 
-	void OpenSettingsScreen()
-	{
-		SettingsScreenOpened.Invoke();
-	}
+        BindButtons();
 
-	void BackToMainMenuConfirmation()
-	{
-		BackToMainRequested.Invoke();
-	}
+        LocalizationSettings.SelectedLocaleChanged += HandleLocaleChanged;
+        RefreshTexts();
+    }
 
-	public void CloseScreen()
-	{
-		Resumed.Invoke();
-	}
+    private void OnDisable()
+    {
+        if (_onPauseOpened != null)
+            _onPauseOpened.RaiseEvent(false);
+
+        UnbindButtons();
+
+        LocalizationSettings.SelectedLocaleChanged -= HandleLocaleChanged;
+
+        if (_refreshTextRoutine != null)
+        {
+            StopCoroutine(_refreshTextRoutine);
+            _refreshTextRoutine = null;
+        }
+    }
+
+    private void BindButtons()
+    {
+        if (_resumeButton != null)
+        {
+            _resumeButton.SetButton(true);
+            _resumeButton.Clicked += Resume;
+        }
+
+        if (_settingsButton != null)
+            _settingsButton.Clicked += OpenSettingsScreen;
+
+        if (_backToMenuButton != null)
+            _backToMenuButton.Clicked += BackToMainMenuConfirmation;
+
+        if (_quitButton != null)
+            _quitButton.Clicked += RequestQuit;
+
+        if (_sectorCenterRescueButton != null)
+            _sectorCenterRescueButton.Clicked += RequestSectorCenterRescue;
+    }
+
+    private void UnbindButtons()
+    {
+        if (_resumeButton != null)
+            _resumeButton.Clicked -= Resume;
+
+        if (_settingsButton != null)
+            _settingsButton.Clicked -= OpenSettingsScreen;
+
+        if (_backToMenuButton != null)
+            _backToMenuButton.Clicked -= BackToMainMenuConfirmation;
+
+        if (_quitButton != null)
+            _quitButton.Clicked -= RequestQuit;
+
+        if (_sectorCenterRescueButton != null)
+            _sectorCenterRescueButton.Clicked -= RequestSectorCenterRescue;
+    }
+
+    private void HandleLocaleChanged(UnityEngine.Localization.Locale locale)
+    {
+        RefreshTexts();
+    }
+
+    private void RefreshTexts()
+    {
+        if (_refreshTextRoutine != null)
+            StopCoroutine(_refreshTextRoutine);
+
+        _refreshTextRoutine = StartCoroutine(RefreshTextsRoutine());
+    }
+
+    private IEnumerator RefreshTextsRoutine()
+    {
+        yield return LocalizationSettings.InitializationOperation;
+
+        yield return SetLocalizedText(_resumeText, _resumeKey);
+        yield return SetLocalizedText(_settingsText, _settingsKey);
+        yield return SetLocalizedText(_backToMenuText, _mainMenuKey);
+        yield return SetLocalizedText(_quitText, _quitKey);
+        yield return SetLocalizedText(_sectorCenterRescueText, _sectorCenterRescueKey);
+
+        _refreshTextRoutine = null;
+    }
+
+    private IEnumerator SetLocalizedText(TextMeshProUGUI target, string key)
+    {
+        if (target == null || string.IsNullOrWhiteSpace(key))
+            yield break;
+
+        AsyncOperationHandle<string> handle =
+            LocalizationSettings.StringDatabase.GetLocalizedStringAsync(_stringTable, key);
+
+        yield return handle;
+
+        string result = handle.Status == AsyncOperationStatus.Succeeded
+            ? handle.Result
+            : string.Empty;
+
+        target.text = string.IsNullOrWhiteSpace(result) ? key : result;
+    }
+
+    private void Resume()
+    {
+        Resumed.Invoke();
+    }
+
+    private void OpenSettingsScreen()
+    {
+        SettingsScreenOpened.Invoke();
+    }
+
+    private void BackToMainMenuConfirmation()
+    {
+        BackToMainRequested.Invoke();
+    }
+
+    private void RequestQuit()
+    {
+        QuitRequested.Invoke();
+    }
+
+    private void RequestSectorCenterRescue()
+    {
+        SectorCenterRescueRequested.Invoke();
+    }
+
+    public void CloseScreen()
+    {
+        Resumed.Invoke();
+    }
 }

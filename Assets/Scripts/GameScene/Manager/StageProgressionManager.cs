@@ -14,7 +14,7 @@ public class StageProgressionManager : MonoBehaviour
     [Header("Broadcasting On")]
     [SerializeField] private VoidEventChannelSO _requestProgressNextStageChannel;
     [SerializeField] private StageProgressSnapshotEventChannelSO _snapshotChangedChannel;
-
+    [SerializeField] private FloatEventChannelSO _stageInfectionControlRecoverChannel;
     private SectorOccupancySummary _latestSummary;
     private StageProgressionRulesSO.StageProgressRule _currentRule;
 
@@ -55,12 +55,13 @@ public class StageProgressionManager : MonoBehaviour
         {
             _remainingSeconds -= Time.deltaTime;
 
-            if (_remainingSeconds <= 0f)
+            if (_remainingSeconds <= 0f)//complete stage
             {
                 _remainingSeconds = 0f;
                 _isCompleted = true;
 
                 PublishSnapshot();
+                RaiseStageCompleteRewards();
 
                 if (_requestProgressNextStageChannel != null)
                     _requestProgressNextStageChannel.RaiseEvent();
@@ -76,6 +77,17 @@ public class StageProgressionManager : MonoBehaviour
         PublishSnapshot();
     }
 
+    private void RaiseStageCompleteRewards()
+    {
+        if (!_hasRule || _stageInfectionControlRecoverChannel == null)
+            return;
+
+        float recoverAmount = Mathf.Max(0f, _currentRule.infectionControlRecoverOnComplete);
+        if (recoverAmount <= 0f)
+            return;
+
+        _stageInfectionControlRecoverChannel.RaiseEvent(recoverAmount);
+    }
     private void OnSectorSummaryChanged(SectorOccupancySummary summary)
     {
         _latestSummary = summary;
@@ -100,9 +112,13 @@ public class StageProgressionManager : MonoBehaviour
         else
             _remainingSeconds = 0f;
 
+        int displayStage = _currentStageIndex + 1;
+        string displayName = _hasRule ? _currentRule.displayName : $"{displayStage} Stage";
+
+        RunResult.SetStage(displayStage, displayName);
+
         PublishSnapshot();
     }
-
     private bool IsRequirementMet()
     {
         if (!_hasSummary || !_hasRule)

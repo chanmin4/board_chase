@@ -11,16 +11,22 @@ public class MenuSelectionHandler : MonoBehaviour
 
 	private void OnEnable()
 	{
-		_inputReader.MenuMouseMoveEvent += HandleMoveCursor;
-		_inputReader.MoveSelectionEvent += HandleMoveSelection;
+		if (_inputReader != null)
+		{
+			_inputReader.MenuMouseMoveEvent += HandleMoveCursor;
+			_inputReader.MoveSelectionEvent += HandleMoveSelection;
+		}
 
 		StartCoroutine(SelectDefault());
 	}
 
 	private void OnDisable()
 	{
-		_inputReader.MenuMouseMoveEvent -= HandleMoveCursor;
-		_inputReader.MoveSelectionEvent -= HandleMoveSelection;
+		if (_inputReader != null)
+		{
+			_inputReader.MenuMouseMoveEvent -= HandleMoveCursor;
+			_inputReader.MoveSelectionEvent -= HandleMoveSelection;
+		}
 	}
 
 	public void UpdateDefault(GameObject newDefault)
@@ -78,12 +84,12 @@ public class MenuSelectionHandler : MonoBehaviour
 
 	public void HandleMouseExit(GameObject UIElement)
 	{
-		if (EventSystem.current.currentSelectedGameObject != UIElement)
-		{
+		if (EventSystem.current == null)
 			return;
-		}
 
-		// keep selecting the last thing the mouse has selected 
+		if (EventSystem.current.currentSelectedGameObject != UIElement)
+			return;
+
 		_mouseSelection = null;
 		EventSystem.current.SetSelectedGameObject(_currentSelection);
 	}
@@ -94,12 +100,12 @@ public class MenuSelectionHandler : MonoBehaviour
 	/// <returns></returns>
 	public bool AllowsSubmit()
 	{
-		// if LMB is not down, there is no edge case to handle, allow the event to continue
-		return !_inputReader.LeftMouseDown()
-			   // if we know mouse & keyboard are on different elements, do not allow interaction to continue
-			   || _mouseSelection != null && _mouseSelection == _currentSelection;
-	}
+		if (_inputReader == null)
+			return true;
 
+		return !_inputReader.LeftMouseDown()
+			|| _mouseSelection != null && _mouseSelection == _currentSelection;
+	}
 	/// <summary>
 	/// Fired by gamepad or keyboard navigation inputs
 	/// </summary>

@@ -276,7 +276,7 @@ public class NamedSectorController : MonoBehaviour
         if (_timing.ReserveFirstSectorImmediately)
             ReserveRandomSector();
         else
-            StartReservationTimer(_timing.FirstReservationDelay);
+            StartReservationTimer(DifficultyRuntime.ApplyNamedFirstReservationDelay(_timing.FirstReservationDelay));
     }
 
     private void HandlePlayerEnteredSector(SectorRuntime sector)
@@ -292,12 +292,14 @@ public class NamedSectorController : MonoBehaviour
         if (!TryPickRandomOpenedSector(out SectorRuntime sector))
         {
             Debug.LogWarning("[NamedSectorController] No valid opened sector candidate.", this);
-            StartReservationTimer(_timing != null ? _timing.RetryDelayWhenNoCandidate : 5f);
+            float retryDelay = _timing != null ? _timing.RetryDelayWhenNoCandidate : 5f;
+            StartReservationTimer(DifficultyRuntime.ApplyNamedRetryDelay(retryDelay));
             return;
         }
 
         _selectedSector = sector;
-        _timer = Mathf.Max(0f, _timing != null ? _timing.ReservationDuration : 30f);
+        float reservationDuration = _timing != null ? _timing.ReservationDuration : 30f;
+        _timer = DifficultyRuntime.ApplyNamedReservationDuration(reservationDuration);
         _timerDuration = _timer;
         _timerPublishCooldown = 0f;
 
@@ -436,7 +438,8 @@ public class NamedSectorController : MonoBehaviour
         _battleEndedEvent?.RaiseEvent(sourceSector);
 
         _selectedSector = null;
-        StartReservationTimer(_timing != null ? _timing.RespawnCooldownAfterKill : 120f);
+        float respawnCooldown = _timing != null ? _timing.RespawnCooldownAfterKill : 120f;
+        StartReservationTimer(DifficultyRuntime.ApplyNamedRespawnCooldown(respawnCooldown));
     }
 
     private void SpawnNamed()

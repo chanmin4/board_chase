@@ -9,34 +9,12 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Enemy Actions/Chaser Virus Self Destruct")]
 public class ChaserVirusSelfDestructActionSO : StateActionSO
 {
+    [Header("Definition Config")]
+    [SerializeField] private ChaserSelfDestructConfigSO _definitionConfig;
+
     [Header("Virus Paint")]
     [Tooltip("Event channel that provides the active MaskRenderManager. If empty, the action searches the scene.")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
-
-    [Tooltip("Radius used to paint virus at the explosion position.")]
-    [SerializeField] private float _virusPaintRadius = 3.5f;
-
-    [Tooltip("Paint priority passed to MaskRenderManager. Use a higher value to override lower priority paint.")]
-    [SerializeField] private int _paintPriority = 10;
-
-    [Header("Player Hit")]
-    [Tooltip("Layers that can receive explosion damage. Include the player hurtbox layer.")]
-    [SerializeField] private LayerMask _damageMask = Physics.DefaultRaycastLayers;
-
-    [Tooltip("Use Collide when player hurtboxes are trigger colliders.")]
-    [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Collide;
-
-    [Tooltip("Radius used for health damage and infection damage.")]
-    [SerializeField] private float _playerHitRadius = 3f;
-
-    [Tooltip("Health damage dealt to the player. Set to 0 for infection-only explosions.")]
-    [SerializeField] private float _healthDamage = 0f;
-
-    [Tooltip("Infection amount added to the player.")]
-    [SerializeField] private float _infectionDamage = 25f;
-
-    [Tooltip("Collider buffer size for overlap queries. Usually 16 to 32 is enough.")]
-    [SerializeField] private int _maxOverlapHits = 32;
 
     [Header("Self")]
     [Tooltip("Stops the NavMeshAgent and clears its path before exploding.")]
@@ -46,14 +24,15 @@ public class ChaserVirusSelfDestructActionSO : StateActionSO
     [SerializeField] private bool _killSelfAfterExplosion = true;
 
     public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
-    public float VirusPaintRadius => Mathf.Max(0.001f, _virusPaintRadius);
-    public int PaintPriority => _paintPriority;
-    public LayerMask DamageMask => _damageMask;
-    public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
-    public float PlayerHitRadius => Mathf.Max(0f, _playerHitRadius);
-    public float HealthDamage => Mathf.Max(0f, _healthDamage);
-    public float InfectionDamage => Mathf.Max(0f, _infectionDamage);
-    public int MaxOverlapHits => Mathf.Max(1, _maxOverlapHits);
+    public bool HasDefinitionConfig => _definitionConfig != null;
+    public float VirusPaintRadius => _definitionConfig.VirusPaintRadius;
+    public int PaintPriority => _definitionConfig.PaintPriority;
+    public LayerMask DamageMask => _definitionConfig.DamageMask;
+    public QueryTriggerInteraction TriggerInteraction => _definitionConfig.TriggerInteraction;
+    public float PlayerHitRadius => _definitionConfig.PlayerHitRadius;
+    public float HealthDamage => _definitionConfig.HealthDamage;
+    public float InfectionDamage => _definitionConfig.InfectionDamage;
+    public int MaxOverlapHits => _definitionConfig.MaxOverlapHits;
     public bool StopAgentOnEnter => _stopAgentOnEnter;
     public bool KillSelfAfterExplosion => _killSelfAfterExplosion;
 
@@ -70,6 +49,7 @@ public class ChaserVirusSelfDestructAction : StateAction
     private MaskRenderManager _maskRenderManager;
     private Collider[] _hits;
     private readonly HashSet<Damageable> _damagedTargets = new HashSet<Damageable>();
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -80,11 +60,20 @@ public class ChaserVirusSelfDestructAction : StateAction
         stateMachine.TryGetComponent(out _agent);
         stateMachine.TryGetComponent(out _selfDamageable);
 
-        _hits = new Collider[_config.MaxOverlapHits];
+        _hasConfig = _config.HasDefinitionConfig;
+        _hits = new Collider[_hasConfig ? _config.MaxOverlapHits : 1];
     }
 
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[ChaserVirusSelfDestructAction] Definition Config is missing.", _owner);
+            return;
+        }
+
         if (_config.StopAgentOnEnter)
             StopAgent();
 

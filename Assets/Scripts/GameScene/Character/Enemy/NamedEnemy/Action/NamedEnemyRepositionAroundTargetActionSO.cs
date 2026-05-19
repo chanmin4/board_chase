@@ -17,38 +17,38 @@ public class NamedEnemyRepositionAroundTargetActionSO : StateActionSO<NamedEnemy
         AgentCurrentValue
     }
 
-    [Header("Distance")]
-    [SerializeField, Min(0f)] private float _tooCloseDistance = 3f;
-    [SerializeField, Min(0f)] private float _preferredDistance = 6f;
-    [SerializeField, Min(0f)] private float _tooFarDistance = 10f;
+    [Header("Definition Config")]
+    [SerializeField] private NamedRepositionConfigSO _definitionConfig;
 
-    [Header("Movement")]
-    [SerializeField] private SpeedSource _speedSource = SpeedSource.MovementStatsNormal;
-    [SerializeField, Min(0f)] private float _fixedMoveSpeed = 2.2f;
-    [SerializeField, Min(0f)] private float _strafeDistance = 2.5f;
-    [SerializeField, Min(0.01f)] private float _destinationRefreshInterval = 0.35f;
-    [SerializeField, Min(0.01f)] private float _navMeshSampleDistance = 2f;
+    public bool HasDefinitionConfig => _definitionConfig != null;
 
-    [Header("Facing")]
-    [SerializeField] private bool _faceTarget = true;
-    [SerializeField, Min(0f)] private float _turnSpeedDegPerSecond = 720f;
+    public SpeedSource MoveSpeedSource => ConvertSpeedSource(_definitionConfig.MoveSpeedSource);
+    public float FixedMoveSpeed => _definitionConfig.FixedMoveSpeed;
+    public float TooCloseDistance => _definitionConfig.TooCloseDistance;
+    public float PreferredDistance => _definitionConfig.PreferredDistance;
+    public float TooFarDistance => _definitionConfig.TooFarDistance;
+    public float StrafeDistance => _definitionConfig.StrafeDistance;
+    public float DestinationRefreshInterval => _definitionConfig.DestinationRefreshInterval;
+    public float NavMeshSampleDistance => _definitionConfig.NavMeshSampleDistance;
+    public bool FaceTarget => _definitionConfig.FaceTarget;
+    public float TurnSpeedDegPerSecond => _definitionConfig.TurnSpeedDegPerSecond;
+    public bool DebugDrawDistances => _definitionConfig.DebugDrawDistances;
+    public float DebugDrawHeight => _definitionConfig.DebugDrawHeight;
 
-    [Header("Debug")]
-    [SerializeField] private bool _debugDrawDistances;
-    [SerializeField] private float _debugDrawHeight = 0.1f;
+    private static SpeedSource ConvertSpeedSource(NamedRepositionConfigSO.SpeedSource source)
+    {
+        switch (source)
+        {
+            case NamedRepositionConfigSO.SpeedSource.MovementStatsNormal:
+                return SpeedSource.MovementStatsNormal;
 
-    public SpeedSource MoveSpeedSource => _speedSource;
-    public float FixedMoveSpeed => _fixedMoveSpeed;
-    public float TooCloseDistance => _tooCloseDistance;
-    public float PreferredDistance => _preferredDistance;
-    public float TooFarDistance => _tooFarDistance;
-    public float StrafeDistance => _strafeDistance;
-    public float DestinationRefreshInterval => _destinationRefreshInterval;
-    public float NavMeshSampleDistance => _navMeshSampleDistance;
-    public bool FaceTarget => _faceTarget;
-    public float TurnSpeedDegPerSecond => _turnSpeedDegPerSecond;
-    public bool DebugDrawDistances => _debugDrawDistances;
-    public float DebugDrawHeight => _debugDrawHeight;
+            case NamedRepositionConfigSO.SpeedSource.AgentCurrentValue:
+                return SpeedSource.AgentCurrentValue;
+
+            default:
+                return SpeedSource.FixedValue;
+        }
+    }
 }
 
 public class NamedEnemyRepositionAroundTargetAction : StateAction
@@ -61,6 +61,7 @@ public class NamedEnemyRepositionAroundTargetAction : StateAction
 
     private float _side;
     private float _nextRefreshTime;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -74,8 +75,15 @@ public class NamedEnemyRepositionAroundTargetAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _origin.HasDefinitionConfig;
         _side = Random.value < 0.5f ? -1f : 1f;
         _nextRefreshTime = 0f;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[NamedEnemyRepositionAroundTargetAction] Definition Config is missing.", _owner);
+            return;
+        }
 
         if (!IsAgentReady())
             return;
@@ -86,6 +94,9 @@ public class NamedEnemyRepositionAroundTargetAction : StateAction
 
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         if (_enemy == null || _enemy.currentTarget == null)
         {
             StopAgent();

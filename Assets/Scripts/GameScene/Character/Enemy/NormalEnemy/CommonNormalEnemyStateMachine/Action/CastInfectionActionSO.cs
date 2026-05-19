@@ -8,29 +8,25 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Enemy Actions/Cast Infection")]
 public class CastInfectionActionSO : StateActionSO
 {
-    [SerializeField] private float _infectionRadius = 1.5f;
-    [SerializeField] private bool _applyOnStateExit = true;
-    [SerializeField] private int _paintPriority = 0;
+    [Header("Definition Config")]
+    [SerializeField] private NormalEnemyCastInfectionConfigSO _definitionConfig;
+
     [Header("Timing")]
     [SerializeField] private TimeElapsedConditionSO _castTimerCondition;
 
     [Header("Refs")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
-    [Header("Debug")]
-    [SerializeField] private bool _debugLogs = true;
-    [SerializeField] private bool _debugDraw = true;
-    [SerializeField] private float _debugDrawDuration = 2f;
-
-    public float InfectionRadius => _infectionRadius;
-    public bool ApplyOnStateExit => _applyOnStateExit;
-    public int PaintPriority => _paintPriority;
+    public bool HasDefinitionConfig => _definitionConfig != null;
+    public float InfectionRadius => _definitionConfig.InfectionRadius;
+    public bool ApplyOnStateExit => _definitionConfig.ApplyOnStateExit;
+    public int PaintPriority => _definitionConfig.PaintPriority;
     public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
-    public bool DebugLogs => _debugLogs;
-    public bool DebugDraw => _debugDraw;
-    public float DebugDrawDuration => _debugDrawDuration;
+    public bool DebugLogs => _definitionConfig.DebugLogs;
+    public bool DebugDraw => _definitionConfig.DebugDraw;
+    public float DebugDrawDuration => _definitionConfig.DebugDrawDuration;
       public float CastDurationSeconds =>
-        _castTimerCondition != null ? Mathf.Max(0.01f, _castTimerCondition.timerLength) : 0.5f;
+        _castTimerCondition != null ? _castTimerCondition.ResolvedTimerLength : 0.5f;
 
     protected override StateAction CreateAction() => new CastInfectionAction();
 }
@@ -41,6 +37,7 @@ public class CastInfectionAction : StateAction
     private NavMeshAgent _agent;
     private CastInfectionActionSO _config;
     private MaskRenderManager _maskRenderManager;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -52,6 +49,14 @@ public class CastInfectionAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[CastInfectionAction] Definition Config is missing.", _enemy);
+            return;
+        }
+
         if (_agent != null && _agent.isActiveAndEnabled)
             _agent.isStopped = true;
 
@@ -63,6 +68,9 @@ public class CastInfectionAction : StateAction
 
     public override void OnStateExit()
     {
+        if (!_hasConfig)
+            return;
+
         if (_enemy != null)
             _enemy.CancelInfectionCast();
 

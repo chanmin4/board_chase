@@ -13,20 +13,5 @@ MonoBehaviour:
   m_Name: SearchInfectionTargetAction
   m_EditorClassIdentifier: 
   description: 
-  _searchRadius: 3
-  _candidateCount: 8
-  _maxRetryCount: 4
-  _searchOnEnterOnly: 0
-  _searchIntervalSeconds: 2
-  _minimumScore: 0.3
-  _minimumTravelDistance: 1.25
-  _sampleOffset: 0.75
-  _minimumValidSamples: 3
-  _navMeshSampleMaxDistance: 1.25
-  _vaccineScore: 1
-  _neutralScore: 0.6
-  _virusScore: 0
+  _definitionConfig: {fileID: 11400000, guid: c38ed21f95b8458fb2fb0149422e7af0, type: 2}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
-  _debugLogs: 1
-  _debugDraw: 1
-  _debugDrawDuration: 2

@@ -49,7 +49,7 @@ public class NamedPatternController : MonoBehaviour
     public void StartFirstPatternSchedule()
     {
         float delay = _config != null ? _config.FirstPatternDelay : 30f;
-        StartSchedule(delay);
+        StartSchedule(DifficultyRuntime.ApplyNamedPatternFirstDelay(delay));
     }
 
     public void StartRepeatPatternSchedule()
@@ -60,7 +60,7 @@ public class NamedPatternController : MonoBehaviour
         if (!_config.RepeatPattern)
             return;
 
-        StartSchedule(_config.RepeatPatternDelay);
+        StartSchedule(DifficultyRuntime.ApplyNamedPatternRepeatDelay(_config.RepeatPatternDelay));
     }
     public void StartPatternActiveTimer(float duration = -1f)
     {
@@ -181,7 +181,7 @@ public class NamedPatternController : MonoBehaviour
         get
         {
             if (_config != null)
-                return _config.PatternActiveDuration;
+                return DifficultyRuntime.ApplyNamedPatternActiveDuration(_config.PatternActiveDuration);
 
             return 20f;
         }

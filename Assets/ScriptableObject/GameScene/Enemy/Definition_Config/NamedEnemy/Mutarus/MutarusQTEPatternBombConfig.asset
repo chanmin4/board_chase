@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7287c6cda7b384741bdcc5e60310a43b, type: 3}
+  m_Name: MutarusQTEPatternBombConfig
+  m_EditorClassIdentifier: 
+  _usePeriodicArcBomb: 1
+  _arcBombPrefab: {fileID: -2512961943983989550, guid: 49cb5a675738a75408f64dc02476a312, type: 3}
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _fireBombOnEnter: 0
+  _firstBombDelay: 4
+  _bombInterval: 4
+  _bombTravelTime: 2.5
+  _bombArcHeight: 20
+  _bombSpawnYOffset: 0.5
+  _bombTargetYOffset: 0
+  _fallbackTargetDistance: 6
+  _targetRandomRadius: 0
+  _damageRadius: 1.5
+  _impactHealthDamage: 15
+  _impactInfectionDamage: 15
+  _damageTargetMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _triggerInteraction: 2
+  _paintChannel: 2
+  _paintRadiusWorld: 7
+  _paintPriority: 0
+  _poisonPuddleDamageConfig: {fileID: 11400000, guid: ac1b15ddde24d5a48b3f50d2702b5b79, type: 2}
+  _triggerAnimatorOnBomb: 1
+  _bombAnimatorTrigger: PatternBomb

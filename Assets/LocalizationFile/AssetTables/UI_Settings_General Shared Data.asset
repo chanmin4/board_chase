@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI_Settings_General Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: UI_Settings_General
+  m_TableCollectionNameGuidString: ba013e3bb72d0f64c8bfe2747ab3029d
+  m_Entries:
+  - m_Id: 192351789056
+    m_Key: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 231602085888
+    m_Key: Resolution
+    m_Metadata:
+      m_Items: []
+  - m_Id: 245380374528
+    m_Key: Display Mode
+    m_Metadata:
+      m_Items: []
+  - m_Id: 283657592832
+    m_Key: Aim Sensitivity
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 2095968652238782690
+  references:
+    version: 2
+    RefIds:
+    - rid: 2095968652238782690
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1779159105345

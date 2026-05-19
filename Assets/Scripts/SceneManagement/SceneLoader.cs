@@ -5,92 +5,128 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// This class manages the scene loading and unloading.
-/// </summary>
 public class SceneLoader : MonoBehaviour
 {
-	[SerializeField] private GameSceneSO _gameplayScene = default;
-	[SerializeField] private InputReader _inputReader = default;
+    [SerializeField] private GameSceneSO _gameplayScene = default;
+    [SerializeField] private InputReader _inputReader = default;
 
-	[Header("Listening to")]
-	[SerializeField] private LoadEventChannelSO _loadMenu = default;
+    [Header("Listening to")]
+    [SerializeField] private LoadEventChannelSO _loadMenu = default;
     [SerializeField] private LoadEventChannelSO _loadGameScene = default;
-	[SerializeField] private LoadEventChannelSO _coldStartupLocation = default;
+    [SerializeField] private LoadEventChannelSO _coldStartupLocation = default;
 
-	[Header("Broadcasting on")]
-	[SerializeField] private BoolEventChannelSO _toggleLoadingScreen = default;
-	[SerializeField] private VoidEventChannelSO _onSceneReady = default; //picked up by the SpawnSystem
-	[SerializeField] private FadeChannelSO _fadeRequestChannel = default;
+    [Header("Game Over")]
+    [SerializeField] private VoidEventChannelSO _gameOverChannel;
+    [SerializeField] private GameSceneSO _gameOverScene;
+    [SerializeField] private float _gameOverDeathDelay = 2f;
+    [SerializeField] private bool _showGameOverLoadingScreen = false;
 
-	private AsyncOperationHandle<SceneInstance> _loadingOperationHandle;
-	private AsyncOperationHandle<SceneInstance> _gameplayManagerLoadingOpHandle;
+    [Header("Broadcasting on")]
+    [SerializeField] private BoolEventChannelSO _toggleLoadingScreen = default;
+    [SerializeField] private VoidEventChannelSO _onSceneReady = default;
+    [SerializeField] private FadeChannelSO _fadeRequestChannel = default;
 
-	//Parameters coming from scene loading requests
-	private GameSceneSO _sceneToLoad;
-	private GameSceneSO _currentlyLoadedScene;
-	private bool _showLoadingScreen;
+    private AsyncOperationHandle<SceneInstance> _loadingOperationHandle;
+    private AsyncOperationHandle<SceneInstance> _gameplayManagerLoadingOpHandle;
 
-	private SceneInstance _gameplayManagerSceneInstance = new SceneInstance();
-	private float _fadeDuration = .5f;
-	private bool _isLoading = false; //To prevent a new loading request while already loading a new scene
+    private GameSceneSO _sceneToLoad;
+    private GameSceneSO _currentlyLoadedScene;
+    private bool _showLoadingScreen;
 
-	private void OnEnable()
-	{
-		_loadMenu.OnLoadingRequested += LoadMenu;
-         _loadGameScene.OnLoadingRequested += LoadGameScene;
-         #if UNITY_EDITOR
-		_coldStartupLocation.OnLoadingRequested += CurrentSceneColdStartup;
-#endif
-	}
+    private SceneInstance _gameplayManagerSceneInstance = new SceneInstance();
+    private float _fadeDuration = .5f;
+    private bool _isLoading;
+    private bool _raiseSceneReadyAfterLoad = true;
+    private Coroutine _gameOverRoutine;
 
-	private void OnDisable()
-	{
-		_loadMenu.OnLoadingRequested -= LoadMenu;
-         _loadGameScene.OnLoadingRequested -= LoadGameScene;
-        #if UNITY_EDITOR
-		_coldStartupLocation.OnLoadingRequested -= CurrentSceneColdStartup;
-#endif
-	}
+    private void OnEnable()
+    {
+        if (_loadMenu != null)
+            _loadMenu.OnLoadingRequested += LoadMenu;
+
+        if (_loadGameScene != null)
+            _loadGameScene.OnLoadingRequested += LoadGameScene;
+
+        if (_gameOverChannel != null)
+            _gameOverChannel.OnEventRaised += HandleGameOverRequested;
+
 #if UNITY_EDITOR
-	/// <summary>
-	/// This special loading function is only used in the editor, when the developer presses Play in a Location scene, without passing by Initialisation.
-	/// </summary>
-	private void CurrentSceneColdStartup(GameSceneSO currentlyOpenedLocation, bool showLoadingScreen, bool fadeScreen)
-	{
-		_currentlyLoadedScene = currentlyOpenedLocation;
-
-		if (_gameplayManagerSceneInstance.Scene == null || !_gameplayManagerSceneInstance.Scene.isLoaded)
-		{
-			_gameplayManagerLoadingOpHandle = _gameplayScene.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true);
-			_gameplayManagerLoadingOpHandle.Completed += OnColdStartupGameplayManagersLoaded;
-		}
-		else
-		{
-			StartGameplay();
-		}
-	}
-	private void OnColdStartupGameplayManagersLoaded(AsyncOperationHandle<SceneInstance> obj)
-	{
-		_gameplayManagerSceneInstance = obj.Result;
-		StartGameplay();
-	}
+        if (_coldStartupLocation != null)
+            _coldStartupLocation.OnLoadingRequested += CurrentSceneColdStartup;
 #endif
-	/// <summary>
-	/// This special loading function is only used in the editor, when the developer presses Play in a Location scene, without passing by Initialisation.
-	/// </summary>
-	private void LoadGameScene(GameSceneSO gameToLoad, bool showLoadingScreen, bool fadeScreen)
+    }
+
+    private void OnDisable()
+    {
+        if (_loadMenu != null)
+            _loadMenu.OnLoadingRequested -= LoadMenu;
+
+        if (_loadGameScene != null)
+            _loadGameScene.OnLoadingRequested -= LoadGameScene;
+
+        if (_gameOverChannel != null)
+            _gameOverChannel.OnEventRaised -= HandleGameOverRequested;
+
+#if UNITY_EDITOR
+        if (_coldStartupLocation != null)
+            _coldStartupLocation.OnLoadingRequested -= CurrentSceneColdStartup;
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void CurrentSceneColdStartup(GameSceneSO currentlyOpenedLocation, bool showLoadingScreen, bool fadeScreen)
+    {
+        _currentlyLoadedScene = currentlyOpenedLocation;
+
+        bool shouldLoadGameplayManager =
+            currentlyOpenedLocation != null &&
+            currentlyOpenedLocation.sceneType == GameSceneSO.GameSceneType.Location;
+
+        _raiseSceneReadyAfterLoad = shouldLoadGameplayManager;
+
+        // MainMenu 같은 Menu 씬을 에디터에서 바로 Play 했을 때는
+        // GamePlay 매니저 씬을 Additive 로드하지 않는다.
+        if (!shouldLoadGameplayManager)
+            return;
+
+        if (_gameplayManagerSceneInstance.Scene == null || !_gameplayManagerSceneInstance.Scene.isLoaded)
+        {
+            _gameplayManagerLoadingOpHandle =
+                _gameplayScene.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true);
+
+            _gameplayManagerLoadingOpHandle.Completed += OnColdStartupGameplayManagersLoaded;
+        }
+        else
+        {
+            StartGameplay();
+        }
+    }
+
+    private void OnColdStartupGameplayManagersLoaded(AsyncOperationHandle<SceneInstance> obj)
+    {
+        _gameplayManagerSceneInstance = obj.Result;
+        StartGameplay();
+    }
+#endif
+
+    private void LoadGameScene(GameSceneSO gameToLoad, bool showLoadingScreen, bool fadeScreen)
     {
         if (_isLoading)
             return;
-
+		RunResult.Clear();
         _sceneToLoad = gameToLoad;
         _showLoadingScreen = showLoadingScreen;
+        _raiseSceneReadyAfterLoad = true;
         _isLoading = true;
-        //In case we are coming from the main menu, we need to load the Gameplay manager scene first
-        if (_gameplayManagerSceneInstance.Scene == null || !_gameplayManagerSceneInstance.Scene.isLoaded)
+
+        bool needsGameplayManager = ShouldLoadGameplayManager(gameToLoad);
+
+        if (needsGameplayManager &&
+            (_gameplayManagerSceneInstance.Scene == null || !_gameplayManagerSceneInstance.Scene.isLoaded))
         {
-            _gameplayManagerLoadingOpHandle =_gameplayScene.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true);
+            _gameplayManagerLoadingOpHandle =
+                _gameplayScene.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true);
+
             _gameplayManagerLoadingOpHandle.Completed += OnGameplayManagersLoaded;
         }
         else
@@ -98,110 +134,169 @@ public class SceneLoader : MonoBehaviour
             StartCoroutine(UnloadPreviousScene());
         }
     }
+    private bool ShouldLoadGameplayManager(GameSceneSO scene)
+    {
+        return scene != null &&
+            scene.sceneType == GameSceneSO.GameSceneType.Location;
+    }
+    private void OnGameplayManagersLoaded(AsyncOperationHandle<SceneInstance> obj)
+    {
+        _gameplayManagerSceneInstance = _gameplayManagerLoadingOpHandle.Result;
+        StartCoroutine(UnloadPreviousScene());
+    }
 
-	/// <summary>
-	/// This function loads the location scenes passed as array parameter
-	/// </summary>
-	private void OnGameplayManagersLoaded(AsyncOperationHandle<SceneInstance> obj)
-	{
-		_gameplayManagerSceneInstance = _gameplayManagerLoadingOpHandle.Result;
+    private void LoadMenu(GameSceneSO menuToLoad, bool showLoadingScreen, bool fadeScreen)
+    {
+        if (_isLoading)
+            return;
 
-		StartCoroutine(UnloadPreviousScene());
-	}
+        _sceneToLoad = menuToLoad;
+        _showLoadingScreen = showLoadingScreen;
+        _raiseSceneReadyAfterLoad = false;
+        _isLoading = true;
 
-	/// <summary>
-	/// Prepares to load the main menu scene, first removing the Gameplay scene in case the game is coming back from gameplay to menus.
-	/// </summary>
-	private void LoadMenu(GameSceneSO menuToLoad, bool showLoadingScreen, bool fadeScreen)
-	{
-		//Prevent a double-loading, for situations where the player falls in two Exit colliders in one frame
-		if (_isLoading)
-			return;
+        if (_gameplayManagerSceneInstance.Scene != null &&
+            _gameplayManagerSceneInstance.Scene.isLoaded &&
+            _gameplayManagerLoadingOpHandle.IsValid())
+        {
+            Addressables.UnloadSceneAsync(_gameplayManagerLoadingOpHandle, true);
+            _gameplayManagerSceneInstance = new SceneInstance();
+        }
 
-		_sceneToLoad = menuToLoad;
-		_showLoadingScreen = showLoadingScreen;
-		_isLoading = true;
+        StartCoroutine(UnloadPreviousScene());
+    }
 
-		//In case we are coming from a Location back to the main menu, we need to get rid of the persistent Gameplay manager scene
-		if (_gameplayManagerSceneInstance.Scene != null
-			&& _gameplayManagerSceneInstance.Scene.isLoaded)
-			Addressables.UnloadSceneAsync(_gameplayManagerLoadingOpHandle, true);
+    private void HandleGameOverRequested()
+    {
+        if (_isLoading || _gameOverRoutine != null)
+            return;
 
-		StartCoroutine(UnloadPreviousScene());
-	}
+        _gameOverRoutine = StartCoroutine(LoadGameOverSceneRoutine());
+    }
 
-	/// <summary>
-	/// In both Location and Menu loading, this function takes care of removing previously loaded scenes.
-	/// </summary>
-	private IEnumerator UnloadPreviousScene()
-	{
-		_inputReader.DisableAllInput();
-		_fadeRequestChannel.FadeOut(_fadeDuration);
+    private IEnumerator LoadGameOverSceneRoutine()
+    {
+        if (_gameOverScene == null)
+        {
+            Debug.LogError("[SceneLoader] GameOverScene is missing.", this);
+            _gameOverRoutine = null;
+            yield break;
+        }
 
-		yield return new WaitForSeconds(_fadeDuration);
+        _isLoading = true;
+        _raiseSceneReadyAfterLoad = false;
+        _sceneToLoad = _gameOverScene;
+        _showLoadingScreen = _showGameOverLoadingScreen;
 
-		if (_currentlyLoadedScene != null) //would be null if the game was started in Initialisation
-		{
-			if (_currentlyLoadedScene.sceneReference.OperationHandle.IsValid())
-			{
-				//Unload the scene through its AssetReference, i.e. through the Addressable system
-				_currentlyLoadedScene.sceneReference.UnLoadScene();
-			}
+        if (_inputReader != null)
+            _inputReader.DisableAllInput();
+
+        if (_gameOverDeathDelay > 0f)
+            yield return new WaitForSeconds(_gameOverDeathDelay);
+
+        if (_fadeRequestChannel != null)
+            _fadeRequestChannel.FadeOut(_fadeDuration);
+
+        yield return new WaitForSeconds(_fadeDuration);
+
+        if (_gameplayManagerSceneInstance.Scene != null &&
+            _gameplayManagerSceneInstance.Scene.isLoaded &&
+            _gameplayManagerLoadingOpHandle.IsValid())
+        {
+            Addressables.UnloadSceneAsync(_gameplayManagerLoadingOpHandle, true);
+            _gameplayManagerSceneInstance = new SceneInstance();
+        }
+
+        if (_currentlyLoadedScene != null)
+        {
+            if (_currentlyLoadedScene.sceneReference.OperationHandle.IsValid())
+            {
+                _currentlyLoadedScene.sceneReference.UnLoadScene();
+            }
 #if UNITY_EDITOR
-			else
-			{
-				//Only used when, after a "cold start", the player moves to a new scene
-				//Since the AsyncOperationHandle has not been used (the scene was already open in the editor),
-				//the scene needs to be unloaded using regular SceneManager instead of as an Addressable
-				SceneManager.UnloadSceneAsync(_currentlyLoadedScene.sceneReference.editorAsset.name);
-			}
+            else
+            {
+                SceneManager.UnloadSceneAsync(_currentlyLoadedScene.sceneReference.editorAsset.name);
+            }
 #endif
-		}
+        }
 
-		LoadNewScene();
-	}
+        LoadNewScene();
+        _gameOverRoutine = null;
+    }
 
-	/// <summary>
-	/// Kicks off the asynchronous loading of a scene, either menu or Location.
-	/// </summary>
-	private void LoadNewScene()
-	{
-		if (_showLoadingScreen)
-		{
-			_toggleLoadingScreen.RaiseEvent(true);
-		}
+    private IEnumerator UnloadPreviousScene()
+    {
+        if (_inputReader != null)
+            _inputReader.DisableAllInput();
 
-		_loadingOperationHandle = _sceneToLoad.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true, 0);
-		_loadingOperationHandle.Completed += OnNewSceneLoaded;
-	}
+        if (_fadeRequestChannel != null)
+            _fadeRequestChannel.FadeOut(_fadeDuration);
 
-	private void OnNewSceneLoaded(AsyncOperationHandle<SceneInstance> obj)
-	{
-		//Save loaded scenes (to be unloaded at next load request)
-		_currentlyLoadedScene = _sceneToLoad;
+        yield return new WaitForSeconds(_fadeDuration);
 
-		Scene s = obj.Result.Scene;
-		SceneManager.SetActiveScene(s);
-		LightProbes.TetrahedralizeAsync();
+        if (_currentlyLoadedScene != null)
+        {
+            if (_currentlyLoadedScene.sceneReference.OperationHandle.IsValid())
+            {
+                _currentlyLoadedScene.sceneReference.UnLoadScene();
+            }
+#if UNITY_EDITOR
+            else
+            {
+                SceneManager.UnloadSceneAsync(_currentlyLoadedScene.sceneReference.editorAsset.name);
+            }
+#endif
+        }
 
-		_isLoading = false;
+        LoadNewScene();
+    }
 
-		if (_showLoadingScreen)
-			_toggleLoadingScreen.RaiseEvent(false);
+    private void LoadNewScene()
+    {
+        if (_sceneToLoad == null)
+        {
+            Debug.LogError("[SceneLoader] SceneToLoad is null.", this);
+            _isLoading = false;
+            return;
+        }
 
-		_fadeRequestChannel.FadeIn(_fadeDuration);
+        if (_showLoadingScreen && _toggleLoadingScreen != null)
+            _toggleLoadingScreen.RaiseEvent(true);
 
-		StartGameplay();
-	}
+        _loadingOperationHandle = _sceneToLoad.sceneReference.LoadSceneAsync(LoadSceneMode.Additive, true, 0);
+        _loadingOperationHandle.Completed += OnNewSceneLoaded;
+    }
 
-	private void StartGameplay()
-	{
-		_onSceneReady.RaiseEvent(); //Spawn system will spawn the PigChef in a gameplay scene
-	}
+    private void OnNewSceneLoaded(AsyncOperationHandle<SceneInstance> obj)
+    {
+        _currentlyLoadedScene = _sceneToLoad;
 
-	private void ExitGame()
-	{
-		Application.Quit();
-		Debug.Log("Exit!");
-	}
+        Scene scene = obj.Result.Scene;
+        SceneManager.SetActiveScene(scene);
+        LightProbes.TetrahedralizeAsync();
+
+        _isLoading = false;
+
+        if (_showLoadingScreen && _toggleLoadingScreen != null)
+            _toggleLoadingScreen.RaiseEvent(false);
+
+        if (_fadeRequestChannel != null)
+            _fadeRequestChannel.FadeIn(_fadeDuration);
+
+        if (_raiseSceneReadyAfterLoad)
+            StartGameplay();
+    }
+
+    private void StartGameplay()
+    {
+        if (_onSceneReady != null)
+            _onSceneReady.RaiseEvent();
+    }
+
+    private void ExitGame()
+    {
+        Application.Quit();
+        Debug.Log("Exit!");
+    }
 }

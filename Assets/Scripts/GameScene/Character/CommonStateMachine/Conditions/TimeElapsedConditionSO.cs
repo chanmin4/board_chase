@@ -6,6 +6,30 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class TimeElapsedConditionSO : StateConditionSO<TimeElapsedCondition>
 {
 	public float timerLength = .5f;
+	[SerializeField] private DifficultyTimerScaleMode _difficultyScaleMode = DifficultyTimerScaleMode.None;
+
+	public float ResolvedTimerLength
+	{
+		get
+		{
+			float length = Mathf.Max(0.01f, timerLength);
+
+			switch (_difficultyScaleMode)
+			{
+				case DifficultyTimerScaleMode.EnemyInfectionCast:
+					return DifficultyRuntime.ApplyEnemyInfectionCastDuration(length);
+
+				default:
+					return length;
+			}
+		}
+	}
+}
+
+public enum DifficultyTimerScaleMode
+{
+	None,
+	EnemyInfectionCast
 }
 
 public class TimeElapsedCondition : Condition
@@ -18,5 +42,5 @@ public class TimeElapsedCondition : Condition
 		_startTime = Time.time;
 	}
 
-	protected override bool Statement() => Time.time >= _startTime + _originSO.timerLength;
+	protected override bool Statement() => Time.time >= _startTime + _originSO.ResolvedTimerLength;
 }

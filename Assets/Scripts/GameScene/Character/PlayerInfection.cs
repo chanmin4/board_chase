@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class PlayerInfection : MonoBehaviour
 {
@@ -13,7 +13,8 @@ public class PlayerInfection : MonoBehaviour
 
     [Header("Broadcasting On")]
     [SerializeField] private PlayerHealthEventChannelSO _playerHealthChanged;
-    [SerializeField] private VoidEventChannelSO _deathEvent;
+    [FormerlySerializedAs("_deathEvent")]
+    [SerializeField] private VoidEventChannelSO _gameOverEvent; 
     [SerializeField] private PlayerInfectionEventChannelSO _playerInfectionReadyChannel;
 
     [Header("Listening To")]
@@ -51,10 +52,13 @@ public class PlayerInfection : MonoBehaviour
     }
 
     private float InfectionGainMultiplier =>
-        _difficultyRules != null ? _difficultyRules.PlayerInfectionGainMultiplier : 1f;
+        ActiveDifficultyRules != null ? ActiveDifficultyRules.PlayerInfectionGainMultiplier : 1f;
 
     private float InfectionRecoverMultiplier =>
-        _difficultyRules != null ? _difficultyRules.PlayerInfectionRecoverMultiplier : 1f;
+        ActiveDifficultyRules != null ? ActiveDifficultyRules.PlayerInfectionRecoverMultiplier : 1f;
+
+    private DifficultyRulesSO ActiveDifficultyRules =>
+        _difficultyRules != null ? _difficultyRules : DifficultyRuntime.CurrentRules;
 
     private void Reset()
     {
@@ -198,10 +202,13 @@ public class PlayerInfection : MonoBehaviour
 
         _isDead = true;
 
-        if (_damageable != null && !_damageable.IsDead)
-            _damageable.Kill();
-        else if (_deathEvent != null)
-            _deathEvent.RaiseEvent();
+        if (_damageable != null)
+            _damageable.IsDead = true;
+
+        if (_gameOverEvent != null)
+            _gameOverEvent.RaiseEvent();
+
+        PublishSnapshot();
     }
 
     private void PublishSnapshot()

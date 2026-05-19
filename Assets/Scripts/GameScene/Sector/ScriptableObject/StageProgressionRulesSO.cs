@@ -18,6 +18,10 @@ public class StageProgressionRulesSO : ScriptableObject
 
         [Min(0)]
         public int requiredPlayerOwnedCount = 1;
+        [Header("Reward")]
+        [Tooltip("This amount is restored to Infection Control when this stage objective is completed.")]
+        [Min(0f)]
+        public float infectionControlRecoverOnComplete = 0f;
 
         [Tooltip("조건이 깨졌을 때 타이머를 다시 처음으로 돌릴지 여부. OFF면 일시정지처럼 멈춤.")]
         public bool resetTimerWhenRequirementLost=false;

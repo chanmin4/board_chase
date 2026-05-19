@@ -7,48 +7,28 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Named Enemy Actions/Fire Projectile Burst")]
 public class NamedEnemyFireProjectileBurstActionSO : StateActionSO<NamedEnemyFireProjectileBurstAction>
 {
-    [Header("Projectile")]
-    [SerializeField] private EnemyProjectile _projectilePrefab;
-    [SerializeField, Min(0.01f)] private float _projectileSpeed = 8f;
-    [SerializeField, Min(0f)] private float _healthDamage = 10f;
-    [SerializeField, Min(0f)] private float _infectionDamage = 5f;
-    [SerializeField, Min(0.001f)] private float _projectileCastRadius = 0.2f;
-    [SerializeField, Min(0.01f)] private float _projectileLifetime = 5f;
-    [SerializeField] private float _projectileSpawnYOffset = 0.2f;
+    [Header("Definition Config")]
+    [SerializeField] private NamedProjectileBurstConfigSO _definitionConfig;
 
-    [Header("Burst")]
-    [SerializeField, Min(1)] private int _burstCount = 1;
-    [SerializeField, Min(0f)] private float _burstInterval = 0.12f;
-    [SerializeField, Min(0f)] private float _randomSpreadAngle = 0f;
-    [SerializeField] private bool _aimEachShotAtCurrentTarget = true;
+    public bool HasDefinitionConfig => _definitionConfig != null;
 
-    [Header("Hit")]
-    [SerializeField] private LayerMask _damageTargetMask;
-    [SerializeField] private LayerMask _impactMask;
-    [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Collide;
-
-    [Header("Paint")]
-    [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Virus;
-    [SerializeField, Min(0f)] private float _paintRadiusWorld = 0f;
-    [SerializeField] private int _paintPriority = 0;
-
-    public EnemyProjectile ProjectilePrefab => _projectilePrefab;
-    public float ProjectileSpeed => _projectileSpeed;
-    public float HealthDamage => _healthDamage;
-    public float InfectionDamage => _infectionDamage;
-    public float ProjectileCastRadius => _projectileCastRadius;
-    public float ProjectileLifetime => _projectileLifetime;
-    public float ProjectileSpawnYOffset => _projectileSpawnYOffset;
-    public int BurstCount => _burstCount;
-    public float BurstInterval => _burstInterval;
-    public float RandomSpreadAngle => _randomSpreadAngle;
-    public bool AimEachShotAtCurrentTarget => _aimEachShotAtCurrentTarget;
-    public LayerMask DamageTargetMask => _damageTargetMask;
-    public LayerMask ImpactMask => _impactMask;
-    public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
-    public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
-    public float PaintRadiusWorld => _paintRadiusWorld;
-    public int PaintPriority => _paintPriority;
+    public EnemyProjectile ProjectilePrefab => _definitionConfig.ProjectilePrefab;
+    public float ProjectileSpeed => _definitionConfig.ProjectileSpeed;
+    public float HealthDamage => _definitionConfig.HealthDamage;
+    public float InfectionDamage => _definitionConfig.InfectionDamage;
+    public float ProjectileCastRadius => _definitionConfig.ProjectileCastRadius;
+    public float ProjectileLifetime => _definitionConfig.ProjectileLifetime;
+    public float ProjectileSpawnYOffset => _definitionConfig.ProjectileSpawnYOffset;
+    public int BurstCount => _definitionConfig.BurstCount;
+    public float BurstInterval => _definitionConfig.BurstInterval;
+    public float RandomSpreadAngle => _definitionConfig.RandomSpreadAngle;
+    public bool AimEachShotAtCurrentTarget => _definitionConfig.AimEachShotAtCurrentTarget;
+    public LayerMask DamageTargetMask => _definitionConfig.DamageTargetMask;
+    public LayerMask ImpactMask => _definitionConfig.ImpactMask;
+    public QueryTriggerInteraction TriggerInteraction => _definitionConfig.TriggerInteraction;
+    public MaskRenderManager.PaintChannel PaintChannel => _definitionConfig.PaintChannel;
+    public float PaintRadiusWorld => _definitionConfig.PaintRadiusWorld;
+    public int PaintPriority => _definitionConfig.PaintPriority;
 }
 
 public class NamedEnemyFireProjectileBurstAction : StateAction
@@ -60,6 +40,7 @@ public class NamedEnemyFireProjectileBurstAction : StateAction
     private int _firedCount;
     private float _timer;
     private Vector3 _cachedDirection;
+    private bool _hasConfig;
 
     public override void Awake(StateMachine stateMachine)
     {
@@ -70,15 +51,25 @@ public class NamedEnemyFireProjectileBurstAction : StateAction
 
     public override void OnStateEnter()
     {
+        _hasConfig = _config.HasDefinitionConfig;
         _firedCount = 0;
         _timer = 0f;
         _cachedDirection = ResolveDirection();
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[NamedEnemyFireProjectileBurstAction] Definition Config is missing.", _enemy);
+            return;
+        }
 
         FireOne();
     }
 
     public override void OnUpdate()
     {
+        if (!_hasConfig)
+            return;
+
         if (_firedCount >= _config.BurstCount)
             return;
 

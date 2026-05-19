@@ -23,14 +23,17 @@ public static class FileManager
 	public static bool LoadFromFile(string fileName, out string result)
 	{
 		var fullPath = Path.Combine(Application.persistentDataPath, fileName);
-		if(!File.Exists(fullPath))
+
+		if (!File.Exists(fullPath))
 		{
-			File.WriteAllText(fullPath, ""); 
+			result = "";
+			return false;
 		}
+
 		try
 		{
 			result = File.ReadAllText(fullPath);
-			return true;
+			return !string.IsNullOrWhiteSpace(result);
 		}
 		catch (Exception e)
 		{

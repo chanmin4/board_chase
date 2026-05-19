@@ -13,24 +13,4 @@ MonoBehaviour:
   m_Name: MutarusFireProjectileBurstAction
   m_EditorClassIdentifier: 
   description: 
-  _projectilePrefab: {fileID: -2747863463967489409, guid: 38ccd250f9e7ad4418e6f9b6202a459c, type: 3}
-  _projectileSpeed: 8
-  _healthDamage: 10
-  _infectionDamage: 5
-  _projectileCastRadius: 0.2
-  _projectileLifetime: 5
-  _projectileSpawnYOffset: 0.2
-  _burstCount: 1
-  _burstInterval: 0.12
-  _randomSpreadAngle: 0
-  _aimEachShotAtCurrentTarget: 1
-  _damageTargetMask:
-    serializedVersion: 2
-    m_Bits: 8
-  _impactMask:
-    serializedVersion: 2
-    m_Bits: 128
-  _triggerInteraction: 2
-  _paintChannel: 1
-  _paintRadiusWorld: 3
-  _paintPriority: 0
+  _definitionConfig: {fileID: 11400000, guid: ab9734f052c84f9cba7dcbff47899d66, type: 2}
