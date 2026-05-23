@@ -163,6 +163,51 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Slot1"",
+                    ""type"": ""Button"",
+                    ""id"": ""f6902011-22c3-4df6-bd67-e314527f904d"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Slot2"",
+                    ""type"": ""Button"",
+                    ""id"": ""f602cee8-974a-4363-b5b7-4a4392192570"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Slot3"",
+                    ""type"": ""Button"",
+                    ""id"": ""644e87dc-b3d8-40b4-96ca-1333b336c006"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Slot4"",
+                    ""type"": ""Button"",
+                    ""id"": ""231c05f1-0363-4d8f-8506-35e00e075b2f"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Slot5"",
+                    ""type"": ""Button"",
+                    ""id"": ""6f0dbc3d-a4f0-4af4-9526-23d22ee1dd5a"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -394,6 +439,61 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""UpgradeStats"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""11759156-d6bf-4498-8849-c72a4ed73cdf"",
+                    ""path"": ""<Keyboard>/1"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Slot1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""5b9bcd59-4ac4-46a2-9c56-96dcd6b57a17"",
+                    ""path"": ""<Keyboard>/2"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Slot2"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ee4fa2e9-df69-405f-8072-57de61f88af2"",
+                    ""path"": ""<Keyboard>/3"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Slot3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e0d7a267-83ad-4506-b923-082feeca7d24"",
+                    ""path"": ""<Keyboard>/4"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Slot4"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""8d7cbc01-3f12-4c2d-b219-8b14b6bf145a"",
+                    ""path"": ""<Keyboard>/5"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Slot5"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -989,6 +1089,11 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         m_Gameplay_Dash = m_Gameplay.FindAction("Dash", throwIfNotFound: true);
         m_Gameplay_Reload = m_Gameplay.FindAction("Reload", throwIfNotFound: true);
         m_Gameplay_UpgradeStats = m_Gameplay.FindAction("UpgradeStats", throwIfNotFound: true);
+        m_Gameplay_Slot1 = m_Gameplay.FindAction("Slot1", throwIfNotFound: true);
+        m_Gameplay_Slot2 = m_Gameplay.FindAction("Slot2", throwIfNotFound: true);
+        m_Gameplay_Slot3 = m_Gameplay.FindAction("Slot3", throwIfNotFound: true);
+        m_Gameplay_Slot4 = m_Gameplay.FindAction("Slot4", throwIfNotFound: true);
+        m_Gameplay_Slot5 = m_Gameplay.FindAction("Slot5", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1090,6 +1195,11 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_Dash;
     private readonly InputAction m_Gameplay_Reload;
     private readonly InputAction m_Gameplay_UpgradeStats;
+    private readonly InputAction m_Gameplay_Slot1;
+    private readonly InputAction m_Gameplay_Slot2;
+    private readonly InputAction m_Gameplay_Slot3;
+    private readonly InputAction m_Gameplay_Slot4;
+    private readonly InputAction m_Gameplay_Slot5;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -1133,6 +1243,26 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/UpgradeStats".
         /// </summary>
         public InputAction @UpgradeStats => m_Wrapper.m_Gameplay_UpgradeStats;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Slot1".
+        /// </summary>
+        public InputAction @Slot1 => m_Wrapper.m_Gameplay_Slot1;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Slot2".
+        /// </summary>
+        public InputAction @Slot2 => m_Wrapper.m_Gameplay_Slot2;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Slot3".
+        /// </summary>
+        public InputAction @Slot3 => m_Wrapper.m_Gameplay_Slot3;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Slot4".
+        /// </summary>
+        public InputAction @Slot4 => m_Wrapper.m_Gameplay_Slot4;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Slot5".
+        /// </summary>
+        public InputAction @Slot5 => m_Wrapper.m_Gameplay_Slot5;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -1183,6 +1313,21 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
             @UpgradeStats.started += instance.OnUpgradeStats;
             @UpgradeStats.performed += instance.OnUpgradeStats;
             @UpgradeStats.canceled += instance.OnUpgradeStats;
+            @Slot1.started += instance.OnSlot1;
+            @Slot1.performed += instance.OnSlot1;
+            @Slot1.canceled += instance.OnSlot1;
+            @Slot2.started += instance.OnSlot2;
+            @Slot2.performed += instance.OnSlot2;
+            @Slot2.canceled += instance.OnSlot2;
+            @Slot3.started += instance.OnSlot3;
+            @Slot3.performed += instance.OnSlot3;
+            @Slot3.canceled += instance.OnSlot3;
+            @Slot4.started += instance.OnSlot4;
+            @Slot4.performed += instance.OnSlot4;
+            @Slot4.canceled += instance.OnSlot4;
+            @Slot5.started += instance.OnSlot5;
+            @Slot5.performed += instance.OnSlot5;
+            @Slot5.canceled += instance.OnSlot5;
         }
 
         /// <summary>
@@ -1218,6 +1363,21 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
             @UpgradeStats.started -= instance.OnUpgradeStats;
             @UpgradeStats.performed -= instance.OnUpgradeStats;
             @UpgradeStats.canceled -= instance.OnUpgradeStats;
+            @Slot1.started -= instance.OnSlot1;
+            @Slot1.performed -= instance.OnSlot1;
+            @Slot1.canceled -= instance.OnSlot1;
+            @Slot2.started -= instance.OnSlot2;
+            @Slot2.performed -= instance.OnSlot2;
+            @Slot2.canceled -= instance.OnSlot2;
+            @Slot3.started -= instance.OnSlot3;
+            @Slot3.performed -= instance.OnSlot3;
+            @Slot3.canceled -= instance.OnSlot3;
+            @Slot4.started -= instance.OnSlot4;
+            @Slot4.performed -= instance.OnSlot4;
+            @Slot4.canceled -= instance.OnSlot4;
+            @Slot5.started -= instance.OnSlot5;
+            @Slot5.performed -= instance.OnSlot5;
+            @Slot5.canceled -= instance.OnSlot5;
         }
 
         /// <summary>
@@ -1574,6 +1734,41 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnUpgradeStats(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Slot1" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSlot1(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Slot2" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSlot2(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Slot3" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSlot3(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Slot4" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSlot4(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Slot5" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSlot5(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

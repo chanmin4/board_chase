@@ -19,11 +19,13 @@ MonoBehaviour:
   _spawnYOffset: 0.5
   _targetYOffset: 0
   _fallbackDistance: 6
+  _disableProjectileCollidersDuringFlight: 1
   _fireOnEnter: 1
   _shotsPerCycle: 1
   _shotInterval: 0.2
   _maxCycles: 1
   _cycleInterval: 5
+  _damageRadiusSource: 1
   _damageRadius: 10
   _impactHealthDamage: 3
   _impactInfectionDamage: 3
@@ -31,6 +33,14 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   _triggerInteraction: 2
+  _showImpactTelegraph: 1
+  _telegraphRadiusSource: 1
+  _telegraphRadiusCustom: 1
+  _impactTelegraphStyle:
+    baseColor: {r: 0.9716981, g: 0.03208439, b: 0.03208439, a: 0.39215687}
+    fillColor: {r: 1, g: 0, b: 0, a: 0.78431374}
+    segments: 0
+    yOffset: 0
   _paintChannel: 2
   _paintRadiusWorld: 10
   _paintPriority: 0

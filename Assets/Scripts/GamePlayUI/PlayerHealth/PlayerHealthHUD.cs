@@ -87,8 +87,8 @@ public class PlayerHealthHUD : MonoBehaviour
             _infectionFill.fillAmount = infection01;
 
         if (_healthText != null)
-            _healthText.text = $"{Mathf.CeilToInt(currentHealth)} / {Mathf.CeilToInt(maxHealth)}";
+            _healthText.text = $"HP {Mathf.CeilToInt(currentHealth)} / {Mathf.CeilToInt(maxHealth)}";
         if (_infectionText != null)
-            _infectionText.text = $"{Mathf.CeilToInt(currentInfection)} / {Mathf.CeilToInt(currentHealth)}";
+            _infectionText.text = $"Infection {Mathf.CeilToInt(currentInfection)} / {Mathf.CeilToInt(currentHealth)}";
     }
 }

@@ -665,6 +665,7 @@ Transform:
   - {fileID: 9021104806671131695}
   - {fileID: 7673211414104050131}
   - {fileID: 5580490319925677580}
+  - {fileID: 4927479400259013869}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &8994133820209950284
@@ -1260,6 +1261,63 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _dashController: {fileID: 7596797448053067780}
   _leanTarget: {fileID: 1297113805532342119}
+--- !u!1 &8650138112814162672
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4927479400259013869}
+  - component: {fileID: 1078626520116574429}
+  m_Layer: 3
+  m_Name: PlayerBulletLoadoutruntime
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4927479400259013869
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8650138112814162672}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5546477128773306913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1078626520116574429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8650138112814162672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd87492fb561ae244bb4e36ef3f82ad5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _defaultAttackBullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
+  _defaultPaintBullet: {fileID: 11400000, guid: 9d354fefd2ce4cc449aca4599df4938f, type: 2}
+  _requestWeaponAmmoLoadoutSnapshotChannel: {fileID: 11400000, guid: 8049a0d03cad3e04cb6240a50c6dd3fe, type: 2}
+  _slotSwapRequestChannel: {fileID: 11400000, guid: f58135998ab7180419df1ebecaba8c5f, type: 2}
+  _slotSelectRequestChannel: {fileID: 11400000, guid: 70cac3adb70609d4cb00ea31b625c0e2, type: 2}
+  _shopPurchaseRequestChannel: {fileID: 11400000, guid: d63d5b59569b8244c95ebe84a60541dc, type: 2}
+  _shopPurchaseResultChannel: {fileID: 11400000, guid: 5f410b478643f4249a7336f6145eb215, type: 2}
+  _sellConfirmRequestChannel: {fileID: 11400000, guid: 818bb65a0358d4f47980008329da8de6, type: 2}
+  _sellResultChannel: {fileID: 11400000, guid: 6cfb32eb4af3e044eaa980bf7aa90edb, type: 2}
+  _weaponAmmoLoadoutEventChannel: {fileID: 11400000, guid: f00206524dca36646b430bebd122c0f6, type: 2}
+  _slotKeyActions: []
+  _defaultMagazineAmmo: 20
+  _selectedSlotIndex: 0
 --- !u!1 &8713701942454541855
 GameObject:
   m_ObjectHideFlags: 0

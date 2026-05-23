@@ -27,9 +27,24 @@ public class EnemyArcBombProjectile : MonoBehaviour
     private GameObject _source;
     private float _elapsed;
     private bool _initialized;
+    private bool _exploded;
+
+    private bool _disableCollidersDuringFlight;
+    private bool _showImpactTelegraph;
+    private float _impactTelegraphRadius;
+    private AreaAttackTelegraphStyle _impactTelegraphStyle;
+    private AreaAttackTelegraph _impactTelegraph;
+
+    private Collider[] _flightColliders;
 
     private readonly Collider[] _hits = new Collider[32];
     private readonly HashSet<Damageable> _damaged = new();
+    private readonly HashSet<PlayerInfection> _infected = new();
+
+    private void Awake()
+    {
+        _flightColliders = GetComponentsInChildren<Collider>(true);
+    }
 
     public void Init(
         Vector3 start,
@@ -46,7 +61,11 @@ public class EnemyArcBombProjectile : MonoBehaviour
         float paintRadiusWorld,
         int paintPriority,
         PoisonPuddleDamageConfigSO poisonPuddleDamageConfig,
-        GameObject source)
+        GameObject source,
+        bool disableCollidersDuringFlight,
+        bool showImpactTelegraph,
+        float impactTelegraphRadius,
+        AreaAttackTelegraphStyle impactTelegraphStyle)
     {
         _start = start;
         _target = target;
@@ -66,10 +85,21 @@ public class EnemyArcBombProjectile : MonoBehaviour
         _poisonPuddleDamageConfig = poisonPuddleDamageConfig;
 
         _source = source;
+        _disableCollidersDuringFlight = disableCollidersDuringFlight;
+        _showImpactTelegraph = showImpactTelegraph;
+        _impactTelegraphRadius = Mathf.Max(0f, impactTelegraphRadius);
+        _impactTelegraphStyle = impactTelegraphStyle.segments > 0
+            ? impactTelegraphStyle
+            : AreaAttackTelegraphStyle.Default;
+
         _elapsed = 0f;
         _initialized = true;
+        _exploded = false;
 
         transform.position = _start;
+
+        DisableFlightCollision();
+        SpawnImpactTelegraph();
     }
 
     private void Update()
@@ -95,11 +125,100 @@ public class EnemyArcBombProjectile : MonoBehaviour
         Destroy(gameObject);
     }
 
+    private void DisableFlightCollision()
+    {
+        if (!_disableCollidersDuringFlight)
+            return;
+
+        if (_flightColliders == null)
+            _flightColliders = GetComponentsInChildren<Collider>(true);
+
+        for (int i = 0; i < _flightColliders.Length; i++)
+        {
+            if (_flightColliders[i] != null)
+                _flightColliders[i].enabled = false;
+        }
+    }
+
+    private void SpawnImpactTelegraph()
+    {
+        if (!_showImpactTelegraph || _impactTelegraphRadius <= 0f)
+            return;
+
+        _impactTelegraph = AreaAttackTelegraph.SpawnCircle(
+            _target,
+            _impactTelegraphRadius,
+            _travelTime,
+            _impactTelegraphStyle,
+            transform.parent);
+    }
+
     private void Explode()
     {
+        if (_exploded)
+            return;
+
+        _exploded = true;
+
+        if (_impactTelegraph != null)
+        {
+            _impactTelegraph.CompleteAndDestroy();
+            _impactTelegraph = null;
+        }
+
+        ApplyImpactDamage();
         StampPaint();
         SpawnImpactParticle();
-        ApplyImpactDamage();
+    }
+
+    private void ApplyImpactDamage()
+    {
+        if (_damageRadius <= 0f || _damageTargetMask.value == 0)
+            return;
+
+        _damaged.Clear();
+        _infected.Clear();
+
+        int count = Physics.OverlapSphereNonAlloc(
+            _target,
+            _damageRadius,
+            _hits,
+            _damageTargetMask,
+            _triggerInteraction);
+
+        Transform sourceRoot = _source != null ? _source.transform.root : null;
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider hit = _hits[i];
+
+            if (hit == null)
+                continue;
+
+            if (sourceRoot != null && hit.transform.IsChildOf(sourceRoot))
+                continue;
+
+            Damageable damageable = hit.GetComponentInParent<Damageable>();
+
+            if (damageable != null &&
+                _damaged.Add(damageable) &&
+                _impactHealthDamage > 0f &&
+                damageable.CanReceiveDamage)
+            {
+                damageable.ReceiveAnAttack(_impactHealthDamage, _source);
+            }
+
+            PlayerInfection infection =
+                hit.GetComponent<PlayerInfection>() ??
+                hit.GetComponentInParent<PlayerInfection>();
+
+            if (infection != null &&
+                _infected.Add(infection) &&
+                _impactInfectionDamage > 0f)
+            {
+                infection.AddInfection(_impactInfectionDamage);
+            }
+        }
     }
 
     private void StampPaint()
@@ -112,11 +231,11 @@ public class EnemyArcBombProjectile : MonoBehaviour
             : null;
 
         if (manager == null)
-            manager = Object.FindAnyObjectByType<MaskRenderManager>();
+            manager = FindAnyObjectByType<MaskRenderManager>();
 
         if (manager == null)
             return;
-            
+
         if (_paintChannel == MaskRenderManager.PaintChannel.PoisonPuddle)
         {
             manager.RequestCircle(
@@ -152,46 +271,9 @@ public class EnemyArcBombProjectile : MonoBehaviour
         particle.Play(true);
     }
 
-    private void ApplyImpactDamage()
+    private void OnDestroy()
     {
-        if (_damageRadius <= 0f || _damageTargetMask.value == 0)
-            return;
-
-        _damaged.Clear();
-
-        int count = Physics.OverlapSphereNonAlloc(
-            _target,
-            _damageRadius,
-            _hits,
-            _damageTargetMask,
-            _triggerInteraction);
-
-        Transform sourceRoot = _source != null ? _source.transform.root : null;
-
-        for (int i = 0; i < count; i++)
-        {
-            Collider hit = _hits[i];
-
-            if (hit == null)
-                continue;
-
-            if (sourceRoot != null && hit.transform.IsChildOf(sourceRoot))
-                continue;
-
-            Damageable damageable = hit.GetComponentInParent<Damageable>();
-
-            if (damageable != null && _damaged.Add(damageable))
-            {
-                if (_impactHealthDamage > 0f && damageable.CanReceiveDamage)
-                    damageable.ReceiveAnAttack(_impactHealthDamage, _source);
-            }
-
-            PlayerInfection infection =
-                hit.GetComponent<PlayerInfection>() ??
-                hit.GetComponentInParent<PlayerInfection>();
-
-            if (infection != null && _impactInfectionDamage > 0f)
-                infection.AddInfection(_impactInfectionDamage);
-        }
+        if (!_exploded && _impactTelegraph != null)
+            _impactTelegraph.CompleteAndDestroy();
     }
 }

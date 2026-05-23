@@ -6,9 +6,13 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 {
     [Space]
 	[SerializeField] private GameStateSO _gameStateManager;
+	private bool _allowUpgradeStatsWhileGameplayDisabled;
+
 
     private GameInput _gameInput;
-	public event UnityAction DashEvent = delegate { };
+	
+	
+		public event UnityAction DashEvent = delegate { };
 	public event UnityAction DashCanceledEvent = delegate { };
 	public event UnityAction ShockwaveChargeEvent = delegate { };
 	public event UnityAction ShockwaveExpelEvent = delegate { };
@@ -29,6 +33,11 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	// Shared between menus and dialogues
 	public event UnityAction MoveSelectionEvent = delegate { };
 	// Menus
+	public event UnityAction Slot1Event = delegate { };
+	public event UnityAction Slot2Event = delegate { };
+	public event UnityAction Slot3Event = delegate { };
+	public event UnityAction Slot4Event = delegate { };
+	public event UnityAction Slot5Event = delegate { };
 	public event UnityAction MenuMouseMoveEvent = delegate { };
 	public event UnityAction MenuClickButtonEvent = delegate { };
 	public event UnityAction MenuUnpauseEvent = delegate { };
@@ -63,22 +72,51 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 
 	public void EnableGameplayInput()
 	{
+		_allowUpgradeStatsWhileGameplayDisabled = false;
+
 		_gameInput.UI.Disable();
 		_gameInput.Gameplay.Enable();
 	}
 
 	public void EnableMenuInput()
 	{
-		_gameInput.Gameplay.Disable();
+		_allowUpgradeStatsWhileGameplayDisabled = false;
 
+		ReleaseGameplayInputState();
+		_gameInput.Gameplay.Disable();
 		_gameInput.UI.Enable();
 	}
 
 	public void DisableAllInput()
 	{
+		_allowUpgradeStatsWhileGameplayDisabled = false;
+
+		ReleaseGameplayInputState();
 		_gameInput.Gameplay.Disable();
 		_gameInput.UI.Disable();
 	}
+
+	public void EnableUpgradePanelInput()
+	{
+		ReleaseGameplayInputState();
+
+		_gameInput.Gameplay.Disable();
+		_gameInput.UI.Enable();
+
+		_allowUpgradeStatsWhileGameplayDisabled = true;
+		_gameInput.Gameplay.UpgradeStats.Enable();
+	}
+
+	private void ReleaseGameplayInputState()
+	{
+		MoveEvent.Invoke(Vector2.zero);
+		AttackCanceledEvent.Invoke();
+		PaintCanceledEvent.Invoke();
+		DashCanceledEvent.Invoke();
+		ShockwaveCanceledEvent.Invoke();
+	}
+
+
     public bool LeftMouseDown() => Mouse.current.leftButton.isPressed;
     // ---------------- Gameplay ----------------
     public void OnMove(InputAction.CallbackContext context) {
@@ -126,17 +164,17 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	}
 	public void OnUpgradeStats(InputAction.CallbackContext context)
 	{
-		if (context.phase == InputActionPhase.Performed)
-		{
-			Debug.Log($"[InputReader] upgradestats performed. GameState={_gameStateManager.CurrentGameState}");
-		}
+		if (context.phase != InputActionPhase.Performed)
+			return;
 
-		if ((context.phase == InputActionPhase.Performed)
-			&& (_gameStateManager.CurrentGameState == GameState.Gameplay))
-		{
-			Debug.Log("[InputReader] upgradestats event invoked.");
-			UpgradeStatsEvent.Invoke();
-		}
+		bool canOpenOrClose =
+			_gameStateManager.CurrentGameState == GameState.Gameplay ||
+			_allowUpgradeStatsWhileGameplayDisabled;
+
+		if (!canOpenOrClose)
+			return;
+
+		UpgradeStatsEvent.Invoke();
 	}
     public void OnShockwave(InputAction.CallbackContext context)
 	{
@@ -163,7 +201,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		}
 	}
 
-public void OnReload(InputAction.CallbackContext context)
+	public void OnReload(InputAction.CallbackContext context)
 	{
 		switch (context.phase)
 		{
@@ -172,6 +210,51 @@ public void OnReload(InputAction.CallbackContext context)
 				break;
 		}
 	}
+	public void OnSlot1(InputAction.CallbackContext context)
+		{
+			switch (context.phase)
+			{
+				case InputActionPhase.Performed:
+					Slot1Event.Invoke();
+					break;
+			}
+		}
+		public void OnSlot2(InputAction.CallbackContext context)
+		{
+			switch (context.phase)
+			{
+				case InputActionPhase.Performed:
+					Slot2Event.Invoke();
+					break;
+			}
+		}
+				public void OnSlot3(InputAction.CallbackContext context)
+		{
+			switch (context.phase)
+			{
+				case InputActionPhase.Performed:
+					Slot3Event.Invoke();
+					break;
+			}
+		}
+				public void OnSlot4(InputAction.CallbackContext context)
+		{
+			switch (context.phase)
+			{
+				case InputActionPhase.Performed:
+					Slot4Event.Invoke();
+					break;
+			}
+		}
+		public void OnSlot5(InputAction.CallbackContext context)
+		{
+			switch (context.phase)
+			{
+				case InputActionPhase.Performed:
+					Slot5Event.Invoke();
+					break;
+			}
+		}
     // ---------------- Menu (UI) ----------------
     public void OnNavigate(InputAction.CallbackContext context) { }
     public void OnSubmit(InputAction.CallbackContext context) { } 

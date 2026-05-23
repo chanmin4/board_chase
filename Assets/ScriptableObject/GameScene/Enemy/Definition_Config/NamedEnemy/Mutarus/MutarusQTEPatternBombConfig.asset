@@ -16,14 +16,18 @@ MonoBehaviour:
   _arcBombPrefab: {fileID: -2512961943983989550, guid: 49cb5a675738a75408f64dc02476a312, type: 3}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
   _fireBombOnEnter: 0
-  _firstBombDelay: 4
-  _bombInterval: 4
+  _firstBombDelay: 3
+  _bombInterval: 5
+  _bombsPerBurst: 2
+  _bombShotInterval: 0.5
   _bombTravelTime: 2.5
   _bombArcHeight: 20
   _bombSpawnYOffset: 0.5
   _bombTargetYOffset: 0
   _fallbackTargetDistance: 6
   _targetRandomRadius: 0
+  _disableProjectileCollidersDuringFlight: 1
+  _damageRadiusSource: 1
   _damageRadius: 1.5
   _impactHealthDamage: 15
   _impactInfectionDamage: 15
@@ -31,9 +35,36 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   _triggerInteraction: 2
+  _showImpactTelegraph: 1
+  _telegraphRadiusSource: 1
+  _telegraphRadiusCustom: 1.5
+  _impactTelegraphStyle:
+    baseColor: {r: 1, g: 0, b: 0, a: 0.39215687}
+    fillColor: {r: 1, g: 0, b: 0, a: 0.78431374}
+    segments: 0
+    yOffset: 0
   _paintChannel: 2
   _paintRadiusWorld: 7
   _paintPriority: 0
   _poisonPuddleDamageConfig: {fileID: 11400000, guid: ac1b15ddde24d5a48b3f50d2702b5b79, type: 2}
+  _fireBombOnPatternFailed: 1
+  _failureArcBombPrefabOverride: {fileID: -2512961943983989550, guid: c9952a0af6827c4488726338a9be537a, type: 3}
+  _failureBombTargetSectorCenter: 1
+  _failureBombTravelTime: 4
+  _failureBombArcHeight: 10
+  _failureBombSpawnYOffset: 0.5
+  _failureBombTargetYOffset: 0
+  _failureDamageRadiusSource: 1
+  _failureDamageRadius: 25
+  _failureImpactHealthDamage: 25
+  _failureImpactInfectionDamage: 25
+  _failureTelegraphRadiusSource: 1
+  _failureTelegraphRadiusCustom: 5
+  _failurePaintChannel: 2
+  _failurePaintRadiusWorld: 40
+  _failurePaintPriority: 10
+  _failurePoisonPuddleDamageConfig: {fileID: 11400000, guid: ac1b15ddde24d5a48b3f50d2702b5b79, type: 2}
   _triggerAnimatorOnBomb: 1
   _bombAnimatorTrigger: PatternBomb
+  _triggerAnimatorOnFailureBomb: 1
+  _failureBombAnimatorTrigger: PatternFailedBomb

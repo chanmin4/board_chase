@@ -21,6 +21,11 @@ public class EnemyFireArcBombActionSO : StateActionSO<EnemyFireArcBombAction>
     public float TargetYOffset => _definitionConfig.TargetYOffset;
     public float FallbackDistance => _definitionConfig.FallbackDistance;
 
+    public bool DisableProjectileCollidersDuringFlight => _definitionConfig.DisableProjectileCollidersDuringFlight;
+    public bool ShowImpactTelegraph => _definitionConfig.ShowImpactTelegraph;
+    public float ImpactTelegraphRadius => _definitionConfig.ImpactTelegraphRadius;
+    public AreaAttackTelegraphStyle ImpactTelegraphStyle => _definitionConfig.ImpactTelegraphStyle;
+
     public bool FireOnEnter => _definitionConfig.FireOnEnter;
     public int ShotsPerCycle => _definitionConfig.ShotsPerCycle;
     public float ShotInterval => _definitionConfig.ShotInterval;
@@ -162,7 +167,11 @@ public class EnemyFireArcBombAction : StateAction
             _config.PaintRadiusWorld,
             _config.PaintPriority,
             _config.PoisonPuddleDamageConfig,
-            _enemy.gameObject);
+            _enemy.gameObject,
+            _config.DisableProjectileCollidersDuringFlight,
+            _config.ShowImpactTelegraph,
+            _config.ImpactTelegraphRadius,
+            _config.ImpactTelegraphStyle);
 
         _shotsInCurrentCycle++;
     }

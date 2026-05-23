@@ -48,6 +48,11 @@ public class VSplatterClickController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (Time.timeScale <= 0f)
+        {
+            _wasHoldingLastFrame = false;
+            return;
+        }
         if (_character == null || _animator == null || _aimAction == null)
             return;
 
