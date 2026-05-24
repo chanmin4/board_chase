@@ -2,16 +2,11 @@ using UnityEngine;
 
 /// <summary>
 /// Player bullet loadout runtime.
-/// Owns 5 ammo slots, slot selection, shop purchase placement, selling, and HUD snapshots.
-///
-/// Slot rules:
-/// Slot 1,2 = Attack
-/// Slot 3,4 = Paint
-/// Slot 5   = Special
-///
-/// Default bullets:
-/// Slot 1 = default attack bullet
-/// Slot 3 = default paint bullet
+/// Owns ammo slots, active bullet per ammo type, current magazine ammo,
+/// reserve ammo, shop purchase placement, selling, reload, and HUD snapshots.
+/// 
+/// Runtime refs are received by event channels.
+/// No GetComponent lookup for PlayerStatsRuntime.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerBulletLoadoutRuntime : MonoBehaviour
@@ -19,6 +14,7 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
     private const int SlotCount = 5;
     private const int DefaultAttackSlot = 0;
     private const int DefaultPaintSlot = 2;
+    private const int MissingStatsEmergencyMagazineSize = 1;
 
     private sealed class AmmoSlotState
     {
@@ -28,6 +24,8 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         public bool infiniteReserve;
         public bool requiredDefault;
         public int sellPricePerAmmo;
+
+        public int TotalAmmo => Mathf.Max(0, currentAmmo) + Mathf.Max(0, reserveAmmo);
 
         public void Clear()
         {
@@ -41,51 +39,45 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
     }
 
     [Header("Need Ref - Default Bullets")]
-    [Tooltip("Required. Automatically placed in slot 1. Must be AttackBulletSO.")]
     [SerializeField] private AttackBulletSO _defaultAttackBullet;
-
-    [Tooltip("Required. Automatically placed in slot 3. Must be PaintBulletSO.")]
     [SerializeField] private PaintBulletSO _defaultPaintBullet;
 
+    [Header("Need Ref - Runtime Ready")]
+    [SerializeField] private PlayerStatsRuntimeReadyEventChannelSO _statsRuntimeReadyChannel;
+    [SerializeField] private PlayerBulletLoadoutRuntimeReadyEventChannelSO _loadoutRuntimeReadyChannel;
+
     [Header("Need Ref - Event Channels")]
-    [Tooltip("HUD requests the current ammo loadout snapshot through this channel.")]
     [SerializeField] private VoidEventChannelSO _requestWeaponAmmoLoadoutSnapshotChannel;
-
-    [Tooltip("HUD drag/drop requests slot swaps through this channel.")]
     [SerializeField] private WeaponAmmoSlotSwapRequestEventChannelSO _slotSwapRequestChannel;
-
-    [Tooltip("Slot buttons or input may request slot selection through this channel. Value is zero-based slot index.")]
     [SerializeField] private IntEventChannelSO _slotSelectRequestChannel;
-
-    [Tooltip("Shop sends purchase requests here. This runtime places the purchased bullet into a valid empty slot.")]
     [SerializeField] private WeaponAmmoShopPurchaseRequestEventChannelSO _shopPurchaseRequestChannel;
-
-    [Tooltip("This runtime broadcasts purchase success/fail results here.")]
     [SerializeField] private WeaponAmmoShopPurchaseResultEventChannelSO _shopPurchaseResultChannel;
-
-    [Tooltip("Sell popup sends confirmed sell requests here.")]
     [SerializeField] private WeaponAmmoSellConfirmRequestEventChannelSO _sellConfirmRequestChannel;
-
-    [Tooltip("This runtime broadcasts sell success/fail results here.")]
     [SerializeField] private WeaponAmmoSellResultEventChannelSO _sellResultChannel;
-
-    [Tooltip("This runtime broadcasts the full ammo loadout snapshot to the HUD.")]
     [SerializeField] private WeaponAmmoLoadoutEventChannelSO _weaponAmmoLoadoutEventChannel;
 
     [Header("Don't Touch Ref Auto")]
-    [Tooltip("Runtime debug value only. Do not edit in Inspector.")]
-    [SerializeField] private int _selectedSlotIndex;
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
+    [SerializeField] private int _activeAttackSlotIndex = DefaultAttackSlot;
+    [SerializeField] private int _activePaintSlotIndex = DefaultPaintSlot;
+    [SerializeField] private int _activeSpecialSlotIndex = -1;
+    [SerializeField] private int _lastSelectedSlotIndex = DefaultAttackSlot;
 
     private AmmoSlotState[] _slots;
+    private bool _warnedMissingStatsRuntime;
 
-    public int SelectedSlotIndex => _selectedSlotIndex;
-
-    public BulletSO SelectedBullet =>
-        IsValidSlot(_selectedSlotIndex) ? _slots[_selectedSlotIndex].bullet : null;
-
-    private void Awake()
+    private int GetMagazineSize(BulletSO bullet)
     {
-        BuildRuntimeSlots();
+        if (_statsRuntime != null)
+            return Mathf.Max(1, _statsRuntime.ResolveMagazineSize(bullet));
+
+        if (!_warnedMissingStatsRuntime)
+        {
+            _warnedMissingStatsRuntime = true;
+            Debug.LogWarning("[PlayerBulletLoadoutRuntime] PlayerStatsRuntime is not ready. Using emergency magazine size.", this);
+        }
+
+        return MissingStatsEmergencyMagazineSize;
     }
 
     private void OnEnable()
@@ -105,7 +97,13 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         if (_sellConfirmRequestChannel != null)
             _sellConfirmRequestChannel.OnEventRaised += HandleSellConfirmRequested;
 
-        PublishSnapshot();
+        if (_statsRuntimeReadyChannel != null)
+        {
+            _statsRuntimeReadyChannel.OnEventRaised += HandleStatsRuntimeReady;
+
+            if (_statsRuntimeReadyChannel.HasCurrent)
+                HandleStatsRuntimeReady(_statsRuntimeReadyChannel.Current);
+        }
     }
 
     private void OnDisable()
@@ -124,24 +122,137 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
 
         if (_sellConfirmRequestChannel != null)
             _sellConfirmRequestChannel.OnEventRaised -= HandleSellConfirmRequested;
+
+        if (_statsRuntimeReadyChannel != null)
+            _statsRuntimeReadyChannel.OnEventRaised -= HandleStatsRuntimeReady;
+
+        if (_loadoutRuntimeReadyChannel != null)
+            _loadoutRuntimeReadyChannel.Clear(this);
+    }
+
+    private void HandleStatsRuntimeReady(PlayerStatsRuntime statsRuntime)
+    {
+        if (statsRuntime == null)
+            return;
+
+        _statsRuntime = statsRuntime;
+        _warnedMissingStatsRuntime = false;
+
+        if (_slots == null)
+            BuildRuntimeSlots();
+        else
+            ClampAllMagazineAmmo();
+
+        PublishSnapshot();
+
+        if (_loadoutRuntimeReadyChannel != null)
+            _loadoutRuntimeReadyChannel.RaiseEvent(this);
     }
 
     public bool SelectSlot(int slotIndex)
     {
+        if (!IsRuntimeReady() || !IsValidSlot(slotIndex))
+            return false;
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        if (slot.bullet == null)
+            return false;
+
+        SetActiveSlot(slot.bullet.AmmoType, slotIndex);
+        _lastSelectedSlotIndex = slotIndex;
+
+        PublishSnapshot();
+        return true;
+    }
+
+    public bool HasLoadedAmmo(BulletAmmoType ammoType)
+    {
+        if (!IsRuntimeReady())
+            return false;
+
+        int slotIndex = GetActiveSlotIndex(ammoType);
+
         if (!IsValidSlot(slotIndex))
             return false;
 
-        if (_slots[slotIndex].bullet == null)
+        AmmoSlotState slot = _slots[slotIndex];
+
+        return slot.bullet != null &&
+               slot.bullet.AmmoType == ammoType &&
+               slot.currentAmmo > 0;
+    }
+    public bool TryGetActiveAttackBullet(out AttackBulletSO bullet)
+    {
+        bullet = GetActiveBullet(BulletAmmoType.Attack) as AttackBulletSO;
+        return bullet != null;
+    }
+
+    public bool TryGetActivePaintBullet(out PaintBulletSO bullet)
+    {
+        bullet = GetActiveBullet(BulletAmmoType.Paint) as PaintBulletSO;
+        return bullet != null;
+    }
+
+    public bool TryConsumeAttackAmmo(int amount, out AttackBulletSO bullet)
+    {
+        bullet = null;
+
+        if (!TryConsumeAmmo(BulletAmmoType.Attack, amount, out BulletSO consumedBullet))
             return false;
 
-        _selectedSlotIndex = slotIndex;
+        bullet = consumedBullet as AttackBulletSO;
+        return bullet != null;
+    }
+
+    public bool TryConsumePaintAmmo(int amount, out PaintBulletSO bullet)
+    {
+        bullet = null;
+
+        if (!TryConsumeAmmo(BulletAmmoType.Paint, amount, out BulletSO consumedBullet))
+            return false;
+
+        bullet = consumedBullet as PaintBulletSO;
+        return bullet != null;
+    }
+
+    private bool TryConsumeAmmo(BulletAmmoType ammoType, int amount, out BulletSO bullet)
+    {
+        bullet = null;
+
+        if (!IsRuntimeReady() || amount <= 0)
+            return false;
+
+        int slotIndex = GetActiveSlotIndex(ammoType);
+
+        if (!IsValidSlot(slotIndex))
+            return false;
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        if (slot.bullet == null || slot.bullet.AmmoType != ammoType)
+            return false;
+
+        if (slot.currentAmmo < amount)
+            return false;
+
+        slot.currentAmmo -= amount;
+        bullet = slot.bullet;
+
+        if (!slot.infiniteReserve && slot.currentAmmo <= 0 && slot.reserveAmmo <= 0)
+            slot.Clear();
+
+        EnsureActiveSlotsValid();
         PublishSnapshot();
 
-        return true;
+        return bullet != null;
     }
 
     public bool TrySwapSlots(int fromSlotIndex, int toSlotIndex)
     {
+        if (!IsRuntimeReady())
+            return false;
+
         if (!IsValidSlot(fromSlotIndex) || !IsValidSlot(toSlotIndex))
             return false;
 
@@ -166,42 +277,80 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         (_slots[fromSlotIndex], _slots[toSlotIndex]) =
             (_slots[toSlotIndex], _slots[fromSlotIndex]);
 
-        if (_selectedSlotIndex == fromSlotIndex)
-            _selectedSlotIndex = toSlotIndex;
-        else if (_selectedSlotIndex == toSlotIndex)
-            _selectedSlotIndex = fromSlotIndex;
+        SwapActiveIndex(ref _activeAttackSlotIndex, fromSlotIndex, toSlotIndex);
+        SwapActiveIndex(ref _activePaintSlotIndex, fromSlotIndex, toSlotIndex);
+        SwapActiveIndex(ref _activeSpecialSlotIndex, fromSlotIndex, toSlotIndex);
+        SwapActiveIndex(ref _lastSelectedSlotIndex, fromSlotIndex, toSlotIndex);
 
+        EnsureActiveSlotsValid();
         PublishSnapshot();
+
         return true;
     }
 
-    public bool TryConsumeSelectedAmmo(int amount = 1)
+    private bool CanReloadSlot(int slotIndex)
     {
-        if (!IsValidSlot(_selectedSlotIndex))
+        if (!IsValidSlot(slotIndex))
             return false;
 
-        AmmoSlotState slot = _slots[_selectedSlotIndex];
+        AmmoSlotState slot = _slots[slotIndex];
 
-        if (slot.bullet == null || amount <= 0)
+        if (slot.bullet == null)
+            return false;
+
+        int magazineSize = GetMagazineSize(slot.bullet);
+
+        if (slot.currentAmmo >= magazineSize)
+            return false;
+
+        return slot.infiniteReserve || slot.reserveAmmo > 0;
+    }
+
+    private bool ReloadSlot(int slotIndex)
+    {
+        if (!CanReloadSlot(slotIndex))
+            return false;
+
+        AmmoSlotState slot = _slots[slotIndex];
+        int magazineSize = GetMagazineSize(slot.bullet);
+        int needed = Mathf.Max(0, magazineSize - slot.currentAmmo);
+
+        if (needed <= 0)
             return false;
 
         if (slot.infiniteReserve)
+        {
+            slot.currentAmmo = magazineSize;
             return true;
+        }
 
-        if (slot.currentAmmo < amount)
+        int loaded = Mathf.Min(needed, slot.reserveAmmo);
+
+        if (loaded <= 0)
             return false;
 
-        slot.currentAmmo -= amount;
-        PublishSnapshot();
+        slot.currentAmmo += loaded;
+        slot.reserveAmmo -= loaded;
 
         return true;
     }
 
-    public void ReloadSelectedSlot()
+    private BulletSO GetActiveBullet(BulletAmmoType ammoType)
     {
-        // Magazine size is no longer owned by this runtime.
-        // Later, connect this to player stats or bullet ammo config.
-        PublishSnapshot();
+        if (!IsRuntimeReady())
+            return null;
+
+        int slotIndex = GetActiveSlotIndex(ammoType);
+
+        if (!IsValidSlot(slotIndex))
+            return null;
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        if (slot.bullet == null || slot.bullet.AmmoType != ammoType)
+            return null;
+
+        return slot.bullet;
     }
 
     private void BuildRuntimeSlots()
@@ -214,7 +363,10 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         PlaceRequiredDefault(DefaultAttackSlot, _defaultAttackBullet);
         PlaceRequiredDefault(DefaultPaintSlot, _defaultPaintBullet);
 
-        _selectedSlotIndex = FindFirstNonEmptySlot();
+        _activeAttackSlotIndex = DefaultAttackSlot;
+        _activePaintSlotIndex = DefaultPaintSlot;
+        _activeSpecialSlotIndex = FindFirstSlotOfType(BulletAmmoType.Special);
+        _lastSelectedSlotIndex = DefaultAttackSlot;
     }
 
     private void PlaceRequiredDefault(int slotIndex, BulletSO bullet)
@@ -231,9 +383,10 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         }
 
         AmmoSlotState slot = _slots[slotIndex];
+        int magazineSize = GetMagazineSize(bullet);
 
         slot.bullet = bullet;
-        slot.currentAmmo = 0;
+        slot.currentAmmo = magazineSize;
         slot.reserveAmmo = 0;
         slot.infiniteReserve = true;
         slot.requiredDefault = true;
@@ -252,6 +405,12 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
 
     private void HandleShopPurchaseRequested(WeaponAmmoShopPurchaseRequest request)
     {
+        if (!IsRuntimeReady())
+        {
+            RaisePurchaseResult(request, false, -1, "Ammo runtime is not ready.");
+            return;
+        }
+
         if (request.bullet == null)
         {
             RaisePurchaseResult(request, false, -1, "Bullet is missing.");
@@ -265,17 +424,21 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         }
 
         int bundleAmount = Mathf.Max(1, request.bundleAmount);
+        int magazineSize = GetMagazineSize(request.bullet);
 
         AmmoSlotState slot = _slots[slotIndex];
 
         slot.bullet = request.bullet;
-        slot.currentAmmo = bundleAmount;
-        slot.reserveAmmo = 0;
+        slot.currentAmmo = Mathf.Min(magazineSize, bundleAmount);
+        slot.reserveAmmo = Mathf.Max(0, bundleAmount - slot.currentAmmo);
         slot.infiniteReserve = false;
         slot.requiredDefault = false;
         slot.sellPricePerAmmo = Mathf.Max(
             1,
             Mathf.FloorToInt(request.totalPrice * request.sellPriceRate / bundleAmount));
+
+        SetActiveSlot(request.bullet.AmmoType, slotIndex);
+        _lastSelectedSlotIndex = slotIndex;
 
         PublishSnapshot();
 
@@ -288,6 +451,12 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
 
     private void HandleSellConfirmRequested(WeaponAmmoSellConfirmRequest request)
     {
+        if (!IsRuntimeReady())
+        {
+            RaiseSellResult(false, request.slotIndex, 0, 0, "Ammo runtime is not ready.");
+            return;
+        }
+
         if (!IsValidSlot(request.slotIndex))
         {
             RaiseSellResult(false, request.slotIndex, 0, 0, "Invalid ammo slot.");
@@ -308,7 +477,7 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
             return;
         }
 
-        int totalAmmo = slot.currentAmmo + slot.reserveAmmo;
+        int totalAmmo = slot.TotalAmmo;
 
         if (totalAmmo <= 0)
         {
@@ -331,9 +500,7 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         if (slot.currentAmmo <= 0 && slot.reserveAmmo <= 0)
             slot.Clear();
 
-        if (!IsValidSlot(_selectedSlotIndex) || _slots[_selectedSlotIndex].bullet == null)
-            _selectedSlotIndex = FindFirstNonEmptySlot();
-
+        EnsureActiveSlotsValid();
         PublishSnapshot();
 
         RaiseSellResult(
@@ -342,6 +509,22 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
             sellAmount,
             gained,
             $"Sold ammo x{sellAmount}.");
+    }
+
+    private void ClampAllMagazineAmmo()
+    {
+        if (_slots == null)
+            return;
+
+        for (int i = 0; i < _slots.Length; i++)
+        {
+            AmmoSlotState slot = _slots[i];
+
+            if (slot == null || slot.bullet == null)
+                continue;
+
+            slot.currentAmmo = Mathf.Clamp(slot.currentAmmo, 0, GetMagazineSize(slot.bullet));
+        }
     }
 
     private bool TryFindEmptyCompatibleSlot(BulletSO bullet, out int slotIndex)
@@ -392,21 +575,96 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         };
     }
 
-    private int FindFirstNonEmptySlot()
+    private int GetActiveSlotIndex(BulletAmmoType ammoType)
+    {
+        return ammoType switch
+        {
+            BulletAmmoType.Attack => _activeAttackSlotIndex,
+            BulletAmmoType.Paint => _activePaintSlotIndex,
+            BulletAmmoType.Special => _activeSpecialSlotIndex,
+            _ => -1
+        };
+    }
+
+    private void SetActiveSlot(BulletAmmoType ammoType, int slotIndex)
+    {
+        if (!IsValidSlot(slotIndex))
+            return;
+
+        if (_slots[slotIndex].bullet == null ||
+            _slots[slotIndex].bullet.AmmoType != ammoType)
+            return;
+
+        switch (ammoType)
+        {
+            case BulletAmmoType.Attack:
+                _activeAttackSlotIndex = slotIndex;
+                break;
+
+            case BulletAmmoType.Paint:
+                _activePaintSlotIndex = slotIndex;
+                break;
+
+            case BulletAmmoType.Special:
+                _activeSpecialSlotIndex = slotIndex;
+                break;
+        }
+    }
+
+    private void EnsureActiveSlotsValid()
+    {
+        if (!IsActiveSlotValid(BulletAmmoType.Attack, _activeAttackSlotIndex))
+            _activeAttackSlotIndex = FindFirstSlotOfType(BulletAmmoType.Attack);
+
+        if (!IsActiveSlotValid(BulletAmmoType.Paint, _activePaintSlotIndex))
+            _activePaintSlotIndex = FindFirstSlotOfType(BulletAmmoType.Paint);
+
+        if (!IsActiveSlotValid(BulletAmmoType.Special, _activeSpecialSlotIndex))
+            _activeSpecialSlotIndex = FindFirstSlotOfType(BulletAmmoType.Special);
+
+        if (!IsValidSlot(_lastSelectedSlotIndex) || _slots[_lastSelectedSlotIndex].bullet == null)
+            _lastSelectedSlotIndex = _activeAttackSlotIndex;
+    }
+
+    private bool IsActiveSlotValid(BulletAmmoType ammoType, int slotIndex)
+    {
+        return IsValidSlot(slotIndex) &&
+               _slots[slotIndex].bullet != null &&
+               _slots[slotIndex].bullet.AmmoType == ammoType;
+    }
+
+    private int FindFirstSlotOfType(BulletAmmoType ammoType)
     {
         for (int i = 0; i < SlotCount; i++)
         {
-            if (_slots[i].bullet != null)
+            if (_slots[i].bullet != null && _slots[i].bullet.AmmoType == ammoType)
                 return i;
         }
 
-        return 0;
+        return -1;
+    }
+
+    private bool IsSlotActive(int slotIndex)
+    {
+        return slotIndex == _activeAttackSlotIndex ||
+               slotIndex == _activePaintSlotIndex ||
+               slotIndex == _activeSpecialSlotIndex;
+    }
+
+    private static void SwapActiveIndex(ref int activeIndex, int fromSlotIndex, int toSlotIndex)
+    {
+        if (activeIndex == fromSlotIndex)
+            activeIndex = toSlotIndex;
+        else if (activeIndex == toSlotIndex)
+            activeIndex = fromSlotIndex;
     }
 
     private void PublishSnapshot()
     {
         if (_weaponAmmoLoadoutEventChannel == null || _slots == null)
             return;
+
+        ClampAllMagazineAmmo();
 
         WeaponAmmoSlotSnapshot[] snapshots = new WeaponAmmoSlotSnapshot[SlotCount];
 
@@ -420,13 +678,13 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
                 slot.currentAmmo,
                 slot.reserveAmmo,
                 slot.infiniteReserve,
-                i == _selectedSlotIndex,
+                IsSlotActive(i),
                 slot.requiredDefault,
                 slot.sellPricePerAmmo);
         }
 
         _weaponAmmoLoadoutEventChannel.RaiseEvent(
-            new WeaponAmmoLoadoutSnapshot(snapshots, _selectedSlotIndex));
+            new WeaponAmmoLoadoutSnapshot(snapshots, _lastSelectedSlotIndex));
     }
 
     private void RaisePurchaseResult(
@@ -466,8 +724,51 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
                 message));
     }
 
+    private bool IsRuntimeReady()
+    {
+        return _slots != null && _statsRuntime != null;
+    }
+
     private bool IsValidSlot(int slotIndex)
     {
         return _slots != null && slotIndex >= 0 && slotIndex < SlotCount;
+    }
+
+    public bool CanReloadActiveAmmo(BulletAmmoType ammoType)
+    {
+        if (!IsRuntimeReady())
+            return false;
+
+        return CanReloadSlot(GetActiveSlotIndex(ammoType));
+    }
+
+    public bool ReloadActiveAmmo(BulletAmmoType ammoType)
+    {
+        if (!IsRuntimeReady())
+            return false;
+
+        bool reloaded = ReloadSlot(GetActiveSlotIndex(ammoType));
+
+        if (reloaded)
+            PublishSnapshot();
+
+        return reloaded;
+    }
+
+    public bool TryGetActiveSpecialBullet(out SpecialBulletSO bullet)
+    {
+        bullet = GetActiveBullet(BulletAmmoType.Special) as SpecialBulletSO;
+        return bullet != null;
+    }
+
+    public bool TryConsumeSpecialAmmo(int amount, out SpecialBulletSO bullet)
+    {
+        bullet = null;
+
+        if (!TryConsumeAmmo(BulletAmmoType.Special, amount, out BulletSO consumedBullet))
+            return false;
+
+        bullet = consumedBullet as SpecialBulletSO;
+        return bullet != null;
     }
 }

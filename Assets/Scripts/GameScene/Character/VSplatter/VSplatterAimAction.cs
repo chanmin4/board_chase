@@ -9,39 +9,35 @@ public class VSplatterAimAction : MonoBehaviour
         Attack,
         Paint
     }
+
     [Header("Refs")]
     [SerializeField] private VSplatterRange _range;
     [SerializeField] private InputReader _inputReader;
     [SerializeField] private VSplatterAttack _attack;
     [SerializeField] private VSplatterPaint _paint;
     [SerializeField] private PlayerStatsRuntime _statsRuntime;
-    [Header("Broadcasting")]
-    [SerializeField] private WeaponAmmoEventChannelSO _weaponAmmoEventChannel;
-
-    [Header("Listening")]
-    [SerializeField] private VoidEventChannelSO _requestWeaponAmmoSnapshotChannel;
-
+    [SerializeField] private PlayerBulletLoadoutRuntime _bulletLoadout;
+    [SerializeField] private PlayerBulletLoadoutRuntimeReadyEventChannelSO _bulletLoadoutReadyChannel;
+    [SerializeField] private VSplatter_Character _character;
     [Header("Auto Refs Don't Touch")]
     [SerializeField] private Camera _aimCamera;
-    [SerializeField] private VSplatter_Character _character;
-    [Header("Options")]
     
-    [SerializeField] private bool _autoReloadOnEmpty = true;
+
+    [Header("Debug")]
     [SerializeField] private bool _debugLogs = false;
-
-
+    private FireKind _lastActiveFireKind = FireKind.Attack;
     private Vector3 _aimWorldPoint;
     private bool _hasAimPoint;
     private bool _isAimWithinRange;
 
     private float _nextAttackFireTime;
     private float _nextPaintFireTime;
+
     private bool _isReloading;
+    private bool _hasReloadingAmmoType;
+    private BulletAmmoType _reloadingAmmoType;
     private float _reloadStartTime;
     private float _reloadEndTime;
-    private int _currentAmmo;
-
-    private WeaponSO _cachedWeapon;
 
     public event Action OnReloadStarted;
     public event Action OnReloadFinished;
@@ -51,11 +47,13 @@ public class VSplatterAimAction : MonoBehaviour
     public bool HasAimPoint => _hasAimPoint;
     public bool IsAimWithinRange => _isAimWithinRange;
     public bool IsReloading => _isReloading;
-    public bool IsOnFireCooldown =>
-    Time.time < _nextAttackFireTime || Time.time < _nextPaintFireTime;
-    public int CurrentAmmo => _currentAmmo;
+    public int CurrentAmmo => 0;
+
     public Camera AimCamera => _aimCamera;
     public WeaponSO CurrentWeapon => _range != null ? _range.CurrentWeapon : null;
+
+    private bool IsReloadModifierHeld =>
+        _inputReader != null && _inputReader.ReloadInputHeld;
 
     private float CurrentAttackShotsPerSecond =>
         _statsRuntime != null ? Mathf.Max(0.01f, _statsRuntime.Weapon.attackShotsPerSecond) : 0.01f;
@@ -63,23 +61,45 @@ public class VSplatterAimAction : MonoBehaviour
     private float CurrentPaintShotsPerSecond =>
         _statsRuntime != null ? Mathf.Max(0.01f, _statsRuntime.Weapon.paintShotsPerSecond) : 0.01f;
 
-    private int CurrentMagazineSize =>
-        _statsRuntime != null ? Mathf.Max(1, _statsRuntime.Weapon.magazineSize) : 1;
-
     private float CurrentReloadDuration =>
         _statsRuntime != null ? Mathf.Max(0.01f, _statsRuntime.Weapon.reloadDurationSeconds) : 0.01f;
+
     public bool CanFireNow => CanFireNowFor(FireKind.Attack);
+
     public bool CanFireNowFor(FireKind kind)
     {
+        _lastActiveFireKind = kind;
         if (CurrentWeapon == null)
             return false;
 
-        if (!_hasAimPoint || _isReloading || _currentAmmo <= 0)
+        if (_bulletLoadout == null)
+            return false;
+
+        BulletAmmoType ammoType = ToAmmoType(kind);
+
+        if (IsReloadModifierHeld)
+        {
+            RequestReload(ammoType);
+            return false;
+        }
+
+        if (_isReloading)
+            return false;
+
+        if (!_bulletLoadout.HasLoadedAmmo(ammoType))
+        {
+            RequestReload(ammoType);
+            return false;
+        }
+
+        if (!_hasAimPoint)
             return false;
 
         return Time.time >= GetNextFireTime(kind);
     }
-    public float Cooldown01 => GetCooldown01(GetActiveFireKind());
+
+    public bool IsOnFireCooldown =>
+        Time.time < _nextAttackFireTime || Time.time < _nextPaintFireTime;
 
     public float Reload01
     {
@@ -93,7 +113,8 @@ public class VSplatterAimAction : MonoBehaviour
         }
     }
 
-    
+    public float Cooldown01 => GetCooldown01(_lastActiveFireKind);
+
     public float ActiveProgress01
     {
         get
@@ -101,7 +122,7 @@ public class VSplatterAimAction : MonoBehaviour
             if (_isReloading)
                 return Reload01;
 
-            FireKind kind = GetActiveFireKind();
+            FireKind kind = _lastActiveFireKind;
 
             if (Time.time < GetNextFireTime(kind))
                 return GetCooldown01(kind);
@@ -123,6 +144,10 @@ public class VSplatterAimAction : MonoBehaviour
 
         if (_paint == null)
             _paint = GetComponent<VSplatterPaint>();
+
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+
         if (_character == null)
             _character = GetComponent<VSplatter_Character>();
     }
@@ -140,51 +165,66 @@ public class VSplatterAimAction : MonoBehaviour
 
         if (_paint == null)
             _paint = GetComponent<VSplatterPaint>();
+
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+
         if (_character == null)
             _character = GetComponent<VSplatter_Character>();
 
         EnsureAimCamera();
-
-        _cachedWeapon = CurrentWeapon;
-        _currentAmmo = CurrentMagazineSize;
     }
 
     private void OnEnable()
     {
-        if (_inputReader != null)
-            _inputReader.ReloadEvent += OnReloadRequested;
-
         if (_attack != null)
             _attack.Fired += OnAttackShotExecuted;
 
         if (_paint != null)
             _paint.Fired += OnPaintShotExecuted;
-        if (_requestWeaponAmmoSnapshotChannel != null)
-            _requestWeaponAmmoSnapshotChannel.OnEventRaised += PublishAmmoSnapshot;
-        PublishAmmoSnapshot();
+
+        if (_inputReader != null)
+            _inputReader.SpecialShotEvent += OnMiddleClickRequested;
+
+        if (_bulletLoadoutReadyChannel != null)
+        {
+            _bulletLoadoutReadyChannel.OnEventRaised += HandleBulletLoadoutReady;
+
+            if (_bulletLoadoutReadyChannel.HasCurrent)
+                HandleBulletLoadoutReady(_bulletLoadoutReadyChannel.Current);
+        }
     }
 
     private void OnDisable()
     {
-        if (_inputReader != null)
-            _inputReader.ReloadEvent -= OnReloadRequested;
-
         if (_attack != null)
             _attack.Fired -= OnAttackShotExecuted;
 
         if (_paint != null)
             _paint.Fired -= OnPaintShotExecuted;
-        if (_requestWeaponAmmoSnapshotChannel != null)
-            _requestWeaponAmmoSnapshotChannel.OnEventRaised -= PublishAmmoSnapshot;
+
+        if (_inputReader != null)
+            _inputReader.SpecialShotEvent -= OnMiddleClickRequested;
+
+        if (_bulletLoadoutReadyChannel != null)
+            _bulletLoadoutReadyChannel.OnEventRaised -= HandleBulletLoadoutReady;
     }
 
     private void Update()
     {
         EnsureAimCamera();
-        SyncWeaponState();
         UpdateAimPoint();
         UpdateReloadState();
     }
+
+    private void OnMiddleClickRequested()
+    {
+        if (!IsReloadModifierHeld)
+            return;
+
+        RequestReload(BulletAmmoType.Special);
+    }
+
     private void OnAttackShotExecuted()
     {
         OnShotExecuted(FireKind.Attack);
@@ -194,25 +234,74 @@ public class VSplatterAimAction : MonoBehaviour
     {
         OnShotExecuted(FireKind.Paint);
     }
+
     private void OnShotExecuted(FireKind kind)
     {
-        if (_isReloading || _currentAmmo <= 0 || CurrentWeapon == null)
+        _lastActiveFireKind = kind;
+        if (CurrentWeapon == null)
             return;
-
-        _currentAmmo = Mathf.Max(0, _currentAmmo - 1);
 
         float shotsPerSecond = GetShotsPerSecond(kind);
         SetNextFireTime(kind, Time.time + (1f / shotsPerSecond));
 
         OnShotConsumed?.Invoke();
-        PublishAmmoSnapshot();
 
         if (_debugLogs)
-            Debug.Log($"[VSplatterAimAction] {kind} shot consumed. Ammo={_currentAmmo}/{CurrentMagazineSize}");
-
-        if (_autoReloadOnEmpty && _currentAmmo <= 0)
-            RequestReload();
+            Debug.Log($"[VSplatterAimAction] {kind} shot cooldown started.");
     }
+
+    public bool RequestReloadFor(FireKind kind)
+    {
+        return RequestReload(ToAmmoType(kind));
+    }
+
+    public bool RequestReload(BulletAmmoType ammoType)
+    {
+        if (_bulletLoadout == null)
+            return false;
+
+        if (_isReloading)
+            return false;
+
+        if (!_bulletLoadout.CanReloadActiveAmmo(ammoType))
+            return false;
+
+        _isReloading = true;
+        _hasReloadingAmmoType = true;
+        _reloadingAmmoType = ammoType;
+
+        _reloadStartTime = Time.time;
+        _reloadEndTime = Time.time + CurrentReloadDuration;
+
+        OnReloadStarted?.Invoke();
+
+        if (_debugLogs)
+            Debug.Log($"[VSplatterAimAction] Reload started. ammoType={ammoType}");
+
+        return true;
+    }
+
+    private void UpdateReloadState()
+    {
+        if (!_isReloading)
+            return;
+
+        if (Time.time < _reloadEndTime)
+            return;
+
+        _isReloading = false;
+
+        if (_bulletLoadout != null && _hasReloadingAmmoType)
+            _bulletLoadout.ReloadActiveAmmo(_reloadingAmmoType);
+
+        _hasReloadingAmmoType = false;
+
+        OnReloadFinished?.Invoke();
+
+        if (_debugLogs)
+            Debug.Log($"[VSplatterAimAction] Reload finished. ammoType={_reloadingAmmoType}");
+    }
+
     public bool TryGetAimPoint(out Vector3 worldPoint)
     {
         worldPoint = default;
@@ -230,61 +319,6 @@ public class VSplatterAimAction : MonoBehaviour
             out _);
     }
 
-    public bool RequestReload()
-    {
-        if (CurrentWeapon == null)
-            return false;
-
-        if (_isReloading)
-            return false;
-
-        if (_currentAmmo >= CurrentMagazineSize)
-            return false;
-
-        _isReloading = true;
-        _reloadStartTime = Time.time;
-        _reloadEndTime = Time.time + CurrentReloadDuration;
-
-        OnReloadStarted?.Invoke();
-        PublishAmmoSnapshot();
-        if (_debugLogs)
-            Debug.Log("[VSplatterAimAction] Reload started.");
-
-        return true;
-    }
-
-    public void ForceRefillAmmo()
-    {
-        _isReloading = false;
-        _currentAmmo = CurrentMagazineSize;
-        _reloadStartTime = 0f;
-        _reloadEndTime = 0f;
-
-        OnReloadFinished?.Invoke();
-        PublishAmmoSnapshot();
-    }
-
-    private void OnReloadRequested()
-    {
-        RequestReload();
-    }
-
-
-    private void SyncWeaponState()
-    {
-        if (_cachedWeapon != CurrentWeapon)
-        {
-            _cachedWeapon = CurrentWeapon;
-            _currentAmmo = CurrentMagazineSize;
-            _isReloading = false;
-            _reloadStartTime = 0f;
-            _reloadEndTime = 0f;
-            PublishAmmoSnapshot();
-        }
-
-        _currentAmmo = Mathf.Clamp(_currentAmmo, 0, CurrentMagazineSize);
-    }
-
     private void UpdateAimPoint()
     {
         _hasAimPoint = TryGetAimPoint(out _aimWorldPoint);
@@ -298,24 +332,6 @@ public class VSplatterAimAction : MonoBehaviour
         _isAimWithinRange = _range != null && _range.IsWithinRange(_aimWorldPoint);
     }
 
-    private void UpdateReloadState()
-    {
-        if (!_isReloading)
-            return;
-
-        if (Time.time < _reloadEndTime)
-            return;
-
-        _isReloading = false;
-        _currentAmmo = CurrentMagazineSize;
-
-        OnReloadFinished?.Invoke();
-        PublishAmmoSnapshot();
-
-        if (_debugLogs)
-            Debug.Log("[VSplatterAimAction] Reload finished.");
-    }
-
     private void EnsureAimCamera()
     {
         if (_aimCamera != null)
@@ -323,18 +339,7 @@ public class VSplatterAimAction : MonoBehaviour
 
         _aimCamera = Camera.main;
     }
-    private void PublishAmmoSnapshot()
-    {
-        if (_weaponAmmoEventChannel == null)
-            return;
 
-        _weaponAmmoEventChannel.RaiseEvent(new WeaponAmmoSnapshot(
-            CurrentWeapon,
-            _currentAmmo,
-            CurrentMagazineSize,
-            _isReloading,
-            Reload01));
-    }
     private float GetNextFireTime(FireKind kind)
     {
         return kind == FireKind.Paint
@@ -356,6 +361,7 @@ public class VSplatterAimAction : MonoBehaviour
         else
             _nextAttackFireTime = value;
     }
+
     private FireKind GetActiveFireKind()
     {
         if (_character != null && _character.paintInput)
@@ -374,5 +380,20 @@ public class VSplatterAimAction : MonoBehaviour
 
         float start = nextFireTime - duration;
         return Mathf.Clamp01((Time.time - start) / duration);
+    }
+
+    private static BulletAmmoType ToAmmoType(FireKind kind)
+    {
+        return kind == FireKind.Paint
+            ? BulletAmmoType.Paint
+            : BulletAmmoType.Attack;
+    }
+
+    private void HandleBulletLoadoutReady(PlayerBulletLoadoutRuntime bulletLoadout)
+    {
+        if (bulletLoadout == null)
+            return;
+
+        _bulletLoadout = bulletLoadout;
     }
 }

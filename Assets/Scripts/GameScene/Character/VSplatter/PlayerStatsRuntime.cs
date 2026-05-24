@@ -6,6 +6,7 @@ public class PlayerStatsRuntime : MonoBehaviour
 {
     [Header("Base Player Stats")]
     [SerializeField] private PlayerBaseStatsConfigSO _baseStatsConfig;
+    
     [Header("Upgrade Runtime")]
     [SerializeField] private UpgradeCatalogSO _catalog;
     [SerializeField] private PlayerUpgradeState _upgradeState;
@@ -29,7 +30,7 @@ public class PlayerStatsRuntime : MonoBehaviour
 
     [Header("Broadcasting")]
     [SerializeField] private PlayerStatsChangedEventChannelSO _statsChangedChannel;
-
+    [SerializeField] private PlayerStatsRuntimeReadyEventChannelSO _statsRuntimeReadyChannel;
     [Header("Runtime Snapshot")]
     [SerializeField] private PlayerStatsSnapshot _current;
 
@@ -66,6 +67,8 @@ public class PlayerStatsRuntime : MonoBehaviour
             _weaponHolder.OnWeaponChanged += OnWeaponChanged;
 
         RebuildAndPublish();
+        if (_statsRuntimeReadyChannel != null)
+            _statsRuntimeReadyChannel.RaiseEvent(this);
     }
 
     private void OnDisable()
@@ -75,6 +78,8 @@ public class PlayerStatsRuntime : MonoBehaviour
 
         if (_weaponHolder != null)
             _weaponHolder.OnWeaponChanged -= OnWeaponChanged;
+        if (_statsRuntimeReadyChannel != null)
+            _statsRuntimeReadyChannel.Clear(this);
     }
 
     public void RebuildAndPublish()
@@ -96,14 +101,16 @@ public class PlayerStatsRuntime : MonoBehaviour
 
         WeaponSO weapon = CurrentWeapon;
 
-        float baseDamage = weapon != null ? weapon.Damage : 0f;
-        float baseRange = weapon != null ? weapon.MaxRange : 1f;
-        float baseAttackSps = weapon != null ? weapon.AttackShotsPerSecond : 1f;
-        float basePaintSps = weapon != null ? weapon.PaintShotsPerSecond : baseAttackSps * 0.5f;
-        float baseReloadDuration = weapon != null ? weapon.ReloadDuration : 1f;
-        float basePaintRadius = weapon != null ? weapon.PaintRadiusWorld : 1f;
-        int baseMagazineSize = weapon != null ? weapon.MagazineSize : 1;
-        int basePaintPriority = weapon != null ? weapon.PaintPriority : 0;
+        float baseDamage = _baseStatsConfig != null ? _baseStatsConfig.AttackDamage : 10f;
+        float baseRange = _baseStatsConfig != null ? _baseStatsConfig.MaxRange : 12f;
+        float baseAttackSps = _baseStatsConfig != null ? _baseStatsConfig.AttackShotsPerSecond : 2f;
+        float basePaintSps = _baseStatsConfig != null ? _baseStatsConfig.PaintShotsPerSecond : 1f;
+        float baseReloadDuration = _baseStatsConfig != null ? _baseStatsConfig.ReloadDurationSeconds : 1.2f;
+        float basePaintRadius = _baseStatsConfig != null ? _baseStatsConfig.PaintRadius : 1.25f;
+        int baseMagazineSize = _baseStatsConfig != null ? _baseStatsConfig.MagazineSize : 6;
+        int basePaintPriority = _baseStatsConfig != null ? _baseStatsConfig.PaintPriority : 0;
+
+        ApplyModifiers(weapon != null ? weapon.StatModifiers : null);
 
         float reloadSpeed = Resolve(PlayerStatId.ReloadSpeedMultiplier, 1f, 0.01f);
 
@@ -117,9 +124,7 @@ public class PlayerStatsRuntime : MonoBehaviour
         _current.weapon.magazineSize = Mathf.Max(1, Mathf.RoundToInt(Resolve(PlayerStatId.MagazineSize, baseMagazineSize, 1f)));
 
         _current.paint.paintRadius = Resolve(PlayerStatId.PaintRadius, basePaintRadius, 0.01f);
-        _current.paint.paintPriority = basePaintPriority; _current.paint.occupationWinThreshold = Mathf.Clamp01(
-            Resolve(PlayerStatId.OccupationWinThreshold, _baseOccupationWinThreshold, 0f));
-        
+        _current.paint.paintPriority = basePaintPriority;
         float baseOccupationWinThreshold =
          _baseStatsConfig != null
         ? _baseStatsConfig.OccupationWinThreshold
@@ -288,5 +293,57 @@ public class PlayerStatsRuntime : MonoBehaviour
 
             return (baseValue + _flatAdd) * (1f + _percentAdd);
         }
+    }
+
+    public float ResolveAttackDamage(AttackBulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.AttackDamage,
+            _current.weapon.attackDamage,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
+    }
+
+    public float ResolvePaintRadius(PaintBulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.PaintRadius,
+            _current.paint.paintRadius,
+            0.01f,
+            bullet != null ? bullet.StatModifiers : null);
+    }
+
+    public int ResolveMagazineSize(BulletSO bullet)
+    {
+        float resolved = ResolveWithExtraModifiers(
+            PlayerStatId.MagazineSize,
+            _current.weapon.magazineSize,
+            1f,
+            bullet != null ? bullet.StatModifiers : null);
+
+        return Mathf.Max(1, Mathf.RoundToInt(resolved));
+    }
+
+    private float ResolveWithExtraModifiers(
+        PlayerStatId stat,
+        float baseValue,
+        float minValue,
+        PlayerStatModifier[] modifiers)
+    {
+        StatAccumulator accumulator = default;
+
+        if (_accumulators.TryGetValue(stat, out StatAccumulator existing))
+            accumulator = existing;
+
+        if (modifiers != null)
+        {
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                if (modifiers[i].stat == stat)
+                    accumulator.Apply(modifiers[i]);
+            }
+        }
+
+        return Mathf.Max(minValue, accumulator.Resolve(baseValue));
     }
 }

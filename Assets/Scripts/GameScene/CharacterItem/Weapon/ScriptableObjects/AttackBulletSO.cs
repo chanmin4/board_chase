@@ -6,8 +6,8 @@ using UnityEngine;
 public class AttackBulletSO : BulletSO
 {
     [Header("Effect")]
-    [Tooltip("damage to target layer mask")]
     [SerializeField] private LayerMask damageTargetMask = 0;
 
+    public override BulletAmmoType AmmoType => BulletAmmoType.Attack;
     public LayerMask DamageTargetMask => damageTargetMask;
 }

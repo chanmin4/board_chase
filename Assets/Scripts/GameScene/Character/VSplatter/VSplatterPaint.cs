@@ -4,69 +4,60 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class VSplatterPaint : MonoBehaviour
 {
-    [Header("Refs")]
+    [Header("Need Ref")]
     [SerializeField] private VSplatterRange _range;
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
+    [SerializeField] private PlayerStatsRuntime _statsRuntime;
+    [SerializeField] private PlayerBulletLoadoutRuntime _bulletLoadout;
 
     [Header("Listening To")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
-
-
     [Header("Options")]
     [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Vaccine;
-    [SerializeField] private PlayerStatsRuntime _statsRuntime;
+
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
     [SerializeField] private bool debugDraw = false;
     [SerializeField] private float debugDrawDuration = 0.15f;
 
-    [Header("AutoRef Don't Touch")]
+    [Header("Don't Touch Ref Auto")]
     [SerializeField] private Camera _aimCamera;
     [NonSerialized] private MaskRenderManager _maskRenderManager;
 
     public event Action Fired;
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
-    private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
-    private Transform VisualFireOrigin => _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
-    private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
-    private float CurrentPaintRadius =>
-    _statsRuntime != null
-        ? Mathf.Max(0.01f, _statsRuntime.Paint.paintRadius)
-        : CurrentWeapon != null ? CurrentWeapon.PaintRadiusWorld : 1f;
+
+    private Transform GameplayFireOrigin =>
+        _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
+
+    private Transform VisualFireOrigin =>
+        _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
+
+    private Transform ProjectilesRoot =>
+        _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
+
+    private float CurrentMaxRange =>
+        _statsRuntime != null
+            ? Mathf.Max(0.1f, _statsRuntime.Weapon.maxRange)
+            : 12f;
 
     private int CurrentPaintPriority =>
         _statsRuntime != null
             ? _statsRuntime.Paint.paintPriority
-            : CurrentWeapon != null ? CurrentWeapon.PaintPriority : 0;
+            : 0;
+
     private void Reset()
     {
-        if (_range == null)
-            _range = GetComponent<VSplatterRange>();
-
-        if (_weaponHolder == null)
-            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
-
-        if (_aimCamera == null)
-            _aimCamera = Camera.main;
-        if (_statsRuntime == null)
-            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+        ResolveRefs();
     }
 
     private void Awake()
     {
-        if (_range == null)
-            _range = GetComponent<VSplatterRange>();
-
-        if (_weaponHolder == null)
-            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
-
-        if (_aimCamera == null)
-            _aimCamera = Camera.main;
-        if (_statsRuntime == null)
-            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+        ResolveRefs();
     }
+
     private void OnEnable()
     {
         if (_maskRenderManagerReadyChannel != null)
@@ -86,16 +77,40 @@ public class VSplatterPaint : MonoBehaviour
         _maskRenderManager = null;
     }
 
+    private void ResolveRefs()
+    {
+        if (_range == null)
+            _range = GetComponent<VSplatterRange>();
+
+        if (_weaponHolder == null)
+            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
+
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+
+        if (_bulletLoadout == null)
+            _bulletLoadout = GetComponent<PlayerBulletLoadoutRuntime>();
+
+        if (_aimCamera == null)
+            _aimCamera = Camera.main;
+    }
+
     private void OnMaskRenderManagerChanged(MaskRenderManager manager)
     {
         _maskRenderManager = manager;
     }
+
     public bool TryFireOnce()
     {
         if (_range == null || !_range.HasValidWeapon() || _maskRenderManager == null || CurrentWeapon == null)
             return false;
 
-        PaintBulletSO bulletConfig = CurrentWeapon.PaintBullet;
+        if (_bulletLoadout == null)
+            return false;
+
+        if (!_bulletLoadout.TryGetActivePaintBullet(out PaintBulletSO bulletConfig))
+            return false;
+
         if (bulletConfig == null || bulletConfig.BulletPrefab == null)
             return false;
 
@@ -111,9 +126,16 @@ public class VSplatterPaint : MonoBehaviour
         if (!gotAimPoint)
             return false;
 
-        Ray aimRay = _aimCamera.ScreenPointToRay(Input.mousePosition);
+        Vector3 rangeOrigin = _range.RangeOrigin != null
+            ? _range.RangeOrigin.position
+            : transform.position;
 
-        Vector3 paintTarget = _range.ClampToRange(aimPoint);
+        Vector3 paintTarget = VSplatterAimUtility.ClampFlatPointToRange(
+            rangeOrigin,
+            aimPoint,
+            CurrentMaxRange);
+
+        Ray aimRay = _aimCamera.ScreenPointToRay(Input.mousePosition);
 
         Transform fireOrigin = VisualFireOrigin != null
             ? VisualFireOrigin
@@ -121,7 +143,6 @@ public class VSplatterPaint : MonoBehaviour
 
         Vector3 visualStart = fireOrigin.position;
 
-        // 실제 판정/페인트는 paintTarget 방향으로 간다.
         Vector3 gameplayDirection = paintTarget - visualStart;
         gameplayDirection.y = 0f;
 
@@ -132,7 +153,6 @@ public class VSplatterPaint : MonoBehaviour
 
         Vector3 gameplayStart = visualStart + gameplayDirection * bulletConfig.SpawnOffset;
 
-        // 비주얼 방향은 크로스헤어 중앙 Ray 기준으로 잡는다.
         Vector3 visualAimPoint;
         if (!VSplatterAimUtility.TryGetPointOnYPlane(
                 aimRay,
@@ -153,24 +173,31 @@ public class VSplatterPaint : MonoBehaviour
 
         Vector3 visualSpawn = visualStart + visualDirection * bulletConfig.SpawnOffset;
 
-        // 중요: visualTarget을 raw aim point로 쓰면 멀리 날아감.
-        // gameplay 탄착 거리만큼만 비주얼도 날아가게 잘라준다.
         float maxVisualDistance = Vector3.Distance(
             new Vector3(gameplayStart.x, 0f, gameplayStart.z),
             new Vector3(paintTarget.x, 0f, paintTarget.z));
 
         Vector3 visualTarget = visualSpawn + visualDirection * maxVisualDistance;
 
+        if (!_bulletLoadout.TryConsumePaintAmmo(1, out bulletConfig))
+            return false;
+
+        if (bulletConfig == null || bulletConfig.BulletPrefab == null)
+            return false;
+
+        float paintRadius = _statsRuntime != null
+            ? _statsRuntime.ResolvePaintRadius(bulletConfig)
+            : 1f;
+
+        int paintPriority = CurrentPaintPriority;
+
         Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
-        
+
         PaintBullet bullet = Instantiate(
             bulletConfig.BulletPrefab,
             visualSpawn,
             bulletRotation,
             ProjectilesRoot).GetComponent<PaintBullet>();
-
-        float paintRadius = CurrentPaintRadius;
-        int paintPriority = CurrentPaintPriority;
 
         bullet.Init(
             gameplayStart,
@@ -186,8 +213,9 @@ public class VSplatterPaint : MonoBehaviour
             _maskRenderManager,
             _paintChannel,
             paintRadius,
-            paintPriority,  
+            paintPriority,
             this);
+
         if (debugDraw)
             Debug.DrawLine(visualSpawn, aimPoint, Color.cyan, debugDrawDuration);
 
@@ -197,5 +225,4 @@ public class VSplatterPaint : MonoBehaviour
         Fired?.Invoke();
         return true;
     }
-
 }

@@ -7,11 +7,6 @@ public enum BulletAmmoType
     Special
 }
 
-/// <summary>
-/// Base definition for every bullet item.
-/// Owns shared bullet data and the ammo type used by HUD/loadout rules.
-/// AttackBulletSO and PaintBulletSO override AmmoType so default bullet assets cannot be misconfigured.
-/// </summary>
 public abstract class BulletSO : ScriptableObject
 {
     [Header("Identity")]
@@ -19,7 +14,6 @@ public abstract class BulletSO : ScriptableObject
     [SerializeField] private string displayName = "Bullet";
 
     [Header("Ammo Type")]
-    [Tooltip("Used by loadout slot rules and HUD type icon. Attack/Paint subclasses override this.")]
     [SerializeField] private BulletAmmoType ammoType = BulletAmmoType.Special;
 
     [Header("UI")]
@@ -29,21 +23,18 @@ public abstract class BulletSO : ScriptableObject
     [SerializeField] private GameObject bulletPrefab;
 
     [Header("Flight")]
-    [Min(0.1f)]
-    [SerializeField] private float speed = 18f;
-
-    [Min(0.001f)]
-    [SerializeField] private float castRadius = 0.08f;
-
-    [Min(0.01f)]
-    [SerializeField] private float maxLifetime = 2f;
-
-    [Min(0f)]
-    [SerializeField] private float spawnOffset = 0.12f;
+    [Min(0.1f)] [SerializeField] private float speed = 18f;
+    [Min(0.001f)] [SerializeField] private float castRadius = 0.08f;
+    [Min(0.01f)] [SerializeField] private float maxLifetime = 2f;
+    [Min(0f)] [SerializeField] private float spawnOffset = 0.12f;
 
     [Header("Collision")]
     [SerializeField] private LayerMask impactMask = 0;
     [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
+
+    [Header("Stat Modifiers")]
+    [Tooltip("Bullet bonus on top of current player stats. Example: AttackDamage FlatAdd +5, AttackDamage PercentAdd 0.2.")]
+    [SerializeField] private PlayerStatModifier[] statModifiers;
 
     public string BulletId => bulletId;
     public string DisplayName => displayName;
@@ -57,4 +48,6 @@ public abstract class BulletSO : ScriptableObject
     public float SpawnOffset => spawnOffset;
     public LayerMask ImpactMask => impactMask;
     public QueryTriggerInteraction TriggerInteraction => triggerInteraction;
+
+    public PlayerStatModifier[] StatModifiers => statModifiers;
 }

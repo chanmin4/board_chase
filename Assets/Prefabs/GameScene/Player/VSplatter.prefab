@@ -79,9 +79,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _range: {fileID: 1214106833504460287}
   _weaponHolder: {fileID: 549010143910834747}
+  _statsRuntime: {fileID: 69354217320293197}
+  _bulletLoadout: {fileID: 1078626520116574429}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
   _paintChannel: 0
-  _statsRuntime: {fileID: 69354217320293197}
   debugLogs: 1
   debugDraw: 1
   debugDrawDuration: 0.15
@@ -300,6 +301,7 @@ MonoBehaviour:
   _range: {fileID: 1214106833504460287}
   _weaponHolder: {fileID: 549010143910834747}
   _statsRuntime: {fileID: 69354217320293197}
+  _bulletLoadout: {fileID: 1078626520116574429}
   debugLogs: 1
   debugDraw: 1
   debugDrawDuration: 0.15
@@ -598,11 +600,10 @@ MonoBehaviour:
   _attack: {fileID: 685610790166866661}
   _paint: {fileID: 5993180757520086435}
   _statsRuntime: {fileID: 69354217320293197}
-  _weaponAmmoEventChannel: {fileID: 11400000, guid: 0858b56c942377742aade4725a6c76a0, type: 2}
-  _requestWeaponAmmoSnapshotChannel: {fileID: 11400000, guid: 8049a0d03cad3e04cb6240a50c6dd3fe, type: 2}
+  _bulletLoadout: {fileID: 1078626520116574429}
+  _bulletLoadoutReadyChannel: {fileID: 11400000, guid: c1a9a2786fb22114f9b8a34532909618, type: 2}
   _aimCamera: {fileID: 0}
-  _character: {fileID: 0}
-  _autoReloadOnEmpty: 1
+  _character: {fileID: 4351803592356138420}
   _debugLogs: 0
 --- !u!1 &6915450752968060550
 GameObject:
@@ -1065,6 +1066,7 @@ MonoBehaviour:
   _shockwaveConfig: {fileID: 11400000, guid: f604b5997624fa54498088548265a627, type: 2}
   _baseOccupationWinThreshold: 0.5
   _statsChangedChannel: {fileID: 11400000, guid: 42bc966d68e57424095ada9dc20cbcf0, type: 2}
+  _statsRuntimeReadyChannel: {fileID: 11400000, guid: ecf69a75cfe09bb458b0e7f93de73a3c, type: 2}
   _current:
     weapon:
       attackDamage: 0
@@ -1307,6 +1309,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _defaultAttackBullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
   _defaultPaintBullet: {fileID: 11400000, guid: 9d354fefd2ce4cc449aca4599df4938f, type: 2}
+  _statsRuntimeReadyChannel: {fileID: 11400000, guid: ecf69a75cfe09bb458b0e7f93de73a3c, type: 2}
+  _loadoutRuntimeReadyChannel: {fileID: 11400000, guid: c1a9a2786fb22114f9b8a34532909618, type: 2}
   _requestWeaponAmmoLoadoutSnapshotChannel: {fileID: 11400000, guid: 8049a0d03cad3e04cb6240a50c6dd3fe, type: 2}
   _slotSwapRequestChannel: {fileID: 11400000, guid: f58135998ab7180419df1ebecaba8c5f, type: 2}
   _slotSelectRequestChannel: {fileID: 11400000, guid: 70cac3adb70609d4cb00ea31b625c0e2, type: 2}
@@ -1315,9 +1319,11 @@ MonoBehaviour:
   _sellConfirmRequestChannel: {fileID: 11400000, guid: 818bb65a0358d4f47980008329da8de6, type: 2}
   _sellResultChannel: {fileID: 11400000, guid: 6cfb32eb4af3e044eaa980bf7aa90edb, type: 2}
   _weaponAmmoLoadoutEventChannel: {fileID: 11400000, guid: f00206524dca36646b430bebd122c0f6, type: 2}
-  _slotKeyActions: []
-  _defaultMagazineAmmo: 20
-  _selectedSlotIndex: 0
+  _statsRuntime: {fileID: 0}
+  _activeAttackSlotIndex: 0
+  _activePaintSlotIndex: 2
+  _activeSpecialSlotIndex: -1
+  _lastSelectedSlotIndex: 0
 --- !u!1 &8713701942454541855
 GameObject:
   m_ObjectHideFlags: 0
@@ -1427,6 +1433,7 @@ MonoBehaviour:
   lineWidth: 0.06
   rangeColor: {r: 0, g: 1, b: 1, a: 0.9}
   rangeMaterial: {fileID: 0}
+  _lineRenderer: {fileID: 0}
 --- !u!1001 &3630731725944481802
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -12,7 +12,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
     private GameInput _gameInput;
 	
 	
-		public event UnityAction DashEvent = delegate { };
+	public event UnityAction DashEvent = delegate { };
 	public event UnityAction DashCanceledEvent = delegate { };
 	public event UnityAction ShockwaveChargeEvent = delegate { };
 	public event UnityAction ShockwaveExpelEvent = delegate { };
@@ -21,6 +21,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction AttackCanceledEvent = delegate { };
 	public event UnityAction PaintEvent = delegate { };
 	public event UnityAction PaintCanceledEvent = delegate { };
+	public event UnityAction SpecialShotEvent = delegate { };
+	public event UnityAction SpecialShotCanceledEvent = delegate { };
 	public event UnityAction ReloadEvent=delegate{};
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
 	public event UnityAction UpgradeStatsEvent = delegate { };
@@ -38,6 +40,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction Slot3Event = delegate { };
 	public event UnityAction Slot4Event = delegate { };
 	public event UnityAction Slot5Event = delegate { };
+	public event UnityAction MiddleClickEvent = delegate { };
 	public event UnityAction MenuMouseMoveEvent = delegate { };
 	public event UnityAction MenuClickButtonEvent = delegate { };
 	public event UnityAction MenuUnpauseEvent = delegate { };
@@ -46,7 +49,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction OpenInventoryEvent = delegate { }; // Used to bring up the inventory
 	public event UnityAction CloseInventoryEvent = delegate { }; // Used to bring up the inventory
 	public event UnityAction<float> TabSwitched = delegate { };
-
+	public bool ReloadInputHeld { get; private set; }
+	public bool SpecialShotHeld { get; private set; }
 
 	private void OnEnable()
 	{
@@ -114,6 +118,9 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		PaintCanceledEvent.Invoke();
 		DashCanceledEvent.Invoke();
 		ShockwaveCanceledEvent.Invoke();
+		ReloadInputHeld = false;
+		SpecialShotHeld = false;
+		SpecialShotCanceledEvent.Invoke();
 	}
 
 
@@ -144,6 +151,21 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 				break;
 			case InputActionPhase.Canceled:
 				PaintCanceledEvent.Invoke();
+				break;
+		}
+	}
+	public void OnSpecialShot(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				SpecialShotHeld = true;
+				SpecialShotEvent.Invoke();
+				break;
+
+			case InputActionPhase.Canceled:
+				SpecialShotHeld = false;
+				SpecialShotCanceledEvent.Invoke();
 				break;
 		}
 	}
@@ -206,7 +228,12 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		switch (context.phase)
 		{
 			case InputActionPhase.Performed:
+				ReloadInputHeld = true;
 				ReloadEvent.Invoke();
+				break;
+
+			case InputActionPhase.Canceled:
+				ReloadInputHeld = false;
 				break;
 		}
 	}
@@ -255,14 +282,16 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 					break;
 			}
 		}
+
     // ---------------- Menu (UI) ----------------
+	public void OnMiddleClick(InputAction.CallbackContext context){}
     public void OnNavigate(InputAction.CallbackContext context) { }
     public void OnSubmit(InputAction.CallbackContext context) { } 
     public void OnCancel(InputAction.CallbackContext context) { }
     public void OnPoint(InputAction.CallbackContext context) { }
     public void OnClick(InputAction.CallbackContext context) { }
     public void OnRightClick(InputAction.CallbackContext context) { }
-    public void OnMiddleClick(InputAction.CallbackContext context) { }
+
     public void OnScrollWheel(InputAction.CallbackContext context) { }
     public void OnTrackedDevicePosition(InputAction.CallbackContext context) { }
     public void OnTrackedDeviceOrientation(InputAction.CallbackContext context) { }

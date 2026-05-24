@@ -4,69 +4,77 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class VSplatterAttack : MonoBehaviour
 {
-    [Header("Refs")]
+    [Header("Need Ref")]
     [SerializeField] private VSplatterRange _range;
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
     [SerializeField] private PlayerStatsRuntime _statsRuntime;
+    [SerializeField] private PlayerBulletLoadoutRuntime _bulletLoadout;
+
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
     [SerializeField] private bool debugDraw = false;
     [SerializeField] private float debugDrawDuration = 0.15f;
 
-    [Header("AutoRef Don't Touch")]
+    [Header("Don't Touch Ref Auto")]
     [SerializeField] private Camera _aimCamera;
 
     public event Action Fired;
 
     private WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
-    private Transform GameplayFireOrigin => _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
-    private Transform VisualFireOrigin => _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
-    private Transform ProjectilesRoot => _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
-    private float CurrentMaxRange =>
-    _statsRuntime != null
-        ? Mathf.Max(0.1f, _statsRuntime.Weapon.maxRange)
-        : CurrentWeapon != null ? CurrentWeapon.MaxRange : 0f;
 
-    private float CurrentDamage =>
+    private Transform GameplayFireOrigin =>
+        _weaponHolder != null ? _weaponHolder.GameplayFireOrigin : transform;
+
+    private Transform VisualFireOrigin =>
+        _weaponHolder != null ? _weaponHolder.VisualFireOrigin : null;
+
+    private Transform ProjectilesRoot =>
+        _weaponHolder != null ? _weaponHolder.ProjectilesRoot : null;
+
+    private float CurrentMaxRange =>
         _statsRuntime != null
-            ? Mathf.Max(0f, _statsRuntime.Weapon.attackDamage)
-            : CurrentWeapon != null ? CurrentWeapon.Damage : 0f;
+            ? Mathf.Max(0.1f, _statsRuntime.Weapon.maxRange)
+            : 12f;
+
     private void Reset()
     {
-        if (_range == null)
-            _range = GetComponent<VSplatterRange>();
-
-        if (_weaponHolder == null)
-            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
-
-        if (_aimCamera == null)
-            _aimCamera = Camera.main;
-        if (_statsRuntime == null)
-            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+        ResolveRefs();
     }
 
     private void Awake()
     {
+        ResolveRefs();
+    }
+
+    private void ResolveRefs()
+    {
         if (_range == null)
             _range = GetComponent<VSplatterRange>();
 
         if (_weaponHolder == null)
             _weaponHolder = GetComponent<VSplatterWeaponHolder>();
 
-        if (_aimCamera == null)
-            _aimCamera = Camera.main;
         if (_statsRuntime == null)
             _statsRuntime = GetComponent<PlayerStatsRuntime>();
+
+        if (_bulletLoadout == null)
+            _bulletLoadout = GetComponent<PlayerBulletLoadoutRuntime>();
+
+        if (_aimCamera == null)
+            _aimCamera = Camera.main;
     }
 
     public bool TryFireOnce()
     {
-        float maxRange = CurrentMaxRange;
-        float damage = CurrentDamage;       
         if (_range == null || !_range.HasValidWeapon() || CurrentWeapon == null)
             return false;
 
-        AttackBulletSO bulletConfig = CurrentWeapon.AttackBullet;
+        if (_bulletLoadout == null)
+            return false;
+
+        if (!_bulletLoadout.TryGetActiveAttackBullet(out AttackBulletSO bulletConfig))
+            return false;
+
         if (bulletConfig == null || bulletConfig.BulletPrefab == null)
             return false;
 
@@ -76,7 +84,7 @@ public class VSplatterAttack : MonoBehaviour
             CurrentWeapon.AllowFallbackPlane,
             CurrentWeapon.FallbackPlaneY,
             transform,
-            out Vector3 aimPoint,
+            out _,
             out _);
 
         if (!gotAimPoint)
@@ -119,11 +127,21 @@ public class VSplatterAttack : MonoBehaviour
                 gameplayStart,
                 gameplayDirection,
                 rangeOrigin,
-                maxRange,
+                CurrentMaxRange,
                 out float maxDistance))
         {
             return false;
         }
+
+        if (!_bulletLoadout.TryConsumeAttackAmmo(1, out bulletConfig))
+            return false;
+
+        if (bulletConfig == null || bulletConfig.BulletPrefab == null)
+            return false;
+
+        float damage = _statsRuntime != null
+            ? _statsRuntime.ResolveAttackDamage(bulletConfig)
+            : 0f;
 
         Quaternion bulletRotation = Quaternion.LookRotation(visualDirection, Vector3.up);
 
@@ -148,7 +166,11 @@ public class VSplatterAttack : MonoBehaviour
             gameObject);
 
         if (debugDraw)
-            Debug.DrawLine(visualSpawn, visualSpawn + visualDirection * maxDistance, Color.yellow, debugDrawDuration);
+            Debug.DrawLine(
+                visualSpawn,
+                visualSpawn + visualDirection * maxDistance,
+                Color.yellow,
+                debugDrawDuration);
 
         if (debugLogs)
             Debug.Log("[VSplatterAttack] attack bullet fired.");
@@ -156,6 +178,4 @@ public class VSplatterAttack : MonoBehaviour
         Fired?.Invoke();
         return true;
     }
-
-
 }

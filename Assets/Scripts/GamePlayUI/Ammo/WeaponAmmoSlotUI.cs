@@ -5,9 +5,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// UI for one weapon ammo slot.
-/// Shows bullet icon, slot key, current magazine ammo, reserve ammo,
-/// selected outline, and bullet type icon.
-/// Empty slots cannot be selected, but can receive dropped bullets if runtime rules allow it.
+/// Shows bullet icon, slot key, current ammo, total ammo,
+/// active outline, bullet type icon, and sell button.
 /// </summary>
 [DisallowMultipleComponent]
 public class WeaponAmmoSlotUI : MonoBehaviour,
@@ -17,25 +16,18 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
     IDropHandler
 {
     [Header("Bullet")]
-    [Tooltip("Main bullet icon image. Uses BulletSO.Icon.")]
     [SerializeField] private Image _bulletIcon;
-
-    [Tooltip("Small icon that represents bullet type: Attack, Paint, Special.")]
     [SerializeField] private Image _ammoTypeIcon;
 
     [Header("Slot Key")]
-    [Tooltip("Slot key label. Example: 1, 2, Left Shift.")]
     [SerializeField] private TextMeshProUGUI _keyText;
 
     [Header("Ammo Text")]
-    [Tooltip("Current magazine ammo text. Example: 3 in 3 / 15.")]
     [SerializeField] private TextMeshProUGUI _currentAmmoText;
-
-    [Tooltip("Total reserve ammo text. Example: 15 in 3 / 15, or infinity symbol.")]
     [SerializeField] private TextMeshProUGUI _reserveAmmoText;
 
-    [Header("Selection")]
-    [Tooltip("Outline enabled only when this slot is selected. Set color/thickness in the Outline component.")]
+    [Header("Active Outline")]
+    [Tooltip("Enabled when this slot is the active bullet for its ammo type.")]
     [SerializeField] private Outline _selectedOutline;
 
     [Header("Type Sprites")]
@@ -45,10 +37,12 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
 
     [Header("Text Values")]
     [SerializeField] private string _emptyAmmoText = "-";
-    [SerializeField] private string _infiniteReserveText = "∞";
+    [SerializeField] private string _infiniteReserveText = "\u221E";
+
     [Header("Sell")]
     [SerializeField] private CanvasGroup _sellButtonGroup;
     [SerializeField] private Button _sellButton;
+
     private static WeaponAmmoSlotUI _dragSource;
 
     private WeaponAmmoSlotSnapshot _snapshot;
@@ -62,6 +56,7 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
         if (_selectedOutline != null)
             _selectedOutline.enabled = false;
     }
+
     private void OnEnable()
     {
         if (_sellButton != null)
@@ -73,6 +68,7 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
         if (_sellButton != null)
             _sellButton.onClick.RemoveListener(HandleSellClicked);
     }
+
     public void Initialize(WeaponAmmoHUD owner)
     {
         _owner = owner;
@@ -87,7 +83,7 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
 
         RefreshBulletIcon(snapshot);
         RefreshAmmoTypeIcon(snapshot);
-        RefreshAmmoTexts(snapshot);
+        RefreshAmmoTexts();
         RefreshSelectedOutline(snapshot);
     }
 
@@ -128,6 +124,21 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
         _dragSource = null;
     }
 
+    public void SetSellModeVisible(bool visible)
+    {
+        bool canShow = visible && _snapshot.canSell;
+
+        if (_sellButtonGroup != null)
+        {
+            _sellButtonGroup.alpha = canShow ? 1f : 0f;
+            _sellButtonGroup.interactable = canShow;
+            _sellButtonGroup.blocksRaycasts = canShow;
+        }
+
+        if (_sellButton != null)
+            _sellButton.interactable = canShow;
+    }
+
     private void RefreshBulletIcon(WeaponAmmoSlotSnapshot snapshot)
     {
         if (_bulletIcon == null)
@@ -153,28 +164,34 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
         _ammoTypeIcon.enabled = _ammoTypeIcon.sprite != null;
     }
 
-    private void RefreshAmmoTexts(WeaponAmmoSlotSnapshot snapshot)
+    private void RefreshAmmoTexts()
     {
-        if (snapshot.isEmpty)
+        if (_snapshot.isEmpty)
         {
-            if (_currentAmmoText != null)
-                _currentAmmoText.text = _emptyAmmoText;
-
-            if (_reserveAmmoText != null)
-                _reserveAmmoText.text = _emptyAmmoText;
-
+            SetAmmoText(_emptyAmmoText, _emptyAmmoText);
             return;
         }
 
+        if (_snapshot.infiniteReserve)
+        {
+            SetAmmoText(
+                Mathf.Max(0, _snapshot.currentAmmo).ToString(),
+                _infiniteReserveText);
+            return;
+        }
+
+        SetAmmoText(
+            Mathf.Max(0, _snapshot.currentAmmo).ToString(),
+            Mathf.Max(0, _snapshot.reserveAmmo).ToString());
+    }
+
+    private void SetAmmoText(string current, string total)
+    {
         if (_currentAmmoText != null)
-            _currentAmmoText.text = Mathf.Max(0, snapshot.currentAmmo).ToString();
+            _currentAmmoText.text = current;
 
         if (_reserveAmmoText != null)
-        {
-            _reserveAmmoText.text = snapshot.infiniteReserve
-                ? _infiniteReserveText
-                : Mathf.Max(0, snapshot.reserveAmmo).ToString();
-        }
+            _reserveAmmoText.text = total;
     }
 
     private void RefreshSelectedOutline(WeaponAmmoSlotSnapshot snapshot)
@@ -203,21 +220,6 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
         }
     }
 
-    public void SetSellModeVisible(bool visible)
-    {
-        bool canShow = visible && _snapshot.canSell;
-
-        if (_sellButtonGroup != null)
-        {
-            _sellButtonGroup.alpha = canShow ? 1f : 0f;
-            _sellButtonGroup.interactable = canShow;
-            _sellButtonGroup.blocksRaycasts = canShow;
-        }
-
-        if (_sellButton != null)
-            _sellButton.interactable = canShow;
-    }
-
     private void HandleSellClicked()
     {
         if (!_snapshot.canSell)
@@ -225,6 +227,4 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
 
         _owner?.RequestSellSlot(_snapshot);
     }
-
-
 }

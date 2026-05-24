@@ -3,54 +3,47 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class VSplatterRange : MonoBehaviour
 {
-    [Header("Refs")]
+    [Header("Need Ref")]
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
     [SerializeField] private InputReader _inputReader;
     [SerializeField] private Transform _rangeOrigin;
     [SerializeField] private PlayerStatsRuntime _statsRuntime;
+
     [Header("Runtime Visual")]
     [SerializeField] private bool showRuntimeRange = true;
     [SerializeField] private bool showOnlyWhileHoldingAimInput = false;
     [SerializeField] private bool attackInputShowsRange = true;
     [SerializeField] private bool paintInputShowsRange = true;
 
+    [Header("Visual Options")]
     [SerializeField] private float yOffset = 0.03f;
     [SerializeField] private int circleSegments = 64;
     [SerializeField] private float lineWidth = 0.06f;
     [SerializeField] private Color rangeColor = new Color(0f, 1f, 1f, 0.35f);
     [SerializeField] private Material rangeMaterial;
 
-    private LineRenderer _lineRenderer;
+    [Header("Don't Touch Ref Auto")]
+    [SerializeField] private LineRenderer _lineRenderer;
 
     private bool _attackHeld;
     private bool _paintHeld;
 
     public Transform RangeOrigin => _rangeOrigin != null ? _rangeOrigin : transform;
     public WeaponSO CurrentWeapon => _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
+
     public float MaxRange =>
-    _statsRuntime != null
-        ? _statsRuntime.Weapon.maxRange
-        : CurrentWeapon != null ? CurrentWeapon.MaxRange : 0f;
+        _statsRuntime != null
+            ? Mathf.Max(0.1f, _statsRuntime.Weapon.maxRange)
+            : 0f;
+
     private void Reset()
     {
-        if (_rangeOrigin == null)
-            _rangeOrigin = transform;
-
-        if (_inputReader == null)
-            _inputReader = FindAnyObjectByType<InputReader>();
-        if (_statsRuntime == null)
-            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+        ResolveRefs();
     }
 
     private void Awake()
     {
-        if (_rangeOrigin == null)
-            _rangeOrigin = transform;
-
-        if (_inputReader == null)
-            _inputReader = FindAnyObjectByType<InputReader>();
-        if (_statsRuntime == null)
-            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+        ResolveRefs();
         EnsureLineRenderer();
         RefreshVisualImmediate();
     }
@@ -86,17 +79,43 @@ public class VSplatterRange : MonoBehaviour
         RefreshVisualImmediate();
     }
 
+    private void ResolveRefs()
+    {
+        if (_rangeOrigin == null)
+            _rangeOrigin = transform;
+
+        if (_weaponHolder == null)
+            _weaponHolder = GetComponent<VSplatterWeaponHolder>();
+
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<PlayerStatsRuntime>();
+
+        if (_inputReader == null)
+            _inputReader = FindAnyObjectByType<InputReader>();
+    }
+
     public bool HasValidWeapon()
     {
-        return CurrentWeapon != null;
+        return CurrentWeapon != null && MaxRange > 0f;
     }
 
     public bool IsWithinRange(Vector3 worldPoint)
     {
-        if (CurrentWeapon == null)
+        if (!HasValidWeapon())
             return false;
 
         return VSplatterAimUtility.IsWithinFlatRange(
+            RangeOrigin.position,
+            worldPoint,
+            MaxRange);
+    }
+
+    public Vector3 ClampToRange(Vector3 worldPoint)
+    {
+        if (!HasValidWeapon())
+            return worldPoint;
+
+        return VSplatterAimUtility.ClampFlatPointToRange(
             RangeOrigin.position,
             worldPoint,
             MaxRange);
@@ -151,6 +170,7 @@ public class VSplatterRange : MonoBehaviour
         else
         {
             Shader shader = Shader.Find("Sprites/Default");
+
             if (shader != null)
             {
                 Material mat = new Material(shader);
@@ -176,6 +196,7 @@ public class VSplatterRange : MonoBehaviour
         _lineRenderer.endColor = rangeColor;
 
         int segments = Mathf.Max(8, circleSegments);
+
         if (_lineRenderer.positionCount != segments)
             _lineRenderer.positionCount = segments;
 
@@ -195,19 +216,24 @@ public class VSplatterRange : MonoBehaviour
             _lineRenderer.SetPosition(i, pos);
         }
     }
-    public Vector3 ClampToRange(Vector3 worldPoint)
-    {
-        if (CurrentWeapon == null)
-            return worldPoint;
 
-        return VSplatterAimUtility.ClampFlatPointToRange(
-            RangeOrigin.position,
-            worldPoint,
-           MaxRange);
+    private void OnAttackStarted()
+    {
+        _attackHeld = true;
     }
 
-    private void OnAttackStarted() => _attackHeld = true;
-    private void OnAttackCanceled() => _attackHeld = false;
-    private void OnPaintStarted() => _paintHeld = true;
-    private void OnPaintCanceled() => _paintHeld = false;
+    private void OnAttackCanceled()
+    {
+        _attackHeld = false;
+    }
+
+    private void OnPaintStarted()
+    {
+        _paintHeld = true;
+    }
+
+    private void OnPaintCanceled()
+    {
+        _paintHeld = false;
+    }
 }
