@@ -54,10 +54,10 @@ public class SelectNamedAttackAction : StateAction
 
         float distance = ResolveTargetDistance();
 
-        if (!_origin.Config.TryPickAttack(distance, out NamedAttackIdSO attackId))
+        if (!_origin.Config.TryPickAttack(distance, out EnemyAttackConfigSO attackConfig))
             return;
 
-        _blackboard.SelectAttack(attackId);
+        _blackboard.SelectAttack(attackConfig);
     }
 
     private float ResolveTargetDistance()

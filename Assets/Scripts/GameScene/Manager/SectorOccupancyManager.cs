@@ -25,6 +25,9 @@ public class SectorOccupancyManager : MonoBehaviour
 
     [Header("Manager Ready Broadcast")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
+    [Header("Named Sector")]
+    [SerializeField] private NamedSectorPhaseEventChannelSO _namedSectorPhaseChannel;
+    
     [Header("Map Snapshot")]
     [SerializeField] private SectorMapSnapshotEventChannelSO _mapSnapshotChangedChannel;
     [SerializeField] private VoidEventChannelSO _requestMapSnapshotChannel;
@@ -44,6 +47,8 @@ public class SectorOccupancyManager : MonoBehaviour
     public SectorOwner startSectorOwner;
     public bool startSectorPlayerOwned;
     private bool _hasLeftStartSector;
+    private bool _pinMapCenterToNamedSource;
+    private Vector2Int _namedSourceMapCenterCoord;
     private void Awake()
     {
         if (_sectorStateManager == null)
@@ -76,6 +81,8 @@ public class SectorOccupancyManager : MonoBehaviour
         {
             OnSectorStateManagerReady(_sectorStateManager);
         }
+        if (_namedSectorPhaseChannel != null)
+            _namedSectorPhaseChannel.OnEventRaised += OnNamedSectorPhaseChanged;
     }
 
     private void OnDisable()
@@ -91,6 +98,8 @@ public class SectorOccupancyManager : MonoBehaviour
 
         if (_sectorStateManagerReadyChannel != null)
             _sectorStateManagerReadyChannel.OnEventRaised -= OnSectorStateManagerReady;
+        if (_namedSectorPhaseChannel != null)
+            _namedSectorPhaseChannel.OnEventRaised -= OnNamedSectorPhaseChanged;
     }
     private void OnSectorStateManagerReady(SectorStateManager manager)
     {
@@ -237,7 +246,7 @@ public class SectorOccupancyManager : MonoBehaviour
 
         SectorMapSnapshot snapshotMap = new SectorMapSnapshot
         {
-            currentSectorCoord = _currentSectorCoord,
+            currentSectorCoord = GetMapSnapshotCenterCoord(),
             cells = cells.ToArray()
         };
 
@@ -272,5 +281,46 @@ public class SectorOccupancyManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    private void OnNamedSectorPhaseChanged(NamedSectorPhaseChange change)
+    {
+        if (ShouldPinMiniMapToNamedSource(change.Phase) && change.Sector != null)
+        {
+            _namedSourceMapCenterCoord = GetSectorCoord(change.Sector);
+            _pinMapCenterToNamedSource = true;
+            PublishMapSnapshot();
+            return;
+        }
+
+        if (ShouldReleaseMiniMapNamedPin(change.Phase))
+        {
+            _pinMapCenterToNamedSource = false;
+            PublishMapSnapshot();
+        }
+    }
+
+    private Vector2Int GetMapSnapshotCenterCoord()
+    {
+        return _pinMapCenterToNamedSource
+            ? _namedSourceMapCenterCoord
+            : _currentSectorCoord;
+    }
+
+    private static bool ShouldPinMiniMapToNamedSource(NamedSectorPhase phase)
+    {
+        return phase == NamedSectorPhase.EnteringBattle ||
+            phase == NamedSectorPhase.Battle ||
+            phase == NamedSectorPhase.RewardPending ||
+            phase == NamedSectorPhase.EndingBattle;
+    }
+
+    private static bool ShouldReleaseMiniMapNamedPin(NamedSectorPhase phase)
+    {
+        return phase == NamedSectorPhase.None ||
+            phase == NamedSectorPhase.WaitingForReservation ||
+            phase == NamedSectorPhase.Reserved ||
+            phase == NamedSectorPhase.Present ||
+            phase == NamedSectorPhase.DefeatedCooldown;
     }
 }

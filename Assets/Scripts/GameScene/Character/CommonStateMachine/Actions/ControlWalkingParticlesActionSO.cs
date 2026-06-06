@@ -12,7 +12,7 @@ public class ControlWalkingParticlesAction : StateAction
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_dustController = stateMachine.GetComponent<PlayerEffectController>();
+		_dustController = ResolveEffects(stateMachine);
 	}
 
 	public override void OnStateEnter()
@@ -26,4 +26,20 @@ public class ControlWalkingParticlesAction : StateAction
 	}
 
 	public override void OnUpdate() { }
+
+	private static PlayerEffectController ResolveEffects(StateMachine stateMachine)
+	{
+		if (stateMachine == null)
+			return null;
+
+		if (stateMachine.TryGetComponent(out PlayerEffectController effects))
+			return effects;
+
+		effects = stateMachine.GetComponentInChildren<PlayerEffectController>(true);
+
+		if (effects != null)
+			return effects;
+
+		return stateMachine.GetComponentInParent<PlayerEffectController>();
+	}
 }

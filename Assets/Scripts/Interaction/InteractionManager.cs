@@ -354,11 +354,11 @@ public class InteractionManager : MonoBehaviour
     {
         return type switch
         {
-            InteractionType.Portal => "이동",
-            InteractionType.QTE => "상호작용",
-            InteractionType.PickUp => "획득",
-            InteractionType.Talk => "대화",
-            _ => "상호작용"
+            InteractionType.Portal => "",
+            InteractionType.QTE => "",
+            InteractionType.PickUp => "",
+            InteractionType.Talk => "",
+            _ => ""
         };
     }
 

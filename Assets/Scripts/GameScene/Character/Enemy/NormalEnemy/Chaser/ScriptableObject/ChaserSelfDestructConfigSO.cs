@@ -2,7 +2,7 @@ using UnityEngine;
 
 [CreateAssetMenu(
     fileName = "ChaserSelfDestructConfig",
-    menuName = "ScriptableObject/GameScene/Enemy/Definition_Config/Chaser Self Destruct Config")]
+    menuName = "Game/Enemy/Definition_Config/NormalEnemy/Chaser/Chaser Self Destruct Config")]
 public class ChaserSelfDestructConfigSO : ScriptableObject
 {
     [Header("Virus Paint")]

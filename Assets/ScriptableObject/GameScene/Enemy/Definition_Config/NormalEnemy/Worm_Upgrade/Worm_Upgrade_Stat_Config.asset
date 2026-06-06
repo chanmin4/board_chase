@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13fe6257f3740a2419acda23b007a7fe, type: 3}
+  m_Name: Worm_Upgrade_Stat_Config
+  m_EditorClassIdentifier: 
+  _id: enemy_common
+  _displayName: Worm_Upgrade
+  _enemyPrefab: {fileID: 469768165924775885, guid: 0b0a072c2c1e77a44838340193af9426, type: 3}
+  _initialHealth: 40
+  _normalMovementSpeed: 25
+  _playerChaseMovementSpeed: 27
+  _contactHealthDamage: 10
+  _contactInfectionDamage: 10
+  _contactHitCooldown: 1
+  _xpOnDeath: 35
+  _runCurrencyOnDeath: 6
+  _virusTrailEnabled: 1
+  _virusTrailRadius: 0.8
+  _virusTrailMinSegmentDistance: 0.25
+  _virusTrailPaintPriority: 10
+  _virusTrailMinMoveSpeed: 0.05
+  _virusTrailTeleportResetDistance: 10

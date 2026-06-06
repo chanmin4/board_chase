@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a02c3ec337717845bb80d8e606d737b, type: 3}
+  m_Name: RollerAttackConfig
+  m_EditorClassIdentifier: 
+  _rollMoveSpeed: 60
+  _attackRollMoveSpeed: 60
+  _pickRandomDirectionOnEnter: 1
+  _faceMoveDirection: 1
+  _turnSpeedDegPerSecond: 1440
+  _minAttackReadyDelay: 2
+  _maxAttackReadyDelay: 4
+  _retargetOnlyWhenTargetExists: 1
+  _collisionRadius: 0.5
+  _collisionSkin: 0.05
+  _maxBouncesPerFrame: 2
+  _wallMask:
+    serializedVersion: 2
+    m_Bits: 128
+  _wallTriggerInteraction: 2
+  _maxWallHitBufferSize: 8
+  _useCurrentSectorBounds: 1
+  _sectorEdgePadding: 0.5
+  _disableNavMeshAgentWhileRolling: 1
+  _debugDrawDirection: 0
+  _debugDrawDuration: 0

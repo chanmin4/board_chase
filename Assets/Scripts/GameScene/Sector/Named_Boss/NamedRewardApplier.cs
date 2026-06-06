@@ -12,18 +12,18 @@ public class NamedRewardApplier : MonoBehaviour
     [Tooltip("Receives the runtime PlayerInfection instance.")]
     [SerializeField] private PlayerInfectionEventChannelSO _playerInfectionReadyChannel;
 
-    [Header("Refs Without Ready Channel")]
-    [SerializeField] private InfectionControlManager _infectionControlManager;
-    [SerializeField] private NamedSectorController _namedSectorController;
 
     [Header("Reward Shape")]
     [Tooltip("If true, reward applies to center sector plus four cardinal neighbor sectors.")]
     [SerializeField] private bool _applyCrossFiveSectors = true;
+    [SerializeField] private InfectionControlManagerReadyEventChannelSO _infectionControlManagerReadyChannel;
+    [SerializeField] private NamedSectorControllerReadyEventChannelSO _namedSectorControllerReadyChannel;
 
     private SectorStateManager _sectorStateManager;
     private MaskRenderManager _maskRenderManager;
     private PlayerInfection _playerInfection;
-
+    private InfectionControlManager _infectionControlManager;
+    private NamedSectorController _namedSectorController;
     private static readonly Vector2Int[] CrossOffsets =
     {
         new Vector2Int(0, 0),
@@ -76,6 +76,21 @@ public class NamedRewardApplier : MonoBehaviour
             if (_playerInfectionReadyChannel.Current != null)
                 HandlePlayerInfectionReady(_playerInfectionReadyChannel.Current);
         }
+        if (_infectionControlManagerReadyChannel != null)
+        {
+            _infectionControlManagerReadyChannel.OnEventRaised += HandleInfectionControlManagerReady;
+
+            if (_infectionControlManagerReadyChannel.HasCurrent)
+                HandleInfectionControlManagerReady(_infectionControlManagerReadyChannel.Current);
+        }
+
+        if (_namedSectorControllerReadyChannel != null)
+        {
+            _namedSectorControllerReadyChannel.OnEventRaised += HandleNamedSectorControllerReady;
+
+            if (_namedSectorControllerReadyChannel.HasCurrent)
+                HandleNamedSectorControllerReady(_namedSectorControllerReadyChannel.Current);
+        }
     }
 
     private void OnDisable()
@@ -88,6 +103,11 @@ public class NamedRewardApplier : MonoBehaviour
 
         if (_playerInfectionReadyChannel != null)
             _playerInfectionReadyChannel.OnEventRaised -= HandlePlayerInfectionReady;
+        if (_infectionControlManagerReadyChannel != null)
+            _infectionControlManagerReadyChannel.OnEventRaised -= HandleInfectionControlManagerReady;
+
+        if (_namedSectorControllerReadyChannel != null)
+            _namedSectorControllerReadyChannel.OnEventRaised -= HandleNamedSectorControllerReady;
     }
 
     public void ApplyReward(SectorRuntime centerSector)
@@ -195,5 +215,14 @@ public class NamedRewardApplier : MonoBehaviour
     {
         if (_playerInfection != null)
             _playerInfection.RecoverOnNamedKilled();
+    }
+    private void HandleInfectionControlManagerReady(InfectionControlManager manager)
+    {
+        _infectionControlManager = manager;
+    }
+
+    private void HandleNamedSectorControllerReady(NamedSectorController controller)
+    {
+        _namedSectorController = controller;
     }
 }

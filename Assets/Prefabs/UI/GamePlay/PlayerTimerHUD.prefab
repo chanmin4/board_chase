@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 103461772615886686}
   - component: {fileID: 8178480547751757602}
   - component: {fileID: 8553056154817656350}
+  - component: {fileID: 8915449583003510043}
   m_Layer: 5
   m_Name: StageText
   m_TagString: Untagged
@@ -138,6 +139,34 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8915449583003510043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1138382213517197128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &3784711238110844294
 GameObject:
   m_ObjectHideFlags: 0
@@ -331,16 +360,22 @@ MonoBehaviour:
   _timeText: {fileID: 4061149609625984590}
   _conditionText: {fileID: 7405598233473879976}
   _stageText: {fileID: 8553056154817656350}
+  _stageLocalizeEvent: {fileID: 8915449583003510043}
+  _stageStringTable:
+    m_TableCollectionName: UI_PlayerTimer
+  _stageEntryKey: PlayerTimer_Stage
+  _stageBreakEntryKey: PlayerTimer_StageBreakTime
   _showStageName: 1
   _showCondition: 1
   _showDecimalSeconds: 0
   _smoothFill: 1
   _smoothSpeed: 8
   _useUnscaledTime: 1
-  _normalColor: {r: 0.33225343, g: 0.5781542, b: 0.690566, a: 1}
-  _readyColor: {r: 0.25, g: 1, b: 0.45, a: 1}
+  _normalColor: {r: 0.52036566, g: 0.9150943, b: 0.4963955, a: 1}
+  _readyColor: {r: 0.9479299, g: 1, b: 0.25098038, a: 1}
   _blockedColor: {r: 0.65, g: 0.65, b: 0.65, a: 1}
   _completedColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  _breakTimeColor: {r: 0.10417364, g: 0.9811321, b: 0, a: 1}
 --- !u!1 &5335634561267445865
 GameObject:
   m_ObjectHideFlags: 0

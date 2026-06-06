@@ -1,3 +1,5 @@
+// Assets/Scripts/GameScene/Character/Enemy/CommonEnemyStateMachine/Action/PlayEnemyGetHitParticlesActionSO.cs
+
 using UnityEngine;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
@@ -15,12 +17,25 @@ public class PlayEnemyGetHitParticlesAction : StateAction
 
     public override void Awake(StateMachine stateMachine)
     {
-        _effects = stateMachine.GetComponent<EnemyEffectController>();
+        if (!stateMachine.TryGetComponent(out _effects))
+        {
+            Enemy enemy = stateMachine.GetComponentInParent<Enemy>();
+            if (enemy != null)
+                _effects = enemy.GetComponentInChildren<EnemyEffectController>(true);
+        }
+
+        if (_effects == null)
+        {
+            Debug.LogWarning(
+                $"[PlayEnemyGetHitParticlesAction] EnemyEffectController not found. Action skipped. owner={stateMachine.name}",
+                stateMachine);
+        }
     }
 
     public override void OnStateEnter()
     {
-        _effects.PlayGetHitParticles();
+        if (_effects != null)
+            _effects.PlayGetHitParticles();
     }
 
     public override void OnUpdate()

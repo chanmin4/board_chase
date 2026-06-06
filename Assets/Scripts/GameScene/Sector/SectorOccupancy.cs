@@ -84,8 +84,8 @@ public class SectorOccupancy : MonoBehaviour
 
     private void SampleRatios()
     {
-        float playerAbs = ComputeRatio(_paint.vaccineBuffer, _paint.textureWidth, _paint.textureHeight);
-        float virusAbs = ComputeRatio(_paint.virusBuffer, _paint.textureWidth, _paint.textureHeight);
+        float playerAbs = _paint.GetCoverageRatio(MaskRenderManager.PaintChannel.Vaccine);
+        float virusAbs = _paint.GetCoverageRatio(MaskRenderManager.PaintChannel.Virus);
         float sum = playerAbs + virusAbs;
 
         _playerRatio = sum > 0.00001f ? playerAbs / sum : 0f;
@@ -155,27 +155,6 @@ public class SectorOccupancy : MonoBehaviour
             _changedChannel.RaiseEvent(BuildSnapshot());
     }
 
-    private float ComputeRatio(Color32[] buffer, int width, int height)
-    {
-        if (buffer == null || width <= 0 || height <= 0)
-            return 0f;
-
-        int stride = Mathf.Max(1, _rules != null ? _rules.sampleStride : 1);
-        long sum = 0;
-        long samples = 0;
-
-        for (int y = 0; y < height; y += stride)
-        {
-            int row = y * width;
-            for (int x = 0; x < width; x += stride)
-            {
-                sum += buffer[row + x].a;
-                samples++;
-            }
-        }
-
-        return samples > 0 ? Mathf.Clamp01(sum / (255f * samples)) : 0f;
-    }
     public void SetSpecialState(SectorSpecialState specialState)
     {
         _specialState = specialState;
@@ -199,6 +178,15 @@ public class SectorOccupancy : MonoBehaviour
         _owner = owner;
         _playerRatio = Mathf.Clamp01(playerRatio);
         _virusRatio = Mathf.Clamp01(virusRatio);
+        ResetContest();
+        Publish();
+    }
+    public void ResetToNeutral()
+    {
+        _owner = SectorOwner.Neutral;
+        _specialState = SectorSpecialState.None;
+        _playerRatio = 0f;
+        _virusRatio = 0f;
         ResetContest();
         Publish();
     }

@@ -1,0 +1,109 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f540ffd575d06954a92e60c3db9b8a31, type: 3}
+  m_Name: METAUpgradeCatalog
+  m_EditorClassIdentifier: 
+  _upgrades:
+  - id: 0
+    displayName: Max Health
+    description: Permanently increases player max health.
+    icon: {fileID: 21300000, guid: c2591cd5c61f4164cbbdb34b8a1ca082, type: 3}
+    statId: 10
+    modifierType: 0
+    valueFormat: +{0:0}
+    effectPerLevel:
+    - 5
+    - 5
+    - 5
+    - 10
+    - 10
+    - 15
+    costPerLevel: 3200000032000000320000006400000064000000c8000000
+  - id: 1
+    displayName: Attack Damage
+    description: Permanently increases player attack damage.
+    icon: {fileID: 21300000, guid: f071dbf80bf74ca49be889a77a29bb24, type: 3}
+    statId: 0
+    modifierType: 0
+    valueFormat: +{0:0}
+    effectPerLevel:
+    - 1
+    - 1
+    - 1
+    - 2
+    - 2
+    - 3
+    costPerLevel: 3200000032000000320000006400000064000000c8000000
+  - id: 2
+    displayName: Magazine Size
+    description: Permanently increases magazine size.
+    icon: {fileID: 21300000, guid: db7e2dc1a8334d94482fe0e0a13d9287, type: 3}
+    statId: 6
+    modifierType: 0
+    valueFormat: +{0:0}
+    effectPerLevel:
+    - 1
+    - 1
+    - 1
+    costPerLevel: 2c0100002c0100002c010000
+  - id: 3
+    displayName: Move Speed
+    description: Permanently increases player move speed.
+    icon: {fileID: 21300000, guid: 1a063d0265c299448bde5fd3e0d01f0b, type: 3}
+    statId: 9
+    modifierType: 0
+    valueFormat: +{0:0.##}
+    effectPerLevel:
+    - 1
+    - 1
+    - 1
+    - 2
+    costPerLevel: 9600000096000000960000002c010000
+  - id: 4
+    displayName: Reload Time
+    description: Permanently reduces reload duration.
+    icon: {fileID: 21300000, guid: db7e2dc1a8334d94482fe0e0a13d9287, type: 3}
+    statId: 15
+    modifierType: 0
+    valueFormat: '{0:0.##}s'
+    effectPerLevel:
+    - -0.1
+    - -0.1
+    - -0.1
+    - -0.2
+    costPerLevel: 640000006400000064000000c8000000
+  - id: 5
+    displayName: Attack Speed
+    description: Permanently increases attack shots per second.
+    icon: {fileID: 21300000, guid: db7e2dc1a8334d94482fe0e0a13d9287, type: 3}
+    statId: 3
+    modifierType: 0
+    valueFormat: +{0:0.##}/s
+    effectPerLevel:
+    - 0.1
+    - 0.1
+    - 0.1
+    - 0.2
+    costPerLevel: 640000006400000064000000c8000000
+  - id: 6
+    displayName: Paint Speed
+    description: Permanently increases paint shots per second.
+    icon: {fileID: 21300000, guid: db7e2dc1a8334d94482fe0e0a13d9287, type: 3}
+    statId: 4
+    modifierType: 0
+    valueFormat: +{0:0.##}/s
+    effectPerLevel:
+    - 0.1
+    - 0.1
+    - 0.1
+    - 0.2
+    costPerLevel: 640000006400000064000000c8000000

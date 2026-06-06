@@ -2,19 +2,26 @@ using UnityEngine;
 
 public class SectorNamedStateApplier : MonoBehaviour
 {
-    [Header("Refs")]
-    [SerializeField] private MaskRenderManager _maskRenderManager;
+    [Header("Runtime Ready Channels")]
+    [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
-    private void Reset()
+    private MaskRenderManager _maskRenderManager;
+
+    private void OnEnable()
     {
-        if (_maskRenderManager == null)
-            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
+        if (_maskRenderManagerReadyChannel != null)
+        {
+            _maskRenderManagerReadyChannel.OnEventRaised += HandleMaskRenderManagerReady;
+
+            if (_maskRenderManagerReadyChannel.Current != null)
+                HandleMaskRenderManagerReady(_maskRenderManagerReadyChannel.Current);
+        }
     }
 
-    private void Awake()
+    private void OnDisable()
     {
-        if (_maskRenderManager == null)
-            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
+        if (_maskRenderManagerReadyChannel != null)
+            _maskRenderManagerReadyChannel.OnEventRaised -= HandleMaskRenderManagerReady;
     }
 
     public void SetReserved(SectorRuntime sector)
@@ -54,6 +61,11 @@ public class SectorNamedStateApplier : MonoBehaviour
 
         occupancy.RemoveSpecialState(SectorSpecialState.NamedReserved);
         occupancy.RemoveSpecialState(SectorSpecialState.NamedActive);
+    }
+
+    private void HandleMaskRenderManagerReady(MaskRenderManager manager)
+    {
+        _maskRenderManager = manager;
     }
 
     private void ClearSectorPaint(SectorRuntime sector)

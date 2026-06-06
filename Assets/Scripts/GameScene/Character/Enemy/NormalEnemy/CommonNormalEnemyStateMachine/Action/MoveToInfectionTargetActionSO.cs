@@ -9,11 +9,12 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class MoveToInfectionTargetActionSO : StateActionSO
 {
     [Header("Definition Config")]
-    [SerializeField] private NormalEnemyMoveToInfectionTargetConfigSO _definitionConfig;
+    [Tooltip("Shared config for normal enemy wander/search/infection behavior.")]
+    [SerializeField] private NormalEnemyBehaviorConfigSO _behaviorConfig;
 
-    public bool HasDefinitionConfig => _definitionConfig != null;
-    public float MoveSpeed => _definitionConfig.MoveSpeed;
-    public float StoppingDistance => _definitionConfig.StoppingDistance;
+    public bool HasBehaviorConfig => _behaviorConfig != null;
+    public float MoveSpeed => _behaviorConfig.InfectionMoveSpeed;
+    public float StoppingDistance => _behaviorConfig.InfectionMoveStoppingDistance;
     protected override StateAction CreateAction() => new MoveToInfectionTargetAction();
 }
 
@@ -36,11 +37,11 @@ public class MoveToInfectionTargetAction : StateAction
     }
     public override void OnStateEnter()
     {
-        _hasConfig = _config.HasDefinitionConfig;
+        _hasConfig = _config.HasBehaviorConfig;
 
         if (!_hasConfig)
         {
-            Debug.LogError("[MoveToInfectionTargetAction] Definition Config is missing.", _enemy);
+            Debug.LogError("[MoveToInfectionTargetAction] NormalEnemyBehaviorConfig is missing.", _enemy);
             return;
         }
 

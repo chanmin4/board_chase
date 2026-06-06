@@ -13,7 +13,8 @@ public class InfectionControlManager : MonoBehaviour
     [SerializeField] private FloatEventChannelSO _stageInfectionControlRecoverChannel;
     [Header("Game Over")]
     [SerializeField] private VoidEventChannelSO _gameOverChannel;
-
+    [Header("Manager Ready")]
+    [SerializeField] private InfectionControlManagerReadyEventChannelSO _infectionControlManagerReadyChannel;
     private float _currentControl;
     private float _sectorDrainPerSecond;
     private float _namedDrainPerSecond;
@@ -34,6 +35,8 @@ public class InfectionControlManager : MonoBehaviour
             _namedSectorPhaseChannel.OnEventRaised += OnNamedSectorPhaseChanged;
         if (_stageInfectionControlRecoverChannel != null)
             _stageInfectionControlRecoverChannel.OnEventRaised += Recover;
+        _infectionControlManagerReadyChannel?.RaiseEvent(this);
+        
         Publish();
     }
 
@@ -47,6 +50,8 @@ public class InfectionControlManager : MonoBehaviour
     
         if (_stageInfectionControlRecoverChannel != null)
             _stageInfectionControlRecoverChannel.OnEventRaised -= Recover;
+        if (_infectionControlManagerReadyChannel != null)
+            _infectionControlManagerReadyChannel.Clear(this);
     }
 
     private void Update()

@@ -1,15 +1,23 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class EnemyMovementStatsProvider : MonoBehaviour
 {
-    [SerializeField] private EnemyMovementStatsSO _movementStats;
+    [Header("Enemy Stat Config")]
+    [FormerlySerializedAs("_movementStats")]
+    [SerializeField] private EnemyStatConfigSO _enemyStatConfig;
 
-    public EnemyMovementStatsSO MovementStats => _movementStats;
+    public EnemyStatConfigSO EnemyStatConfig => _enemyStatConfig;
 
     public float NormalMovementSpeed =>
-        _movementStats != null ? _movementStats.NormalMovementSpeed : 2.2f;
+        _enemyStatConfig != null ? _enemyStatConfig.NormalMovementSpeed : 2.2f;
 
     public float PlayerChaseMovementSpeed =>
-        _movementStats != null ? _movementStats.PlayerChaseMovementSpeed : 3.5f;
+        _enemyStatConfig != null ? _enemyStatConfig.PlayerChaseMovementSpeed : 3.5f;
+
+    public void SetEnemyStatConfig(EnemyStatConfigSO enemyStatConfig)
+    {
+        _enemyStatConfig = enemyStatConfig;
+    }
 }

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+
 public class EnemyHealthBarWidget : MonoBehaviour
 {
     [Header("Refs")]
@@ -8,15 +9,19 @@ public class EnemyHealthBarWidget : MonoBehaviour
     [SerializeField] private RectTransform _fillRect;
     [SerializeField] private Image _fillImage;
     [SerializeField] private UICanvasGroupOpacity _uicanvasgroupopacity;
+
     [Header("Multiplier")]
     [SerializeField] private TextMeshProUGUI _multiplierText;
     [SerializeField] private string _multiplierFormat = "x{0:0.00}";
+
     private EnemyScreenSpaceHPUIAnchor _anchor;
     private Damageable _damageable;
     private EnemyHealthBarSettingsSO _settings;
     private float _emphasisUntilTime;
     private float _fillFullWidth;
-    private bool _managerVisible = true;
+    private bool _managerVisible;
+    private bool _hasValidScreenPosition;
+
     public RectTransform Root => _root != null ? _root : (RectTransform)transform;
 
     private void Awake()
@@ -30,14 +35,13 @@ public class EnemyHealthBarWidget : MonoBehaviour
         if (_fillRect != null)
         {
             _fillFullWidth = _fillRect.sizeDelta.x;
-
-            // 왼쪽부터 줄어들도록 강제
             _fillRect.pivot = new Vector2(0f, 0.5f);
             _fillRect.anchorMin = new Vector2(0f, 0.5f);
             _fillRect.anchorMax = new Vector2(0f, 0.5f);
         }
 
         EnsureFillImageMode();
+        ForceHiddenUntilPositioned();
     }
 
     public void Bind(EnemyScreenSpaceHPUIAnchor anchor)
@@ -47,14 +51,18 @@ public class EnemyHealthBarWidget : MonoBehaviour
         _anchor = anchor;
         _damageable = anchor != null ? anchor.Damageable : null;
         _settings = anchor != null ? anchor.HealthBarSettings : null;
+        _managerVisible = false;
+        _hasValidScreenPosition = false;
 
-       if (_damageable != null)
+        if (_damageable != null)
         {
             _damageable.OnHealthChanged += OnHealthChanged;
             _damageable.OnDamageMultiplierChanged += OnDamageMultiplierChanged;
         }
+
         EnsureFillImageMode();
         RefreshImmediate();
+        ForceHiddenUntilPositioned();
     }
 
     public void Unbind()
@@ -64,13 +72,12 @@ public class EnemyHealthBarWidget : MonoBehaviour
             _damageable.OnHealthChanged -= OnHealthChanged;
             _damageable.OnDamageMultiplierChanged -= OnDamageMultiplierChanged;
         }
+
         _anchor = null;
         _damageable = null;
         _settings = null;
-    }
-    private void OnDamageMultiplierChanged(Damageable damageable)
-    {
-        RefreshImmediate();
+        _managerVisible = false;
+        _hasValidScreenPosition = false;
     }
 
     public void TickVisualState()
@@ -80,7 +87,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
 
         RefreshImmediate();
 
-        if (!_managerVisible)
+        if (!_managerVisible || !_hasValidScreenPosition)
         {
             _uicanvasgroupopacity.Hide();
             return;
@@ -98,7 +105,9 @@ public class EnemyHealthBarWidget : MonoBehaviour
             return;
         }
 
-        if (_settings != null && _settings.HideWhenFull && Mathf.Approximately(_damageable.HealthNormalized, 1f))
+        if (_settings != null &&
+            _settings.HideWhenFull &&
+            Mathf.Approximately(_damageable.HealthNormalized, 1f))
         {
             _uicanvasgroupopacity.Hide();
             return;
@@ -110,6 +119,18 @@ public class EnemyHealthBarWidget : MonoBehaviour
     public void SetScreenPosition(Vector2 anchoredPosition)
     {
         Root.anchoredPosition = anchoredPosition;
+        _hasValidScreenPosition = true;
+    }
+
+    public void SetManagerVisible(bool visible)
+    {
+        _managerVisible = visible;
+
+        if (_uicanvasgroupopacity == null)
+            return;
+
+        if (!visible)
+            _uicanvasgroupopacity.Hide();
     }
 
     private void OnHealthChanged(Damageable damageable)
@@ -118,6 +139,11 @@ public class EnemyHealthBarWidget : MonoBehaviour
 
         if (_settings != null)
             _emphasisUntilTime = Time.time + _settings.EmphasisDuration;
+    }
+
+    private void OnDamageMultiplierChanged(Damageable damageable)
+    {
+        RefreshImmediate();
     }
 
     private void RefreshImmediate()
@@ -133,14 +159,22 @@ public class EnemyHealthBarWidget : MonoBehaviour
             _fillImage.fillAmount = normalized;
         }
 
-        if (_fillRect != null)
+        // Image.fillAmount만 사용한다. Rect width까지 줄이면 체력이 이중으로 감소해 보인다.
+        if (_fillRect != null && _fillImage == null)
         {
             Vector2 size = _fillRect.sizeDelta;
             size.x = _fillFullWidth * normalized;
             _fillRect.sizeDelta = size;
         }
+
         if (_multiplierText != null)
             _multiplierText.text = string.Format(_multiplierFormat, _damageable.DamageTakenMultiplier);
+    }
+
+    private void ForceHiddenUntilPositioned()
+    {
+        if (_uicanvasgroupopacity != null)
+            _uicanvasgroupopacity.Hide();
     }
 
     private void OnDisable()
@@ -161,15 +195,5 @@ public class EnemyHealthBarWidget : MonoBehaviour
 
         if (_fillImage.fillOrigin != (int)Image.OriginHorizontal.Left)
             _fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
-    }
-    public void SetManagerVisible(bool visible)
-    {
-        _managerVisible = visible;
-
-        if (_uicanvasgroupopacity == null)
-            return;
-
-        if (!visible)
-            _uicanvasgroupopacity.Hide();
     }
 }

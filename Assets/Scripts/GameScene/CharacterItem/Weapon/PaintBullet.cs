@@ -22,6 +22,7 @@ public class PaintBullet : MonoBehaviour
     private float _travelledDistance;
     private float _lifeTime;
     private bool _initialized;
+    private bool _completed;
 
     public void Init(
         Vector3 gameplayStartPosition,
@@ -70,6 +71,7 @@ public class PaintBullet : MonoBehaviour
         _travelledDistance = 0f;
         _lifeTime = 0f;
         _initialized = true;
+        _completed = false;
     }
 
     private void Update()
@@ -83,7 +85,7 @@ public class PaintBullet : MonoBehaviour
         _lifeTime += Time.deltaTime;
         if (_lifeTime >= _maxLifetime)
         {
-            Destroy(gameObject);
+            Complete(_gameplayPosition);
             return;
         }
 
@@ -91,8 +93,7 @@ public class PaintBullet : MonoBehaviour
         if (remainingDistance <= 0.001f)
         {
             transform.position = _visualTarget;
-            Stamp(_paintTarget);
-            Destroy(gameObject);
+            Complete(_paintTarget);
             return;
         }
 
@@ -114,8 +115,7 @@ public class PaintBullet : MonoBehaviour
                 : 1f;
 
             transform.position = Vector3.Lerp(_visualStartPosition, _visualTarget, progress);
-            Stamp(hit.point);
-            Destroy(gameObject);
+            Complete(hit.point);
             return;
         }
 
@@ -125,6 +125,22 @@ public class PaintBullet : MonoBehaviour
             ? Mathf.Clamp01(_travelledDistance / _maxDistance)
             : 1f;
         transform.position = Vector3.Lerp(_visualStartPosition, _visualTarget, visualProgress);
+
+        if (_travelledDistance >= _maxDistance - 0.001f)
+        {
+            transform.position = _visualTarget;
+            Complete(_paintTarget);
+        }
+    }
+
+    private void Complete(Vector3 worldPoint)
+    {
+        if (_completed)
+            return;
+
+        _completed = true;
+        Stamp(worldPoint);
+        Destroy(gameObject);
     }
 
     private void Stamp(Vector3 worldPoint)

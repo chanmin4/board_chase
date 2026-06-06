@@ -1,10 +1,12 @@
 using UnityEngine;
 using UnityEngine.Serialization;
+
 [DisallowMultipleComponent]
 public class PlayerInfection : MonoBehaviour
 {
+    private const float DefaultZoneTickInterval = 0.2f;
+
     [Header("Refs")]
-    [SerializeField] private HealthSO _healthSO;
     [SerializeField] private Damageable _damageable;
 
     [Header("Rules")]
@@ -14,42 +16,22 @@ public class PlayerInfection : MonoBehaviour
     [Header("Broadcasting On")]
     [SerializeField] private PlayerHealthEventChannelSO _playerHealthChanged;
     [FormerlySerializedAs("_deathEvent")]
-    [SerializeField] private VoidEventChannelSO _gameOverEvent; 
+    [SerializeField] private VoidEventChannelSO _gameOverEvent;
     [SerializeField] private PlayerInfectionEventChannelSO _playerInfectionReadyChannel;
-
-    [Header("Listening To")]
-    [SerializeField] private VoidEventChannelSO _updateHealthUI;
 
     [Header("Runtime")]
     [SerializeField] private float _currentInfection;
 
     private bool _isDead;
-    public float PoisonPuddleHealthDamagePerSecond =>
-        _infectionRules != null ? _infectionRules.PoisonPuddleHealthDamagePerSecond : 0f;
+
+    public float ZoneTickInterval =>
+        _infectionRules != null ? _infectionRules.ZoneTickInterval : DefaultZoneTickInterval;
+
     public float CurrentInfection => _currentInfection;
     public bool IsDead => _isDead;
 
-    private float MaxHealth
-    {
-        get
-        {
-            if (_damageable != null)
-                return _damageable.MaxHealth;
-
-            return _healthSO != null ? _healthSO.MaxHealth : 0f;
-        }
-    }
-
-    private float CurrentHealth
-    {
-        get
-        {
-            if (_damageable != null)
-                return _damageable.CurrentHealth;
-
-            return _healthSO != null ? _healthSO.CurrentHealth : 0f;
-        }
-    }
+    public float MaxHealth => _damageable != null ? _damageable.MaxHealth : 0f;
+    public float CurrentHealth => _damageable != null ? _damageable.CurrentHealth : 0f;
 
     private float InfectionGainMultiplier =>
         ActiveDifficultyRules != null ? ActiveDifficultyRules.PlayerInfectionGainMultiplier : 1f;
@@ -72,56 +54,42 @@ public class PlayerInfection : MonoBehaviour
             _damageable = GetComponent<Damageable>();
 
         ClampInfectionToMaxHealth();
-        PublishSnapshot();
     }
 
     private void OnEnable()
     {
-        if (_updateHealthUI != null)
-            _updateHealthUI.OnEventRaised += OnHealthChanged;
+        if (_damageable != null)
+            _damageable.OnHealthChanged += HandleDamageableHealthChanged;
 
         if (_playerInfectionReadyChannel != null)
             _playerInfectionReadyChannel.RaiseEvent(this);
+
+        PublishCurrentSnapshot();
     }
 
     private void OnDisable()
     {
-        if (_updateHealthUI != null)
-            _updateHealthUI.OnEventRaised -= OnHealthChanged;
+        if (_damageable != null)
+            _damageable.OnHealthChanged -= HandleDamageableHealthChanged;
 
         if (_playerInfectionReadyChannel != null)
             _playerInfectionReadyChannel.Clear(this);
     }
 
-    public void AddVirusZoneExposure(float deltaTime)
+    public void ApplyVirusZoneTick()
     {
         if (_infectionRules == null)
             return;
 
-        AddInfection(_infectionRules.VirusZoneGainPerSecond * InfectionGainMultiplier * deltaTime);
-    }
-    public void AddPoisonPuddleZoneExposure(float deltaTime)
-    {
-        if (_infectionRules == null)
-            return;
-
-        AddInfection(_infectionRules.PoisonPuddleInfectionGainPerSecond * InfectionGainMultiplier * deltaTime);
+        AddInfection(_infectionRules.VirusZoneInfectionGainPerTick * InfectionGainMultiplier);
     }
 
-    public void AddVaccineZoneRecovery(float deltaTime)
+    public void ApplyVaccineZoneTick()
     {
         if (_infectionRules == null)
             return;
 
-        ReduceInfection(_infectionRules.VaccineZoneRecoverPerSecond * InfectionRecoverMultiplier * deltaTime);
-    }
-
-    public void AddHitInfection()
-    {
-        if (_infectionRules == null)
-            return;
-
-        AddInfection(_infectionRules.InfectionOnHit * InfectionGainMultiplier);
+        ReduceInfection(_infectionRules.VaccineZoneRecoverPerTick * InfectionRecoverMultiplier);
     }
 
     public void RecoverOnSectorCaptured()
@@ -157,7 +125,7 @@ public class PlayerInfection : MonoBehaviour
         ClampInfectionToMaxHealth();
 
         CheckInfectionDeath();
-        PublishSnapshot();
+        PublishCurrentSnapshot();
     }
 
     public void ReduceInfection(float amount)
@@ -168,20 +136,32 @@ public class PlayerInfection : MonoBehaviour
         _currentInfection -= amount;
         ClampInfectionToMaxHealth();
 
-        PublishSnapshot();
+        PublishCurrentSnapshot();
     }
 
     public void ClearInfection()
     {
         _currentInfection = 0f;
-        PublishSnapshot();
+        PublishCurrentSnapshot();
     }
 
-    private void OnHealthChanged()
+    public void PublishCurrentSnapshot()
+    {
+        if (_playerHealthChanged == null)
+            return;
+
+        _playerHealthChanged.RaiseEvent(new PlayerHealthSnapshot(
+            MaxHealth,
+            CurrentHealth,
+            _currentInfection,
+            _isDead));
+    }
+
+    private void HandleDamageableHealthChanged(Damageable damageable)
     {
         ClampInfectionToMaxHealth();
         CheckInfectionDeath();
-        PublishSnapshot();
+        PublishCurrentSnapshot();
     }
 
     private void ClampInfectionToMaxHealth()
@@ -208,18 +188,6 @@ public class PlayerInfection : MonoBehaviour
         if (_gameOverEvent != null)
             _gameOverEvent.RaiseEvent();
 
-        PublishSnapshot();
-    }
-
-    private void PublishSnapshot()
-    {
-        if (_playerHealthChanged == null)
-            return;
-
-        _playerHealthChanged.RaiseEvent(new PlayerHealthSnapshot(
-            MaxHealth,
-            CurrentHealth,
-            _currentInfection,
-            _isDead));
+        PublishCurrentSnapshot();
     }
 }

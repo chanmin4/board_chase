@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-//HUD에 체력/감염 상태를 넘기는 이벤트.
+
 [Serializable]
 public struct PlayerHealthSnapshot
 {
@@ -32,8 +32,22 @@ public class PlayerHealthEventChannelSO : ScriptableObject
 {
     public event Action<PlayerHealthSnapshot> OnEventRaised;
 
+    [NonSerialized] private bool _hasCurrent;
+    [NonSerialized] private PlayerHealthSnapshot _current;
+
+    public bool HasCurrent => _hasCurrent;
+    public PlayerHealthSnapshot Current => _current;
+
     public void RaiseEvent(PlayerHealthSnapshot snapshot)
     {
+        _current = snapshot;
+        _hasCurrent = true;
         OnEventRaised?.Invoke(snapshot);
+    }
+
+    public void Clear()
+    {
+        _hasCurrent = false;
+        _current = default;
     }
 }

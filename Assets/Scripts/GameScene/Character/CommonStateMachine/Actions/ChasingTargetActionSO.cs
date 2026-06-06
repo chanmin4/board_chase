@@ -17,7 +17,7 @@ public class ChasingTargetActionSO : StateActionSO
     public enum SpeedSource
     {
         FixedValue,
-        MovementStatsSO,
+        MovementStatsProvider,
         AgentCurrentValue
     }
 
@@ -28,14 +28,11 @@ public class ChasingTargetActionSO : StateActionSO
     [Header("Speed")]
     [SerializeField] private SpeedSource _speedSource = SpeedSource.FixedValue;
     [SerializeField] private float _fixedChasingSpeed = 3.5f;
-    [SerializeField] private EnemyMovementStatsSO _movementStats = default;
 
     public TargetSource TargetMode => _targetSource;
     public TransformAnchor FallbackTarget => _fallbackTarget;
-
     public SpeedSource SpeedMode => _speedSource;
     public float FixedChasingSpeed => _fixedChasingSpeed;
-    public EnemyMovementStatsSO MovementStats => _movementStats;
 
     protected override StateAction CreateAction() => new ChasingTargetAction();
 }
@@ -46,6 +43,7 @@ public class ChasingTargetAction : StateAction
     private NavMeshAgent _agent;
     private Enemy _enemy;
     private EnemyMovementStatsProvider _movementStatsProvider;
+
     public override void Awake(StateMachine stateMachine)
     {
         _config = (ChasingTargetActionSO)OriginSO;
@@ -53,6 +51,7 @@ public class ChasingTargetAction : StateAction
         _enemy = stateMachine.GetComponent<Enemy>();
         stateMachine.TryGetComponent(out _movementStatsProvider);
     }
+
     public override void OnStateEnter()
     {
         if (!CanUseAgent())
@@ -110,7 +109,7 @@ public class ChasingTargetAction : StateAction
     {
         switch (_config.SpeedMode)
         {
-            case ChasingTargetActionSO.SpeedSource.MovementStatsSO:
+            case ChasingTargetActionSO.SpeedSource.MovementStatsProvider:
                 if (_movementStatsProvider != null)
                     return _movementStatsProvider.PlayerChaseMovementSpeed;
                 break;
@@ -121,5 +120,4 @@ public class ChasingTargetAction : StateAction
 
         return _config.FixedChasingSpeed;
     }
-
 }

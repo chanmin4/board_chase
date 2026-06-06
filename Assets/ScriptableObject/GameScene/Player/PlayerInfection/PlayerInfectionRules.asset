@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8ba0bbc4b03ea4449daff59647cba75, type: 3}
   m_Name: PlayerInfectionRules
   m_EditorClassIdentifier: 
-  virusZoneGainPerSecond: 8
-  vaccineZoneRecoverPerSecond: 10
-  infectionOnHit: 10
-  recoverOnSectorCaptured: 20
-  recoverOnNamedKilled: 30
-  recoverOnBossKilled: 50
+  _zoneTickInterval: 0.05
+  _virusZoneInfectionGainPerTick: 0.5
+  _vaccineZoneRecoverPerTick: 0.5
+  _recoverOnSectorCaptured: 20
+  _recoverOnNamedKilled: 30
+  _recoverOnBossKilled: 50

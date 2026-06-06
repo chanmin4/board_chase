@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 068de922a21c0a548913d2642d2cbe72, type: 3}
+  m_Name: Mutarus_Stat_Config
+  m_EditorClassIdentifier: 
+  _id: enemy_common
+  _displayName: Mutarus
+  _enemyPrefab: {fileID: 2399849270425247512, guid: 08db695c4ee33be4dbc69a1944842bc2, type: 3}
+  _initialHealth: 100
+  _normalMovementSpeed: 20
+  _playerChaseMovementSpeed: 30
+  _contactHealthDamage: 5
+  _contactInfectionDamage: 5
+  _contactHitCooldown: 1
+  _virusTrailEnabled: 0
+  _virusTrailRadius: 0.8
+  _virusTrailMinSegmentDistance: 0.25
+  _virusTrailPaintPriority: 10
+  _virusTrailMinMoveSpeed: 0.05
+  _virusTrailTeleportResetDistance: 10
+  _tooCloseDistance: 10
+  _preferredDistance: 25
+  _tooFarDistance: 40
+  _repositionSpeedSource: 1
+  _repositionFixedMoveSpeed: 2.2
+  _strafeDistance: 2.5
+  _destinationRefreshInterval: 0.35
+  _navMeshSampleDistance: 2
+  _faceTarget: 1
+  _turnSpeedDegPerSecond: 720
+  _debugDrawDistances: 0
+  _debugDrawHeight: 0.1

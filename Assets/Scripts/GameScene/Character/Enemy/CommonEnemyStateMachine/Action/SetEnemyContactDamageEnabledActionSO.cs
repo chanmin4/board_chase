@@ -18,12 +18,12 @@ public class SetEnemyContactDamageEnabledActionSO : StateActionSO
 
 public class SetEnemyContactDamageEnabledAction : StateAction
 {
-    private EnemyContactDamageManager _contactDamage;
+    private EnemyContactDamage _contactDamage;
     private new SetEnemyContactDamageEnabledActionSO OriginSO => (SetEnemyContactDamageEnabledActionSO)base.OriginSO;
 
     public override void Awake(StateMachine stateMachine)
     {
-        _contactDamage = stateMachine.GetComponent<EnemyContactDamageManager>();
+        _contactDamage = stateMachine.GetComponent<EnemyContactDamage>();
     }
 
     public override void OnUpdate()

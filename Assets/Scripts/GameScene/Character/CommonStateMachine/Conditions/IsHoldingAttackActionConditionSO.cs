@@ -17,7 +17,7 @@ public class IsHoldingAttackActionCondition : Condition
 
 	protected override bool Statement()
 	{
-		Debug.Log($"Attack input: {_vsplatterScript.attackInput}");
-		return _vsplatterScript.attackInput;
+		Debug.Log($"Attack input: {_vsplatterScript.shootInput}");
+		return _vsplatterScript.shootInput;
 	}
 }

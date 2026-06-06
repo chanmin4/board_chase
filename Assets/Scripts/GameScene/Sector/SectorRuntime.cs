@@ -1,3 +1,4 @@
+// Assets/Scripts/GameScene/Sector/SectorRuntime.cs
 using UnityEngine;
 
 public class SectorRuntime : MonoBehaviour
@@ -5,23 +6,25 @@ public class SectorRuntime : MonoBehaviour
     [Header("NeedRef Roots")]
     [SerializeField] private Transform _PatternObjectRoot;
     [SerializeField] private Transform[] _cleanupRoots;
-    
 
-    
+    [Header("Runtime Anchors")]
+    [Tooltip("Player spawn/reposition point used when this sector becomes the stage start sector. Falls back to cameraPoint, then this transform.")]
+    [SerializeField] private Transform _playerStartPoint;
+
     [Header("Ref Don't Touch")]
     [ReadOnly] public Vector2Int coord;
     [ReadOnly] public bool isOpened;
+    [ReadOnly] public bool isCleared;
     [ReadOnly] public bool is_startsector = false;
 
     public Transform cameraPoint;
-    [Tooltip("실제 적 스폰 위치")]
+
+    [Tooltip("Enemy spawn positions in this sector.")]
     public Transform[] enemySpawnPoints;
-    // 실제 적 생성 위치들. 기존 호환용 spawn point 배열.
-    [Tooltip("spawn point medata, additional settings for each spawn point. can be empty for basic spawning using enemySpawnPoints only.")]
+
+    [Tooltip("Optional spawn metadata. Can be empty when enemySpawnPoints are enough.")]
     [SerializeField] private EnemySpawnPoint[] _spawnPointMetadata;
-    //이포인트 비활성 , 이포인트 보스전용 등등 전용 설정가능
-    // 각 spawn point의 추가 설정용 메타데이터 배열.
-    // 비어 있어도 enemySpawnPoints만으로 기본 스폰은 가능.
+
     public SectorEdge XMin;
     public SectorEdge XMax;
     public SectorEdge ZMin;
@@ -33,20 +36,42 @@ public class SectorRuntime : MonoBehaviour
 
     public Vector2Int Coord => coord;
     public bool IsOpened => isOpened;
+    public bool IsCleared => isCleared;
     public bool IsStartSector => is_startsector;
     public EnemySpawnPoint[] SpawnPointMetadata => _spawnPointMetadata;
     public Transform PatternObjectRoot => _PatternObjectRoot != null ? _PatternObjectRoot : transform;
     public Transform[] CleanupRoots => _cleanupRoots;
+
+    public Transform PlayerStartPoint
+    {
+        get
+        {
+            if (_playerStartPoint != null)
+                return _playerStartPoint;
+
+            if (cameraPoint != null)
+                return cameraPoint;
+
+            return transform;
+        }
+    }
+
     public void SetRuntimeInfo(Vector2Int newCoord, bool opened, bool isStartSector)
     {
         coord = newCoord;
         isOpened = opened;
+        isCleared = false;
         is_startsector = isStartSector;
     }
 
     public void SetOpened(bool opened)
     {
         isOpened = opened;
+    }
+
+    public void SetCleared(bool cleared)
+    {
+        isCleared = cleared;
     }
 
     public Bounds GetWorldBounds()
@@ -61,14 +86,12 @@ public class SectorRuntime : MonoBehaviour
             Vector3 center = new Vector3(
                 (minX + maxX) * 0.5f,
                 transform.position.y,
-                (minZ + maxZ) * 0.5f
-            );
+                (minZ + maxZ) * 0.5f);
 
             Vector3 size = new Vector3(
                 Mathf.Abs(maxX - minX),
                 5f,
-                Mathf.Abs(maxZ - minZ)
-            );
+                Mathf.Abs(maxZ - minZ));
 
             return new Bounds(center, size);
         }
@@ -89,7 +112,9 @@ public class SectorRuntime : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if ((_spawnPointMetadata == null || _spawnPointMetadata.Length == 0) && enemySpawnPoints != null && enemySpawnPoints.Length > 0)
+        if ((_spawnPointMetadata == null || _spawnPointMetadata.Length == 0) &&
+            enemySpawnPoints != null &&
+            enemySpawnPoints.Length > 0)
         {
             EnemySpawnPoint[] found = new EnemySpawnPoint[enemySpawnPoints.Length];
 

@@ -12,26 +12,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e419cbca755b774468bc92161758c1b8, type: 3}
   m_Name: SpitterProjectileAttackConfig
   m_EditorClassIdentifier: 
-  _preferredDistance: 20
-  _tooCloseDistance: 15
-  _tooFarDistance: 20
-  _windupMoveSpeed: 2.2
-  _recoverMoveSpeed: 3
-  _strafeDistance: 3
-  _destinationRefreshInterval: 0.35
-  _navMeshSampleDistance: 2
-  _turnSpeedDegPerSecond: 720
+  _debugName: Spitter_ProjectileAttack
+  _postAttackDelaySeconds: 2
+  _triggerAnimatorOnEachShot: 1
+  _shotAnimatorTrigger: ProjectileAttack
+  _faceTargetOnAttack: 1
+  _snapFacingOnAttackStart: 1
+  _faceTargetWhileAttacking: 1
+  _attackFacingRotationSpeedDegPerSec: 1440
+  _requireTarget: 1
+  _stopAgentOnEnter: 1
+  _aimEachShotAtCurrentTarget: 1
   _usePredictiveAim: 1
-  _aimLeadTime: 0.2
-  _maxAimLeadDistance: 40
-  _randomSpreadAngle: 5
+  _aimLeadTime: 0.4
+  _maxAimLeadDistance: 15
+  _randomSpreadAngle: 4
   _projectilePrefab: {fileID: -2747863463967489409, guid: 38ccd250f9e7ad4418e6f9b6202a459c, type: 3}
-  _projectileSpeed: 45
-  _projectileLifetime: 1.2
-  _projectileCastRadius: 2
-  _projectileSpawnYOffset: 3
+  _projectileSpeed: 40
+  _projectileLifetime: 2
+  _projectileCastRadius: 1
+  _projectileSpawnYOffset: 0.5
+  _burstCount: 1
+  _burstInterval: 0.25
   _healthDamage: 5
-  _infectionDamage: 12
+  _infectionDamage: 5
   _damageTargetMask:
     serializedVersion: 2
     m_Bits: 8
@@ -42,6 +46,15 @@ MonoBehaviour:
   _paintChannel: 1
   _paintRadiusWorld: 5
   _paintPriority: 0
+  _preferredDistance: 20
+  _tooCloseDistance: 15
+  _tooFarDistance: 20
+  _windupMoveSpeed: 2.2
+  _recoverMoveSpeed: 3
+  _strafeDistance: 3
+  _destinationRefreshInterval: 0.35
+  _navMeshSampleDistance: 2
+  _turnSpeedDegPerSecond: 720
   _debugDrawRecoverDistances: 1
   _debugLogRecoverDistance: 0
   _debugLogInterval: 0.5

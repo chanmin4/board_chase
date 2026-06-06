@@ -97,6 +97,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4297012449826711450}
   - component: {fileID: 902943828256929384}
+  - component: {fileID: 7175101771414003438}
   m_Layer: 3
   m_Name: AudioManager
   m_TagString: Untagged
@@ -132,16 +133,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _sfxEventChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
-  _audioConfig: {fileID: 0}
-  _gameState: {fileID: 0}
-  _dash: {fileID: 0}
-  _objectPickup: {fileID: 0}
-  _footsteps: {fileID: 0}
-  _getHit: {fileID: 0}
-  _die: {fileID: 0}
-  _shockwaveCharge: {fileID: 0}
-  _shockwaveRelease: {fileID: 0}
-  _shockwaveCancel: {fileID: 0}
+  _audioConfig: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  _gameState: {fileID: 11400000, guid: 8e8b48267ef954f49a75dbff9d394778, type: 2}
+  _character: {fileID: 4351803592356138420}
+  _attack: {fileID: 685610790166866661}
+  _paint: {fileID: 5993180757520086435}
+  _dashController: {fileID: 7596797448053067780}
+  _damageable: {fileID: 3725409875933228798}
+  _characterController: {fileID: 5406591660721695122}
+  _attackCue: {fileID: 11400000, guid: a877e8df9eb63d54d8f22a91f2c4b912, type: 2}
+  _paintCue: {fileID: 11400000, guid: cda72b614ef84074b89714346108b336, type: 2}
+  _specialCue: {fileID: 0}
+  _dashCue: {fileID: 0}
+  _footstepsCue: {fileID: 0}
+  _getHitCue: {fileID: 0}
+  _dieCue: {fileID: 11400000, guid: 57a1ed0f5d7bf4241b07e4530dc376ce, type: 2}
+  _shockwaveChargeCue: {fileID: 0}
+  _shockwaveReleaseCue: {fileID: 0}
+  _playFootstepsWhileMoving: 1
+  _footstepInterval: 0.35
+  _movementThreshold: 0.12
+  _requireGroundedForFootsteps: 1
+  _debugLastHealth: 0
+  _debugFootstepTimer: 0
+--- !u!81 &7175101771414003438
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2345858737914817885}
+  m_Enabled: 1
 --- !u!1 &3050454772815296038
 GameObject:
   m_ObjectHideFlags: 0
@@ -302,6 +324,8 @@ MonoBehaviour:
   _weaponHolder: {fileID: 549010143910834747}
   _statsRuntime: {fileID: 69354217320293197}
   _bulletLoadout: {fileID: 1078626520116574429}
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+  _paintChannel: 0
   debugLogs: 1
   debugDraw: 1
   debugDrawDuration: 0.15
@@ -414,11 +438,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _character: {fileID: 4351803592356138420}
-  _animator: {fileID: 6766731295951724156}
   _aimAction: {fileID: 488941093109917602}
   _attack: {fileID: 685610790166866661}
   _paint: {fileID: 5993180757520086435}
   _actionGate: {fileID: 8618877116158418073}
+  _bulletLoadout: {fileID: 1078626520116574429}
 --- !u!1 &3610677903115402780
 GameObject:
   m_ObjectHideFlags: 0
@@ -517,6 +541,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d80e68735a897f644851eb1a27267e16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _outlineSourceRenderers:
+  - {fileID: 1316161387817811415}
+  - {fileID: 1315842586438456905}
+  _outlineMaterial: {fileID: 2100000, guid: ed8ec137a7229044da7f188c015bae11, type: 2}
+  _buildOutlineOnAwake: 1
+  _debugOutlineWeight: 0
 --- !u!1 &4064622088884078218
 GameObject:
   m_ObjectHideFlags: 0
@@ -603,7 +633,6 @@ MonoBehaviour:
   _bulletLoadout: {fileID: 1078626520116574429}
   _bulletLoadoutReadyChannel: {fileID: 11400000, guid: c1a9a2786fb22114f9b8a34532909618, type: 2}
   _aimCamera: {fileID: 0}
-  _character: {fileID: 4351803592356138420}
   _debugLogs: 0
 --- !u!1 &6915450752968060550
 GameObject:
@@ -636,6 +665,7 @@ GameObject:
   - component: {fileID: 681943115171059239}
   - component: {fileID: 4895959261900182708}
   - component: {fileID: 9210651667087362931}
+  - component: {fileID: 3418356392918273818}
   m_Layer: 3
   m_Name: VSplatter
   m_TagString: Player
@@ -751,8 +781,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7a826accce8d2d42a49e801ef2a178f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _healthConfigSO: {fileID: 11400000, guid: 4a31c5d403836f34e985dbcadd8d8453, type: 2}
-  _currentHealthSO: {fileID: 11400000, guid: 53a134cbd7189844c8d61c74cd1b50ce, type: 2}
+  _statConfig: {fileID: 11400000, guid: 8248831e8bc3cf742bd5ea433d528514, type: 2}
+  _fallbackInitialHealth: 1
+  _maxHealth: 0
+  _currentHealth: 0
   _keepAliveAtMinimumHealth: 1
   _minimumAliveHealth: 1
   _destroyOnDeath: 0
@@ -761,8 +793,6 @@ MonoBehaviour:
   _damageTakenMultiplier: 1
   _minDamageTakenMultiplier: 0
   _maxDamageTakenMultiplier: 99
-  _debugCurrentHealth: 0
-  _debugMaxHealth: 0
   _debugHealthNormalized: 0
   _debugDamageTakenMultiplier: 1
   _getHitEffectSO: {fileID: 11400000, guid: dcf7b20a3fc92814b8b7640e48d40d3a, type: 2}
@@ -839,14 +869,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d13ed55ce344614fb640ce9db8d0a53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _healthSO: {fileID: 11400000, guid: 53a134cbd7189844c8d61c74cd1b50ce, type: 2}
   _damageable: {fileID: 3725409875933228798}
   _infectionRules: {fileID: 11400000, guid: f61396243b933164e84206035bff1bfe, type: 2}
   _difficultyRules: {fileID: 11400000, guid: b3062c3ca54a07c499c92c9e2152d48f, type: 2}
   _playerHealthChanged: {fileID: 11400000, guid: c52ec27763e26ec4c89491ceccae6fbc, type: 2}
   _gameOverEvent: {fileID: 11400000, guid: c56424f07189cca4cac1bea2fce2534d, type: 2}
   _playerInfectionReadyChannel: {fileID: 11400000, guid: a72fde196ac2ba442adf03fc32ccfc1c, type: 2}
-  _updateHealthUI: {fileID: 11400000, guid: 2447a760b3f9f134f8730aa53c8d2ece, type: 2}
   _currentInfection: 0
 --- !u!114 &7769268975387512119
 MonoBehaviour:
@@ -1055,13 +1083,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c95d6a2f9e1ad047b897b72770ac1d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _baseStatsConfig: {fileID: 11400000, guid: 8248831e8bc3cf742bd5ea433d528514, type: 2}
+  _playerStatsConfig: {fileID: 11400000, guid: 8248831e8bc3cf742bd5ea433d528514, type: 2}
   _catalog: {fileID: 11400000, guid: 1f16ae3dba8fdba4498a2e060fa83dc8, type: 2}
   _upgradeState: {fileID: 5839303864436758566}
+  _metaUpgradeCatalog: {fileID: 0}
+  _saveSystem: {fileID: 0}
+  _loadMetaSaveOnEnable: 1
   _weaponHolder: {fileID: 549010143910834747}
   _fallbackWeapon: {fileID: 11400000, guid: 57d2b1b8ac5f3d74887e3f23ce5b0fe8, type: 2}
   _horizontalMoveAction: {fileID: 11400000, guid: c929b038ede507e4589a54bfae2c31ec, type: 2}
-  _healthConfig: {fileID: 11400000, guid: 4a31c5d403836f34e985dbcadd8d8453, type: 2}
   _dashConfig: {fileID: 11400000, guid: babb0e12fafadad4d8ac58746ac93544, type: 2}
   _shockwaveConfig: {fileID: 11400000, guid: f604b5997624fa54498088548265a627, type: 2}
   _baseOccupationWinThreshold: 0.5
@@ -1139,6 +1169,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _playerRuntimeReadyChannel: {fileID: 11400000, guid: 31d9f48afcfd69e41b6f414a4d32642b, type: 2}
+--- !u!114 &3418356392918273818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6915450752968060550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae532d04133f9444e89dda982ac878b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _playerStatsConfig: {fileID: 11400000, guid: 8248831e8bc3cf742bd5ea433d528514, type: 2}
+  _currencyChangedChannel: {fileID: 11400000, guid: bde88866f8e059344afd660d10a446c2, type: 2}
+  _currencyRuntimeReadyChannel: {fileID: 11400000, guid: 0d5c550b369471f49b90db56e48e5792, type: 2}
+  _requestCurrencySnapshotChannel: {fileID: 11400000, guid: feff414167bbdab4fa9966027320bd01, type: 2}
+  _saveSystem: {fileID: 11400000, guid: 096e40e8aee5c694a824b4025828ec02, type: 2}
+  _loadRoguelikeCurrencyFromSaveOnEnable: 1
+  _roguelikeCurrency: 0
+  _runCurrency: 0
 --- !u!1 &7234683804352580705
 GameObject:
   m_ObjectHideFlags: 0
@@ -1307,8 +1357,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd87492fb561ae244bb4e36ef3f82ad5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _defaultAttackBullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
-  _defaultPaintBullet: {fileID: 11400000, guid: 9d354fefd2ce4cc449aca4599df4938f, type: 2}
+  _defaultAttackAndPaintBullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
   _statsRuntimeReadyChannel: {fileID: 11400000, guid: ecf69a75cfe09bb458b0e7f93de73a3c, type: 2}
   _loadoutRuntimeReadyChannel: {fileID: 11400000, guid: c1a9a2786fb22114f9b8a34532909618, type: 2}
   _requestWeaponAmmoLoadoutSnapshotChannel: {fileID: 11400000, guid: 8049a0d03cad3e04cb6240a50c6dd3fe, type: 2}
@@ -1320,8 +1369,8 @@ MonoBehaviour:
   _sellResultChannel: {fileID: 11400000, guid: 6cfb32eb4af3e044eaa980bf7aa90edb, type: 2}
   _weaponAmmoLoadoutEventChannel: {fileID: 11400000, guid: f00206524dca36646b430bebd122c0f6, type: 2}
   _statsRuntime: {fileID: 0}
-  _activeAttackSlotIndex: 0
-  _activePaintSlotIndex: 2
+  _activePrimarySlotIndex: 0
+  _activePaintSlotIndex: -1
   _activeSpecialSlotIndex: -1
   _lastSelectedSlotIndex: 0
 --- !u!1 &8713701942454541855
@@ -1425,9 +1474,8 @@ MonoBehaviour:
   _rangeOrigin: {fileID: 6017853420671442627}
   _statsRuntime: {fileID: 69354217320293197}
   showRuntimeRange: 1
-  showOnlyWhileHoldingAimInput: 0
-  attackInputShowsRange: 1
-  paintInputShowsRange: 1
+  showOnlyWhileHoldingShootInput: 0
+  shootInputShowsRange: 1
   yOffset: 0.03
   circleSegments: 48
   lineWidth: 0.06
@@ -1628,6 +1676,16 @@ PrefabInstance:
 --- !u!4 &1297113805532342119 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8475264583216434159, guid: bdbeedbeaaa880547a1c3a3b803b79c1, type: 3}
+  m_PrefabInstance: {fileID: 7466535104254454920}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1315842586438456905 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 8492867241949067969, guid: bdbeedbeaaa880547a1c3a3b803b79c1, type: 3}
+  m_PrefabInstance: {fileID: 7466535104254454920}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1316161387817811415 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 8493093804610752863, guid: bdbeedbeaaa880547a1c3a3b803b79c1, type: 3}
   m_PrefabInstance: {fileID: 7466535104254454920}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &5493001281733607703 stripped

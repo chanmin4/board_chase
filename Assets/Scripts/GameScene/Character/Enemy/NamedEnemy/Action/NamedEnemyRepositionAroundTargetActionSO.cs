@@ -1,7 +1,6 @@
-// Assets/Scripts/GameScene/Character/Enemy/NamedEnemy/Action/NamedEnemyRepositionAroundTargetActionSO.cs
-
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Serialization;
 using VSplatter.StateMachine;
 using VSplatter.StateMachine.ScriptableObjects;
 
@@ -17,32 +16,33 @@ public class NamedEnemyRepositionAroundTargetActionSO : StateActionSO<NamedEnemy
         AgentCurrentValue
     }
 
-    [Header("Definition Config")]
-    [SerializeField] private NamedRepositionConfigSO _definitionConfig;
+    [Header("Stat Config")]
+    [FormerlySerializedAs("_mutarusStatConfig")]
+    [SerializeField] private NamedEnemyStatConfigSO _enemyStatConfig;
 
-    public bool HasDefinitionConfig => _definitionConfig != null;
+    public bool HasDefinitionConfig => _enemyStatConfig != null;
 
-    public SpeedSource MoveSpeedSource => ConvertSpeedSource(_definitionConfig.MoveSpeedSource);
-    public float FixedMoveSpeed => _definitionConfig.FixedMoveSpeed;
-    public float TooCloseDistance => _definitionConfig.TooCloseDistance;
-    public float PreferredDistance => _definitionConfig.PreferredDistance;
-    public float TooFarDistance => _definitionConfig.TooFarDistance;
-    public float StrafeDistance => _definitionConfig.StrafeDistance;
-    public float DestinationRefreshInterval => _definitionConfig.DestinationRefreshInterval;
-    public float NavMeshSampleDistance => _definitionConfig.NavMeshSampleDistance;
-    public bool FaceTarget => _definitionConfig.FaceTarget;
-    public float TurnSpeedDegPerSecond => _definitionConfig.TurnSpeedDegPerSecond;
-    public bool DebugDrawDistances => _definitionConfig.DebugDrawDistances;
-    public float DebugDrawHeight => _definitionConfig.DebugDrawHeight;
+    public SpeedSource MoveSpeedSource => ConvertSpeedSource(_enemyStatConfig.MoveSpeedSource);
+    public float FixedMoveSpeed => _enemyStatConfig.RepositionFixedMoveSpeed;
+    public float TooCloseDistance => _enemyStatConfig.TooCloseDistance;
+    public float PreferredDistance => _enemyStatConfig.PreferredDistance;
+    public float TooFarDistance => _enemyStatConfig.TooFarDistance;
+    public float StrafeDistance => _enemyStatConfig.StrafeDistance;
+    public float DestinationRefreshInterval => _enemyStatConfig.DestinationRefreshInterval;
+    public float NavMeshSampleDistance => _enemyStatConfig.NavMeshSampleDistance;
+    public bool FaceTarget => _enemyStatConfig.FaceTarget;
+    public float TurnSpeedDegPerSecond => _enemyStatConfig.TurnSpeedDegPerSecond;
+    public bool DebugDrawDistances => _enemyStatConfig.DebugDrawDistances;
+    public float DebugDrawHeight => _enemyStatConfig.DebugDrawHeight;
 
-    private static SpeedSource ConvertSpeedSource(NamedRepositionConfigSO.SpeedSource source)
+    private static SpeedSource ConvertSpeedSource(NamedEnemyStatConfigSO.RepositionSpeedSource source)
     {
         switch (source)
         {
-            case NamedRepositionConfigSO.SpeedSource.MovementStatsNormal:
+            case NamedEnemyStatConfigSO.RepositionSpeedSource.MovementStatsNormal:
                 return SpeedSource.MovementStatsNormal;
 
-            case NamedRepositionConfigSO.SpeedSource.AgentCurrentValue:
+            case NamedEnemyStatConfigSO.RepositionSpeedSource.AgentCurrentValue:
                 return SpeedSource.AgentCurrentValue;
 
             default:
@@ -81,7 +81,7 @@ public class NamedEnemyRepositionAroundTargetAction : StateAction
 
         if (!_hasConfig)
         {
-            Debug.LogError("[NamedEnemyRepositionAroundTargetAction] Definition Config is missing.", _owner);
+            Debug.LogError("[NamedEnemyRepositionAroundTargetAction] Named Enemy Stat Config is missing.", _owner);
             return;
         }
 

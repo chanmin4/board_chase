@@ -1,282 +1,307 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.Events;
-using System.Collections;
+using UnityEngine.Serialization;
+
 public class Damageable : MonoBehaviour
 {
-	[Header("Health")]
-	[SerializeField] private HealthConfigSO _healthConfigSO;
-	[Tooltip("this feature is allocated automatically if healthConfigSO is provided")] 
-	[SerializeField] private HealthSO _currentHealthSO;
-	[Header("Player Health Floor")]
-	[Tooltip("If true, this Damageable never drops below Minimum Alive Health by normal damage.")]
-	[SerializeField] private bool _keepAliveAtMinimumHealth = false;
+    [Header("Health Config")]
+    [FormerlySerializedAs("_mutarusStatConfigSO")]
+    [FormerlySerializedAs("_enemyStatConfigSO")]
+    [SerializeField] private EntityStatConfigSO _statConfig;
 
-	[SerializeField, Min(0f)] private float _minimumAliveHealth = 1f;
-	[Header("Death")]
-	[SerializeField] private bool _destroyOnDeath = false;
-	[SerializeField] private float _destroyDelay = 1f;
-	[Header("Damage Multiplier")]
-	[SerializeField, Min(0f)] private float _defaultDamageTakenMultiplier = 1f;
-	[SerializeField, Min(0f)] private float _damageTakenMultiplier = 1f;
-	[SerializeField, Min(0f)] private float _minDamageTakenMultiplier = 0f;
-	[SerializeField, Min(0f)] private float _maxDamageTakenMultiplier = 99f;
-	[Header("Runtime Debug")]
-	[ReadOnly] [SerializeField] private float _debugCurrentHealth;
-	[ReadOnly] [SerializeField] private float _debugMaxHealth;
-	[ReadOnly] [SerializeField] private float _debugHealthNormalized;
-	[ReadOnly] [SerializeField] private float _debugDamageTakenMultiplier = 1f;
+    [Tooltip("Used only when Stat Config is missing.")]
+    [SerializeField, Min(1f)] private float _fallbackInitialHealth = 1f;
 
-	[Header("Combat")]
-	[SerializeField] private GetHitEffectConfigSO _getHitEffectSO;
-	[SerializeField] private Renderer _mainMeshRenderer;
-	[SerializeField] private DroppableRewardConfigSO _droppableRewardSO;
-	[Header("Invulnerability")]
-	[SerializeField] private InvulnerabilityController _invulnerabilityController;
-	[SerializeField] private InvulnerabilityConfigSO _postHitInvulnerabilityConfig;
+    [Header("Runtime Health")]
+    [ReadOnly] [SerializeField] private float _maxHealth;
+    [ReadOnly] [SerializeField] private float _currentHealth;
 
-	[Header("Broadcasting On")]
-	[SerializeField] private VoidEventChannelSO _updateHealthUI = default;
-	[SerializeField] private VoidEventChannelSO _deathEvent = default;
+    [Header("Player Health Floor")]
+    [Tooltip("If true, this Damageable never drops below Minimum Alive Health by normal damage.")]
+    [SerializeField] private bool _keepAliveAtMinimumHealth = false;
+    [SerializeField, Min(0f)] private float _minimumAliveHealth = 1f;
 
-	[Header("Listening To")]
-	[SerializeField] private FloatEventChannelSO _restoreHealth = default; //Getting cured when eating food
+    [Header("Death")]
+    [SerializeField] private bool _destroyOnDeath = false;
+    [SerializeField] private float _destroyDelay = 1f;
+    
+    [Header("Damage Multiplier")]
+    [SerializeField, Min(0f)] private float _defaultDamageTakenMultiplier = 1f;
+    [SerializeField, Min(0f)] private float _damageTakenMultiplier = 1f;
+    [SerializeField, Min(0f)] private float _minDamageTakenMultiplier = 0f;
+    [SerializeField, Min(0f)] private float _maxDamageTakenMultiplier = 99f;
 
-	public DroppableRewardConfigSO DroppableRewardConfig => _droppableRewardSO;
+    [Header("Runtime Debug")]
+    [ReadOnly] [SerializeField] private float _debugHealthNormalized;
+    [ReadOnly] [SerializeField] private float _debugDamageTakenMultiplier = 1f;
 
-	//Flags that the StateMachine uses for Conditions to move between states
-	public bool GetHit { get; set; }
-	public bool IsDead { get; set; }
-	public float MaxHealth => _currentHealthSO != null ? _currentHealthSO.MaxHealth : 0f;
-	public float CurrentHealth => _currentHealthSO != null ? _currentHealthSO.CurrentHealth : 0f;
-	public float HealthNormalized => MaxHealth > 0f ? Mathf.Clamp01(CurrentHealth / MaxHealth) : 0f;
+    [Header("Combat")]
+    [SerializeField] private GetHitEffectConfigSO _getHitEffectSO;
+    [SerializeField] private Renderer _mainMeshRenderer;
+    [SerializeField] private DroppableRewardConfigSO _droppableRewardSO;
 
-	public float DamageTakenMultiplier => _damageTakenMultiplier;
-	private Coroutine _damageMultiplierRoutine;
-	public event UnityAction<Damageable> OnDamageMultiplierChanged;
- 	public event UnityAction<Damageable> OnHealthChanged;
+    [Header("Invulnerability")]
+    [SerializeField] private InvulnerabilityController _invulnerabilityController;
+    [SerializeField] private bool _applyPostHitInvulnerability = false;
+    [SerializeField] private InvulnerabilityConfigSO _postHitInvulnerabilityConfig;
+    [Header("Broadcasting On")]
+    [SerializeField] private VoidEventChannelSO _updateHealthUI = default;
+    [SerializeField] private VoidEventChannelSO _deathEvent = default;
 
-	public GetHitEffectConfigSO GetHitEffectConfig => _getHitEffectSO;
-	public Renderer MainMeshRenderer => _mainMeshRenderer; //used to apply the hit flash effect
-	public bool IsInvulnerable =>
-		_invulnerabilityController != null && _invulnerabilityController.IsInvulnerable;
+    [Header("Listening To")]
+    [SerializeField] private FloatEventChannelSO _restoreHealth = default;
 
-	public bool CanReceiveDamage => !IsDead && !IsInvulnerable;
-	public event UnityAction OnDie;
+    public DroppableRewardConfigSO DroppableRewardConfig => _droppableRewardSO;
 
-	private void Awake()
-	{
-		//If the HealthSO hasn't been provided in the Inspector (as it's the case for the player),
-		//we create a new SO unique to this instance of the component. This is typical for enemies.
-		if (_currentHealthSO == null)
-		{
-			_currentHealthSO = ScriptableObject.CreateInstance<HealthSO>();
-			float initialHealth = ResolveInitialHealth();
-			_currentHealthSO.SetMaxHealth(initialHealth);
-			_currentHealthSO.SetCurrentHealth(initialHealth);
-		}
-		if (_invulnerabilityController == null)
-    		TryGetComponent(out _invulnerabilityController);
+    public bool GetHit { get; set; }
+    public bool IsDead { get; set; }
 
-		SyncRuntimeHealthDebug();
+    public float MaxHealth => _maxHealth;
+    public float CurrentHealth => _currentHealth;
+    public float HealthNormalized => _maxHealth > 0f ? Mathf.Clamp01(_currentHealth / _maxHealth) : 0f;
+    public float DamageTakenMultiplier => _damageTakenMultiplier;
 
-		if (_updateHealthUI != null)
-			_updateHealthUI.RaiseEvent();
-	}
+    public event UnityAction<Damageable> OnDamageMultiplierChanged;
+    public event UnityAction<Damageable> OnHealthChanged;
+    public event UnityAction OnDie;
 
-	private void OnEnable()
-	{
-		if(_restoreHealth != null)
-			_restoreHealth.OnEventRaised += Cure;
-	}
+    public GetHitEffectConfigSO GetHitEffectConfig => _getHitEffectSO;
+    public Renderer MainMeshRenderer => _mainMeshRenderer;
 
-	private void OnDisable()
-	{
-		if(_restoreHealth != null)
-			_restoreHealth.OnEventRaised -= Cure;
-	}
+    public bool IsInvulnerable =>
+        _invulnerabilityController != null && _invulnerabilityController.IsInvulnerable;
 
-	public void ReceiveAnAttack(float damage, GameObject attacker = null)
-	{
-		if (!CanReceiveDamage || _currentHealthSO == null)
-			return;
+    public bool CanReceiveDamage => !IsDead && !IsInvulnerable;
 
-		float finalDamage = Mathf.Max(0f, damage * _damageTakenMultiplier);
-		if (finalDamage <= 0f)
-			return;
+    private Coroutine _damageMultiplierRoutine;
 
-		float minAliveHealth = Mathf.Min(
-			Mathf.Max(0f, _minimumAliveHealth),
-			MaxHealth);
+    private void Awake()
+    {
+        InitializeHealthFromConfig();
 
-		bool useHealthFloor = _keepAliveAtMinimumHealth && MaxHealth > 0f;
-		float nextHealth = CurrentHealth - finalDamage;
+        if (_invulnerabilityController == null)
+            TryGetComponent(out _invulnerabilityController);
 
-		if (useHealthFloor && nextHealth <= minAliveHealth)
-			_currentHealthSO.SetCurrentHealth(minAliveHealth);
-		else
-			_currentHealthSO.InflictDamage(finalDamage);
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
+    }
 
-		SyncRuntimeHealthDebug();
+    private void OnEnable()
+    {
+        if (_restoreHealth != null)
+            _restoreHealth.OnEventRaised += Cure;
+    }
 
-		GetHit = true;
+    private void OnDisable()
+    {
+        if (_restoreHealth != null)
+            _restoreHealth.OnEventRaised -= Cure;
+    }
 
-		bool diedThisHit = !useHealthFloor && _currentHealthSO.CurrentHealth <= 0f;
+    public void ReceiveAnAttack(float damage, GameObject attacker = null)
+    {
+        if (!CanReceiveDamage)
+            return;
 
-		if (diedThisHit)
-		{
-			_currentHealthSO.SetCurrentHealth(0f);
-			IsDead = true;
-		}
-		else if (_invulnerabilityController != null)
-		{
-			_invulnerabilityController.Begin(_postHitInvulnerabilityConfig);
-		}
+        float finalDamage = Mathf.Max(0f, damage * _damageTakenMultiplier);
+        if (finalDamage <= 0f)
+            return;
 
-		if (!diedThisHit && attacker != null && TryGetComponent(out Enemy enemy))
-			enemy.NotifyDamagedBy(attacker);
+        float minAliveHealth = Mathf.Min(Mathf.Max(0f, _minimumAliveHealth), _maxHealth);
+        bool useHealthFloor = _keepAliveAtMinimumHealth && _maxHealth > 0f;
+        float nextHealth = _currentHealth - finalDamage;
 
-		OnHealthChanged?.Invoke(this);
+        _currentHealth = useHealthFloor && nextHealth <= minAliveHealth
+            ? minAliveHealth
+            : Mathf.Clamp(nextHealth, 0f, _maxHealth);
 
-		if (_updateHealthUI != null)
-			_updateHealthUI.RaiseEvent();
+        SyncRuntimeHealthDebug();
+        GetHit = true;
 
-		if (!diedThisHit)
-			return;
+        bool diedThisHit = !useHealthFloor && _currentHealth <= 0f;
 
-		OnDie?.Invoke();
+        if (diedThisHit)
+        {
+            IsDead = true;
+        }
+        else if (_applyPostHitInvulnerability && _invulnerabilityController != null)
+        {
+            _invulnerabilityController.Begin(_postHitInvulnerabilityConfig);
+        }
 
-		if (_deathEvent != null)
-			_deathEvent.RaiseEvent();
+        if (!diedThisHit && attacker != null && TryGetComponent(out Enemy enemy))
+            enemy.NotifyDamagedBy(attacker);
 
-		if (_destroyOnDeath)
-			Destroy(gameObject, Mathf.Max(0f, _destroyDelay));
-	}
+        NotifyHealthChanged();
 
-	public void Kill()
-	{
-		ReceiveAnAttack(_currentHealthSO.CurrentHealth);
-	}
+        if (!diedThisHit)
+            return;
 
-	/// <summary>
-	/// Called by the StateMachine action ResetHealthSO. Used to revive the Rock critters.
-	/// </summary>
-	public void Revive()
-	{
-		_currentHealthSO.SetCurrentHealth(_healthConfigSO.InitialHealth);
-		SyncRuntimeHealthDebug();
-		OnHealthChanged?.Invoke(this);
-		if (_updateHealthUI != null)
-			_updateHealthUI.RaiseEvent();
-			
-		IsDead = false;
-	}
+        OnDie?.Invoke();
+        _deathEvent?.RaiseEvent();
 
-	/// <summary>
-	/// Used for cure events, like eating food. Triggered by an IntEventChannelSO.
-	/// </summary>
-	private void Cure(float healthToAdd)
-	{
-		if (IsDead)
-			return;
-			
-		_currentHealthSO.RestoreHealth(healthToAdd);
-		SyncRuntimeHealthDebug();
-		OnHealthChanged?.Invoke(this);
-		if (_updateHealthUI != null)
-			_updateHealthUI.RaiseEvent();
-	}
+        if (_destroyOnDeath)
+            Destroy(gameObject, Mathf.Max(0f, _destroyDelay));
+    }
 
-	private void SyncRuntimeHealthDebug()
-	{
-		_debugCurrentHealth = CurrentHealth;
-		_debugMaxHealth = MaxHealth;
-		_debugHealthNormalized = HealthNormalized;
-		_debugDamageTakenMultiplier = _damageTakenMultiplier;
-	}
+    public void Kill()
+    {
+        if (IsDead)
+            return;
 
-	private float ResolveInitialHealth()
-	{
-		float initialHealth = _healthConfigSO != null ? _healthConfigSO.InitialHealth : 1f;
+        _currentHealth = 0f;
+        IsDead = true;
 
-		if (TryGetComponent(out Enemy _))
-			initialHealth = DifficultyRuntime.ApplyEnemyHealth(initialHealth);
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
 
-		return Mathf.Max(1f, initialHealth);
-	}
+        OnDie?.Invoke();
+        _deathEvent?.RaiseEvent();
 
-	public void ApplyMaxHealthFromStats(float maxHealth, bool healToFull)
-	{
-		if (_currentHealthSO == null)
-			return;
+        if (_destroyOnDeath)
+            Destroy(gameObject, Mathf.Max(0f, _destroyDelay));
+    }
 
-		maxHealth = Mathf.Max(1f, maxHealth);
+    public void Revive()
+    {
+        _currentHealth = Mathf.Max(1f, _maxHealth);
+        IsDead = false;
 
-		float previousNormalized = HealthNormalized;
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
+    }
 
-		_currentHealthSO.SetMaxHealth(maxHealth);
+    public void ResetHealthFromConfig()
+    {
+        InitializeHealthFromConfig();
+        IsDead = false;
 
-		float nextHealth = healToFull
-			? maxHealth
-			: Mathf.Clamp(previousNormalized * maxHealth, 0f, maxHealth);
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
+    }
 
-		_currentHealthSO.SetCurrentHealth(nextHealth);
+    public void ApplyMaxHealthFromStats(float maxHealth, bool healToFull)
+    {
+        SetMaxHealth(maxHealth, healToFull);
+    }
 
-		SyncRuntimeHealthDebug();
-		OnHealthChanged?.Invoke(this);
+    public void SetMaxHealth(float maxHealth, bool healToFull)
+    {
+        _maxHealth = Mathf.Max(1f, maxHealth);
 
-		if (_updateHealthUI != null)
-			_updateHealthUI.RaiseEvent();
-	}
-	public void SetDamageTakenMultiplier(float multiplier)
-	{
-		StopDamageMultiplierTimer();
+        _currentHealth = healToFull
+            ? _maxHealth
+            : Mathf.Clamp(_currentHealth, 0f, _maxHealth);
 
-		_damageTakenMultiplier = Mathf.Max(0f, multiplier);
-		NotifyDamageMultiplierChanged();
-	}
-	public void SetDamageTakenMultiplierForSeconds(float multiplier, float duration)
-	{
-		StopDamageMultiplierTimer();
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
+    }
 
-		_damageTakenMultiplier = Mathf.Max(0f, multiplier);
-		NotifyDamageMultiplierChanged();
+    public void SetCurrentHealth(float currentHealth)
+    {
+        _currentHealth = Mathf.Clamp(currentHealth, 0f, _maxHealth);
+        IsDead = _currentHealth <= 0f;
 
-		if (duration > 0f)
-			_damageMultiplierRoutine = StartCoroutine(ResetDamageMultiplierAfter(duration));
-	}
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
+    }
 
-	public void ResetDamageTakenMultiplier()
-	{
-		StopDamageMultiplierTimer();
+    public void SetDamageTakenMultiplier(float multiplier)
+    {
+        StopDamageMultiplierTimer();
 
-		_damageTakenMultiplier = Mathf.Max(0f, _defaultDamageTakenMultiplier);
-		NotifyDamageMultiplierChanged();
-	}
-	private IEnumerator ResetDamageMultiplierAfter(float seconds)
-	{
-		yield return new WaitForSeconds(seconds);
+        _damageTakenMultiplier = ClampDamageTakenMultiplier(multiplier);
+        NotifyDamageMultiplierChanged();
+    }
 
-		_damageMultiplierRoutine = null;
-		_damageTakenMultiplier = Mathf.Max(0f, _defaultDamageTakenMultiplier);
-		NotifyDamageMultiplierChanged();
-	}
-	private void StopDamageMultiplierTimer()
-	{
-		if (_damageMultiplierRoutine == null)
-			return;
+    public void SetDamageTakenMultiplierForSeconds(float multiplier, float duration)
+    {
+        StopDamageMultiplierTimer();
 
-		StopCoroutine(_damageMultiplierRoutine);
-		_damageMultiplierRoutine = null;
-	}
+        _damageTakenMultiplier = ClampDamageTakenMultiplier(multiplier);
+        NotifyDamageMultiplierChanged();
 
-	private void NotifyDamageMultiplierChanged()
-	{
-		OnDamageMultiplierChanged?.Invoke(this);
-		OnHealthChanged?.Invoke(this);
+        if (duration > 0f)
+            _damageMultiplierRoutine = StartCoroutine(ResetDamageMultiplierAfter(duration));
+    }
 
-		if (_updateHealthUI != null)
-			_updateHealthUI.RaiseEvent();
-	}
+    public void ResetDamageTakenMultiplier()
+    {
+        StopDamageMultiplierTimer();
 
+        _damageTakenMultiplier = ClampDamageTakenMultiplier(_defaultDamageTakenMultiplier);
+        NotifyDamageMultiplierChanged();
+    }
 
+    private void InitializeHealthFromConfig()
+    {
+        float initialHealth = ResolveInitialHealth();
+
+        _maxHealth = initialHealth;
+        _currentHealth = initialHealth;
+    }
+
+    private float ResolveInitialHealth()
+    {
+        return _statConfig != null
+            ? _statConfig.ResolveInitialHealth()
+            : Mathf.Max(1f, _fallbackInitialHealth);
+    }
+
+    private void Cure(float healthToAdd)
+    {
+        if (IsDead || healthToAdd <= 0f)
+            return;
+
+        _currentHealth = Mathf.Clamp(_currentHealth + healthToAdd, 0f, _maxHealth);
+
+        SyncRuntimeHealthDebug();
+        NotifyHealthChanged();
+    }
+
+    private float ClampDamageTakenMultiplier(float multiplier)
+    {
+        float min = Mathf.Max(0f, _minDamageTakenMultiplier);
+        float max = Mathf.Max(min, _maxDamageTakenMultiplier);
+
+        return Mathf.Clamp(multiplier, min, max);
+    }
+
+    private void SyncRuntimeHealthDebug()
+    {
+        _debugHealthNormalized = HealthNormalized;
+        _debugDamageTakenMultiplier = _damageTakenMultiplier;
+    }
+
+    private IEnumerator ResetDamageMultiplierAfter(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+
+        _damageMultiplierRoutine = null;
+        _damageTakenMultiplier = ClampDamageTakenMultiplier(_defaultDamageTakenMultiplier);
+        NotifyDamageMultiplierChanged();
+    }
+
+    private void StopDamageMultiplierTimer()
+    {
+        if (_damageMultiplierRoutine == null)
+            return;
+
+        StopCoroutine(_damageMultiplierRoutine);
+        _damageMultiplierRoutine = null;
+    }
+
+    private void NotifyHealthChanged()
+    {
+        OnHealthChanged?.Invoke(this);
+        _updateHealthUI?.RaiseEvent();
+    }
+
+    private void NotifyDamageMultiplierChanged()
+    {
+        OnDamageMultiplierChanged?.Invoke(this);
+        OnHealthChanged?.Invoke(this);
+        _updateHealthUI?.RaiseEvent();
+    }
 }

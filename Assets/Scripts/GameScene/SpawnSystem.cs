@@ -1,62 +1,117 @@
-﻿using System;
-using System.Linq;
-using TMPro;
+﻿// Assets/Scripts/GameScene/SpawnSystem.cs
 using UnityEngine;
 
 public class SpawnSystem : MonoBehaviour
-{ 
-	[Header("Asset References")]
-	[SerializeField] private InputReader _inputReader = default;
-	[SerializeField] private VSplatter_Character _playerPrefab = default;
-	[SerializeField] private TransformAnchor _playerTransformAnchor = default;
-	[SerializeField] private TransformEventChannelSO _playerInstantiatedChannel = default;
+{
+    [Header("Asset References")]
+    [SerializeField] private InputReader _inputReader = default;
+    [SerializeField] private VSplatter_Character _playerPrefab = default;
+    [SerializeField] private TransformAnchor _playerTransformAnchor = default;
+    [SerializeField] private TransformEventChannelSO _playerInstantiatedChannel = default;
 
-	[Header("Scene Ready Event")]
-	[SerializeField] private VoidEventChannelSO _onSceneReady = default; //Raised by SceneLoader when the scene is set to active
-	[Header("Scene Refs")]
-	[SerializeField] private Transform _projectilesRoot = default;
-	private Transform _defaultSpawnPoint;
-	
+    [Header("Scene Ready Event")]
+    [SerializeField] private VoidEventChannelSO _onSceneReady = default;
 
-	private void Awake()
-	{
-		_defaultSpawnPoint = transform.GetChild(0);
-	}
+    [Header("Sector Events")]
+    [Tooltip("Current generated StartSector. Player spawn/reposition uses this sector's PlayerStartPoint.")]
+    [SerializeField] private SectorRuntimeEventChannelSO _startSectorReadyEvent = default;
 
-	private void OnEnable()
-	{
-		Debug.Log("onsceneready event raised");
-		_onSceneReady.OnEventRaised += SpawnPlayer;
-	}
+    [Header("Scene Refs")]
+    [SerializeField] private Transform _projectilesRoot = default;
 
-	private void OnDisable()
-	{
-		_onSceneReady.OnEventRaised -= SpawnPlayer;
+    private Transform _defaultSpawnPoint;
+    private Transform _spawnedPlayer;
 
-		_playerTransformAnchor.Unset();
-	}
+    private void Awake()
+    {
+        _defaultSpawnPoint = transform.childCount > 0 ? transform.GetChild(0) : transform;
+    }
 
+    private void OnEnable()
+    {
+        if (_onSceneReady != null)
+            _onSceneReady.OnEventRaised += SpawnPlayer;
 
-	private void SpawnPlayer()
-	{
-		Transform spawnLocation = _defaultSpawnPoint;
-		Debug.Log($"player Spawn position: {spawnLocation.position}");
+        if (_startSectorReadyEvent != null)
+            _startSectorReadyEvent.OnEventRaised += HandleStartSectorReady;
+    }
 
-		VSplatter_Character playerInstance = Instantiate(_playerPrefab, spawnLocation.position, spawnLocation.rotation);
+    private void OnDisable()
+    {
+        if (_onSceneReady != null)
+            _onSceneReady.OnEventRaised -= SpawnPlayer;
 
-		VSplatterWeaponHolder weaponHolder = playerInstance.GetComponentInChildren<VSplatterWeaponHolder>();
-		
-		if (weaponHolder != null)
-		{
-			Debug.Log($"[SpawnSystem] scene projectilesRoot = {_projectilesRoot}");
-			Debug.Log($"[SpawnSystem] weaponHolder = {weaponHolder}");
-			weaponHolder.SetProjectilesRoot(_projectilesRoot);
-			Debug.Log($"[SpawnSystem] holder.ProjectilesRoot after set = {weaponHolder.ProjectilesRoot}");
-		}
+        if (_startSectorReadyEvent != null)
+            _startSectorReadyEvent.OnEventRaised -= HandleStartSectorReady;
 
-		_playerInstantiatedChannel.RaiseEvent(playerInstance.transform);
-		_playerTransformAnchor.Provide(playerInstance.transform);
+        if (_playerTransformAnchor != null)
+            _playerTransformAnchor.Unset();
 
-		_inputReader.EnableGameplayInput();
-	}
+        _spawnedPlayer = null;
+    }
+
+    private void SpawnPlayer()
+    {
+        if (_spawnedPlayer != null || _playerPrefab == null)
+            return;
+
+        Transform spawnLocation = ResolveSpawnLocation();
+
+        VSplatter_Character playerInstance = Instantiate(
+            _playerPrefab,
+            spawnLocation.position,
+            spawnLocation.rotation);
+
+        _spawnedPlayer = playerInstance.transform;
+
+        VSplatterWeaponHolder weaponHolder =
+            playerInstance.GetComponentInChildren<VSplatterWeaponHolder>();
+
+        if (weaponHolder != null)
+            weaponHolder.SetProjectilesRoot(_projectilesRoot);
+
+        if (_playerInstantiatedChannel != null)
+            _playerInstantiatedChannel.RaiseEvent(_spawnedPlayer);
+
+        if (_playerTransformAnchor != null)
+            _playerTransformAnchor.Provide(_spawnedPlayer);
+
+        if (_inputReader != null)
+            _inputReader.EnableGameplayInput();
+    }
+
+    private void HandleStartSectorReady(SectorRuntime startSector)
+    {
+        if (_spawnedPlayer == null || startSector == null)
+            return;
+
+        MovePlayerTo(startSector.PlayerStartPoint);
+    }
+
+    private Transform ResolveSpawnLocation()
+    {
+        if (_startSectorReadyEvent != null &&
+            _startSectorReadyEvent.Current != null)
+        {
+            return _startSectorReadyEvent.Current.PlayerStartPoint;
+        }
+
+        return _defaultSpawnPoint != null ? _defaultSpawnPoint : transform;
+    }
+
+    private void MovePlayerTo(Transform target)
+    {
+        if (_spawnedPlayer == null || target == null)
+            return;
+
+        CharacterController controller = _spawnedPlayer.GetComponent<CharacterController>();
+
+        if (controller != null)
+            controller.enabled = false;
+
+        _spawnedPlayer.SetPositionAndRotation(target.position, target.rotation);
+
+        if (controller != null)
+            controller.enabled = true;
+    }
 }

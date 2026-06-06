@@ -1,23 +1,52 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class EnemyVirusTrail : MonoBehaviour
 {
+    private const float ManagerLookupInterval = 1f;
+
     [Header("Refs")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
-    [SerializeField] private EnemyPollutionTrailSettingsSO _settings;
+
+    [Header("Enemy Stat Config")]
+    [FormerlySerializedAs("_settings")]
+    [SerializeField] private EnemyStatConfigSO _enemyStatConfig;
 
     [Header("Runtime")]
-    [SerializeField] private bool _trailEnabled = true;
+    [Tooltip("Usually leave true. Base enable/disable lives in EnemyStatConfigSO.")]
+    [FormerlySerializedAs("_trailEnabled")]
+    [SerializeField] private bool _runtimeTrailEnabled = true;
 
+    private Transform _cachedTransform;
     private MaskRenderManager _maskRenderManager;
-    private Vector3 _lastPosition;
+    private EnemyMovementStatsProvider _movementStatsProvider;
+    private EnemyStatConfigSO _resolvedConfig;
+
+    private Vector3 _lastPaintPosition;
+    private float _lastPaintTime;
+    private float _nextStampTime;
+    private float _nextManagerLookupTime;
+    private bool _hasPaintPosition;
+
+    public void SetEnemyStatConfig(EnemyStatConfigSO enemyStatConfig)
+    {
+        _enemyStatConfig = enemyStatConfig;
+        _resolvedConfig = enemyStatConfig;
+    }
 
     public void SetTrailEnabled(bool enabled)
     {
-        _trailEnabled = enabled;
+        _runtimeTrailEnabled = enabled;
 
         if (enabled)
             ResetTrail();
+    }
+
+    private void Awake()
+    {
+        _cachedTransform = transform;
+        CacheMovementStatsProvider();
+        CacheStatConfig();
     }
 
     private void OnEnable()
@@ -28,6 +57,7 @@ public class EnemyVirusTrail : MonoBehaviour
         if (_maskRenderManagerReadyChannel != null)
             _maskRenderManager = _maskRenderManagerReadyChannel.Current;
 
+        CacheStatConfig();
         ResetTrail();
     }
 
@@ -39,54 +69,140 @@ public class EnemyVirusTrail : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!_trailEnabled || _settings == null)
+        if (!_runtimeTrailEnabled)
             return;
 
-        MaskRenderManager manager = ResolveMaskRenderManager();
-        if (manager == null)
+        EnemyStatConfigSO config = ResolveStatConfig();
+        if (config == null || !config.VirusTrailEnabled)
             return;
 
-        Vector3 current = transform.position;
+        Transform currentTransform = _cachedTransform != null ? _cachedTransform : transform;
+        Vector3 current = currentTransform.position;
 
-        Vector3 from = _lastPosition;
+        if (!_hasPaintPosition)
+        {
+            SetLastPaintPosition(current, Time.time);
+            return;
+        }
+
+        Vector3 from = _lastPaintPosition;
         Vector3 to = current;
-
         from.y = 0f;
         to.y = 0f;
 
         Vector3 delta = to - from;
-        float moved = delta.magnitude;
+        float movedSqr = delta.sqrMagnitude;
 
-        if (moved <= _settings.minSegmentDistance)
+        float minSegmentDistance = config.VirusTrailMinSegmentDistance;
+        if (movedSqr <= minSegmentDistance * minSegmentDistance)
             return;
 
-        if (moved > _settings.teleportResetDistance)
+        float now = Time.time;
+        if (now < _nextStampTime)
+            return;
+
+        float moved = Mathf.Sqrt(movedSqr);
+
+        float teleportResetDistance = config.VirusTrailTeleportResetDistance;
+        if (teleportResetDistance > 0f && moved > teleportResetDistance)
         {
-            ResetTrail();
+            ResetTrail(current, now);
             return;
         }
 
-        float speed = moved / Mathf.Max(Time.deltaTime, 0.0001f);
-        if (speed < _settings.minMoveSpeed)
+        float elapsed = Mathf.Max(0.0001f, now - _lastPaintTime);
+        float speed = moved / elapsed;
+
+        if (speed < config.VirusTrailMinMoveSpeed)
         {
-            _lastPosition = current;
+            SetLastPaintPosition(current, now);
             return;
         }
 
-        manager.RequestCapsuleTrail(
-            MaskRenderManager.PaintChannel.Virus,
-            _lastPosition,
+        MaskRenderManager manager = ResolveMaskRenderManager(now);
+        if (manager == null)
+        {
+            SetLastPaintPosition(current, now);
+            return;
+        }
+
+        Vector3 paintFrom = _lastPaintPosition;
+
+        float maxPaintSegmentDistance = config.VirusTrailMaxPaintSegmentDistance;
+        if (maxPaintSegmentDistance > 0f && moved > maxPaintSegmentDistance)
+        {
+            Vector3 flatDirection = delta / moved;
+            paintFrom = current - flatDirection * maxPaintSegmentDistance;
+        }
+
+        manager.RequestVirusTrailSegment(
+            paintFrom,
             current,
-            _settings.trailRadius,
-            _settings.paintPriority,
-            gameObject);
+            config.VirusTrailRadius,
+            config.VirusTrailPaintPriority,
+            gameObject,
+            config.VirusTrailSpacing,
+            config.VirusTrailMaxSteps);
 
-        _lastPosition = current;
+        SetLastPaintPosition(current, now);
+        _nextStampTime = now + config.VirusTrailStampInterval;
+    }
+
+    private EnemyStatConfigSO ResolveStatConfig()
+    {
+        if (_resolvedConfig != null)
+            return _resolvedConfig;
+
+        return CacheStatConfig();
+    }
+
+    private EnemyStatConfigSO CacheStatConfig()
+    {
+        if (_enemyStatConfig != null)
+        {
+            _resolvedConfig = _enemyStatConfig;
+            return _resolvedConfig;
+        }
+
+        if (_movementStatsProvider == null)
+            CacheMovementStatsProvider();
+
+        _resolvedConfig = _movementStatsProvider != null
+            ? _movementStatsProvider.EnemyStatConfig
+            : null;
+
+        return _resolvedConfig;
+    }
+
+    private void CacheMovementStatsProvider()
+    {
+        _movementStatsProvider =
+            GetComponent<EnemyMovementStatsProvider>() ??
+            GetComponentInParent<EnemyMovementStatsProvider>() ??
+            GetComponentInChildren<EnemyMovementStatsProvider>(true);
     }
 
     private void ResetTrail()
     {
-        _lastPosition = transform.position;
+        ResetTrail(_cachedTransform != null ? _cachedTransform.position : transform.position, Time.time);
+    }
+
+    private void ResetTrail(Vector3 position, float now)
+    {
+        SetLastPaintPosition(position, now);
+
+        float stampInterval = ResolveStatConfig()?.VirusTrailStampInterval ?? 0f;
+
+        _nextStampTime = stampInterval > 0f
+            ? now + Random.Range(0f, stampInterval)
+            : now;
+    }
+
+    private void SetLastPaintPosition(Vector3 position, float time)
+    {
+        _lastPaintPosition = position;
+        _lastPaintTime = time;
+        _hasPaintPosition = true;
     }
 
     private void HandleMaskRenderManagerReady(MaskRenderManager manager)
@@ -94,17 +210,22 @@ public class EnemyVirusTrail : MonoBehaviour
         _maskRenderManager = manager;
     }
 
-    private MaskRenderManager ResolveMaskRenderManager()
+    private MaskRenderManager ResolveMaskRenderManager(float now)
     {
         if (_maskRenderManager != null)
             return _maskRenderManager;
 
-        if (_maskRenderManagerReadyChannel != null)
+        if (_maskRenderManagerReadyChannel != null && _maskRenderManagerReadyChannel.Current != null)
+        {
             _maskRenderManager = _maskRenderManagerReadyChannel.Current;
+            return _maskRenderManager;
+        }
 
-        if (_maskRenderManager == null)
-            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
+        if (now < _nextManagerLookupTime)
+            return null;
 
+        _nextManagerLookupTime = now + ManagerLookupInterval;
+        _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
         return _maskRenderManager;
     }
 }

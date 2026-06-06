@@ -21,18 +21,15 @@ public class SetNamedBlackboardBoolActionSO : StateActionSO<SetNamedBlackboardBo
     [SerializeField] private StateAction.SpecificMoment _moment = StateAction.SpecificMoment.OnStateEnter;
 
     [Header("Delay")]
+    [Tooltip("Keep this for non-attack flow such as intro. Attack finish delay should live in NamedAttackConfigSO.")]
     [SerializeField] private bool _useDelay;
     [SerializeField, Min(0f)] private float _delaySeconds;
-
-    [Header("Optional")]
-    [SerializeField] private bool _clearSelectedAttack;
 
     public NamedBlackboardBoolField Field => _field;
     public bool Value => _value;
     public StateAction.SpecificMoment Moment => _moment;
     public bool UseDelay => _useDelay;
     public float DelaySeconds => _delaySeconds;
-    public bool ClearSelectedAttack => _clearSelectedAttack;
 }
 
 public class SetNamedBlackboardBoolAction : StateAction
@@ -101,9 +98,6 @@ public class SetNamedBlackboardBoolAction : StateAction
                 _blackboard.attackFinished = _config.Value;
                 break;
         }
-
-        if (_config.ClearSelectedAttack)
-            _blackboard.ClearSelectedAttack();
 
         _applied = true;
     }

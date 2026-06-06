@@ -16,7 +16,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "Attack",
+                    "name": "Shoot",
                     "type": "Button",
                     "id": "6c2ab1b8-8984-453a-af3d-a3c78ae1679a",
                     "expectedControlType": "",
@@ -25,16 +25,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Paint",
-                    "type": "Button",
-                    "id": "ee066c75-5ad8-4f9e-a4c3-a7f8c28438dc",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "SpecialShot",
+                    "name": "SpecialShoot",
                     "type": "Button",
                     "id": "bc9e1aba-f8e1-4336-adad-af33f5bdef09",
                     "expectedControlType": "",
@@ -229,7 +220,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "Attack",
+                    "action": "Shoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -240,7 +231,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Gamepad",
-                    "action": "Attack",
+                    "action": "Shoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -251,7 +242,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "XR",
-                    "action": "Attack",
+                    "action": "Shoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -329,17 +320,6 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Shockwave",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "fb0a9c4e-a6ca-4a73-b05a-aaa1886a1c66",
-                    "path": "<Mouse>/rightButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Keyboard&Mouse",
-                    "action": "Paint",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -427,7 +407,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "SpecialShot",
+                    "action": "SpecialShoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

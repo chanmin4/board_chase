@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4383b7eb320140ef8cea36905e481cf7, type: 3}
+  m_Name: NormalEnemyBehaviorConfig
+  m_EditorClassIdentifier: 
+  _wanderMoveSpeed: 2.2
+  _wanderMinTravelDistance: 1.25
+  _wanderEdgePadding: 0.75
+  _wanderNavMeshSampleMaxDistance: 1.25
+  _wanderCandidateCount: 8
+  _wanderMaxRepickCount: 2
+  _wanderDebugLogs: 0
+  _wanderDebugDraw: 0
+  _wanderDebugDrawDuration: 1.5
+  _searchRadius: 3
+  _searchCandidateCount: 8
+  _searchMaxRetryCount: 4
+  _searchOnEnterOnly: 0
+  _searchIntervalSeconds: 2
+  _searchMinimumScore: 0.3
+  _searchMinimumTravelDistance: 1.25
+  _searchPreferNearestOnTie: 1
+  _searchDistanceScoreWeight: 0.25
+  _searchSampleOffset: 0.75
+  _searchMinimumValidSamples: 3
+  _searchNavMeshSampleMaxDistance: 1.25
+  _searchVaccineScore: 1
+  _searchNeutralScore: 0.6
+  _searchVirusScore: 0
+  _searchDebugLogs: 1
+  _searchDebugDraw: 1
+  _searchDebugDrawDuration: 2
+  _infectionMoveSpeed: 3.5
+  _infectionMoveStoppingDistance: 0.8
+  _castInfectionRadius: 5
+  _castApplyOnStateExit: 1
+  _castPaintPriority: 0
+  _castDebugLogs: 1
+  _castDebugDraw: 1
+  _castDebugDrawDuration: 2

@@ -14,12 +14,14 @@ public class SaveSystem : ScriptableObject
 
     private void OnEnable()
     {
-        _saveSettingsEvent.OnEventRaised += SaveSettings;
+        if (_saveSettingsEvent != null)
+            _saveSettingsEvent.OnEventRaised += SaveSettings;
     }
 
     private void OnDisable()
     {
-        _saveSettingsEvent.OnEventRaised -= SaveSettings;
+        if (_saveSettingsEvent != null)
+            _saveSettingsEvent.OnEventRaised -= SaveSettings;
     }
 
     public bool LoadSaveDataFromDisk()
@@ -30,18 +32,16 @@ public class SaveSystem : ScriptableObject
 			return true;
 		}
 
+        saveData.EnsureRuntimeDefaults();
 		return false;
 	}
 
     	public void SaveDataToDisk()
 	{
-		if (FileManager.MoveFile(saveFilename, backupSaveFilename))
-		{
-			if (FileManager.WriteToFile(saveFilename, saveData.ToJson()))
-			{
-				//Debug.Log("Save successful " + saveFilename);
-			}
-		}
+        saveData.EnsureRuntimeDefaults();
+
+		FileManager.MoveFile(saveFilename, backupSaveFilename);
+		FileManager.WriteToFile(saveFilename, saveData.ToJson());
 	}
 
 	public void WriteEmptySaveFile()

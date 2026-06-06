@@ -1,15 +1,22 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
-// contact damagebox manager
-public class EnemyContactDamageManager : MonoBehaviour
+public class EnemyContactDamage : MonoBehaviour
 {
     [Header("Hitboxes")]
     [SerializeField] private EnemyContactAttack[] _hitboxes;
 
-    [Header("Settings")]
-    [SerializeField] private EnemyContactDamageSettingsSO _settings;
+    [Header("Enemy Stat Config")]
+    [FormerlySerializedAs("_settings")]
+    [SerializeField] private EnemyStatConfigSO _enemyStatConfig;
 
+    private EnemyMovementStatsProvider _movementStatsProvider;
     private float _nextHitTime;
+
+    public void SetEnemyStatConfig(EnemyStatConfigSO enemyStatConfig)
+    {
+        _enemyStatConfig = enemyStatConfig;
+    }
 
     private void Reset()
     {
@@ -19,6 +26,7 @@ public class EnemyContactDamageManager : MonoBehaviour
 
     private void Awake()
     {
+        CacheMovementStatsProvider();
         RegisterHitboxes();
     }
 
@@ -36,10 +44,9 @@ public class EnemyContactDamageManager : MonoBehaviour
 
     public void TryDamage(Collider other)
     {
-        if (_settings == null)
-            return;
+        EnemyStatConfigSO config = ResolveStatConfig();
 
-        if (Time.time < _nextHitTime)
+        if (config == null || Time.time < _nextHitTime)
             return;
 
         VSplatter_Character playerCharacter = other.GetComponentInParent<VSplatter_Character>();
@@ -47,32 +54,46 @@ public class EnemyContactDamageManager : MonoBehaviour
             return;
 
         Damageable damageable = playerCharacter.GetComponent<Damageable>();
-        if (damageable == null)
-            return;
-
-        if (damageable.gameObject == gameObject)
-            return;
-
-        if (!damageable.CanReceiveDamage)
+        if (damageable == null || damageable.gameObject == gameObject || !damageable.CanReceiveDamage)
             return;
 
         PlayerInfection playerInfection = playerCharacter.GetComponent<PlayerInfection>();
-
         bool appliedAny = false;
 
-        if (_settings.HealthDamage > 0f)
+        if (config.ContactHealthDamage > 0f)
         {
-            damageable.ReceiveAnAttack(_settings.HealthDamage, gameObject);
+            damageable.ReceiveAnAttack(config.ContactHealthDamage, gameObject);
             appliedAny = true;
         }
 
-        if (playerInfection != null && _settings.InfectionDamage > 0f)
+        if (playerInfection != null && config.ContactInfectionDamage > 0f)
         {
-            playerInfection.AddInfection(_settings.InfectionDamage);
+            playerInfection.AddInfection(config.ContactInfectionDamage);
             appliedAny = true;
         }
 
         if (appliedAny)
-            _nextHitTime = Time.time + _settings.HitCooldown;
+            _nextHitTime = Time.time + config.ContactHitCooldown;
+    }
+
+    private EnemyStatConfigSO ResolveStatConfig()
+    {
+        if (_enemyStatConfig != null)
+            return _enemyStatConfig;
+
+        if (_movementStatsProvider == null)
+            CacheMovementStatsProvider();
+
+        return _movementStatsProvider != null
+            ? _movementStatsProvider.EnemyStatConfig
+            : null;
+    }
+
+    private void CacheMovementStatsProvider()
+    {
+        _movementStatsProvider =
+            GetComponent<EnemyMovementStatsProvider>() ??
+            GetComponentInParent<EnemyMovementStatsProvider>() ??
+            GetComponentInChildren<EnemyMovementStatsProvider>(true);
     }
 }

@@ -1,71 +1,51 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class SectorEnemySpawner : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private SectorRuntime _sectorRuntime; 
-    // 이 스포너가 관리할 sector runtime.
-    // spawn point 목록, opened 상태, sector 좌표 등의 기준이 된다
-    [Tooltip("Enemies spawned by this spawner will put their projectiles under this root. Add this root to SectorRuntime CleanupRoots if it should be cleared.")]
+    [SerializeField] private SectorRuntime _sectorRuntime;
+
+    [Tooltip("Enemies spawned by this spawner will put their projectiles under this root.")]
     [SerializeField] private Transform _projectileRoot;
 
+    [FormerlySerializedAs("_spawnTable")]
+    [FormerlySerializedAs("_stageenemysetting")]
+    [SerializeField] private StageEnemySettingSO _stageEnemySetting;
 
-    [SerializeField] private StageEnemySpawnTableSO _spawnTable; 
-    // 현재 stage 기준으로
-    // 어떤 일반몹이 나오는지, sector min/max alive와 spawn interval이 얼마인지 정의한 테이블.
+    [SerializeField] private Transform _spawnedEnemiesRoot;
 
-    [SerializeField] private Transform _spawnedEnemiesRoot; 
-    // 실제 생성된 적들을 정리해서 붙여둘 부모.
-    // 비워두면 기본적으로 해당 sector runtime 밑에 생성.
     [Header("Exclusion")]
     [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
 
-
     [Header("Listening To")]
-    [SerializeField] private SectorRuntimeEventChannelSO _sectorOpenedEvent; 
-    // sector가 열렸을 때 받는 이벤트 채널.
-    // spawnOnlyWhenOpened가 켜져 있으면 이 이벤트 이후부터 스폰 가능해진다.
+    [SerializeField] private SectorRuntimeEventChannelSO _sectorOpenedEvent;
+    [SerializeField] private StageProgressSnapshotEventChannelSO _stageProgressChangedChannel;
 
-    [SerializeField] private StageProgressSnapshotEventChannelSO _stageProgressChangedChannel; 
-    // 현재 stage index 변경을 받는 채널.
-    // 이를 기준으로 resolved min/max alive, spawn interval을 갱신한다.
     [Header("Named Battle Lock")]
     [SerializeField] private BoolEventChannelSO _namedBattleWorldLockedChannel;
-
+    
+    
+    [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     [Header("Options")]
-    [SerializeField] private bool _spawnOnlyWhenOpened = true; 
-    // true면 sector가 opened 상태일 때만 적을 스폰한다.
-
+    [SerializeField] private bool _spawnOnlyWhenOpened = true;
     [SerializeField] private bool _fillMinimumImmediately = false;
-    // true면 현재 살아있는 적 수가 resolved min보다 적을 때
-    // min 수치까지 가능한 한 즉시 채우려 한다.
-    // false면 일반 spawn interval 주기만 따른다.
-
-    [SerializeField] private int _maxImmediateSpawnPerTick = 3; 
-    // fillMinimumImmediately가 켜져 있을 때
-    // 한 프레임에 최대로 즉시 생성할 적 수.
-
+    [SerializeField] private int _maxImmediateSpawnPerTick = 3;
 
     [Header("Runtime Don't Touch")]
-    [ReadOnly] [SerializeField] private int _currentStageIndex=-1; 
-    // 현재 적용 중인 stage index.
-
-    [ReadOnly] [SerializeField] private int _resolvedMinAlive; 
-    // 현재 stage rule에서 계산된 sector 최소 유지 적 수.
-
-    [ReadOnly] [SerializeField] private int _resolvedMaxAlive; 
-    // 현재 stage rule에서 계산된 sector 최대 유지 적 수.
-
-    [ReadOnly] [SerializeField] private float _resolvedSpawnInterval; 
-    // 현재 stage rule에서 계산된 스폰 간격(초).
-
-    [ReadOnly] [SerializeField] private bool _isSectorActive; 
-    // 현재 이 sector가 스폰 활성 상태인지.
-    
+    [ReadOnly] [SerializeField] private int _currentStageIndex = -1;
+    [ReadOnly] [SerializeField] private int _resolvedMinAlive;
+    [ReadOnly] [SerializeField] private int _resolvedMaxAlive;
+    [ReadOnly] [SerializeField] private int _resolvedSimultaneousSpawnCount = 1;
+    [ReadOnly] [SerializeField] private float _resolvedFirstSpawnInterval;
+    [ReadOnly] [SerializeField] private float _resolvedSpawnInterval;
+    [ReadOnly] [SerializeField] private bool _hasSpawnedFirstBatch;
+    [ReadOnly] [SerializeField] private bool _isSectorActive;
     [ReadOnly] [SerializeField] private bool _isNamedBattleWorldLocked;
+    private SectorStateManager _sectorStateManager;
     private readonly List<Enemy> _aliveEnemies = new();
     private readonly Dictionary<Enemy, Damageable> _trackedDamageables = new();
     private readonly Dictionary<Enemy, UnityAction> _deathHandlers = new();
@@ -77,12 +57,21 @@ public class SectorEnemySpawner : MonoBehaviour
     {
         if (_sectorRuntime == null)
             _sectorRuntime = GetComponent<SectorRuntime>();
+
+        if (_sectorStateManager == null)
+            _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
     }
 
     private void Awake()
     {
         if (_sectorRuntime == null)
             _sectorRuntime = GetComponent<SectorRuntime>();
+
+        if (_sectorStateManager == null)
+            _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
+
+        if (_sectorStateManager != null)
+            _sectorStateManager.EnsureInitialized();
     }
 
     private void OnEnable()
@@ -95,9 +84,15 @@ public class SectorEnemySpawner : MonoBehaviour
 
         if (_namedBattleWorldLockedChannel != null)
             _namedBattleWorldLockedChannel.OnEventRaised += OnNamedBattleWorldLocked;
+        if (_sectorStateManagerReadyChannel != null)
+        {
+            _sectorStateManagerReadyChannel.OnEventRaised += HandleSectorStateManagerReady;
 
-        _isSectorActive = _sectorRuntime != null && (!_spawnOnlyWhenOpened || _sectorRuntime.IsOpened);
+            if (_sectorStateManagerReadyChannel.HasCurrent)
+                HandleSectorStateManagerReady(_sectorStateManagerReadyChannel.Current);
+        }
         RefreshResolvedSettings();
+        RefreshSectorActivity();
     }
 
     private void OnDisable()
@@ -107,59 +102,64 @@ public class SectorEnemySpawner : MonoBehaviour
 
         if (_stageProgressChangedChannel != null)
             _stageProgressChangedChannel.OnEventRaised -= OnStageProgressChanged;
+
         if (_namedBattleWorldLockedChannel != null)
             _namedBattleWorldLockedChannel.OnEventRaised -= OnNamedBattleWorldLocked;
+        if (_sectorStateManagerReadyChannel != null)
+            _sectorStateManagerReadyChannel.OnEventRaised -= HandleSectorStateManagerReady;
         UnbindAllTrackedEnemies();
     }
-    private void OnNamedBattleWorldLocked(bool locked)
-    {
-        _isNamedBattleWorldLocked = locked;
-    }
+
     private void Update()
     {
         CleanupTrackedEnemies();
+        RefreshSectorActivity();
 
         if (!CanSpawn())
-        {
-        
             return;
-        }
 
         if (_aliveEnemies.Count >= _resolvedMaxAlive)
-        {   
+            return;
+
+        if (_aliveEnemies.Count < _resolvedMinAlive)
+        {
+            if (!_fillMinimumImmediately && Time.time < _nextSpawnTime)
+                return;
+
+            int spawnedThisTick = 0;
+            int maxSpawnCount = Mathf.Max(1, _maxImmediateSpawnPerTick);
+
+            while (_aliveEnemies.Count < _resolvedMinAlive &&
+                   spawnedThisTick < maxSpawnCount &&
+                   _aliveEnemies.Count < _resolvedMaxAlive)
+            {
+                int spawned = TrySpawnEnemyBatch(maxSpawnCount - spawnedThisTick);
+
+                if (spawned <= 0)
+                    break;
+
+                spawnedThisTick += spawned;
+
+                if (!_fillMinimumImmediately)
+                    break;
+            }
+
+            if (spawnedThisTick > 0)
+                HandleSuccessfulSpawnBatch();
+
             return;
         }
 
         if (Time.time < _nextSpawnTime)
-        {
-            // 아직 다음 스폰 시각 전.
-            // 타이머 때문에 안 나오는 건 정상이라 너무 시끄러우면 로그 안 찍는 게 낫다.
             return;
-        }
 
-        if (_aliveEnemies.Count < _resolvedMinAlive)
-        {
+        if (TrySpawnEnemyBatch(int.MaxValue) > 0)
+            HandleSuccessfulSpawnBatch();
+    }
 
-            int immediateSpawnCount = 0;
-            int maxSpawnCount = Mathf.Max(1, _maxImmediateSpawnPerTick);
-
-            while (_aliveEnemies.Count < _resolvedMinAlive && immediateSpawnCount < maxSpawnCount)
-            {
-                if (!TrySpawnOne())
-                    break;
-
-                immediateSpawnCount++;
-            }
-
-            _nextSpawnTime = Time.time + _resolvedSpawnInterval;
-            return;
-        }
-
-        if (TrySpawnOne())
-        {
-
-            _nextSpawnTime = Time.time + _resolvedSpawnInterval;
-        }
+    private void OnNamedBattleWorldLocked(bool locked)
+    {
+        _isNamedBattleWorldLocked = locked;
     }
 
     private void OnSectorOpened(SectorRuntime sector)
@@ -167,13 +167,7 @@ public class SectorEnemySpawner : MonoBehaviour
         if (_sectorRuntime == null || sector != _sectorRuntime)
             return;
 
-        _isSectorActive = true;
-        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
-
-        Debug.Log(
-            $"[SectorEnemySpawner] SectorOpened " +
-            $"sector={sector.name}, nextSpawnTime={_nextSpawnTime}, " +
-            $"resolvedSpawnInterval={_resolvedSpawnInterval}");
+        RefreshSectorActivity();
     }
 
     private void OnStageProgressChanged(StageProgressSnapshot snapshot)
@@ -189,33 +183,64 @@ public class SectorEnemySpawner : MonoBehaviour
     {
         _resolvedMinAlive = 0;
         _resolvedMaxAlive = 0;
+        _resolvedSimultaneousSpawnCount = 1;
+        _resolvedFirstSpawnInterval = 0f;
         _resolvedSpawnInterval = 0f;
+        _hasSpawnedFirstBatch = false;
+        _nextSpawnTime = float.PositiveInfinity;
 
-        if (_spawnTable == null)
-        {
-           // Debug.Log("[SectorEnemySpawner] RefreshResolvedSettings failed: spawnTable is null");
+        if (_stageEnemySetting == null)
             return;
-        }
 
-        if (!_spawnTable.TryGetRule(_currentStageIndex, out StageEnemySpawnTableSO.StageSpawnRule rule))
+        if (!_stageEnemySetting.TryGetRule(
+                _currentStageIndex,
+                out StageEnemySettingSO.StageSpawnRule rule))
         {
-            //Debug.Log($"[SectorEnemySpawner] RefreshResolvedSettings failed: no rule for stageIndex={_currentStageIndex}");
             return;
         }
 
         _resolvedMinAlive = Mathf.Max(0, rule.sectorMinAlive);
         _resolvedMaxAlive = Mathf.Max(_resolvedMinAlive, rule.sectorMaxAlive);
-        _resolvedSpawnInterval = DifficultyRuntime.ApplyEnemySpawnInterval(rule.spawnIntervalSeconds);
+        _resolvedSimultaneousSpawnCount = Mathf.Max(1, rule.SimultaneousSpawnCount);
+
+        _resolvedFirstSpawnInterval = DifficultyRuntime.ApplyEnemySpawnInterval(
+            rule.firstSpawnIntervalSeconds);
+
+        _resolvedSpawnInterval = DifficultyRuntime.ApplyEnemySpawnInterval(
+            rule.spawnIntervalSeconds);
+
+        ResetFirstSpawnSchedule();
+    }
+
+    private void ResetFirstSpawnSchedule()
+    {
+        _hasSpawnedFirstBatch = false;
+
+        _nextSpawnTime = _fillMinimumImmediately
+            ? Time.time
+            : Time.time + _resolvedFirstSpawnInterval;
+    }
+
+    private void HandleSuccessfulSpawnBatch()
+    {
+        _hasSpawnedFirstBatch = true;
+        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
+    }
+
+    private void ScheduleAfterEnemyRemoved()
+    {
+        if (!_hasSpawnedFirstBatch)
+            return;
 
         _nextSpawnTime = Time.time + _resolvedSpawnInterval;
-
     }
 
     private bool CanSpawn()
     {
         if (_isNamedBattleWorldLocked)
             return false;
-        if (_sectorRuntime == null || _spawnTable == null)
+
+        if (_sectorRuntime == null || _stageEnemySetting == null)
             return false;
 
         if (_sectorExclusionRules != null &&
@@ -224,7 +249,10 @@ public class SectorEnemySpawner : MonoBehaviour
             return false;
         }
 
-        if (_spawnOnlyWhenOpened && !_isSectorActive)
+        if (!_isSectorActive)
+            return false;
+
+        if (_sectorRuntime.IsCleared)
             return false;
 
         if (_resolvedMaxAlive <= 0)
@@ -233,58 +261,114 @@ public class SectorEnemySpawner : MonoBehaviour
         return true;
     }
 
-    private bool TrySpawnOne()
+    private void RefreshSectorActivity()
     {
-        if (_sectorRuntime == null || _spawnTable == null)
+        bool wasActive = _isSectorActive;
+
+        _isSectorActive =
+            _sectorRuntime != null &&
+            _sectorStateManager != null &&
+            _sectorStateManager.CurrentSector == _sectorRuntime &&
+            (!_spawnOnlyWhenOpened || _sectorRuntime.IsOpened) &&
+            !_sectorRuntime.IsCleared;
+
+        if (_isSectorActive && !wasActive && float.IsPositiveInfinity(_nextSpawnTime))
+            ResetFirstSpawnSchedule();
+    }
+    private int TrySpawnEnemyBatch(int maxBatchLimit)
+    {
+        if (_sectorRuntime == null || _stageEnemySetting == null)
+            return 0;
+
+        int remainingCapacity = Mathf.Max(0, _resolvedMaxAlive - _aliveEnemies.Count);
+        int maxAllowedThisCall = Mathf.Max(1, maxBatchLimit);
+
+        int spawnCount = Mathf.Min(
+            _resolvedSimultaneousSpawnCount,
+            remainingCapacity,
+            maxAllowedThisCall);
+
+        int spawned = 0;
+
+        for (int i = 0; i < spawnCount; i++)
         {
-            Debug.Log("[SectorEnemySpawner] TrySpawnOne failed: missing sectorRuntime or spawnTable");
-            return false;
+            if (!_stageEnemySetting.TryPickArchetype(
+                    _currentStageIndex,
+                    out EnemyStatConfigSO enemyConfig))
+            {
+                break;
+            }
+
+            if (!TrySpawnOne(enemyConfig))
+                break;
+
+            spawned++;
         }
 
-        if (!_spawnTable.TryPickArchetype(_currentStageIndex, out EnemyArchetypeSO archetype))
-        {
-            Debug.Log($"[SectorEnemySpawner] TrySpawnOne failed: no archetype for stageIndex={_currentStageIndex}");
-            return false;
-        }
+        return spawned;
+    }
 
-        if (archetype == null || archetype.EnemyPrefab == null)
-        {
-            Debug.Log("[SectorEnemySpawner] TrySpawnOne failed: invalid archetype or EnemyPrefab is null");
+    private bool TrySpawnOne(EnemyStatConfigSO enemyConfig)
+    {
+        if (enemyConfig == null || enemyConfig.EnemyPrefab == null)
             return false;
-        }
 
         if (!TryGetSpawnPoint(out Transform spawnPoint))
-        {
-            Debug.Log("[SectorEnemySpawner] TrySpawnOne failed: no valid spawn point found");
             return false;
-        }
 
-        Transform parent = _spawnedEnemiesRoot != null ? _spawnedEnemiesRoot : _sectorRuntime.transform;
-
-        Debug.Log(
-            $"[SectorEnemySpawner] TrySpawnOne instantiate " +
-            $"archetype={archetype.name}, prefab={archetype.EnemyPrefab.name}, " +
-            $"spawnPoint={spawnPoint.name}, position={spawnPoint.position}, parent={parent.name}");
+        Transform parent = _spawnedEnemiesRoot != null
+            ? _spawnedEnemiesRoot
+            : _sectorRuntime.transform;
 
         Enemy enemyInstance = Instantiate(
-            archetype.EnemyPrefab,
+            enemyConfig.EnemyPrefab,
             spawnPoint.position,
             spawnPoint.rotation,
             parent);
 
         if (enemyInstance == null)
-        {
-            Debug.Log("[SectorEnemySpawner] TrySpawnOne failed: Instantiate returned null");
             return false;
-        }
-
-        Debug.Log($"[SectorEnemySpawner] TrySpawnOne success: instantiated {enemyInstance.name}");
 
         enemyInstance.SetCurrentSector(_sectorRuntime);
+        BindEnemyStatConfig(enemyInstance, enemyConfig);
         BindProjectileRoot(enemyInstance);
         TrackEnemy(enemyInstance);
+
         return true;
     }
+
+    private static void BindEnemyStatConfig(
+        Enemy enemy,
+        EnemyStatConfigSO enemyConfig)
+    {
+        if (enemy == null || enemyConfig == null)
+            return;
+
+        EnemyMovementStatsProvider[] movementProviders =
+            enemy.GetComponentsInChildren<EnemyMovementStatsProvider>(true);
+
+        for (int i = 0; i < movementProviders.Length; i++)
+            movementProviders[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyContactDamage[] contactDamages =
+            enemy.GetComponentsInChildren<EnemyContactDamage>(true);
+
+        for (int i = 0; i < contactDamages.Length; i++)
+            contactDamages[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyVirusTrail[] virusTrails =
+            enemy.GetComponentsInChildren<EnemyVirusTrail>(true);
+
+        for (int i = 0; i < virusTrails.Length; i++)
+            virusTrails[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyKillRewardSource[] killRewardSources =
+            enemy.GetComponentsInChildren<EnemyKillRewardSource>(true);
+
+        for (int i = 0; i < killRewardSources.Length; i++)
+            killRewardSources[i].SetEnemyStatConfig(enemyConfig);
+    }
+
     private void BindProjectileRoot(Enemy enemy)
     {
         if (enemy == null || _projectileRoot == null)
@@ -298,27 +382,28 @@ public class SectorEnemySpawner : MonoBehaviour
                 rigs[i].SetProjectileRoot(_projectileRoot);
         }
     }
+
     private bool TryGetSpawnPoint(out Transform spawnPoint)
     {
         spawnPoint = null;
         _spawnPointBuffer.Clear();
 
         if (_sectorRuntime == null)
-        {
-            Debug.Log("[SectorEnemySpawner] TryGetSpawnPoint failed: sectorRuntime is null");
             return false;
-        }
 
         Transform[] runtimePoints = _sectorRuntime.enemySpawnPoints;
+
         if (runtimePoints != null)
         {
             for (int i = 0; i < runtimePoints.Length; i++)
             {
                 Transform point = runtimePoints[i];
+
                 if (point == null)
                     continue;
 
                 EnemySpawnPoint metadata = point.GetComponent<EnemySpawnPoint>();
+
                 if (metadata != null && !metadata.EnabledForSpawning)
                     continue;
 
@@ -326,12 +411,15 @@ public class SectorEnemySpawner : MonoBehaviour
             }
         }
 
-        if (_spawnPointBuffer.Count == 0 && _sectorRuntime.SpawnPointMetadata != null)
+        if (_spawnPointBuffer.Count == 0 &&
+            _sectorRuntime.SpawnPointMetadata != null)
         {
             EnemySpawnPoint[] metadataPoints = _sectorRuntime.SpawnPointMetadata;
+
             for (int i = 0; i < metadataPoints.Length; i++)
             {
                 EnemySpawnPoint metadata = metadataPoints[i];
+
                 if (metadata == null || !metadata.EnabledForSpawning)
                     continue;
 
@@ -342,11 +430,8 @@ public class SectorEnemySpawner : MonoBehaviour
         if (_spawnPointBuffer.Count <= 0)
             return false;
 
-        spawnPoint = _spawnPointBuffer[UnityEngine.Random.Range(0, _spawnPointBuffer.Count)];
-
-        Debug.Log(
-            $"[SectorEnemySpawner] TryGetSpawnPoint success " +
-            $"candidateCount={_spawnPointBuffer.Count}, picked={spawnPoint.name}, position={spawnPoint.position}");
+        spawnPoint = _spawnPointBuffer[
+            UnityEngine.Random.Range(0, _spawnPointBuffer.Count)];
 
         return spawnPoint != null;
     }
@@ -358,12 +443,12 @@ public class SectorEnemySpawner : MonoBehaviour
 
         _aliveEnemies.Add(enemy);
 
-        Debug.Log($"[SectorEnemySpawner] TrackEnemy {enemy.name}, aliveCount={_aliveEnemies.Count}");
-
-        if (enemy.TryGetComponent(out Damageable damageable) && damageable != null)
+        if (enemy.TryGetComponent(out Damageable damageable) &&
+            damageable != null)
         {
             UnityAction handler = () => OnTrackedEnemyDied(enemy);
             damageable.OnDie += handler;
+
             _trackedDamageables[enemy] = damageable;
             _deathHandlers[enemy] = handler;
         }
@@ -371,7 +456,6 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private void OnTrackedEnemyDied(Enemy enemy)
     {
-        Debug.Log($"[SectorEnemySpawner] OnTrackedEnemyDied {enemy.name}");
         UntrackEnemy(enemy);
     }
 
@@ -387,7 +471,9 @@ public class SectorEnemySpawner : MonoBehaviour
                 continue;
             }
 
-            if (_trackedDamageables.TryGetValue(enemy, out Damageable damageable) &&
+            if (_trackedDamageables.TryGetValue(
+                    enemy,
+                    out Damageable damageable) &&
                 damageable != null &&
                 damageable.IsDead)
             {
@@ -410,20 +496,22 @@ public class SectorEnemySpawner : MonoBehaviour
         }
 
         _aliveEnemies.RemoveAt(index);
-        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
+        ScheduleAfterEnemyRemoved();
     }
+
     private void UntrackEnemy(Enemy enemy)
     {
         if (enemy == null)
         {
             _aliveEnemies.Remove(enemy);
-            _nextSpawnTime = Time.time + _resolvedSpawnInterval;
+            ScheduleAfterEnemyRemoved();
             return;
         }
 
-        string enemyName = enemy.name;
-
-        if (_trackedDamageables.TryGetValue(enemy, out Damageable damageable) && damageable != null)
+        if (_trackedDamageables.TryGetValue(
+                enemy,
+                out Damageable damageable) &&
+            damageable != null)
         {
             if (_deathHandlers.TryGetValue(enemy, out UnityAction handler))
                 damageable.OnDie -= handler;
@@ -433,22 +521,33 @@ public class SectorEnemySpawner : MonoBehaviour
 
         _deathHandlers.Remove(enemy);
         _aliveEnemies.Remove(enemy);
-        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
-
-        Debug.Log(
-            $"[SectorEnemySpawner] UntrackEnemy {enemyName}, " +
-            $"aliveCount={_aliveEnemies.Count}, nextSpawnTime={_nextSpawnTime}");
+        ScheduleAfterEnemyRemoved();
     }
+
     private void UnbindAllTrackedEnemies()
     {
         foreach (var pair in _trackedDamageables)
         {
-            if (pair.Value != null && _deathHandlers.TryGetValue(pair.Key, out UnityAction handler))
+            if (pair.Value != null &&
+                _deathHandlers.TryGetValue(pair.Key, out UnityAction handler))
+            {
                 pair.Value.OnDie -= handler;
+            }
         }
 
         _deathHandlers.Clear();
         _trackedDamageables.Clear();
         _aliveEnemies.Clear();
+    }
+    private void HandleSectorStateManagerReady(SectorStateManager manager)
+    {
+        if (manager == null)
+            return;
+
+        _sectorStateManager = manager;
+        _sectorStateManager.EnsureInitialized();
+
+        RefreshResolvedSettings();
+        RefreshSectorActivity();
     }
 }

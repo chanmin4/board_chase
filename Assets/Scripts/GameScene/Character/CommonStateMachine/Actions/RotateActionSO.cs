@@ -70,6 +70,11 @@ public class RotateAction : StateAction
     }
     public override void OnUpdate()
     {
+        if (GamePause.IsPaused || Time.timeScale <= 0f)
+        {
+            _turnSmoothSpeed = 0f;
+            return;
+        }
         if (_aimAction == null)
             return;
 

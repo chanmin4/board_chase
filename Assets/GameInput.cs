@@ -102,7 +102,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": true
                 },
                 {
-                    ""name"": ""Attack"",
+                    ""name"": ""Shoot"",
                     ""type"": ""Button"",
                     ""id"": ""6c2ab1b8-8984-453a-af3d-a3c78ae1679a"",
                     ""expectedControlType"": """",
@@ -111,16 +111,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""Paint"",
-                    ""type"": ""Button"",
-                    ""id"": ""ee066c75-5ad8-4f9e-a4c3-a7f8c28438dc"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""SpecialShot"",
+                    ""name"": ""SpecialShoot"",
                     ""type"": ""Button"",
                     ""id"": ""bc9e1aba-f8e1-4336-adad-af33f5bdef09"",
                     ""expectedControlType"": """",
@@ -315,7 +306,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""Attack"",
+                    ""action"": ""Shoot"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -326,7 +317,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Gamepad"",
-                    ""action"": ""Attack"",
+                    ""action"": ""Shoot"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -337,7 +328,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""XR"",
-                    ""action"": ""Attack"",
+                    ""action"": ""Shoot"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -415,17 +406,6 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""Shockwave"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""fb0a9c4e-a6ca-4a73-b05a-aaa1886a1c66"",
-                    ""path"": ""<Mouse>/rightButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""Paint"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -513,7 +493,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""SpecialShot"",
+                    ""action"": ""SpecialShoot"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1102,9 +1082,8 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         // Gameplay
         m_Gameplay = asset.FindActionMap("Gameplay", throwIfNotFound: true);
         m_Gameplay_Move = m_Gameplay.FindAction("Move", throwIfNotFound: true);
-        m_Gameplay_Attack = m_Gameplay.FindAction("Attack", throwIfNotFound: true);
-        m_Gameplay_Paint = m_Gameplay.FindAction("Paint", throwIfNotFound: true);
-        m_Gameplay_SpecialShot = m_Gameplay.FindAction("SpecialShot", throwIfNotFound: true);
+        m_Gameplay_Shoot = m_Gameplay.FindAction("Shoot", throwIfNotFound: true);
+        m_Gameplay_SpecialShoot = m_Gameplay.FindAction("SpecialShoot", throwIfNotFound: true);
         m_Gameplay_Interact = m_Gameplay.FindAction("Interact", throwIfNotFound: true);
         m_Gameplay_Shockwave = m_Gameplay.FindAction("Shockwave", throwIfNotFound: true);
         m_Gameplay_Dash = m_Gameplay.FindAction("Dash", throwIfNotFound: true);
@@ -1209,9 +1188,8 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
     private readonly InputActionMap m_Gameplay;
     private List<IGameplayActions> m_GameplayActionsCallbackInterfaces = new List<IGameplayActions>();
     private readonly InputAction m_Gameplay_Move;
-    private readonly InputAction m_Gameplay_Attack;
-    private readonly InputAction m_Gameplay_Paint;
-    private readonly InputAction m_Gameplay_SpecialShot;
+    private readonly InputAction m_Gameplay_Shoot;
+    private readonly InputAction m_Gameplay_SpecialShoot;
     private readonly InputAction m_Gameplay_Interact;
     private readonly InputAction m_Gameplay_Shockwave;
     private readonly InputAction m_Gameplay_Dash;
@@ -1238,17 +1216,13 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Move => m_Wrapper.m_Gameplay_Move;
         /// <summary>
-        /// Provides access to the underlying input action "Gameplay/Attack".
+        /// Provides access to the underlying input action "Gameplay/Shoot".
         /// </summary>
-        public InputAction @Attack => m_Wrapper.m_Gameplay_Attack;
+        public InputAction @Shoot => m_Wrapper.m_Gameplay_Shoot;
         /// <summary>
-        /// Provides access to the underlying input action "Gameplay/Paint".
+        /// Provides access to the underlying input action "Gameplay/SpecialShoot".
         /// </summary>
-        public InputAction @Paint => m_Wrapper.m_Gameplay_Paint;
-        /// <summary>
-        /// Provides access to the underlying input action "Gameplay/SpecialShot".
-        /// </summary>
-        public InputAction @SpecialShot => m_Wrapper.m_Gameplay_SpecialShot;
+        public InputAction @SpecialShoot => m_Wrapper.m_Gameplay_SpecialShoot;
         /// <summary>
         /// Provides access to the underlying input action "Gameplay/Interact".
         /// </summary>
@@ -1318,15 +1292,12 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
             @Move.started += instance.OnMove;
             @Move.performed += instance.OnMove;
             @Move.canceled += instance.OnMove;
-            @Attack.started += instance.OnAttack;
-            @Attack.performed += instance.OnAttack;
-            @Attack.canceled += instance.OnAttack;
-            @Paint.started += instance.OnPaint;
-            @Paint.performed += instance.OnPaint;
-            @Paint.canceled += instance.OnPaint;
-            @SpecialShot.started += instance.OnSpecialShot;
-            @SpecialShot.performed += instance.OnSpecialShot;
-            @SpecialShot.canceled += instance.OnSpecialShot;
+            @Shoot.started += instance.OnShoot;
+            @Shoot.performed += instance.OnShoot;
+            @Shoot.canceled += instance.OnShoot;
+            @SpecialShoot.started += instance.OnSpecialShoot;
+            @SpecialShoot.performed += instance.OnSpecialShoot;
+            @SpecialShoot.canceled += instance.OnSpecialShoot;
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
@@ -1371,15 +1342,12 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
             @Move.started -= instance.OnMove;
             @Move.performed -= instance.OnMove;
             @Move.canceled -= instance.OnMove;
-            @Attack.started -= instance.OnAttack;
-            @Attack.performed -= instance.OnAttack;
-            @Attack.canceled -= instance.OnAttack;
-            @Paint.started -= instance.OnPaint;
-            @Paint.performed -= instance.OnPaint;
-            @Paint.canceled -= instance.OnPaint;
-            @SpecialShot.started -= instance.OnSpecialShot;
-            @SpecialShot.performed -= instance.OnSpecialShot;
-            @SpecialShot.canceled -= instance.OnSpecialShot;
+            @Shoot.started -= instance.OnShoot;
+            @Shoot.performed -= instance.OnShoot;
+            @Shoot.canceled -= instance.OnShoot;
+            @SpecialShoot.started -= instance.OnSpecialShoot;
+            @SpecialShoot.performed -= instance.OnSpecialShoot;
+            @SpecialShoot.canceled -= instance.OnSpecialShoot;
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
@@ -1718,26 +1686,19 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnMove(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "Attack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Shoot" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnAttack(InputAction.CallbackContext context);
+        void OnShoot(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "Paint" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "SpecialShoot" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnPaint(InputAction.CallbackContext context);
-        /// <summary>
-        /// Method invoked when associated input action "SpecialShot" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-        /// </summary>
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnSpecialShot(InputAction.CallbackContext context);
+        void OnSpecialShoot(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Interact" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

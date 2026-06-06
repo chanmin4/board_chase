@@ -31,6 +31,8 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
     [SerializeField] private Outline _selectedOutline;
 
     [Header("Type Sprites")]
+    [Tooltip("Optional. Falls back to Attack Type Sprite when empty.")]
+    [SerializeField] private Sprite _attackAndPaintTypeSprite;
     [SerializeField] private Sprite _attackTypeSprite;
     [SerializeField] private Sprite _paintTypeSprite;
     [SerializeField] private Sprite _specialTypeSprite;
@@ -206,6 +208,11 @@ public class WeaponAmmoSlotUI : MonoBehaviour,
     {
         switch (bulletType)
         {
+            case BulletAmmoType.AttackAndPaint:
+                return _attackAndPaintTypeSprite != null
+                    ? _attackAndPaintTypeSprite
+                    : _attackTypeSprite;
+
             case BulletAmmoType.Attack:
                 return _attackTypeSprite;
 

@@ -1,12 +1,14 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [Serializable]
 public class NamedNormalAttackOption
 {
     [Header("Attack")]
-    [Tooltip("Unique attack id asset. Use this instead of enum/string.")]
-    public NamedAttackIdSO attackId;
+    [Tooltip("Attack config asset. The asset reference itself is used as the selected attack identity.")]
+    [FormerlySerializedAs("attackId")]
+    public EnemyAttackConfigSO attackConfig;
 
     [Tooltip("Only for inspector readability.")]
     public string displayName;
@@ -21,7 +23,7 @@ public class NamedNormalAttackOption
     [Tooltip("If false, this option is ignored without deleting it.")]
     public bool enabled = true;
 
-    public bool IsValid => enabled && attackId != null && maxRange >= minRange;
+    public bool IsValid => enabled && attackConfig != null && maxRange >= minRange;
 
     public bool IsInRange(float distance)
     {
@@ -40,19 +42,28 @@ public class NamedNormalAttackConfigSO : ScriptableObject
     [SerializeField] private NamedNormalAttackOption[] _options;
 
     [Header("Preferred Positioning Range")]
-    [Tooltip("Used by Chase/Reposition decisions, not by attack selection.")]
-    [SerializeField, Min(0f)] private float _preferredMinRange = 3f;
+    [Tooltip("If true, attack selection is blocked until target distance is inside Preferred Min/Max Range.")]
+    [SerializeField] private bool _requirePreferredRangeBeforeSelection = true;
 
-    [Tooltip("Used by Chase/Reposition decisions, not by attack selection.")]
+    [SerializeField, Min(0f)] private float _preferredMinRange = 3f;
     [SerializeField, Min(0f)] private float _preferredMaxRange = 9f;
 
     public NamedNormalAttackOption[] Options => _options;
+    public bool RequirePreferredRangeBeforeSelection => _requirePreferredRangeBeforeSelection;
     public float PreferredMinRange => _preferredMinRange;
     public float PreferredMaxRange => Mathf.Max(_preferredMinRange, _preferredMaxRange);
 
-    public bool TryPickAttack(float distance, out NamedAttackIdSO attackId)
+    public bool IsInPreferredRange(float distance)
     {
-        attackId = null;
+        return distance >= PreferredMinRange && distance <= PreferredMaxRange;
+    }
+
+    public bool TryPickAttack(float distance, out EnemyAttackConfigSO attackConfig)
+    {
+        attackConfig = null;
+
+        if (_requirePreferredRangeBeforeSelection && !IsInPreferredRange(distance))
+            return false;
 
         if (_options == null || _options.Length == 0)
             return false;
@@ -85,8 +96,8 @@ public class NamedNormalAttackConfigSO : ScriptableObject
 
             if (roll < 0)
             {
-                attackId = option.attackId;
-                return attackId != null;
+                attackConfig = option.attackConfig;
+                return attackConfig != null;
             }
         }
 

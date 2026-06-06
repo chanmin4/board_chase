@@ -11,22 +11,24 @@ public class NamedSectorRuntimeUnityEvent : UnityEvent<SectorRuntime>
 
 public class NamedSectorController : MonoBehaviour
 {
-    [Header("Auto Refs")]
-    [SerializeField] private SectorStateManager _sectorStateManager;
+    public event Action<SectorRuntime> NamedBattleCompleted;
+    [Header("Manager Ready")]
+    [SerializeField] private NamedSectorControllerReadyEventChannelSO _namedSectorControllerReadyChannel;
+    
 
     [Header("Refs")]
     [SerializeField] private NamedSectorTransitionController _transitionController;
     [SerializeField] private SectorNamedStateApplier _namedStateApplier;
+
     [Header("Named Runtime Roots")]
     [Tooltip("Projectiles spawned by the named enemy are parented here so battle reset can clear them before reward popup.")]
     [SerializeField] private Transform _namedProjectileRoot;
-        
+
     [Header("Battle Sector Reset")]
     [SerializeField] private NamedBattleSectorResetter _battleSectorResetter;
-    
+
     [Header("Rules")]
     [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
-    [SerializeField] private NamedSectorTimingSO _timing;
 
     [Header("Listening")]
     [SerializeField] private NamedEnemyKilledEventChannelSO _namedEnemyKilledEvent;
@@ -42,11 +44,12 @@ public class NamedSectorController : MonoBehaviour
     [SerializeField] private NamedBattleSignalEventChannelSO _battleEndedEvent;
 
     [Header("Named Spawn")]
-    [SerializeField] private StageEnemySpawnTableSO _stageEnemySpawnTable;
+    [SerializeField] private StageEnemySettingSO _stageEnemySetting;
     [SerializeField] private int _stageOverride = -1;
     [SerializeField] private Transform _namedSpawnPoint;
     [SerializeField] private Transform _namedRoot;
-    [Header("Named Spawn InfoBroadcasting")]
+
+    [Header("Named Spawn Info Broadcasting")]
     [SerializeField] private NamedEnemySpawnInfoEventChannelSO _namedEnemySpawnInfoChannel;
 
     [Header("Sector Hooks")]
@@ -57,7 +60,7 @@ public class NamedSectorController : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool _logNamedTimer;
-
+    private SectorStateManager _sectorStateManager;
     private NamedSectorPhase _phase = NamedSectorPhase.None;
     private SectorRuntime _selectedSector;
     private SectorRuntime _currentPlayerSector;
@@ -79,6 +82,12 @@ public class NamedSectorController : MonoBehaviour
 
     private void Awake()
     {
+        if (_sectorStateManager == null)
+            _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
+
+        if (_sectorStateManager != null)
+            _sectorStateManager.EnsureInitialized();
+
         if (_namedStateApplier == null)
             _namedStateApplier = FindAnyObjectByType<SectorNamedStateApplier>();
     }
@@ -87,8 +96,10 @@ public class NamedSectorController : MonoBehaviour
     {
         if (_currentsectorchangedEvent != null)
             _currentsectorchangedEvent.OnEventRaised += HandlePlayerEnteredSector;
+
         if (_namedEnemyKilledEvent != null)
             _namedEnemyKilledEvent.OnEventRaised += HandleNamedEnemyKilled;
+
         if (_sectorStateManagerReadyChannel != null)
         {
             _sectorStateManagerReadyChannel.OnEventRaised += HandleSectorStateManagerReady;
@@ -103,19 +114,24 @@ public class NamedSectorController : MonoBehaviour
 
         if (_stageAppliedEvent != null)
             _stageAppliedEvent.OnEventRaised += HandleStageApplied;
+        _namedSectorControllerReadyChannel?.RaiseEvent(this);
     }
 
     private void OnDisable()
     {
         if (_currentsectorchangedEvent != null)
             _currentsectorchangedEvent.OnEventRaised -= HandlePlayerEnteredSector;
+
         if (_namedEnemyKilledEvent != null)
             _namedEnemyKilledEvent.OnEventRaised -= HandleNamedEnemyKilled;
+
         if (_sectorStateManagerReadyChannel != null)
             _sectorStateManagerReadyChannel.OnEventRaised -= HandleSectorStateManagerReady;
 
         if (_stageAppliedEvent != null)
             _stageAppliedEvent.OnEventRaised -= HandleStageApplied;
+        if (_namedSectorControllerReadyChannel != null)
+            _namedSectorControllerReadyChannel.Clear(this);
     }
 
     private void Update()
@@ -183,9 +199,10 @@ public class NamedSectorController : MonoBehaviour
     public bool TryStartBattleFromPortal(SectorRuntime targetSector)
     {
         Debug.Log(
-        $"[NamedSectorController] TryStartBattleFromPortal. " +
-        $"phase={_phase}, selected={_selectedSector?.name}, target={targetSector?.name}",
-        this);
+            $"[NamedSectorController] TryStartBattleFromPortal. " +
+            $"phase={_phase}, selected={_selectedSector?.name}, target={targetSector?.name}",
+            this);
+
         if (_phase != NamedSectorPhase.Present)
             return false;
 
@@ -206,8 +223,10 @@ public class NamedSectorController : MonoBehaviour
             : null;
 
         SetPhase(NamedSectorPhase.RewardPending, _selectedSector);
+
         if (_battleSectorResetter != null)
             _battleSectorResetter.ResetBattleSector();
+
         Debug.Log(
             $"[NamedSectorController] Named killed. Reward pending. " +
             $"sector={_selectedSector?.name}, named={namedEnemy?.name}",
@@ -215,8 +234,7 @@ public class NamedSectorController : MonoBehaviour
 
         _bossRewardRequestEvent?.RaiseEvent(new BossRewardRequest(
             _selectedSector,
-            namedEnemy
-        ));
+            namedEnemy));
     }
 
     public void ConfirmNamedRewardAndEndBattle()
@@ -226,6 +244,46 @@ public class NamedSectorController : MonoBehaviour
 
         StartCoroutine(FinishBattleRoutine());
     }
+
+    public void ResetForStageTransition()
+    {
+        StopAllCoroutines();
+
+        SectorRuntime previousSector = _selectedSector;
+        bool wasBattlePhase =
+            _phase == NamedSectorPhase.EnteringBattle ||
+            _phase == NamedSectorPhase.Battle ||
+            _phase == NamedSectorPhase.RewardPending ||
+            _phase == NamedSectorPhase.EndingBattle;
+
+        _battleRoutineRunning = false;
+        _firstCycleStarted = false;
+        _timer = 0f;
+        _timerDuration = 0f;
+        _timerPublishCooldown = 0f;
+        _debugLogCooldown = 0f;
+
+        if (_namedInstance != null)
+        {
+            Destroy(_namedInstance);
+            _namedInstance = null;
+        }
+
+        if (_battleSectorResetter != null)
+            _battleSectorResetter.ResetBattleSector();
+
+        if (_namedStateApplier != null && previousSector != null)
+            _namedStateApplier.ClearNamedState(previousSector);
+
+        if (wasBattlePhase)
+            _battleEndedEvent?.RaiseEvent(previousSector);
+
+        _selectedSector = null;
+
+        SetPhase(NamedSectorPhase.None, null);
+        PublishTimerSnapshot();
+    }
+
     private void HandleNamedEnemyKilled(NamedEnemy namedEnemy)
     {
         if (namedEnemy == null)
@@ -236,6 +294,7 @@ public class NamedSectorController : MonoBehaviour
 
         NotifyNamedKilled();
     }
+
     private void HandleSectorStateManagerReady(SectorStateManager manager)
     {
         if (manager == null)
@@ -249,6 +308,7 @@ public class NamedSectorController : MonoBehaviour
 
     private void HandleStageApplied(int stage)
     {
+        ResetForStageTransition();
         TryStartFirstCycle();
     }
 
@@ -257,26 +317,25 @@ public class NamedSectorController : MonoBehaviour
         if (_firstCycleStarted)
             return;
 
-        if (_timing == null || !_timing.StartOnReady)
+        if (_sectorStateManager == null || _stageEnemySetting == null)
             return;
 
-        if (_sectorStateManager == null)
+        if (!TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule))
             return;
 
-        if (_stageEnemySpawnTable == null)
-            return;
-
-        int stage = ResolveCurrentStage();
-
-        if (!_stageEnemySpawnTable.CanStartNamedCycle(stage))
+        if (!rule.startNamedCycleOnReady)
             return;
 
         _firstCycleStarted = true;
 
-        if (_timing.ReserveFirstSectorImmediately)
+        if (rule.reserveFirstSectorImmediately)
+        {
             ReserveRandomSector();
-        else
-            StartReservationTimer(DifficultyRuntime.ApplyNamedFirstReservationDelay(_timing.FirstReservationDelay));
+            return;
+        }
+
+        StartReservationTimer(
+            DifficultyRuntime.ApplyNamedFirstReservationDelay(rule.firstReservationDelay));
     }
 
     private void HandlePlayerEnteredSector(SectorRuntime sector)
@@ -289,17 +348,25 @@ public class NamedSectorController : MonoBehaviour
 
     private void ReserveRandomSector()
     {
+        if (!TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule))
+        {
+            SetPhase(NamedSectorPhase.None, null);
+            PublishTimerSnapshot();
+            return;
+        }
+
         if (!TryPickRandomOpenedSector(out SectorRuntime sector))
         {
             Debug.LogWarning("[NamedSectorController] No valid opened sector candidate.", this);
-            float retryDelay = _timing != null ? _timing.RetryDelayWhenNoCandidate : 5f;
-            StartReservationTimer(DifficultyRuntime.ApplyNamedRetryDelay(retryDelay));
+
+            StartReservationTimer(
+                DifficultyRuntime.ApplyNamedRetryDelay(rule.retryDelayWhenNoCandidate));
+
             return;
         }
 
         _selectedSector = sector;
-        float reservationDuration = _timing != null ? _timing.ReservationDuration : 30f;
-        _timer = DifficultyRuntime.ApplyNamedReservationDuration(reservationDuration);
+        _timer = DifficultyRuntime.ApplyNamedReservationDuration(rule.reservationDuration);
         _timerDuration = _timer;
         _timerPublishCooldown = 0f;
 
@@ -331,13 +398,13 @@ public class NamedSectorController : MonoBehaviour
         SetPhase(NamedSectorPhase.Present, _selectedSector);
         PublishTimerSnapshot();
 
-         Debug.Log(
-        $"[NamedSectorController] Present check. " +
-        $"selected={_selectedSector?.name}, " +
-        $"current={_currentPlayerSector?.name}, " +
-        $"same={_currentPlayerSector == _selectedSector}",
-        this);
-        Debug.Log(_currentPlayerSector);
+        Debug.Log(
+            $"[NamedSectorController] Present check. " +
+            $"selected={_selectedSector?.name}, " +
+            $"current={_currentPlayerSector?.name}, " +
+            $"same={_currentPlayerSector == _selectedSector}",
+            this);
+
         if (_currentPlayerSector == _selectedSector)
             StartBattle(_selectedSector);
     }
@@ -345,20 +412,24 @@ public class NamedSectorController : MonoBehaviour
     private void StartBattle(SectorRuntime sourceSector)
     {
         Debug.Log(
-        $"[NamedSectorController] StartBattle requested. " +
-        $"phase={_phase}, source={sourceSector?.name}, routineRunning={_battleRoutineRunning}",
-        this);
+            $"[NamedSectorController] StartBattle requested. " +
+            $"phase={_phase}, source={sourceSector?.name}, routineRunning={_battleRoutineRunning}",
+            this);
+
         if (_phase == NamedSectorPhase.Battle ||
             _phase == NamedSectorPhase.EnteringBattle ||
             _battleRoutineRunning)
+        {
             return;
+        }
 
         StartCoroutine(StartBattleRoutine(sourceSector));
     }
 
     private IEnumerator StartBattleRoutine(SectorRuntime sourceSector)
     {
-         Debug.Log($"[NamedSectorController] StartBattleRoutine begin. source={sourceSector?.name}", this);
+        Debug.Log($"[NamedSectorController] StartBattleRoutine begin. source={sourceSector?.name}", this);
+
         if (_transitionController == null)
         {
             Debug.LogWarning("[NamedSectorController] TransitionController is missing.", this);
@@ -371,8 +442,7 @@ public class NamedSectorController : MonoBehaviour
         yield return _transitionController.PlayEnterTransition(
             sourceSector,
             () => PrepareBattleWhileCovered(sourceSector),
-            () => CompleteBattleStart(sourceSector)
-        );
+            () => CompleteBattleStart(sourceSector));
 
         _battleRoutineRunning = false;
     }
@@ -408,8 +478,7 @@ public class NamedSectorController : MonoBehaviour
         yield return _transitionController.PlayExitTransition(
             sourceSector,
             () => ApplyBattleEndWhileCovered(sourceSector),
-            () => CompleteBattleEnd(sourceSector)
-        );
+            () => CompleteBattleEnd(sourceSector));
 
         _battleRoutineRunning = false;
     }
@@ -438,13 +507,22 @@ public class NamedSectorController : MonoBehaviour
         _battleEndedEvent?.RaiseEvent(sourceSector);
 
         _selectedSector = null;
-        float respawnCooldown = _timing != null ? _timing.RespawnCooldownAfterKill : 120f;
-        StartReservationTimer(DifficultyRuntime.ApplyNamedRespawnCooldown(respawnCooldown));
+        NamedBattleCompleted?.Invoke(sourceSector);
+
+        if (!TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule))
+        {
+            SetPhase(NamedSectorPhase.None, null);
+            PublishTimerSnapshot();
+            return;
+        }
+
+        StartReservationTimer(
+            DifficultyRuntime.ApplyNamedRespawnCooldown(rule.respawnCooldownAfterKill));
     }
 
     private void SpawnNamed()
     {
-        if (_stageEnemySpawnTable == null || _namedSpawnPoint == null)
+        if (_stageEnemySetting == null || _namedSpawnPoint == null)
         {
             Debug.LogWarning("[NamedSectorController] Named spawn refs are missing.", this);
             return;
@@ -452,42 +530,80 @@ public class NamedSectorController : MonoBehaviour
 
         int stage = ResolveCurrentStage();
 
-        if (!_stageEnemySpawnTable.TryPickNamedArchetype(stage, out EnemyArchetypeSO archetype))
+        if (!_stageEnemySetting.TryPickNamedArchetype(stage, out EnemyStatConfigSO enemyConfig))
         {
             Debug.LogWarning($"[NamedSectorController] No named enemy entry for stage {stage}.", this);
             return;
         }
 
-        if (archetype == null || archetype.EnemyPrefab == null)
+        if (enemyConfig == null || enemyConfig.EnemyPrefab == null)
         {
-            Debug.LogWarning($"[NamedSectorController] Named archetype has no EnemyPrefab. Stage={stage}.", this);
+            Debug.LogWarning($"[NamedSectorController] Named enemy config has no EnemyPrefab. Stage={stage}.", this);
             return;
         }
 
         Enemy instance = Instantiate(
-            archetype.EnemyPrefab,
+            enemyConfig.EnemyPrefab,
             _namedSpawnPoint.position,
             _namedSpawnPoint.rotation,
-            _namedRoot != null ? _namedRoot : null
-        );
+            _namedRoot != null ? _namedRoot : null);
 
+        BindEnemyStatConfig(instance, enemyConfig);
         _namedInstance = instance.gameObject;
+
         EnemyAttackRig attackRig = instance.GetComponentInChildren<EnemyAttackRig>(true);
         if (attackRig != null && _namedProjectileRoot != null)
             attackRig.SetProjectileRoot(_namedProjectileRoot);
-        
+
         if (instance.TryGetComponent(out NamedEnemy namedEnemy))
         {
             _namedEnemySpawnInfoChannel?.RaiseEvent(new NamedEnemySpawnInfo(
                 namedEnemy,
                 _selectedSector,
-                _namedSpawnPoint
-            ));
+                _namedSpawnPoint));
         }
         else
         {
             Debug.LogWarning("[NamedSectorController] Spawned named prefab has no NamedEnemy component.", this);
         }
+    }
+    private static void BindEnemyStatConfig(Enemy enemy, EnemyStatConfigSO enemyConfig)
+    {
+        if (enemy == null || enemyConfig == null)
+            return;
+
+        EnemyMovementStatsProvider[] movementProviders =
+            enemy.GetComponentsInChildren<EnemyMovementStatsProvider>(true);
+
+        for (int i = 0; i < movementProviders.Length; i++)
+            movementProviders[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyContactDamage[] contactDamages =
+            enemy.GetComponentsInChildren<EnemyContactDamage>(true);
+
+        for (int i = 0; i < contactDamages.Length; i++)
+            contactDamages[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyVirusTrail[] virusTrails =
+            enemy.GetComponentsInChildren<EnemyVirusTrail>(true);
+
+        for (int i = 0; i < virusTrails.Length; i++)
+            virusTrails[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyKillRewardSource[] killRewardSources =
+            enemy.GetComponentsInChildren<EnemyKillRewardSource>(true);
+
+        for (int i = 0; i < killRewardSources.Length; i++)
+            killRewardSources[i].SetEnemyStatConfig(enemyConfig);
+    }
+    private bool TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule)
+    {
+        rule = null;
+
+        if (_stageEnemySetting == null)
+            return false;
+
+        return _stageEnemySetting.TryGetNamedCycleRule(ResolveCurrentStage(), out rule);
     }
 
     private int ResolveCurrentStage()
@@ -503,6 +619,12 @@ public class NamedSectorController : MonoBehaviour
         result = null;
 
         if (_sectorStateManager == null)
+            return false;
+
+        if (TryPickStageGoalSector(out result))
+            return true;
+
+        if (_sectorStateManager.HasCurrentStageMap)
             return false;
 
         IReadOnlyList<SectorRuntime> sectors = _sectorStateManager.Sectors;
@@ -524,7 +646,9 @@ public class NamedSectorController : MonoBehaviour
             Vector2Int coord = _sectorStateManager.GetSectorCoord(sector);
             if (_sectorExclusionRules != null &&
                 _sectorExclusionRules.ExcludeFromNamedReservation(coord))
+            {
                 continue;
+            }
 
             candidates.Add(sector);
         }
@@ -533,6 +657,40 @@ public class NamedSectorController : MonoBehaviour
             return false;
 
         result = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        return true;
+    }
+
+    private bool TryPickStageGoalSector(out SectorRuntime result)
+    {
+        result = null;
+
+        if (_sectorStateManager == null ||
+            !_sectorStateManager.TryGetStageGoalSector(out SectorRuntime goalSector) ||
+            goalSector == null ||
+            !goalSector.IsOpened ||
+            goalSector.IsCleared)
+        {
+            return false;
+        }
+
+        if (_sectorStateManager.TryGetStageRoomType(
+                goalSector,
+                out StageRoomType roomType) &&
+            roomType != StageRoomType.Named &&
+            roomType != StageRoomType.Boss)
+        {
+            return false;
+        }
+
+        Vector2Int coord = _sectorStateManager.GetSectorCoord(goalSector);
+
+        if (_sectorExclusionRules != null &&
+            _sectorExclusionRules.ExcludeFromNamedReservation(coord))
+        {
+            return false;
+        }
+
+        result = goalSector;
         return true;
     }
 
@@ -548,15 +706,14 @@ public class NamedSectorController : MonoBehaviour
             _phase,
             _selectedSector,
             _timer,
-            _timerDuration
-        ));
+            _timerDuration));
     }
 
     private bool IsTimerPhase(NamedSectorPhase phase)
     {
         return phase == NamedSectorPhase.WaitingForReservation ||
-            phase == NamedSectorPhase.Reserved ||
-            phase == NamedSectorPhase.DefeatedCooldown;
+               phase == NamedSectorPhase.Reserved ||
+               phase == NamedSectorPhase.DefeatedCooldown;
     }
 
     private void TickTimerSnapshot()
@@ -565,7 +722,11 @@ public class NamedSectorController : MonoBehaviour
         if (_timerPublishCooldown > 0f)
             return;
 
-        _timerPublishCooldown = Mathf.Max(0.01f, _timing != null ? _timing.TimerPublishInterval : 0.1f);
+        float interval = TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule)
+            ? rule.timerPublishInterval
+            : 0.1f;
+
+        _timerPublishCooldown = Mathf.Max(0.01f, interval);
         PublishTimerSnapshot();
     }
 
@@ -578,7 +739,11 @@ public class NamedSectorController : MonoBehaviour
         if (_debugLogCooldown > 0f)
             return;
 
-        _debugLogCooldown = Mathf.Max(0.1f, _timing != null ? _timing.DebugLogInterval : 1f);
+        float interval = TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule)
+            ? rule.debugLogInterval
+            : 1f;
+
+        _debugLogCooldown = Mathf.Max(0.1f, interval);
 
         Debug.Log(
             $"[NamedSectorController] phase={_phase}, timer={_timer:0.00}/{_timerDuration:0.00}, " +
@@ -586,5 +751,4 @@ public class NamedSectorController : MonoBehaviour
             $"selected={(_selectedSector != null ? _selectedSector.name : "null")}",
             this);
     }
-    
 }

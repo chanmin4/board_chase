@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92ad4537e8aa49ebaaa8bf9b40c432f2, type: 3}
+  m_Name: Mutarus_Pattern_Config
+  m_EditorClassIdentifier: 
+  _firstPatternDelay: 30
+  _repeatPattern: 1
+  _showObjectiveCounter: 1
+  _objectiveRequiredCount: 3
+  _repeatPatternDelay: 30
+  _displayPatternName: Mutarus_Pattern
+  _patternActiveDuration: 20
+  _applyActiveDamageMultiplier: 1
+  _activeDamageTakenMultiplier: 0.25
+  _applySuccessDamageMultiplier: 1
+  _successDamageTakenMultiplier: 2
+  _successMultiplierDuration: 20
+  _applyFailureDamageMultiplier: 1
+  _failureDamageTakenMultiplier: 0.25
+  _failureMultiplierDuration: 20
+  _qtePatternBomb:
+    _usePeriodicArcBomb: 1
+    _arcBombPrefab: {fileID: -2512961943983989550, guid: 49cb5a675738a75408f64dc02476a312, type: 3}
+    _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
+    _fireBombOnEnter: 0
+    _firstBombDelay: 3
+    _bombInterval: 5
+    _bombsPerBurst: 2
+    _bombShotInterval: 0.5
+    _bombTravelTime: 2.5
+    _bombArcHeight: 20
+    _bombSpawnYOffset: 0.5
+    _bombTargetYOffset: 0
+    _fallbackTargetDistance: 6
+    _targetRandomRadius: 0
+    _faceTargetOnBomb: 1
+    _snapFacingOnBomb: 1
+    _faceTargetWhileBombing: 1
+    _bombFacingRotationSpeedDegPerSec: 1440
+    _disableProjectileCollidersDuringFlight: 1
+    _damageRadiusSource: 1
+    _damageRadius: 1.5
+    _impactHealthDamage: 15
+    _impactInfectionDamage: 15
+    _damageTargetMask:
+      serializedVersion: 2
+      m_Bits: 8
+    _triggerInteraction: 2
+    _showImpactTelegraph: 1
+    _telegraphRadiusSource: 1
+    _telegraphRadiusCustom: 1.5
+    _impactTelegraphStyle:
+      baseColor: {r: 1, g: 0, b: 0, a: 0.39215687}
+      fillColor: {r: 1, g: 0, b: 0, a: 0.78431374}
+      segments: 0
+      yOffset: 0
+    _paintChannel: 2
+    _paintRadiusWorld: 7
+    _paintPriority: 0
+    _poisonPuddleDamageConfig: {fileID: 11400000, guid: 50a5565dc0987d9428f60c0d62541e2a, type: 2}
+    _fireBombOnPatternFailed: 1
+    _failureArcBombPrefabOverride: {fileID: -2512961943983989550, guid: c9952a0af6827c4488726338a9be537a, type: 3}
+    _failureBombTargetSectorCenter: 1
+    _failureBombTravelTime: 4
+    _failureBombArcHeight: 10
+    _failureBombSpawnYOffset: 0.5
+    _failureBombTargetYOffset: 0
+    _failureDamageRadiusSource: 1
+    _failureDamageRadius: 25
+    _failureImpactHealthDamage: 25
+    _failureImpactInfectionDamage: 25
+    _failureTelegraphRadiusSource: 1
+    _failureTelegraphRadiusCustom: 5
+    _failurePaintChannel: 2
+    _failurePaintRadiusWorld: 40
+    _failurePaintPriority: 10
+    _failurePoisonPuddleDamageConfig: {fileID: 11400000, guid: 50a5565dc0987d9428f60c0d62541e2a, type: 2}
+    _triggerAnimatorOnBomb: 1
+    _bombAnimatorTrigger: PoisonpuddleAttack
+    _triggerAnimatorOnFailureBomb: 1
+    _failureBombAnimatorTrigger: PoisonpuddleAttack
+  _facePlayerWhilePatternActive: 1
+  _snapFacingOnPatternEnter: 1
+  _patternFacingRotationSpeedDegPerSec: 1440

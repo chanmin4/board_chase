@@ -12,15 +12,30 @@ public class NamedEnemyBlackboard : MonoBehaviour
     public bool attackFinished = true;
 
     [Header("Runtime Selected Attack")]
-    [SerializeField, ReadOnly] private NamedAttackIdSO _selectedAttack;
+    [SerializeField, ReadOnly] private EnemyAttackConfigSO _selectedAttack;
 
-    public NamedAttackIdSO SelectedAttack => _selectedAttack;
+    public EnemyAttackConfigSO SelectedAttack => _selectedAttack;
     public bool HasSelectedAttack => _selectedAttack != null;
 
-    public void SelectAttack(NamedAttackIdSO attackId)
+    public void SelectAttack(EnemyAttackConfigSO attackConfig)
     {
-        _selectedAttack = attackId;
+        if (attackConfig == null)
+        {
+            ClearSelectedAttack();
+            attackFinished = true;
+            return;
+        }
+
+        _selectedAttack = attackConfig;
         attackFinished = false;
+    }
+
+    public void FinishSelectedAttack(bool clearSelectedAttack = true)
+    {
+        attackFinished = true;
+
+        if (clearSelectedAttack)
+            ClearSelectedAttack();
     }
 
     public void ClearSelectedAttack()
@@ -28,8 +43,8 @@ public class NamedEnemyBlackboard : MonoBehaviour
         _selectedAttack = null;
     }
 
-    public bool SelectedAttackIs(NamedAttackIdSO attackId)
+    public bool SelectedAttackIs(EnemyAttackConfigSO attackConfig)
     {
-        return _selectedAttack != null && _selectedAttack == attackId;
+        return _selectedAttack != null && _selectedAttack == attackConfig;
     }
 }

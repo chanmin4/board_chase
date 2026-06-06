@@ -16,15 +16,32 @@ public class PlayShockwaveChargeParticlesAction : StateAction
 
     public override void Awake(StateMachine stateMachine)
     {
-        _effects = stateMachine.GetComponent<PlayerEffectController>();
+        _effects = ResolveEffects(stateMachine);
     }
 
     public override void OnStateEnter()
     {
-        _effects.PlayShockwaveChargeParticles();
+        if (_effects != null)
+            _effects.PlayShockwaveChargeParticles();
     }
 
     public override void OnUpdate()
     {
+    }
+
+    private static PlayerEffectController ResolveEffects(StateMachine stateMachine)
+    {
+        if (stateMachine == null)
+            return null;
+
+        if (stateMachine.TryGetComponent(out PlayerEffectController effects))
+            return effects;
+
+        effects = stateMachine.GetComponentInChildren<PlayerEffectController>(true);
+
+        if (effects != null)
+            return effects;
+
+        return stateMachine.GetComponentInParent<PlayerEffectController>();
     }
 }

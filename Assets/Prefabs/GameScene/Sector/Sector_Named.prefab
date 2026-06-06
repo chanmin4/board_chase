@@ -91,7 +91,6 @@ GameObject:
   - component: {fileID: 1103159448206079380}
   - component: {fileID: 3321280048417220109}
   - component: {fileID: 1987385153465026167}
-  - component: {fileID: 7699533306228301735}
   m_Layer: 9
   m_Name: Applier
   m_TagString: Untagged
@@ -126,7 +125,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 383325165d31fb2489843897a2a6d30b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maskRenderManager: {fileID: 0}
+  _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
 --- !u!114 &1987385153465026167
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -142,23 +141,9 @@ MonoBehaviour:
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _maskRenderManagerReadyChannel: {fileID: 11400000, guid: 6050952acab454346ba97cc080abac28, type: 2}
   _playerInfectionReadyChannel: {fileID: 11400000, guid: a72fde196ac2ba442adf03fc32ccfc1c, type: 2}
-  _infectionControlManager: {fileID: 0}
-  _namedSectorController: {fileID: 3019453464138125349}
   _applyCrossFiveSectors: 1
---- !u!114 &7699533306228301735
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700995407881769261}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e277ad6414514644bd111b4c4de9ea8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _destroyEnemies: 1
-  _destroyCleanupRootChildren: 1
+  _infectionControlManagerReadyChannel: {fileID: 11400000, guid: 53066018a5f6f1c47a4217f83ff95b83, type: 2}
+  _namedSectorControllerReadyChannel: {fileID: 11400000, guid: 8c62595ebdcaadf4b8c64c1af8378e2c, type: 2}
 --- !u!1 &2452628848840021954
 GameObject:
   m_ObjectHideFlags: 0
@@ -288,19 +273,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _sectorRuntime: {fileID: 1399724844744912947}
   _projectileRoot: {fileID: 1418144889954438944}
-  _spawnTable: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
+  _stageEnemySetting: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
   _spawnedEnemiesRoot: {fileID: 8761316128307464955}
   _sectorExclusionRules: {fileID: 11400000, guid: 498279093e5b5634291755e780b4ac69, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
   _stageProgressChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
   _namedBattleWorldLockedChannel: {fileID: 11400000, guid: 13322fa37fe3afa4eadbd823711b4d3d, type: 2}
+  _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _spawnOnlyWhenOpened: 1
   _fillMinimumImmediately: 0
   _maxImmediateSpawnPerTick: 4
   _currentStageIndex: 0
   _resolvedMinAlive: 0
   _resolvedMaxAlive: 0
+  _resolvedSimultaneousSpawnCount: 1
+  _resolvedFirstSpawnInterval: 0
   _resolvedSpawnInterval: 0
+  _hasSpawnedFirstBatch: 0
   _isSectorActive: 0
   _isNamedBattleWorldLocked: 0
 --- !u!1 &3087310284613070715
@@ -382,9 +371,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   runtime: {fileID: 1399724844744912947}
-  MaskRenderManager: {fileID: 0}
   allowPaintWhenClosed: 0
   boundsPadding: 0.1
+  _paintGridCellSize: 0.5
+  _paintQueryThreshold: 0.2
   worldBounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
@@ -392,12 +382,6 @@ MonoBehaviour:
   vaccineMask: {fileID: 0}
   virusMask: {fileID: 0}
   poisonPuddleMask: {fileID: 0}
-  vaccineBuffer: []
-  virusBuffer: []
-  poisonPuddleBuffer: []
-  vaccineDirty: 0
-  virusDirty: 0
-  poisonPuddleDirty: 0
   vaccineMaterialInstance: {fileID: 0}
   virusMaterialInstance: {fileID: 0}
   poisonPuddleMaterialInstance: {fileID: 0}
@@ -503,8 +487,10 @@ MonoBehaviour:
   - {fileID: 8761316128307464955}
   - {fileID: 1418144889954438944}
   - {fileID: 1802479375339506747}
+  _playerStartPoint: {fileID: 0}
   coord: {x: -2, y: 0}
   isOpened: 1
+  isCleared: 0
   is_startsector: 1
   cameraPoint: {fileID: 3116319525940045081}
   enemySpawnPoints:
@@ -537,13 +523,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f588bcd9fd66c64b8f3c002d6e40d64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _sectorStateManager: {fileID: 0}
+  _namedSectorControllerReadyChannel: {fileID: 0}
   _transitionController: {fileID: 1541815409933280638}
   _namedStateApplier: {fileID: 3321280048417220109}
   _namedProjectileRoot: {fileID: 1418144889954438944}
   _battleSectorResetter: {fileID: 4417905691366674065}
   _sectorExclusionRules: {fileID: 11400000, guid: 498279093e5b5634291755e780b4ac69, type: 2}
-  _timing: {fileID: 11400000, guid: d0b143c7ed9796f4b9f54c7903af177d, type: 2}
   _namedEnemyKilledEvent: {fileID: 11400000, guid: cb217ea5230895a45af7bc60ed8eae29, type: 2}
   _currentsectorchangedEvent: {fileID: 11400000, guid: cb39fc0f8d034346a9164254d2f477d7, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
@@ -553,7 +538,7 @@ MonoBehaviour:
   _timerSnapshotEvent: {fileID: 11400000, guid: 2f378e6ef4638754e99a1a9d3907e07f, type: 2}
   _battleStartedEvent: {fileID: 11400000, guid: cf2ea5b742a68ab4eb3268d8dadd27cb, type: 2}
   _battleEndedEvent: {fileID: 11400000, guid: d9d938b77ef305a4e8cfe195f0e30c6c, type: 2}
-  _stageEnemySpawnTable: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
+  _stageEnemySetting: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
   _stageOverride: -1
   _namedSpawnPoint: {fileID: 5978653604206007493}
   _namedRoot: {fileID: 8761316128307464955}
@@ -591,7 +576,7 @@ MonoBehaviour:
   _onBeforeBattleSetup:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 7699533306228301735}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: SectorCleanupController, Assembly-CSharp
         m_MethodName: CleanupSector
         m_Mode: 2

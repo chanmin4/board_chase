@@ -13,6 +13,9 @@ public class UIMenuManager : MonoBehaviour
     [SerializeField] private UIMainMenu _mainMenuPanel;
     [SerializeField] private CanvasGroup _mainMenuGroup;
 
+    [SerializeField] private MetaSystemPanelUI _metaSystemPanel;
+    [SerializeField] private CanvasGroup _metaSystemGroup;
+
     [Header("Refs")]
     [SerializeField] private SaveSystem _saveSystem;
     [SerializeField] private InputReader _inputReader;
@@ -27,6 +30,7 @@ public class UIMenuManager : MonoBehaviour
     {
         SetVisible(_mainMenuGroup, true);
         SetVisible(_settingsGroup, false);
+        SetVisible(_metaSystemGroup, false);
         SetVisible(_popupGroup, false);
     }
 
@@ -47,6 +51,7 @@ public class UIMenuManager : MonoBehaviour
 
         _mainMenuPanel.ContinueButtonAction += ContinueGame;
         _mainMenuPanel.NewGameButtonAction += ButtonStartNewGameClicked;
+        _mainMenuPanel.PlayerUpgradeButtonAction += OpenMetaSystemScreen;
         _mainMenuPanel.AchievementButtonAction += OpenAchievementScreen;
         _mainMenuPanel.SettingsButtonAction += OpenSettingsScreen;
         _mainMenuPanel.QuitButtonAction += ShowExitConfirmationPopup;
@@ -59,6 +64,7 @@ public class UIMenuManager : MonoBehaviour
 
         _mainMenuPanel.ContinueButtonAction -= ContinueGame;
         _mainMenuPanel.NewGameButtonAction -= ButtonStartNewGameClicked;
+        _mainMenuPanel.PlayerUpgradeButtonAction -= OpenMetaSystemScreen;
         _mainMenuPanel.AchievementButtonAction -= OpenAchievementScreen;
         _mainMenuPanel.SettingsButtonAction -= OpenSettingsScreen;
         _mainMenuPanel.QuitButtonAction -= ShowExitConfirmationPopup;
@@ -140,6 +146,33 @@ public class UIMenuManager : MonoBehaviour
         // TODO: Achievement panel도 CanvasGroup 방식으로 연결.
     }
 
+    public void OpenMetaSystemScreen()
+    {
+        if (_metaSystemPanel == null)
+        {
+            Debug.LogError("[UIMenuManager] Meta system panel is missing.", this);
+            return;
+        }
+
+        SetVisible(_mainMenuGroup, false);
+        SetVisible(_metaSystemGroup, true);
+
+        _metaSystemPanel.Closed -= CloseMetaSystemScreen;
+        _metaSystemPanel.Closed += CloseMetaSystemScreen;
+        _metaSystemPanel.OpenMetaSystemScreen();
+    }
+
+    public void CloseMetaSystemScreen()
+    {
+        if (_metaSystemPanel != null)
+            _metaSystemPanel.Closed -= CloseMetaSystemScreen;
+
+        SetVisible(_metaSystemGroup, false);
+        SetVisible(_mainMenuGroup, true);
+
+        RefreshMenuScreen();
+    }
+
 	public void OpenSettingsScreen()
 	{
 		if (_settingsPanel == null)
@@ -194,12 +227,15 @@ public class UIMenuManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_popupPanel == null)
-            return;
+        if (_popupPanel != null)
+        {
+            _popupPanel.ConfirmationResponseAction -= HideExitConfirmationPopup;
+            _popupPanel.ConfirmationResponseAction -= StartNewGamePopupResponse;
+            _popupPanel.ClosePopupAction -= HidePopup;
+        }
 
-        _popupPanel.ConfirmationResponseAction -= HideExitConfirmationPopup;
-        _popupPanel.ConfirmationResponseAction -= StartNewGamePopupResponse;
-        _popupPanel.ClosePopupAction -= HidePopup;
+        if (_metaSystemPanel != null)
+            _metaSystemPanel.Closed -= CloseMetaSystemScreen;
     }
 
 	private static void SetVisible(CanvasGroup group, bool visible)

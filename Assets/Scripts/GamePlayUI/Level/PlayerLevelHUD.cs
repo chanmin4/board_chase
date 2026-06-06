@@ -42,7 +42,7 @@ public class PlayerLevelHUD : MonoBehaviour
         if (_xpFill != null)
             _xpFill.fillAmount = snapshot.progress01;
 
-        if (_stageCapRoot != null)
-            _stageCapRoot.SetActive(snapshot.stageXpCapped);
+        //if (_stageCapRoot != null)
+         //   _stageCapRoot.SetActive(snapshot.stageXpCapped);
     }
 }

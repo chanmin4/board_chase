@@ -86,6 +86,7 @@ GameObject:
   - component: {fileID: 4132284342673614600}
   - component: {fileID: 7230400398554472901}
   - component: {fileID: 6724282460954035151}
+  - component: {fileID: 6939984307103982785}
   m_Layer: 5
   m_Name: QTETimingPanel
   m_TagString: Untagged
@@ -156,6 +157,26 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &6939984307103982785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1695250083874620103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ada2a59e0520a9409c6acd0080f3112, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _sourceGroup: {fileID: 6724282460954035151}
+  _suppressWhenSourceVisible: 1
+  _visibleAlphaThreshold: 0.01
+  _requireSourceBlocksRaycasts: 1
+  _requestChannel: {fileID: 11400000, guid: 7f9fe9c8b72808449bbe548a70eb2d11, type: 2}
+  _targetId: AimCursor
+  _sourceId: 
+  _debugLogs: 0
 --- !u!1 &2695516318589382172
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class MaskRenderManager : MonoBehaviour
@@ -38,11 +39,11 @@ public class MaskRenderManager : MonoBehaviour
         public float radiusWorld;
         public object sender;
 
-        public int totalPixels;
-        public int neutralPixels;
-        public int overwrittenVirusPixels;
-        public int alreadyVaccinePixels;
-        public int alreadyVirusPixels;
+        public int totalCells;
+        public int neutralCells;
+        public int overwrittenVirusCells;
+        public int alreadyVaccineCells;
+        public int alreadyVirusCells;
 
         public float neutralArea;
         public float overwrittenVirusArea;
@@ -50,8 +51,9 @@ public class MaskRenderManager : MonoBehaviour
         public float totalArea;
 
         public float ValidArea => neutralArea + overwrittenVirusArea;
-        public int ValidPixels => neutralPixels + overwrittenVirusPixels;
+        public int ValidCells => neutralCells + overwrittenVirusCells;
     }
+
     [Header("Base Materials")]
     [SerializeField] private Material vaccineBaseMaterial;
     [SerializeField] private Material virusBaseMaterial;
@@ -62,18 +64,35 @@ public class MaskRenderManager : MonoBehaviour
 
     [Header("Mask Resolution")]
     [SerializeField] private int pixelsPerUnit = 16;
+
     [Header("Broadcasting On")]
-[SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
+    [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
     [Header("Overlay")]
     [SerializeField] private float yOffset = 0.3f;
     [SerializeField] private bool virusAboveVaccine = true;
 
+    [Header("GPU Paint")]
+    [Tooltip("Optional. If empty, Hidden/VSplatter/PaintMaskStamp is created at runtime.")]
+    [SerializeField] private Material _paintStampMaterial;
+    [SerializeField, Range(0.001f, 0.5f)] private float _paintStampEdgeSoftness = 0.08f;
+
+    [Header("Performance")]
+    [FormerlySerializedAs("_maxFastTrailCirclesPerFrame")]
+    [SerializeField, Min(0)] private int _maxTrailCirclesPerFrame = 128;
+
+    private static readonly int StampShaderId = Shader.PropertyToID("_Stamp");
+    private static readonly int StampSoftnessShaderId = Shader.PropertyToID("_StampSoftness");
+
     private readonly List<SectorPaint> _registeredSectors = new();
+    private int _trailCircleBudgetFrame = -1;
+    private int _trailCircleBudgetCount;
+    private bool _missingPaintStampMaterialLogged;
 
     public event Action<CirclePaintRequest> OnCircleRequestAccepted;
     public event Action<CirclePaintRequest> OnCircleRequestRejected;
     public event Action<CirclePaintImpact> OnCirclePaintImpactAccepted;
+
     private void OnEnable()
     {
         if (_maskRenderManagerReadyChannel != null)
@@ -84,17 +103,6 @@ public class MaskRenderManager : MonoBehaviour
     {
         if (_maskRenderManagerReadyChannel != null)
             _maskRenderManagerReadyChannel.Clear(this);
-    }
-    private void LateUpdate()
-    {
-        for (int i = 0; i < _registeredSectors.Count; i++)
-        {
-            SectorPaint sector = _registeredSectors[i];
-            if (sector == null)
-                continue;
-
-            ApplyDirtyMasks(sector);
-        }
     }
 
     public void RegisterSector(SectorPaint sector)
@@ -124,7 +132,13 @@ public class MaskRenderManager : MonoBehaviour
         object sender = null)
     {
         CirclePaintRequest request = BuildCircleRequest(
-        channel,worldPos,radiusWorld,0,sender,null);
+            channel,
+            worldPos,
+            radiusWorld,
+            0,
+            sender,
+            null);
+
         for (int i = 0; i < _registeredSectors.Count; i++)
         {
             SectorPaint sector = _registeredSectors[i];
@@ -137,13 +151,15 @@ public class MaskRenderManager : MonoBehaviour
 
         return false;
     }
-    public bool RequestCapsuleTrail(
-    PaintChannel channel,
-    Vector3 fromWorld,
-    Vector3 toWorld,
-    float radiusWorld,
-    int priority = 0,
-    object sender = null)
+
+    public bool RequestVirusTrailSegment(
+        Vector3 fromWorld,
+        Vector3 toWorld,
+        float radiusWorld,
+        int priority = 0,
+        object sender = null,
+        float spacingWorld = 0f,
+        int maxSteps = 3)
     {
         Vector3 from = fromWorld;
         Vector3 to = toWorld;
@@ -154,10 +170,26 @@ public class MaskRenderManager : MonoBehaviour
         float distance = Vector3.Distance(from, to);
 
         if (distance <= 0.001f)
-            return RequestCircle(channel, toWorld, radiusWorld, priority, sender);
+        {
+            CirclePaintRequest singleRequest = BuildCircleRequest(
+                PaintChannel.Virus,
+                toWorld,
+                radiusWorld,
+                priority,
+                sender,
+                null);
 
-        float spacing = Mathf.Max(radiusWorld * 0.75f, 0.05f);
-        int steps = Mathf.Max(1, Mathf.CeilToInt(distance / spacing));
+            return RequestVirusTrailCircleInternal(singleRequest);
+        }
+
+        float spacing = spacingWorld > 0f
+            ? spacingWorld
+            : Mathf.Max(radiusWorld * 1.5f, 0.25f);
+
+        int steps = Mathf.Clamp(
+            Mathf.CeilToInt(distance / Mathf.Max(0.001f, spacing)),
+            1,
+            Mathf.Max(1, maxSteps));
 
         bool acceptedAny = false;
 
@@ -166,14 +198,20 @@ public class MaskRenderManager : MonoBehaviour
             float t = i / (float)steps;
             Vector3 position = Vector3.Lerp(fromWorld, toWorld, t);
 
-            if (RequestCircle(channel, position, radiusWorld, priority, sender))
+            CirclePaintRequest request = BuildCircleRequest(
+                PaintChannel.Virus,
+                position,
+                radiusWorld,
+                priority,
+                sender,
+                null);
+
+            if (RequestVirusTrailCircleInternal(request))
                 acceptedAny = true;
         }
 
         return acceptedAny;
     }
-
-    
 
     public bool RequestCircle(
         PaintChannel channel,
@@ -249,13 +287,82 @@ public class MaskRenderManager : MonoBehaviour
         return accepted;
     }
 
+    private bool RequestVirusTrailCircleInternal(CirclePaintRequest request)
+    {
+        if (!TryConsumeTrailCircleBudget())
+            return false;
+
+        bool accepted = false;
+
+        for (int i = 0; i < _registeredSectors.Count; i++)
+        {
+            SectorPaint sector = _registeredSectors[i];
+
+            if (sector == null)
+                continue;
+
+            if (!CanSectorAcceptCircle(sector, request, out _))
+                continue;
+
+            RefreshSector(sector);
+            PaintGpuCircle(sector.virusMask, sector, request.worldPos, request.radiusWorld, true);
+            PaintGpuCircle(sector.vaccineMask, sector, request.worldPos, request.radiusWorld, false);
+
+            if (sector.AddVirusTrailCircle(request.worldPos, request.radiusWorld))
+                accepted = true;
+        }
+
+        return accepted;
+    }
+
+    private static bool CanSectorAcceptCircle(
+        SectorPaint sector,
+        CirclePaintRequest request,
+        out Bounds bounds)
+    {
+        bounds = default;
+
+        if (sector == null || !sector.CanPaintNow())
+            return false;
+
+        bounds = sector.GetWorldBounds();
+
+        float radius = request.radiusWorld + sector.BoundsPadding;
+        float closestX = Mathf.Clamp(request.worldPos.x, bounds.min.x, bounds.max.x);
+        float closestZ = Mathf.Clamp(request.worldPos.z, bounds.min.z, bounds.max.z);
+        float dx = request.worldPos.x - closestX;
+        float dz = request.worldPos.z - closestZ;
+
+        return dx * dx + dz * dz <= radius * radius;
+    }
+
+    private bool TryConsumeTrailCircleBudget()
+    {
+        if (_maxTrailCirclesPerFrame <= 0)
+            return true;
+
+        int frame = Time.frameCount;
+
+        if (_trailCircleBudgetFrame != frame)
+        {
+            _trailCircleBudgetFrame = frame;
+            _trailCircleBudgetCount = 0;
+        }
+
+        if (_trailCircleBudgetCount >= _maxTrailCirclesPerFrame)
+            return false;
+
+        _trailCircleBudgetCount++;
+        return true;
+    }
+
     public void RefreshSector(SectorPaint sector)
     {
         if (sector == null)
             return;
 
         Bounds bounds = sector.GetWorldBounds();
-        bool rebuildTextures = !sector.initialized || NeedTextureRebuild(sector, bounds);
+        bool rebuildTextures = !sector.initialized || NeedRenderTextureRebuild(sector, bounds);
 
         sector.worldBounds = bounds;
 
@@ -263,10 +370,9 @@ public class MaskRenderManager : MonoBehaviour
 
         if (rebuildTextures)
         {
-            BuildOrRebuildMaskTextures(sector);
+            BuildOrRebuildMaskRenderTextures(sector);
             BindTexturesToMaterials(sector);
             ClearAllToNeutral(sector);
-            ApplyDirtyMasks(sector);
         }
 
         sector.initialized = true;
@@ -282,18 +388,26 @@ public class MaskRenderManager : MonoBehaviour
         switch (request.channel)
         {
             case PaintChannel.Vaccine:
-                StampVaccineCircle(sector, request.worldPos, request.radiusWorld, true);
+                PaintGpuCircle(sector.vaccineMask, sector, request.worldPos, request.radiusWorld, true);
+                PaintGpuCircle(sector.virusMask, sector, request.worldPos, request.radiusWorld, false);
+                PaintGpuCircle(sector.poisonPuddleMask, sector, request.worldPos, request.radiusWorld, false);
                 break;
 
             case PaintChannel.Virus:
-                StampVirusCircle(sector, request.worldPos, request.radiusWorld, true);
-                break;
-            case PaintChannel.PoisonPuddle:
-                StampPoisonPuddleCircle(sector, request.worldPos, request.radiusWorld, true);
+                PaintGpuCircle(sector.virusMask, sector, request.worldPos, request.radiusWorld, true);
+                PaintGpuCircle(sector.vaccineMask, sector, request.worldPos, request.radiusWorld, false);
                 break;
 
+            case PaintChannel.PoisonPuddle:
+                PaintGpuCircle(sector.virusMask, sector, request.worldPos, request.radiusWorld, true);
+                PaintGpuCircle(sector.poisonPuddleMask, sector, request.worldPos, request.radiusWorld, true);
+                PaintGpuCircle(sector.vaccineMask, sector, request.worldPos, request.radiusWorld, false);
+                break;
         }
+
+        sector.ApplyGameplayCircle(request.channel, request.worldPos, request.radiusWorld, true);
     }
+
     public bool TryGetPoisonPuddleAtWorld(Vector3 worldPos, bool requireOpened = true)
     {
         for (int i = 0; i < _registeredSectors.Count; i++)
@@ -303,21 +417,13 @@ public class MaskRenderManager : MonoBehaviour
             if (sector == null)
                 continue;
 
-            if (requireOpened && !sector.CanPaintNow())
+            if (requireOpened && !sector.CanQueryPaintNow())
                 continue;
 
             if (!sector.ContainsPoint(worldPos))
                 continue;
 
-            RefreshSector(sector);
-
-            if (!TryWorldToPixel(sector, worldPos, out int px, out int py))
-                return false;
-
-            int index = py * sector.textureWidth + px;
-
-            return sector.poisonPuddleBuffer != null &&
-                sector.poisonPuddleBuffer[index].a > 0;
+            return sector.HasPaintAtWorld(PaintChannel.PoisonPuddle, worldPos);
         }
 
         return false;
@@ -337,24 +443,13 @@ public class MaskRenderManager : MonoBehaviour
             if (sector == null)
                 continue;
 
-            if (requireOpened && !sector.CanPaintNow())
+            if (requireOpened && !sector.CanQueryPaintNow())
                 continue;
 
             if (!sector.ContainsPoint(worldPos))
                 continue;
 
-            RefreshSector(sector);
-
-            if (!TryWorldToPixel(sector, worldPos, out int px, out int py))
-                return false;
-
-            int index = py * sector.textureWidth + px;
-
-            bool hasPoisonPuddle =
-                sector.poisonPuddleBuffer != null &&
-                sector.poisonPuddleBuffer[index].a > 0;
-
-            if (!hasPoisonPuddle)
+            if (!sector.HasPaintAtWorld(PaintChannel.PoisonPuddle, worldPos))
                 return false;
 
             poisonPuddleDamageConfig = ResolvePoisonPuddleDamageConfig(sector, worldPos);
@@ -402,6 +497,7 @@ public class MaskRenderManager : MonoBehaviour
 
         return bestConfig;
     }
+
     public bool TryGetStateAtWorld(
         Vector3 worldPos,
         out PaintState state,
@@ -416,13 +512,11 @@ public class MaskRenderManager : MonoBehaviour
             if (sector == null)
                 continue;
 
-            if (requireOpened && !sector.CanPaintNow())
+            if (requireOpened && !sector.CanQueryPaintNow())
                 continue;
 
             if (!sector.ContainsPoint(worldPos))
                 continue;
-
-            RefreshSector(sector);
 
             state = GetStateAtWorld(sector, worldPos);
             return true;
@@ -430,22 +524,13 @@ public class MaskRenderManager : MonoBehaviour
 
         return false;
     }
+
     public PaintState GetStateAtWorld(SectorPaint sector, Vector3 worldPos)
     {
-        if (sector == null || !sector.initialized)
+        if (sector == null)
             return PaintState.Neutral;
 
-        if (!TryWorldToPixel(sector, worldPos, out int px, out int py))
-            return PaintState.Neutral;
-
-        int index = py * sector.textureWidth + px;
-
-        bool vaccine = sector.vaccineBuffer != null && sector.vaccineBuffer[index].a > 0;
-        bool virus = sector.virusBuffer != null && sector.virusBuffer[index].a > 0;
-
-        if (vaccine && !virus) return PaintState.Vaccine;
-        if (!vaccine && virus) return PaintState.Virus;
-        return PaintState.Neutral;
+        return sector.GetPaintStateAtWorld(worldPos);
     }
 
     public void ClearAllToNeutral(SectorPaint sector)
@@ -453,47 +538,47 @@ public class MaskRenderManager : MonoBehaviour
         if (sector == null)
             return;
 
-        ClearBuffer(sector.vaccineBuffer);
-        ClearBuffer(sector.virusBuffer);
-        ClearBuffer(sector.poisonPuddleBuffer);
-
-        sector.vaccineDirty = true;
-        sector.virusDirty = true;
-        sector.poisonPuddleDirty = true;
+        sector.ClearAllPaintCoverage();
+        ClearRenderTexture(sector.vaccineMask, 0f);
+        ClearRenderTexture(sector.virusMask, 0f);
+        ClearRenderTexture(sector.poisonPuddleMask, 0f);
     }
+
     public bool FillSector(SectorPaint sector, PaintChannel channel, bool clearOtherChannel = true)
     {
         if (sector == null)
             return false;
 
         RefreshSector(sector);
-
-        if (sector.vaccineBuffer == null || sector.virusBuffer == null)
-            return false;
+        sector.FillGameplay(channel, clearOtherChannel);
 
         switch (channel)
         {
             case PaintChannel.Vaccine:
-                FillBufferAlpha(sector.vaccineBuffer, 255);
-                sector.vaccineDirty = true;
+                ClearRenderTexture(sector.vaccineMask, 1f);
 
                 if (clearOtherChannel)
                 {
-                    FillBufferAlpha(sector.virusBuffer, 0);
-                    sector.virusDirty = true;
+                    ClearRenderTexture(sector.virusMask, 0f);
+                    ClearRenderTexture(sector.poisonPuddleMask, 0f);
                 }
 
                 break;
 
             case PaintChannel.Virus:
-                FillBufferAlpha(sector.virusBuffer, 255);
-                sector.virusDirty = true;
+                ClearRenderTexture(sector.virusMask, 1f);
 
                 if (clearOtherChannel)
-                {
-                    FillBufferAlpha(sector.vaccineBuffer, 0);
-                    sector.vaccineDirty = true;
-                }
+                    ClearRenderTexture(sector.vaccineMask, 0f);
+
+                break;
+
+            case PaintChannel.PoisonPuddle:
+                ClearRenderTexture(sector.virusMask, 1f);
+                ClearRenderTexture(sector.poisonPuddleMask, 1f);
+
+                if (clearOtherChannel)
+                    ClearRenderTexture(sector.vaccineMask, 0f);
 
                 break;
         }
@@ -502,29 +587,15 @@ public class MaskRenderManager : MonoBehaviour
         return true;
     }
 
-    private void FillBufferAlpha(Color32[] buffer, byte alpha)
+    private CirclePaintRequest BuildCircleRequest(
+        PaintChannel channel,
+        Vector3 worldPos,
+        float radiusWorld,
+        int priority,
+        object sender,
+        PoisonPuddleDamageConfigSO poisonPuddleDamageConfig)
     {
-        if (buffer == null)
-            return;
-
-        for (int i = 0; i < buffer.Length; i++)
-        {
-            Color32 color = buffer[i];
-            color.a = alpha;
-            buffer[i] = color;
-        }
-    }
-
-
-   private CirclePaintRequest BuildCircleRequest(
-    PaintChannel channel,
-    Vector3 worldPos,
-    float radiusWorld,
-    int priority,
-    object sender,
-    PoisonPuddleDamageConfigSO poisonPuddleDamageConfig)
-    {
-        CirclePaintRequest request = new CirclePaintRequest
+        return new CirclePaintRequest
         {
             channel = channel,
             worldPos = worldPos,
@@ -533,11 +604,9 @@ public class MaskRenderManager : MonoBehaviour
             sender = sender,
             poisonPuddleDamageConfig = poisonPuddleDamageConfig
         };
-
-        return request;
     }
 
-    private bool NeedTextureRebuild(SectorPaint sector, Bounds newBounds)
+    private bool NeedRenderTextureRebuild(SectorPaint sector, Bounds newBounds)
     {
         int newWidth = Mathf.Max(1, Mathf.CeilToInt(newBounds.size.x * Mathf.Max(1, pixelsPerUnit)));
         int newHeight = Mathf.Max(1, Mathf.CeilToInt(newBounds.size.z * Mathf.Max(1, pixelsPerUnit)));
@@ -585,7 +654,7 @@ public class MaskRenderManager : MonoBehaviour
             sector.poisonPuddleMaterialInstance.renderQueue = Mathf.Max(sector.poisonPuddleMaterialInstance.renderQueue, 3710);
     }
 
-    private void BuildOrRebuildMaskTextures(SectorPaint sector)
+    private void BuildOrRebuildMaskRenderTextures(SectorPaint sector)
     {
         sector.textureWidth = Mathf.Max(1, Mathf.CeilToInt(sector.worldBounds.size.x * Mathf.Max(1, pixelsPerUnit)));
         sector.textureHeight = Mathf.Max(1, Mathf.CeilToInt(sector.worldBounds.size.z * Mathf.Max(1, pixelsPerUnit)));
@@ -593,15 +662,14 @@ public class MaskRenderManager : MonoBehaviour
         ReleaseObject(sector.vaccineMask);
         ReleaseObject(sector.virusMask);
         ReleaseObject(sector.poisonPuddleMask);
-        sector.vaccineMask = CreateMaskTexture(sector.textureWidth, sector.textureHeight, "VaccineMask");
-        sector.virusMask = CreateMaskTexture(sector.textureWidth, sector.textureHeight, "VirusMask");
-        sector.poisonPuddleMask = CreateMaskTexture(sector.textureWidth, sector.textureHeight, "PoisonPuddleMask");
-        sector.vaccineBuffer = CreateClearBuffer(sector.textureWidth, sector.textureHeight);
-        sector.virusBuffer = CreateClearBuffer(sector.textureWidth, sector.textureHeight);
-        sector.poisonPuddleBuffer = CreateClearBuffer(sector.textureWidth, sector.textureHeight);
-        sector.vaccineDirty = true;
-        sector.virusDirty = true;
-        sector.poisonPuddleDirty = true;
+
+        sector.vaccineMask = CreateMaskRenderTexture(sector.textureWidth, sector.textureHeight, "VaccineMaskRT");
+        sector.virusMask = CreateMaskRenderTexture(sector.textureWidth, sector.textureHeight, "VirusMaskRT");
+        sector.poisonPuddleMask = CreateMaskRenderTexture(sector.textureWidth, sector.textureHeight, "PoisonPuddleMaskRT");
+
+        ClearRenderTexture(sector.vaccineMask, 0f);
+        ClearRenderTexture(sector.virusMask, 0f);
+        ClearRenderTexture(sector.poisonPuddleMask, 0f);
     }
 
     private void BindTexturesToMaterials(SectorPaint sector)
@@ -611,127 +679,82 @@ public class MaskRenderManager : MonoBehaviour
 
         if (sector.virusMaterialInstance != null && sector.virusMaterialInstance.HasProperty(maskTextureProperty))
             sector.virusMaterialInstance.SetTexture(maskTextureProperty, sector.virusMask);
+
         if (sector.poisonPuddleMaterialInstance != null && sector.poisonPuddleMaterialInstance.HasProperty(maskTextureProperty))
             sector.poisonPuddleMaterialInstance.SetTexture(maskTextureProperty, sector.poisonPuddleMask);
     }
 
-    private void StampVaccineCircle(SectorPaint sector, Vector3 centerWorld, float radiusWorld, bool overwriteOther = true)
-    {
-        StampCircleAlpha(sector, sector.vaccineBuffer, centerWorld, radiusWorld, 255, markVaccineDirty: true);
-
-        if (overwriteOther)
-        {
-            StampCircleAlpha(sector, sector.virusBuffer, centerWorld, radiusWorld, 0, markVirusDirty: true);
-            StampCircleAlpha(sector, sector.poisonPuddleBuffer, centerWorld, radiusWorld, 0, markPoisonPuddleDirty: true);
-        }
-    }
-
-    private void StampVirusCircle(SectorPaint sector, Vector3 centerWorld, float radiusWorld, bool overwriteOther = true)
-    {
-        StampCircleAlpha(sector, sector.virusBuffer, centerWorld, radiusWorld, 255, markVirusDirty: true);
-
-        if (overwriteOther)
-            StampCircleAlpha(sector, sector.vaccineBuffer, centerWorld, radiusWorld, 0, markVaccineDirty: true);
-    }
-    private void StampPoisonPuddleCircle(SectorPaint sector, Vector3 centerWorld, float radiusWorld, bool overwriteOther = true)
-    {
-        StampVirusCircle(sector, centerWorld, radiusWorld, overwriteOther);
-        StampCircleAlpha(sector, sector.poisonPuddleBuffer, centerWorld, radiusWorld, 255, markPoisonPuddleDirty: true);
-    }
-
-    private void StampCircleAlpha(
+    private void PaintGpuCircle(
+        RenderTexture target,
         SectorPaint sector,
-        Color32[] buffer,
         Vector3 centerWorld,
         float radiusWorld,
-        byte alpha,
-        bool markVaccineDirty = false,
-        bool markVirusDirty = false,
-        bool markPoisonPuddleDirty = false
-        )
+        bool add)
     {
-        if (sector == null || buffer == null)
+        if (target == null || sector == null || !EnsurePaintStampMaterial())
             return;
 
-        if (!TryWorldToPixel(sector, centerWorld, out int cx, out int cy))
-            return;
+        sector.TryWorldToMaskUV(centerWorld, out Vector2 uv);
 
-        float pixelsPerMeterX = sector.textureWidth / Mathf.Max(0.0001f, sector.worldBounds.size.x);
-        float pixelsPerMeterY = sector.textureHeight / Mathf.Max(0.0001f, sector.worldBounds.size.z);
-        float pixelsPerMeter = Mathf.Min(pixelsPerMeterX, pixelsPerMeterY);
+        Bounds bounds = sector.worldBounds;
+        float radiusU = radiusWorld / Mathf.Max(0.0001f, bounds.size.x);
+        float radiusV = radiusWorld / Mathf.Max(0.0001f, bounds.size.z);
 
-        int radiusPx = Mathf.Max(1, Mathf.RoundToInt(radiusWorld * pixelsPerMeter));
+        _paintStampMaterial.SetVector(StampShaderId, new Vector4(uv.x, uv.y, radiusU, radiusV));
+        _paintStampMaterial.SetFloat(StampSoftnessShaderId, _paintStampEdgeSoftness);
 
-        int minX = Mathf.Max(0, cx - radiusPx);
-        int maxX = Mathf.Min(sector.textureWidth - 1, cx + radiusPx);
-        int minY = Mathf.Max(0, cy - radiusPx);
-        int maxY = Mathf.Min(sector.textureHeight - 1, cy + radiusPx);
+        Graphics.Blit(Texture2D.whiteTexture, target, _paintStampMaterial, add ? 0 : 1);
+    }
 
-        float rr = (radiusPx + 0.5f) * (radiusPx + 0.5f);
+    private bool EnsurePaintStampMaterial()
+    {
+        if (_paintStampMaterial != null)
+            return true;
 
-        for (int y = minY; y <= maxY; y++)
+        Shader shader = Shader.Find("Hidden/VSplatter/PaintMaskStamp");
+
+        if (shader != null)
         {
-            int dy = y - cy;
-            int row = y * sector.textureWidth;
-
-            for (int x = minX; x <= maxX; x++)
+            _paintStampMaterial = new Material(shader)
             {
-                int dx = x - cx;
-                if ((dx * dx) + (dy * dy) > rr)
-                    continue;
-
-                int index = row + x;
-                Color32 c = buffer[index];
-                c.a = alpha;
-                buffer[index] = c;
-            }
+                name = "Runtime_PaintMaskStamp"
+            };
+            return true;
         }
 
-        if (markVaccineDirty) sector.vaccineDirty = true;
-        if (markVirusDirty) sector.virusDirty = true;
-        if (markPoisonPuddleDirty) sector.poisonPuddleDirty = true;
+        if (!_missingPaintStampMaterialLogged)
+        {
+            _missingPaintStampMaterialLogged = true;
+            Debug.LogError("[MaskRenderManager] Paint stamp shader not found: Hidden/VSplatter/PaintMaskStamp", this);
+        }
+
+        return false;
     }
 
-    private void ApplyDirtyMasks(SectorPaint sector)
+    private RenderTexture CreateMaskRenderTexture(int width, int height, string textureName)
     {
-        if (sector == null)
+        RenderTexture texture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+        {
+            name = textureName,
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear,
+            useMipMap = false,
+            autoGenerateMips = false
+        };
+
+        texture.Create();
+        return texture;
+    }
+
+    private void ClearRenderTexture(RenderTexture texture, float value)
+    {
+        if (texture == null)
             return;
 
-        if (sector.vaccineDirty && sector.vaccineMask != null && sector.vaccineBuffer != null)
-        {
-            sector.vaccineMask.SetPixels32(sector.vaccineBuffer);
-            sector.vaccineMask.Apply(false, false);
-            sector.vaccineDirty = false;
-        }
-
-        if (sector.virusDirty && sector.virusMask != null && sector.virusBuffer != null)
-        {
-            sector.virusMask.SetPixels32(sector.virusBuffer);
-            sector.virusMask.Apply(false, false);
-            sector.virusDirty = false;
-        }
-        if (sector.poisonPuddleDirty && sector.poisonPuddleMask != null && sector.poisonPuddleBuffer != null)
-        {
-            sector.poisonPuddleMask.SetPixels32(sector.poisonPuddleBuffer);
-            sector.poisonPuddleMask.Apply(false, false);
-            sector.poisonPuddleDirty = false;
-        }
-    }
-
-    private bool TryWorldToPixel(SectorPaint sector, Vector3 worldPos, out int px, out int py)
-    {
-        float x01 = Mathf.InverseLerp(sector.worldBounds.min.x, sector.worldBounds.max.x, worldPos.x);
-        float y01 = Mathf.InverseLerp(sector.worldBounds.min.z, sector.worldBounds.max.z, worldPos.z);
-
-        bool inside = x01 >= 0f && x01 <= 1f && y01 >= 0f && y01 <= 1f;
-
-        px = Mathf.RoundToInt(x01 * (sector.textureWidth - 1));
-        py = Mathf.RoundToInt(y01 * (sector.textureHeight - 1));
-
-        px = Mathf.Clamp(px, 0, sector.textureWidth - 1);
-        py = Mathf.Clamp(py, 0, sector.textureHeight - 1);
-
-        return inside;
+        RenderTexture previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        GL.Clear(false, true, new Color(value, value, value, value));
+        RenderTexture.active = previous;
     }
 
     private void CreateOverlayIfNeeded(
@@ -779,26 +802,26 @@ public class MaskRenderManager : MonoBehaviour
 
     private Mesh CreateUnitQuadXZMesh()
     {
-        Mesh mesh = new Mesh();
-        mesh.name = "MaskOverlayQuad_XZ";
-
-        mesh.vertices = new Vector3[]
+        Mesh mesh = new Mesh
         {
-            new Vector3(-0.5f, 0f, -0.5f),
-            new Vector3( 0.5f, 0f, -0.5f),
-            new Vector3( 0.5f, 0f,  0.5f),
-            new Vector3(-0.5f, 0f,  0.5f)
+            name = "MaskOverlayQuad_XZ",
+            vertices = new Vector3[]
+            {
+                new Vector3(-0.5f, 0f, -0.5f),
+                new Vector3(0.5f, 0f, -0.5f),
+                new Vector3(0.5f, 0f, 0.5f),
+                new Vector3(-0.5f, 0f, 0.5f)
+            },
+            uv = new Vector2[]
+            {
+                new Vector2(0f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(1f, 1f),
+                new Vector2(0f, 1f)
+            },
+            triangles = new[] { 0, 1, 2, 0, 2, 3 }
         };
 
-        mesh.uv = new Vector2[]
-        {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(1f, 1f),
-            new Vector2(0f, 1f)
-        };
-
-        mesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         return mesh;
@@ -811,128 +834,99 @@ public class MaskRenderManager : MonoBehaviour
         target.localScale = new Vector3(bounds.size.x, 1f, bounds.size.z);
     }
 
-    private Texture2D CreateMaskTexture(int width, int height, string textureName)
-    {
-        Texture2D tex = new Texture2D(width, height, TextureFormat.Alpha8, false, true);
-        tex.name = textureName;
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
-        return tex;
-    }
-
-    private Color32[] CreateClearBuffer(int width, int height)
-    {
-        Color32[] buffer = new Color32[width * height];
-        for (int i = 0; i < buffer.Length; i++)
-            buffer[i] = new Color32(0, 0, 0, 0);
-        return buffer;
-    }
-
-    private void ClearBuffer(Color32[] buffer)
-    {
-        if (buffer == null)
-            return;
-
-        for (int i = 0; i < buffer.Length; i++)
-            buffer[i] = new Color32(0, 0, 0, 0);
-    }
-
     private void ReleaseObject(UnityEngine.Object obj)
     {
         if (obj == null)
             return;
+
+        if (obj is RenderTexture renderTexture && renderTexture.IsCreated())
+            renderTexture.Release();
 
         if (Application.isPlaying)
             Destroy(obj);
         else
             DestroyImmediate(obj);
     }
+
     private CirclePaintImpact EvaluateCircleImpact(SectorPaint sector, CirclePaintRequest request)
     {
         CirclePaintImpact impact = CreateEmptyImpact(request);
 
-        if (sector == null || !sector.initialized)
+        if (sector == null)
             return impact;
 
-        if (!TryWorldToPixel(sector, request.worldPos, out int cx, out int cy))
+        if (!sector.TryGetPaintCellRange(
+                request.worldPos,
+                request.radiusWorld,
+                out int minX,
+                out int maxX,
+                out int minY,
+                out int maxY))
+        {
             return impact;
+        }
 
-        float pixelsPerMeterX = sector.textureWidth / Mathf.Max(0.0001f, sector.worldBounds.size.x);
-        float pixelsPerMeterY = sector.textureHeight / Mathf.Max(0.0001f, sector.worldBounds.size.z);
-        float pixelsPerMeter = Mathf.Min(pixelsPerMeterX, pixelsPerMeterY);
-
-        int radiusPx = Mathf.Max(1, Mathf.RoundToInt(request.radiusWorld * pixelsPerMeter));
-
-        int minX = Mathf.Max(0, cx - radiusPx);
-        int maxX = Mathf.Min(sector.textureWidth - 1, cx + radiusPx);
-        int minY = Mathf.Max(0, cy - radiusPx);
-        int maxY = Mathf.Min(sector.textureHeight - 1, cy + radiusPx);
-
-        float rr = (radiusPx + 0.5f) * (radiusPx + 0.5f);
-
-        float pixelWorldWidth = sector.worldBounds.size.x / Mathf.Max(1, sector.textureWidth);
-        float pixelWorldHeight = sector.worldBounds.size.z / Mathf.Max(1, sector.textureHeight);
-        float pixelArea = pixelWorldWidth * pixelWorldHeight;
+        float cellWorldWidth = sector.worldBounds.size.x / Mathf.Max(1, sector.PaintGridWidth);
+        float cellWorldHeight = sector.worldBounds.size.z / Mathf.Max(1, sector.PaintGridHeight);
+        float cellArea = cellWorldWidth * cellWorldHeight;
 
         for (int y = minY; y <= maxY; y++)
         {
-            int dy = y - cy;
-            int row = y * sector.textureWidth;
-
             for (int x = minX; x <= maxX; x++)
             {
-                int dx = x - cx;
+                float paintCoverage = sector.EstimatePaintCoverage(request.worldPos, request.radiusWorld, x, y);
 
-                if ((dx * dx) + (dy * dy) > rr)
+                if (paintCoverage <= 0f)
                     continue;
 
-                int index = row + x;
+                float vaccine = sector.GetCoverageAtCell(PaintChannel.Vaccine, x, y);
+                float virus = sector.GetCoverageAtCell(PaintChannel.Virus, x, y);
+                float area = paintCoverage * cellArea;
 
-                bool hasVaccine =
-                    sector.vaccineBuffer != null &&
-                    sector.vaccineBuffer[index].a > 0;
-
-                bool hasVirus =
-                    sector.virusBuffer != null &&
-                    sector.virusBuffer[index].a > 0;
-
-                impact.totalPixels++;
-                impact.totalArea += pixelArea;
+                impact.totalCells++;
+                impact.totalArea += area;
 
                 if (request.channel == PaintChannel.Vaccine)
                 {
-                    if (hasVirus)
+                    float overwritten = Mathf.Min(paintCoverage, virus);
+                    float already = Mathf.Min(paintCoverage, vaccine);
+                    float neutral = Mathf.Max(0f, paintCoverage - Mathf.Max(vaccine, virus));
+
+                    if (overwritten > 0f)
                     {
-                        impact.overwrittenVirusPixels++;
-                        impact.overwrittenVirusArea += pixelArea;
+                        impact.overwrittenVirusCells++;
+                        impact.overwrittenVirusArea += overwritten * cellArea;
                     }
-                    else if (!hasVaccine)
+                    else if (neutral > 0f)
                     {
-                        impact.neutralPixels++;
-                        impact.neutralArea += pixelArea;
+                        impact.neutralCells++;
+                        impact.neutralArea += neutral * cellArea;
                     }
-                    else
+                    else if (already > 0f)
                     {
-                        impact.alreadyVaccinePixels++;
-                        impact.alreadyVaccineArea += pixelArea;
+                        impact.alreadyVaccineCells++;
+                        impact.alreadyVaccineArea += already * cellArea;
                     }
                 }
                 else if (request.channel == PaintChannel.Virus ||
                     request.channel == PaintChannel.PoisonPuddle)
                 {
-                    if (hasVaccine)
+                    float overwritten = Mathf.Min(paintCoverage, vaccine);
+                    float neutral = Mathf.Max(0f, paintCoverage - Mathf.Max(vaccine, virus));
+
+                    if (overwritten > 0f)
                     {
-                        impact.overwrittenVirusPixels++;
-                        impact.overwrittenVirusArea += pixelArea;
+                        impact.overwrittenVirusCells++;
+                        impact.overwrittenVirusArea += overwritten * cellArea;
                     }
-                    else if (!hasVirus)
+                    else if (neutral > 0f)
                     {
-                        impact.neutralPixels++;
-                        impact.neutralArea += pixelArea;
+                        impact.neutralCells++;
+                        impact.neutralArea += neutral * cellArea;
                     }
                     else
                     {
-                        impact.alreadyVirusPixels++;
+                        impact.alreadyVirusCells++;
                     }
                 }
             }
@@ -940,6 +934,7 @@ public class MaskRenderManager : MonoBehaviour
 
         return impact;
     }
+
     private CirclePaintImpact CreateEmptyImpact(CirclePaintRequest request)
     {
         return new CirclePaintImpact
@@ -953,16 +948,15 @@ public class MaskRenderManager : MonoBehaviour
 
     private void AddImpact(ref CirclePaintImpact total, CirclePaintImpact add)
     {
-        total.totalPixels += add.totalPixels;
-        total.neutralPixels += add.neutralPixels;
-        total.overwrittenVirusPixels += add.overwrittenVirusPixels;
-        total.alreadyVaccinePixels += add.alreadyVaccinePixels;
-        total.alreadyVirusPixels += add.alreadyVirusPixels;
+        total.totalCells += add.totalCells;
+        total.neutralCells += add.neutralCells;
+        total.overwrittenVirusCells += add.overwrittenVirusCells;
+        total.alreadyVaccineCells += add.alreadyVaccineCells;
+        total.alreadyVirusCells += add.alreadyVirusCells;
 
         total.neutralArea += add.neutralArea;
         total.overwrittenVirusArea += add.overwrittenVirusArea;
         total.alreadyVaccineArea += add.alreadyVaccineArea;
         total.totalArea += add.totalArea;
     }
-
 }

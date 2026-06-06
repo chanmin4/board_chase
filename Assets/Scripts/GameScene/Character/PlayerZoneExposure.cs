@@ -3,6 +3,14 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class PlayerZoneExposure : MonoBehaviour
 {
+    private enum ExposureKind
+    {
+        None,
+        Virus,
+        Vaccine,
+        PoisonPuddle
+    }
+
     [Header("Refs")]
     [SerializeField] private PlayerInfection _playerInfection;
     [SerializeField] private Damageable _damageable;
@@ -14,8 +22,9 @@ public class PlayerZoneExposure : MonoBehaviour
     [Header("Options")]
     [SerializeField] private bool _requireOpenedSector = true;
 
-    private float _poisonPuddleTickTimer;
-    private float _poisonPuddleAccumulatedTime;
+    private ExposureKind _activeExposureKind;
+    private PoisonPuddleDamageConfigSO _activePoisonPuddleConfig;
+    private float _zoneTickTimer;
 
     private void Reset()
     {
@@ -55,18 +64,44 @@ public class PlayerZoneExposure : MonoBehaviour
         if (_maskRenderManager == null || _samplePoint == null)
             return;
 
+        ResolveCurrentExposure(
+            out ExposureKind exposureKind,
+            out PoisonPuddleDamageConfigSO poisonPuddleConfig);
+
+        if (exposureKind == ExposureKind.None)
+        {
+            ResetZoneTick();
+            return;
+        }
+
+        if (exposureKind != _activeExposureKind ||
+            poisonPuddleConfig != _activePoisonPuddleConfig)
+        {
+            _activeExposureKind = exposureKind;
+            _activePoisonPuddleConfig = poisonPuddleConfig;
+            _zoneTickTimer = 0f;
+        }
+
+        TickExposure(exposureKind, poisonPuddleConfig);
+    }
+
+    private void ResolveCurrentExposure(
+        out ExposureKind exposureKind,
+        out PoisonPuddleDamageConfigSO poisonPuddleConfig)
+    {
+        exposureKind = ExposureKind.None;
+        poisonPuddleConfig = null;
+
         if (_maskRenderManager.TryGetPoisonPuddleAtWorld(
                 _samplePoint.position,
-                out PoisonPuddleDamageConfigSO poisonPuddleConfig,
+                out poisonPuddleConfig,
                 _requireOpenedSector) &&
             poisonPuddleConfig != null &&
             poisonPuddleConfig.HasDamage)
         {
-            ApplyPoisonPuddleExposure(poisonPuddleConfig, Time.deltaTime);
+            exposureKind = ExposureKind.PoisonPuddle;
             return;
         }
-
-        ResetPoisonPuddleTick();
 
         if (!_maskRenderManager.TryGetStateAtWorld(
                 _samplePoint.position,
@@ -79,47 +114,73 @@ public class PlayerZoneExposure : MonoBehaviour
         switch (state)
         {
             case MaskRenderManager.PaintState.Virus:
-                _playerInfection.AddVirusZoneExposure(Time.deltaTime);
+                exposureKind = ExposureKind.Virus;
                 break;
 
             case MaskRenderManager.PaintState.Vaccine:
-                _playerInfection.AddVaccineZoneRecovery(Time.deltaTime);
+                exposureKind = ExposureKind.Vaccine;
                 break;
         }
     }
 
-    private void ApplyPoisonPuddleExposure(
-        PoisonPuddleDamageConfigSO config,
-        float deltaTime)
+    private void TickExposure(
+        ExposureKind exposureKind,
+        PoisonPuddleDamageConfigSO poisonPuddleConfig)
     {
-        _poisonPuddleTickTimer += deltaTime;
-        _poisonPuddleAccumulatedTime += deltaTime;
+        float tickInterval = _playerInfection.ZoneTickInterval;
 
-        if (_poisonPuddleTickTimer < config.TickInterval)
+        _zoneTickTimer += Time.deltaTime;
+
+        while (_zoneTickTimer >= tickInterval)
+        {
+            _zoneTickTimer -= tickInterval;
+            ApplyExposureTick(exposureKind, poisonPuddleConfig);
+        }
+    }
+
+    private void ApplyExposureTick(
+        ExposureKind exposureKind,
+        PoisonPuddleDamageConfigSO poisonPuddleConfig)
+    {
+        switch (exposureKind)
+        {
+            case ExposureKind.Virus:
+                _playerInfection.ApplyVirusZoneTick();
+                break;
+
+            case ExposureKind.Vaccine:
+                _playerInfection.ApplyVaccineZoneTick();
+                break;
+
+            case ExposureKind.PoisonPuddle:
+                ApplyPoisonPuddleTick(poisonPuddleConfig);
+                break;
+        }
+    }
+
+    private void ApplyPoisonPuddleTick(PoisonPuddleDamageConfigSO config)
+    {
+        if (config == null)
             return;
-
-        float elapsed = _poisonPuddleAccumulatedTime;
-
-        _poisonPuddleTickTimer = 0f;
-        _poisonPuddleAccumulatedTime = 0f;
 
         if (_damageable != null && _damageable.CanReceiveDamage)
         {
-            float healthDamage = config.HealthDamagePerSecond * elapsed;
+            float healthDamage = config.HealthDamagePerTick;
 
             if (healthDamage > 0f)
                 _damageable.ReceiveAnAttack(healthDamage);
         }
 
-        float infectionGain = config.InfectionGainPerSecond * elapsed;
+        float infectionGain = config.InfectionGainPerTick;
 
         if (infectionGain > 0f)
             _playerInfection.AddInfection(infectionGain);
     }
 
-    private void ResetPoisonPuddleTick()
+    private void ResetZoneTick()
     {
-        _poisonPuddleTickTimer = 0f;
-        _poisonPuddleAccumulatedTime = 0f;
+        _activeExposureKind = ExposureKind.None;
+        _activePoisonPuddleConfig = null;
+        _zoneTickTimer = 0f;
     }
 }

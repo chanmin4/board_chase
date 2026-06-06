@@ -9,18 +9,19 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class WanderRandomInSectorActionSO : StateActionSO
 {
     [Header("Definition Config")]
-    [SerializeField] private NormalEnemyWanderConfigSO _definitionConfig;
+    [Tooltip("Shared config for normal enemy wander/search/infection behavior.")]
+    [SerializeField] private NormalEnemyBehaviorConfigSO _behaviorConfig;
 
-    public bool HasDefinitionConfig => _definitionConfig != null;
-    public float MoveSpeed => _definitionConfig.MoveSpeed;
-    public float MinTravelDistance => _definitionConfig.MinTravelDistance;
-    public float EdgePadding => _definitionConfig.EdgePadding;
-    public float NavMeshSampleMaxDistance => _definitionConfig.NavMeshSampleMaxDistance;
-    public int CandidateCount => _definitionConfig.CandidateCount;
-    public int MaxRepickCount => _definitionConfig.MaxRepickCount;
-    public bool DebugLogs => _definitionConfig.DebugLogs;
-    public bool DebugDraw => _definitionConfig.DebugDraw;
-    public float DebugDrawDuration => _definitionConfig.DebugDrawDuration;
+    public bool HasBehaviorConfig => _behaviorConfig != null;
+    public float MoveSpeed => _behaviorConfig.WanderMoveSpeed;
+    public float MinTravelDistance => _behaviorConfig.WanderMinTravelDistance;
+    public float EdgePadding => _behaviorConfig.WanderEdgePadding;
+    public float NavMeshSampleMaxDistance => _behaviorConfig.WanderNavMeshSampleMaxDistance;
+    public int CandidateCount => _behaviorConfig.WanderCandidateCount;
+    public int MaxRepickCount => _behaviorConfig.WanderMaxRepickCount;
+    public bool DebugLogs => _behaviorConfig.WanderDebugLogs;
+    public bool DebugDraw => _behaviorConfig.WanderDebugDraw;
+    public float DebugDrawDuration => _behaviorConfig.WanderDebugDrawDuration;
     
     protected override StateAction CreateAction() => new WanderRandomInSectorAction();
 }
@@ -47,14 +48,14 @@ public class WanderRandomInSectorAction : StateAction
 
     public override void OnStateEnter()
     {
-        _hasConfig = _config.HasDefinitionConfig;
+        _hasConfig = _config.HasBehaviorConfig;
         _isActiveAgent = _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
         _hasDestination = false;
         _repickCount = 0;
 
         if (!_hasConfig)
         {
-            Debug.LogError("[WanderRandomInSectorAction] Definition Config is missing.", _enemy);
+            Debug.LogError("[WanderRandomInSectorAction] NormalEnemyBehaviorConfig is missing.", _enemy);
             return;
         }
 

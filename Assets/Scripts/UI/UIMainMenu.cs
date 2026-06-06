@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Localization.Tables;
 using UnityEngine.Localization.Components;
+using UnityEngine.Localization.Tables;
 using UnityEngine.UI;
 
 public class UIMainMenu : MonoBehaviour
@@ -9,16 +9,18 @@ public class UIMainMenu : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button _continueButton;
     [SerializeField] private Button _newGameButton;
+    [SerializeField] private Button _playerUpgradeButton;
     [SerializeField] private Button _settingsButton;
     [SerializeField] private Button _achievementButton;
     [SerializeField] private Button _quitButton;
 
     [Header("Text Localization")]
-    [Tooltip("메인메뉴 버튼 텍스트가 들어있는 String Table Collection입니다. 예: UI_MainMenu")]
+    [Tooltip("Main menu button texts string table. Usually UI_MainMenu.")]
     [SerializeField] private TableReference _mainMenuStringTable = "UI_MainMenu";
 
     [SerializeField] private LocalizeStringEvent _continueText;
     [SerializeField] private LocalizeStringEvent _newGameText;
+    [SerializeField] private LocalizeStringEvent _playerUpgradeText;
     [SerializeField] private LocalizeStringEvent _settingsText;
     [SerializeField] private LocalizeStringEvent _achievementText;
     [SerializeField] private LocalizeStringEvent _quitText;
@@ -26,12 +28,14 @@ public class UIMainMenu : MonoBehaviour
     [Header("Localization Keys")]
     [SerializeField] private string _continueKey = "MainMenu_Continue";
     [SerializeField] private string _newGameKey = "MainMenu_NewGame";
+    [SerializeField] private string _playerUpgradeKey = "MainMenu_PlayerUpgrade";
     [SerializeField] private string _settingsKey = "MainMenu_Settings";
     [SerializeField] private string _achievementKey = "MainMenu_Achievement";
     [SerializeField] private string _quitKey = "MainMenu_Quit";
 
     public event UnityAction NewGameButtonAction = delegate { };
     public event UnityAction ContinueButtonAction = delegate { };
+    public event UnityAction PlayerUpgradeButtonAction = delegate { };
     public event UnityAction SettingsButtonAction = delegate { };
     public event UnityAction AchievementButtonAction = delegate { };
     public event UnityAction QuitButtonAction = delegate { };
@@ -48,6 +52,9 @@ public class UIMainMenu : MonoBehaviour
 
         if (_continueButton != null)
             _continueButton.onClick.AddListener(HandleContinueClicked);
+
+        if (_playerUpgradeButton != null)
+            _playerUpgradeButton.onClick.AddListener(HandlePlayerUpgradeClicked);
 
         if (_settingsButton != null)
             _settingsButton.onClick.AddListener(HandleSettingsClicked);
@@ -68,6 +75,9 @@ public class UIMainMenu : MonoBehaviour
 
         if (_continueButton != null)
             _continueButton.onClick.RemoveListener(HandleContinueClicked);
+
+        if (_playerUpgradeButton != null)
+            _playerUpgradeButton.onClick.RemoveListener(HandlePlayerUpgradeClicked);
 
         if (_settingsButton != null)
             _settingsButton.onClick.RemoveListener(HandleSettingsClicked);
@@ -94,6 +104,7 @@ public class UIMainMenu : MonoBehaviour
     {
         ApplyTextKey(_continueText, _continueKey);
         ApplyTextKey(_newGameText, _newGameKey);
+        ApplyTextKey(_playerUpgradeText, _playerUpgradeKey);
         ApplyTextKey(_settingsText, _settingsKey);
         ApplyTextKey(_achievementText, _achievementKey);
         ApplyTextKey(_quitText, _quitKey);
@@ -117,6 +128,11 @@ public class UIMainMenu : MonoBehaviour
     private void HandleContinueClicked()
     {
         ContinueButtonAction.Invoke();
+    }
+
+    private void HandlePlayerUpgradeClicked()
+    {
+        PlayerUpgradeButtonAction.Invoke();
     }
 
     private void HandleSettingsClicked()

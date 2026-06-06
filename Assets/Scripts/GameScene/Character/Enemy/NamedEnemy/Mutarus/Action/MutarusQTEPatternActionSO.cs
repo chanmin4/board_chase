@@ -11,67 +11,76 @@ public class MutarusQTEPatternActionSO : StateActionSO<MutarusQTEPatternAction>
     [SerializeField] private MutarusQTEPatternControllerEventChannelSO _controllerReadyChannel;
 
     [Header("Definition Config")]
-    [SerializeField] private MutarusQTEPatternBombConfigSO _bombConfig;
+    [Tooltip("Mutarus pattern config. Uses the QTE Pattern Bomb section.")]
+    [SerializeField] private MutarusPatternConfigSO _patternConfig;
 
     public MutarusQTEPatternControllerEventChannelSO ControllerReadyChannel => _controllerReadyChannel;
 
-    public bool HasBombConfig => _bombConfig != null;
-    public bool UsePeriodicArcBomb => _bombConfig.UsePeriodicArcBomb;
-    public EnemyArcBombProjectile ArcBombPrefab => _bombConfig.ArcBombPrefab;
-    public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _bombConfig.MaskRenderManagerReadyChannel;
+    public bool HasBombConfig => _patternConfig != null;
+    public bool UsePeriodicArcBomb => _patternConfig.UsePeriodicArcBomb;
+    public EnemyArcBombProjectile ArcBombPrefab => _patternConfig.ArcBombPrefab;
+    public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _patternConfig.MaskRenderManagerReadyChannel;
 
-    public bool FireBombOnEnter => _bombConfig.FireBombOnEnter;
-    public float FirstBombDelay => _bombConfig.FirstBombDelay;
-    public float BombInterval => _bombConfig.BombInterval;
-    public int BombsPerBurst => _bombConfig.BombsPerBurst;
-    public float BombShotInterval => _bombConfig.BombShotInterval;
+    public bool FireBombOnEnter => _patternConfig.FireBombOnEnter;
+    public float FirstBombDelay => _patternConfig.FirstBombDelay;
+    public float BombInterval => _patternConfig.BombInterval;
+    public int BombsPerBurst => _patternConfig.BombsPerBurst;
+    public float BombShotInterval => _patternConfig.BombShotInterval;
 
-    public float BombTravelTime => _bombConfig.BombTravelTime;
-    public float BombArcHeight => _bombConfig.BombArcHeight;
-    public float BombSpawnYOffset => _bombConfig.BombSpawnYOffset;
-    public float BombTargetYOffset => _bombConfig.BombTargetYOffset;
-    public float FallbackTargetDistance => _bombConfig.FallbackTargetDistance;
-    public float TargetRandomRadius => _bombConfig.TargetRandomRadius;
+    public float BombTravelTime => _patternConfig.BombTravelTime;
+    public float BombArcHeight => _patternConfig.BombArcHeight;
+    public float BombSpawnYOffset => _patternConfig.BombSpawnYOffset;
+    public float BombTargetYOffset => _patternConfig.BombTargetYOffset;
+    public float FallbackTargetDistance => _patternConfig.FallbackTargetDistance;
+    public float TargetRandomRadius => _patternConfig.TargetRandomRadius;
 
-    public bool DisableProjectileCollidersDuringFlight => _bombConfig.DisableProjectileCollidersDuringFlight;
-    public bool ShowImpactTelegraph => _bombConfig.ShowImpactTelegraph;
-    public float ImpactTelegraphRadius => _bombConfig.ImpactTelegraphRadius;
-    public AreaAttackTelegraphStyle ImpactTelegraphStyle => _bombConfig.ImpactTelegraphStyle;
+    public bool FaceTargetOnBomb => _patternConfig.FaceTargetOnBomb;
+    public bool SnapFacingOnBomb => _patternConfig.SnapFacingOnBomb;
+    public bool FaceTargetWhileBombing => _patternConfig.FaceTargetWhileBombing;
+    public float BombFacingRotationSpeedDegPerSec => _patternConfig.BombFacingRotationSpeedDegPerSec;
+    public bool FacePlayerWhilePatternActive => _patternConfig.FacePlayerWhilePatternActive;
+    public bool SnapFacingOnPatternEnter => _patternConfig.SnapFacingOnPatternEnter;
+    public float PatternFacingRotationSpeedDegPerSec => _patternConfig.PatternFacingRotationSpeedDegPerSec;
 
-    public float DamageRadius => _bombConfig.DamageRadius;
-    public float ImpactHealthDamage => _bombConfig.ImpactHealthDamage;
-    public float ImpactInfectionDamage => _bombConfig.ImpactInfectionDamage;
-    public LayerMask DamageTargetMask => _bombConfig.DamageTargetMask;
-    public QueryTriggerInteraction TriggerInteraction => _bombConfig.TriggerInteraction;
+    public bool DisableProjectileCollidersDuringFlight => _patternConfig.DisableProjectileCollidersDuringFlight;
+    public bool ShowImpactTelegraph => _patternConfig.ShowImpactTelegraph;
+    public float ImpactTelegraphRadius => _patternConfig.ImpactTelegraphRadius;
+    public AreaAttackTelegraphStyle ImpactTelegraphStyle => _patternConfig.ImpactTelegraphStyle;
 
-    public MaskRenderManager.PaintChannel PaintChannel => _bombConfig.PaintChannel;
-    public float PaintRadiusWorld => _bombConfig.PaintRadiusWorld;
-    public int PaintPriority => _bombConfig.PaintPriority;
-    public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _bombConfig.PoisonPuddleDamageConfig;
+    public float DamageRadius => _patternConfig.DamageRadius;
+    public float ImpactHealthDamage => _patternConfig.ImpactHealthDamage;
+    public float ImpactInfectionDamage => _patternConfig.ImpactInfectionDamage;
+    public LayerMask DamageTargetMask => _patternConfig.DamageTargetMask;
+    public QueryTriggerInteraction TriggerInteraction => _patternConfig.TriggerInteraction;
 
-    public bool FireBombOnPatternFailed => _bombConfig.FireBombOnPatternFailed;
-    public EnemyArcBombProjectile FailureArcBombPrefab => _bombConfig.FailureArcBombPrefab;
-    public bool FailureBombTargetSectorCenter => _bombConfig.FailureBombTargetSectorCenter;
-    public float FailureBombTravelTime => _bombConfig.FailureBombTravelTime;
-    public float FailureBombArcHeight => _bombConfig.FailureBombArcHeight;
-    public float FailureBombSpawnYOffset => _bombConfig.FailureBombSpawnYOffset;
-    public float FailureBombTargetYOffset => _bombConfig.FailureBombTargetYOffset;
+    public MaskRenderManager.PaintChannel PaintChannel => _patternConfig.PaintChannel;
+    public float PaintRadiusWorld => _patternConfig.PaintRadiusWorld;
+    public int PaintPriority => _patternConfig.PaintPriority;
+    public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _patternConfig.PoisonPuddleDamageConfig;
 
-    public float FailureDamageRadius => _bombConfig.FailureDamageRadius;
-    public float FailureImpactHealthDamage => _bombConfig.FailureImpactHealthDamage;
-    public float FailureImpactInfectionDamage => _bombConfig.FailureImpactInfectionDamage;
-    public float FailureImpactTelegraphRadius => _bombConfig.FailureImpactTelegraphRadius;
+    public bool FireBombOnPatternFailed => _patternConfig.FireBombOnPatternFailed;
+    public EnemyArcBombProjectile FailureArcBombPrefab => _patternConfig.FailureArcBombPrefab;
+    public bool FailureBombTargetSectorCenter => _patternConfig.FailureBombTargetSectorCenter;
+    public float FailureBombTravelTime => _patternConfig.FailureBombTravelTime;
+    public float FailureBombArcHeight => _patternConfig.FailureBombArcHeight;
+    public float FailureBombSpawnYOffset => _patternConfig.FailureBombSpawnYOffset;
+    public float FailureBombTargetYOffset => _patternConfig.FailureBombTargetYOffset;
 
-    public MaskRenderManager.PaintChannel FailurePaintChannel => _bombConfig.FailurePaintChannel;
-    public float FailurePaintRadiusWorld => _bombConfig.FailurePaintRadiusWorld;
-    public int FailurePaintPriority => _bombConfig.FailurePaintPriority;
-    public PoisonPuddleDamageConfigSO FailurePoisonPuddleDamageConfig => _bombConfig.FailurePoisonPuddleDamageConfig;
+    public float FailureDamageRadius => _patternConfig.FailureDamageRadius;
+    public float FailureImpactHealthDamage => _patternConfig.FailureImpactHealthDamage;
+    public float FailureImpactInfectionDamage => _patternConfig.FailureImpactInfectionDamage;
+    public float FailureImpactTelegraphRadius => _patternConfig.FailureImpactTelegraphRadius;
 
-    public bool TriggerAnimatorOnBomb => _bombConfig.TriggerAnimatorOnBomb;
-    public string BombAnimatorTrigger => _bombConfig.BombAnimatorTrigger;
+    public MaskRenderManager.PaintChannel FailurePaintChannel => _patternConfig.FailurePaintChannel;
+    public float FailurePaintRadiusWorld => _patternConfig.FailurePaintRadiusWorld;
+    public int FailurePaintPriority => _patternConfig.FailurePaintPriority;
+    public PoisonPuddleDamageConfigSO FailurePoisonPuddleDamageConfig => _patternConfig.FailurePoisonPuddleDamageConfig;
 
-    public bool TriggerAnimatorOnFailureBomb => _bombConfig.TriggerAnimatorOnFailureBomb;
-    public string FailureBombAnimatorTrigger => _bombConfig.FailureBombAnimatorTrigger;
+    public bool TriggerAnimatorOnBomb => _patternConfig.TriggerAnimatorOnBomb;
+    public string BombAnimatorTrigger => _patternConfig.BombAnimatorTrigger;
+
+    public bool TriggerAnimatorOnFailureBomb => _patternConfig.TriggerAnimatorOnFailureBomb;
+    public string FailureBombAnimatorTrigger => _patternConfig.FailureBombAnimatorTrigger;
 }
 
 public class MutarusQTEPatternAction : StateAction
@@ -104,7 +113,7 @@ public class MutarusQTEPatternAction : StateAction
         _pattern = stateMachine.GetComponentInParent<NamedPatternController>();
         _enemy = stateMachine.GetComponentInParent<Enemy>();
         _attackRig = stateMachine.GetComponentInParent<EnemyAttackRig>();
-        _animator = stateMachine.GetComponentInParent<Animator>();
+        _animator = ResolveAnimator(stateMachine, _enemy);
 
         if (_config.ControllerReadyChannel != null)
             _qteController = _config.ControllerReadyChannel.Current;
@@ -145,6 +154,9 @@ public class MutarusQTEPatternAction : StateAction
             return;
         }
 
+        if (_config.SnapFacingOnPatternEnter)
+            FaceCurrentPatternTarget(true);
+
         RefreshQTEController();
 
         if (_qteController == null)
@@ -174,8 +186,17 @@ public class MutarusQTEPatternAction : StateAction
 
     public override void OnUpdate()
     {
-        if (_completed || !_runtimeReady)
+        if (_completed)
             return;
+
+        if (_hasBombConfig && _config.FacePlayerWhilePatternActive)
+            FaceCurrentPatternTarget(false);
+
+        if (!_runtimeReady)
+            return;
+
+        if (_burstActive && _config.FaceTargetWhileBombing)
+            FaceCurrentBombTarget(false);
 
         TickPeriodicArcBomb();
     }
@@ -314,6 +335,8 @@ public class MutarusQTEPatternAction : StateAction
         Vector3 start = fireOrigin.position + Vector3.up * _config.BombSpawnYOffset;
         Vector3 target = ResolveBombTarget();
 
+        FaceBombTarget(target, _config.SnapFacingOnBomb);
+
         SpawnArcBomb(
             _config.ArcBombPrefab,
             start,
@@ -347,6 +370,8 @@ public class MutarusQTEPatternAction : StateAction
 
         Vector3 start = fireOrigin.position + Vector3.up * _config.FailureBombSpawnYOffset;
         Vector3 target = ResolveFailureBombTarget();
+
+        FaceBombTarget(target, _config.SnapFacingOnBomb);
 
         SpawnArcBomb(
             _config.FailureArcBombPrefab,
@@ -417,6 +442,78 @@ public class MutarusQTEPatternAction : StateAction
             impactTelegraphStyle);
     }
 
+    private void FaceCurrentBombTarget(bool snap)
+    {
+        if (TryResolveCurrentBombFacingPoint(out Vector3 targetPoint))
+            FaceBombTarget(targetPoint, snap);
+    }
+
+    private void FaceCurrentPatternTarget(bool snap)
+    {
+        if (TryResolveCurrentBombFacingPoint(out Vector3 targetPoint))
+            FacePatternTarget(targetPoint, snap);
+    }
+
+    private bool TryResolveCurrentBombFacingPoint(out Vector3 targetPoint)
+    {
+        if (_qteController != null &&
+            _qteController.TryGetPlayerPosition(out targetPoint))
+        {
+            return true;
+        }
+
+        if (_enemy != null && _enemy.currentTarget != null)
+        {
+            targetPoint = _enemy.currentTarget.transform.position;
+            return true;
+        }
+
+        targetPoint = Vector3.zero;
+        return false;
+    }
+
+    private void FaceBombTarget(Vector3 targetPoint, bool snap)
+    {
+        if (!_config.FaceTargetOnBomb || _enemy == null)
+            return;
+
+        Vector3 direction = targetPoint - _enemy.transform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+
+        _enemy.transform.rotation = snap
+            ? targetRotation
+            : Quaternion.RotateTowards(
+                _enemy.transform.rotation,
+                targetRotation,
+                _config.BombFacingRotationSpeedDegPerSec * Time.deltaTime);
+    }
+
+    private void FacePatternTarget(Vector3 targetPoint, bool snap)
+    {
+        if (!_config.FacePlayerWhilePatternActive || _enemy == null)
+            return;
+
+        Vector3 direction = targetPoint - _enemy.transform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+
+        _enemy.transform.rotation = snap
+            ? targetRotation
+            : Quaternion.RotateTowards(
+                _enemy.transform.rotation,
+                targetRotation,
+                _config.PatternFacingRotationSpeedDegPerSec * Time.deltaTime);
+    }
+
     private Vector3 ResolveBombTarget()
     {
         Vector3 target;
@@ -485,6 +582,24 @@ public class MutarusQTEPatternAction : StateAction
             return;
 
         _animator.SetTrigger(triggerHash);
+    }
+
+    private static Animator ResolveAnimator(StateMachine stateMachine, Enemy enemy)
+    {
+        if (stateMachine == null)
+            return null;
+
+        if (stateMachine.TryGetComponent(out Animator animator))
+            return animator;
+
+        animator = stateMachine.GetComponentInChildren<Animator>(true);
+
+        if (animator != null)
+            return animator;
+
+        return enemy != null
+            ? enemy.GetComponentInChildren<Animator>(true)
+            : stateMachine.GetComponentInParent<Animator>();
     }
 
     private void RefreshQTEController()

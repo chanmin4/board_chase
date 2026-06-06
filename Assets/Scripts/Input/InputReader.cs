@@ -17,12 +17,10 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction ShockwaveChargeEvent = delegate { };
 	public event UnityAction ShockwaveExpelEvent = delegate { };
 	public event UnityAction ShockwaveCanceledEvent = delegate { };
-	public event UnityAction AttackEvent = delegate { };
-	public event UnityAction AttackCanceledEvent = delegate { };
-	public event UnityAction PaintEvent = delegate { };
-	public event UnityAction PaintCanceledEvent = delegate { };
-	public event UnityAction SpecialShotEvent = delegate { };
-	public event UnityAction SpecialShotCanceledEvent = delegate { };
+	public event UnityAction ShootEvent = delegate { };
+	public event UnityAction ShootCanceledEvent = delegate { };
+	public event UnityAction SpecialShootEvent = delegate { };
+	public event UnityAction SpecialShootCanceledEvent = delegate { };
 	public event UnityAction ReloadEvent=delegate{};
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
 	public event UnityAction UpgradeStatsEvent = delegate { };
@@ -50,7 +48,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction CloseInventoryEvent = delegate { }; // Used to bring up the inventory
 	public event UnityAction<float> TabSwitched = delegate { };
 	public bool ReloadInputHeld { get; private set; }
-	public bool SpecialShotHeld { get; private set; }
+	public bool SpecialShootHeld { get; private set; }
 
 	private void OnEnable()
 	{
@@ -114,13 +112,12 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	private void ReleaseGameplayInputState()
 	{
 		MoveEvent.Invoke(Vector2.zero);
-		AttackCanceledEvent.Invoke();
-		PaintCanceledEvent.Invoke();
+		ShootCanceledEvent.Invoke();
 		DashCanceledEvent.Invoke();
 		ShockwaveCanceledEvent.Invoke();
 		ReloadInputHeld = false;
-		SpecialShotHeld = false;
-		SpecialShotCanceledEvent.Invoke();
+		SpecialShootHeld = false;
+		SpecialShootCanceledEvent.Invoke();
 	}
 
 
@@ -130,42 +127,30 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		MoveEvent.Invoke(context.ReadValue<Vector2>()); 
 	}
 
-    public void OnAttack(InputAction.CallbackContext context)
+    public void OnShoot(InputAction.CallbackContext context)
 	{
 		switch (context.phase)
 		{
 			case InputActionPhase.Performed:
-				AttackEvent.Invoke();
+				ShootEvent.Invoke();
 				break;
 			case InputActionPhase.Canceled:
-				AttackCanceledEvent.Invoke();
+				ShootCanceledEvent.Invoke();
 				break;
 		}
 	}
-	public void OnPaint(InputAction.CallbackContext context)
+	public void OnSpecialShoot(InputAction.CallbackContext context)
 	{
 		switch (context.phase)
 		{
 			case InputActionPhase.Performed:
-				PaintEvent.Invoke();
-				break;
-			case InputActionPhase.Canceled:
-				PaintCanceledEvent.Invoke();
-				break;
-		}
-	}
-	public void OnSpecialShot(InputAction.CallbackContext context)
-	{
-		switch (context.phase)
-		{
-			case InputActionPhase.Performed:
-				SpecialShotHeld = true;
-				SpecialShotEvent.Invoke();
+				SpecialShootHeld = true;
+				SpecialShootEvent.Invoke();
 				break;
 
 			case InputActionPhase.Canceled:
-				SpecialShotHeld = false;
-				SpecialShotCanceledEvent.Invoke();
+				SpecialShootHeld = false;
+				SpecialShootCanceledEvent.Invoke();
 				break;
 		}
 	}

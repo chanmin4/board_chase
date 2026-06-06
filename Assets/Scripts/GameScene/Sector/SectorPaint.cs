@@ -19,27 +19,23 @@ public class SectorPaint : MonoBehaviour
 
     [Header("Refs")]
     [SerializeField] private SectorRuntime runtime;
-    [Header("AutoRefs Don't Touch")]
-    [SerializeField]private MaskRenderManager MaskRenderManager;
-
+    
 
     [Header("Options")]
     [SerializeField] private bool allowPaintWhenClosed = false;
     [SerializeField] private float boundsPadding = 0.1f;
 
+    [Header("Gameplay Grid")]
+    [SerializeField, Min(0.05f)] private float _paintGridCellSize = 0.5f;
+    [SerializeField, Range(0.01f, 1f)] private float _paintQueryThreshold = 0.2f;
+
     [HideInInspector] public Bounds worldBounds;
     [HideInInspector] public bool initialized;
 
-    [HideInInspector] public Texture2D vaccineMask;
-    [HideInInspector] public Texture2D virusMask;
-    [HideInInspector] public Texture2D poisonPuddleMask;
-    [HideInInspector] public Color32[] vaccineBuffer;
-    [HideInInspector] public Color32[] virusBuffer;
-    [HideInInspector] public Color32[] poisonPuddleBuffer;
+    [HideInInspector] public RenderTexture vaccineMask;
+    [HideInInspector] public RenderTexture virusMask;
+    [HideInInspector] public RenderTexture poisonPuddleMask;
 
-    [HideInInspector] public bool vaccineDirty;
-    [HideInInspector] public bool virusDirty;
-    [HideInInspector] public bool poisonPuddleDirty;
     [HideInInspector] public Material vaccineMaterialInstance;
     [HideInInspector] public Material virusMaterialInstance;
     [HideInInspector] public Material poisonPuddleMaterialInstance;
@@ -51,25 +47,39 @@ public class SectorPaint : MonoBehaviour
     [HideInInspector] public MeshFilter poisonPuddleFilter;
     [HideInInspector] public int textureWidth;
     [HideInInspector] public int textureHeight;
-
+    private MaskRenderManager _maskRenderManager;
     private readonly List<StoredCirclePaint> _playerPaints = new();
     private readonly List<StoredCirclePaint> _enemyPaints = new();
 
+    private Bounds _paintGridBounds;
+    private float[] _vaccineCoverage;
+    private float[] _virusCoverage;
+    private float[] _poisonPuddleCoverage;
+    private float _vaccineCoverageSum;
+    private float _virusCoverageSum;
+    private float _poisonPuddleCoverageSum;
+    private float _paintGridCellSizeRuntime;
+    private int _paintGridWidth;
+    private int _paintGridHeight;
+
     public event Action<SectorPaint, StoredCirclePaint> OnCircleApplied;
-    
+
     public int PlayerPaintCount => _playerPaints.Count;
     public int EnemyPaintCount => _enemyPaints.Count;
     public SectorRuntime Runtime => runtime;
     public bool AllowPaintWhenClosed => allowPaintWhenClosed;
     public float BoundsPadding => boundsPadding;
+    public int PaintGridWidth => _paintGridWidth;
+    public int PaintGridHeight => _paintGridHeight;
+    public float PaintGridCellSize => Mathf.Max(0.05f, _paintGridCellSize);
 
     private void Reset()
     {
         if (!runtime)
             runtime = GetComponent<SectorRuntime>();
 
-        if (!MaskRenderManager)
-            MaskRenderManager = FindAnyObjectByType<MaskRenderManager>();
+        if (!_maskRenderManager)
+            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
     }
 
     private void Awake()
@@ -77,20 +87,20 @@ public class SectorPaint : MonoBehaviour
         if (!runtime)
             runtime = GetComponent<SectorRuntime>();
 
-        if (!MaskRenderManager)
-            MaskRenderManager = FindAnyObjectByType<MaskRenderManager>();
+        if (!_maskRenderManager)
+            _maskRenderManager = FindAnyObjectByType<MaskRenderManager>();
     }
 
     private void OnEnable()
     {
-        if (MaskRenderManager != null)
-            MaskRenderManager.RegisterSector(this);
+        if (_maskRenderManager != null)
+            _maskRenderManager.RegisterSector(this);
     }
 
     private void OnDisable()
     {
-        if (MaskRenderManager != null)
-            MaskRenderManager.UnregisterSector(this);
+        if (_maskRenderManager != null)
+            _maskRenderManager.UnregisterSector(this);
     }
 
     public Bounds GetWorldBounds()
@@ -103,6 +113,9 @@ public class SectorPaint : MonoBehaviour
 
     public bool CanPaintNow()
     {
+        if (runtime != null && runtime.IsCleared)
+            return false;
+
         if (allowPaintWhenClosed)
             return true;
 
@@ -112,14 +125,25 @@ public class SectorPaint : MonoBehaviour
         return runtime.isOpened;
     }
 
+    public bool CanQueryPaintNow()
+    {
+        if (allowPaintWhenClosed)
+            return true;
+
+        if (runtime == null)
+            return true;
+
+        return runtime.IsOpened;
+    }
+
     public bool ContainsPoint(Vector3 worldPos)
     {
         Bounds bounds = GetWorldBounds();
 
         return worldPos.x >= bounds.min.x &&
-               worldPos.x <= bounds.max.x &&
-               worldPos.z >= bounds.min.z &&
-               worldPos.z <= bounds.max.z;
+            worldPos.x <= bounds.max.x &&
+            worldPos.z >= bounds.min.z &&
+            worldPos.z <= bounds.max.z;
     }
 
     public bool IntersectsCircle(Vector3 worldPos, float radiusWorld)
@@ -128,11 +152,10 @@ public class SectorPaint : MonoBehaviour
 
         float closestX = Mathf.Clamp(worldPos.x, bounds.min.x, bounds.max.x);
         float closestZ = Mathf.Clamp(worldPos.z, bounds.min.z, bounds.max.z);
-
         float dx = worldPos.x - closestX;
         float dz = worldPos.z - closestZ;
 
-        return (dx * dx) + (dz * dz) <= radiusWorld * radiusWorld;
+        return dx * dx + dz * dz <= radiusWorld * radiusWorld;
     }
 
     public bool CanAcceptCircle(MaskRenderManager.CirclePaintRequest request)
@@ -145,26 +168,26 @@ public class SectorPaint : MonoBehaviour
 
     public void ApplyCircle(MaskRenderManager.CirclePaintRequest request)
     {
-        if (MaskRenderManager == null)
+        if (_maskRenderManager == null)
             return;
 
-     StoredCirclePaint stored = new StoredCirclePaint
-    {
-        channel = request.channel,
-        worldPos = request.worldPos,
-        radiusWorld = request.radiusWorld,
-        priority = request.priority,
-        appliedTime = Time.time,
-        sender = request.sender,
-        poisonPuddleDamageConfig = request.poisonPuddleDamageConfig
-    };
+        StoredCirclePaint stored = new StoredCirclePaint
+        {
+            channel = request.channel,
+            worldPos = request.worldPos,
+            radiusWorld = request.radiusWorld,
+            priority = request.priority,
+            appliedTime = Time.time,
+            sender = request.sender,
+            poisonPuddleDamageConfig = request.poisonPuddleDamageConfig
+        };
 
         if (request.channel == MaskRenderManager.PaintChannel.Vaccine)
             _playerPaints.Add(stored);
         else
             _enemyPaints.Add(stored);
 
-        MaskRenderManager.StampCircle(this, request);
+        _maskRenderManager.StampCircle(this, request);
         OnCircleApplied?.Invoke(this, stored);
     }
 
@@ -195,23 +218,465 @@ public class SectorPaint : MonoBehaviour
         initialized = false;
         vaccineMask = null;
         virusMask = null;
-        vaccineBuffer = null;
-        virusBuffer = null;
-        vaccineDirty = false;
-        virusDirty = false;
+        poisonPuddleMask = null;
         vaccineMaterialInstance = null;
         virusMaterialInstance = null;
+        poisonPuddleMaterialInstance = null;
         vaccineRenderer = null;
         virusRenderer = null;
+        poisonPuddleRenderer = null;
         vaccineFilter = null;
         virusFilter = null;
-        poisonPuddleMask = null;
-        poisonPuddleBuffer = null;
-        poisonPuddleDirty = false;
-        poisonPuddleMaterialInstance = null;
-        poisonPuddleRenderer = null;
         poisonPuddleFilter = null;
         textureWidth = 0;
         textureHeight = 0;
+        ClearAllPaintCoverage();
+    }
+
+    public bool ApplyGameplayCircle(
+        MaskRenderManager.PaintChannel channel,
+        Vector3 worldPos,
+        float radiusWorld,
+        bool overwriteOther = true)
+    {
+        bool changed = false;
+
+        switch (channel)
+        {
+            case MaskRenderManager.PaintChannel.Vaccine:
+                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, true);
+
+                if (overwriteOther)
+                {
+                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, false);
+                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.PoisonPuddle, worldPos, radiusWorld, false);
+                }
+
+                break;
+
+            case MaskRenderManager.PaintChannel.Virus:
+                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, true);
+
+                if (overwriteOther)
+                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, false);
+
+                break;
+
+            case MaskRenderManager.PaintChannel.PoisonPuddle:
+                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, true);
+                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.PoisonPuddle, worldPos, radiusWorld, true);
+
+                if (overwriteOther)
+                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, false);
+
+                break;
+        }
+
+        return changed;
+    }
+
+    public bool AddVirusTrailCircle(Vector3 worldPos, float radiusWorld)
+    {
+        if (!CanPaintNow())
+            return false;
+
+        if (!IntersectsCircle(worldPos, radiusWorld + boundsPadding))
+            return false;
+
+        bool changed = PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, true);
+        changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, false);
+        return changed;
+    }
+
+    public void FillGameplay(MaskRenderManager.PaintChannel channel, bool clearOtherChannel)
+    {
+        EnsurePaintGrid();
+
+        switch (channel)
+        {
+            case MaskRenderManager.PaintChannel.Vaccine:
+                FillCoverage(MaskRenderManager.PaintChannel.Vaccine, 1f);
+
+                if (clearOtherChannel)
+                {
+                    FillCoverage(MaskRenderManager.PaintChannel.Virus, 0f);
+                    FillCoverage(MaskRenderManager.PaintChannel.PoisonPuddle, 0f);
+                }
+
+                break;
+
+            case MaskRenderManager.PaintChannel.Virus:
+                FillCoverage(MaskRenderManager.PaintChannel.Virus, 1f);
+
+                if (clearOtherChannel)
+                    FillCoverage(MaskRenderManager.PaintChannel.Vaccine, 0f);
+
+                break;
+
+            case MaskRenderManager.PaintChannel.PoisonPuddle:
+                FillCoverage(MaskRenderManager.PaintChannel.Virus, 1f);
+                FillCoverage(MaskRenderManager.PaintChannel.PoisonPuddle, 1f);
+
+                if (clearOtherChannel)
+                    FillCoverage(MaskRenderManager.PaintChannel.Vaccine, 0f);
+
+                break;
+        }
+    }
+
+    public void ClearAllPaintCoverage()
+    {
+        ClearCoverage(MaskRenderManager.PaintChannel.Vaccine);
+        ClearCoverage(MaskRenderManager.PaintChannel.Virus);
+        ClearCoverage(MaskRenderManager.PaintChannel.PoisonPuddle);
+    }
+
+    public bool HasPaintAtWorld(MaskRenderManager.PaintChannel channel, Vector3 worldPos)
+    {
+        return GetCoverageAtWorld(channel, worldPos) >= _paintQueryThreshold;
+    }
+
+    public float GetCoverageAtWorld(MaskRenderManager.PaintChannel channel, Vector3 worldPos)
+    {
+        if (!HasCoverageGrid())
+            return 0f;
+
+        EnsurePaintGrid();
+
+        if (!TryWorldToPaintCell(worldPos, out int x, out int y))
+            return 0f;
+
+        return GetCoverage(channel, y * _paintGridWidth + x);
+    }
+
+    public float GetCoverageRatio(MaskRenderManager.PaintChannel channel)
+    {
+        if (!HasCoverageGrid())
+            return 0f;
+
+        EnsurePaintGrid();
+
+        int count = Mathf.Max(1, _paintGridWidth * _paintGridHeight);
+        return Mathf.Clamp01(GetCoverageSum(channel) / count);
+    }
+
+    public MaskRenderManager.PaintState GetPaintStateAtWorld(Vector3 worldPos)
+    {
+        float vaccine = GetCoverageAtWorld(MaskRenderManager.PaintChannel.Vaccine, worldPos);
+        float virus = GetCoverageAtWorld(MaskRenderManager.PaintChannel.Virus, worldPos);
+
+        if (vaccine >= _paintQueryThreshold && vaccine >= virus)
+            return MaskRenderManager.PaintState.Vaccine;
+
+        if (virus >= _paintQueryThreshold)
+            return MaskRenderManager.PaintState.Virus;
+
+        return MaskRenderManager.PaintState.Neutral;
+    }
+
+    public bool TryWorldToMaskUV(Vector3 worldPos, out Vector2 uv)
+    {
+        Bounds bounds = GetWorldBounds();
+        uv = new Vector2(
+            Mathf.InverseLerp(bounds.min.x, bounds.max.x, worldPos.x),
+            Mathf.InverseLerp(bounds.min.z, bounds.max.z, worldPos.z));
+
+        return uv.x >= 0f && uv.x <= 1f && uv.y >= 0f && uv.y <= 1f;
+    }
+
+    public float EstimatePaintCoverage(Vector3 worldPos, float radiusWorld, int cellX, int cellY)
+    {
+        EnsurePaintGrid();
+        return EstimateCircleCellCoverage(worldPos, radiusWorld, cellX, cellY);
+    }
+
+    public bool TryGetPaintCellRange(
+        Vector3 worldPos,
+        float radiusWorld,
+        out int minX,
+        out int maxX,
+        out int minY,
+        out int maxY)
+    {
+        EnsurePaintGrid();
+
+        minX = maxX = minY = maxY = 0;
+
+        radiusWorld = Mathf.Max(0.01f, radiusWorld);
+        Bounds bounds = _paintGridBounds;
+
+        float circleMinX = worldPos.x - radiusWorld;
+        float circleMaxX = worldPos.x + radiusWorld;
+        float circleMinZ = worldPos.z - radiusWorld;
+        float circleMaxZ = worldPos.z + radiusWorld;
+
+        if (circleMaxX < bounds.min.x ||
+            circleMinX > bounds.max.x ||
+            circleMaxZ < bounds.min.z ||
+            circleMinZ > bounds.max.z)
+        {
+            return false;
+        }
+
+        float cellWidth = bounds.size.x / Mathf.Max(1, _paintGridWidth);
+        float cellHeight = bounds.size.z / Mathf.Max(1, _paintGridHeight);
+
+        minX = Mathf.Clamp(Mathf.FloorToInt((circleMinX - bounds.min.x) / Mathf.Max(0.0001f, cellWidth)), 0, _paintGridWidth - 1);
+        maxX = Mathf.Clamp(Mathf.FloorToInt((circleMaxX - bounds.min.x) / Mathf.Max(0.0001f, cellWidth)), 0, _paintGridWidth - 1);
+        minY = Mathf.Clamp(Mathf.FloorToInt((circleMinZ - bounds.min.z) / Mathf.Max(0.0001f, cellHeight)), 0, _paintGridHeight - 1);
+        maxY = Mathf.Clamp(Mathf.FloorToInt((circleMaxZ - bounds.min.z) / Mathf.Max(0.0001f, cellHeight)), 0, _paintGridHeight - 1);
+        return true;
+    }
+
+    public float GetCoverageAtCell(MaskRenderManager.PaintChannel channel, int x, int y)
+    {
+        EnsurePaintGrid();
+
+        if (x < 0 || x >= _paintGridWidth || y < 0 || y >= _paintGridHeight)
+            return 0f;
+
+        return GetCoverage(channel, y * _paintGridWidth + x);
+    }
+
+    private bool PaintCoverageCircle(
+        MaskRenderManager.PaintChannel channel,
+        Vector3 worldPos,
+        float radiusWorld,
+        bool add)
+    {
+        EnsurePaintGrid();
+        radiusWorld = Mathf.Max(0.01f, radiusWorld);
+
+        if (!TryGetPaintCellRange(worldPos, radiusWorld, out int minX, out int maxX, out int minY, out int maxY))
+            return false;
+
+        bool changed = false;
+
+        for (int y = minY; y <= maxY; y++)
+        {
+            int row = y * _paintGridWidth;
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                float coverage = EstimateCircleCellCoverage(worldPos, radiusWorld, x, y);
+
+                if (coverage <= 0f)
+                    continue;
+
+                int index = row + x;
+                float current = GetCoverage(channel, index);
+                float next = add ? Mathf.Max(current, coverage) : Mathf.Max(0f, current - coverage);
+
+                if (Mathf.Approximately(current, next))
+                    continue;
+
+                SetCoverage(channel, index, next);
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private void EnsurePaintGrid()
+    {
+        Bounds bounds = GetWorldBounds();
+        float cellSize = Mathf.Max(0.05f, _paintGridCellSize);
+        int width = Mathf.Max(1, Mathf.CeilToInt(bounds.size.x / cellSize));
+        int height = Mathf.Max(1, Mathf.CeilToInt(bounds.size.z / cellSize));
+
+        bool needsRebuild =
+            _vaccineCoverage == null ||
+            _virusCoverage == null ||
+            _poisonPuddleCoverage == null ||
+            _paintGridWidth != width ||
+            _paintGridHeight != height ||
+            !Mathf.Approximately(_paintGridCellSizeRuntime, cellSize) ||
+            !ApproximatelySameBoundsXZ(_paintGridBounds, bounds);
+
+        if (!needsRebuild)
+            return;
+
+        _paintGridBounds = bounds;
+        _paintGridCellSizeRuntime = cellSize;
+        _paintGridWidth = width;
+        _paintGridHeight = height;
+        int count = width * height;
+        _vaccineCoverage = new float[count];
+        _virusCoverage = new float[count];
+        _poisonPuddleCoverage = new float[count];
+        _vaccineCoverageSum = 0f;
+        _virusCoverageSum = 0f;
+        _poisonPuddleCoverageSum = 0f;
+    }
+
+    private bool HasCoverageGrid()
+    {
+        return _vaccineCoverage != null &&
+            _virusCoverage != null &&
+            _poisonPuddleCoverage != null &&
+            _paintGridWidth > 0 &&
+            _paintGridHeight > 0;
+    }
+
+    private void ClearCoverage(MaskRenderManager.PaintChannel channel)
+    {
+        float[] coverage = GetCoverageArray(channel);
+
+        if (coverage != null)
+            Array.Clear(coverage, 0, coverage.Length);
+
+        SetCoverageSum(channel, 0f);
+    }
+
+    private void FillCoverage(MaskRenderManager.PaintChannel channel, float value)
+    {
+        EnsurePaintGrid();
+
+        float[] coverage = GetCoverageArray(channel);
+
+        if (coverage == null)
+            return;
+
+        value = Mathf.Clamp01(value);
+
+        for (int i = 0; i < coverage.Length; i++)
+            coverage[i] = value;
+
+        SetCoverageSum(channel, value * coverage.Length);
+    }
+
+    private float GetCoverage(MaskRenderManager.PaintChannel channel, int index)
+    {
+        float[] coverage = GetCoverageArray(channel);
+        return coverage != null && index >= 0 && index < coverage.Length ? coverage[index] : 0f;
+    }
+
+    private void SetCoverage(MaskRenderManager.PaintChannel channel, int index, float value)
+    {
+        float[] coverage = GetCoverageArray(channel);
+
+        if (coverage == null || index < 0 || index >= coverage.Length)
+            return;
+
+        value = Mathf.Clamp01(value);
+        float previous = coverage[index];
+        coverage[index] = value;
+        AddCoverageSum(channel, value - previous);
+    }
+
+    private float[] GetCoverageArray(MaskRenderManager.PaintChannel channel)
+    {
+        switch (channel)
+        {
+            case MaskRenderManager.PaintChannel.Vaccine:
+                return _vaccineCoverage;
+
+            case MaskRenderManager.PaintChannel.Virus:
+                return _virusCoverage;
+
+            case MaskRenderManager.PaintChannel.PoisonPuddle:
+                return _poisonPuddleCoverage;
+
+            default:
+                return null;
+        }
+    }
+
+    private float GetCoverageSum(MaskRenderManager.PaintChannel channel)
+    {
+        switch (channel)
+        {
+            case MaskRenderManager.PaintChannel.Vaccine:
+                return _vaccineCoverageSum;
+
+            case MaskRenderManager.PaintChannel.Virus:
+                return _virusCoverageSum;
+
+            case MaskRenderManager.PaintChannel.PoisonPuddle:
+                return _poisonPuddleCoverageSum;
+
+            default:
+                return 0f;
+        }
+    }
+
+    private void AddCoverageSum(MaskRenderManager.PaintChannel channel, float delta)
+    {
+        SetCoverageSum(channel, GetCoverageSum(channel) + delta);
+    }
+
+    private void SetCoverageSum(MaskRenderManager.PaintChannel channel, float value)
+    {
+        switch (channel)
+        {
+            case MaskRenderManager.PaintChannel.Vaccine:
+                _vaccineCoverageSum = value;
+                break;
+
+            case MaskRenderManager.PaintChannel.Virus:
+                _virusCoverageSum = value;
+                break;
+
+            case MaskRenderManager.PaintChannel.PoisonPuddle:
+                _poisonPuddleCoverageSum = value;
+                break;
+        }
+    }
+
+    private float EstimateCircleCellCoverage(Vector3 worldPos, float radiusWorld, int cellX, int cellY)
+    {
+        Vector3 center = PaintCellCenterToWorld(cellX, cellY);
+        float halfX = _paintGridBounds.size.x / Mathf.Max(1, _paintGridWidth) * 0.5f;
+        float halfZ = _paintGridBounds.size.z / Mathf.Max(1, _paintGridHeight) * 0.5f;
+
+        int inside = 0;
+        inside += IsInsideCircleXZ(center, worldPos, radiusWorld) ? 1 : 0;
+        inside += IsInsideCircleXZ(center + new Vector3(-halfX, 0f, -halfZ), worldPos, radiusWorld) ? 1 : 0;
+        inside += IsInsideCircleXZ(center + new Vector3(-halfX, 0f, halfZ), worldPos, radiusWorld) ? 1 : 0;
+        inside += IsInsideCircleXZ(center + new Vector3(halfX, 0f, -halfZ), worldPos, radiusWorld) ? 1 : 0;
+        inside += IsInsideCircleXZ(center + new Vector3(halfX, 0f, halfZ), worldPos, radiusWorld) ? 1 : 0;
+
+        return inside / 5f;
+    }
+
+    private bool TryWorldToPaintCell(Vector3 worldPos, out int x, out int y)
+    {
+        Bounds bounds = _paintGridBounds;
+
+        float x01 = Mathf.InverseLerp(bounds.min.x, bounds.max.x, worldPos.x);
+        float y01 = Mathf.InverseLerp(bounds.min.z, bounds.max.z, worldPos.z);
+
+        bool inside = x01 >= 0f && x01 <= 1f && y01 >= 0f && y01 <= 1f;
+
+        x = Mathf.Clamp(Mathf.FloorToInt(x01 * _paintGridWidth), 0, _paintGridWidth - 1);
+        y = Mathf.Clamp(Mathf.FloorToInt(y01 * _paintGridHeight), 0, _paintGridHeight - 1);
+        return inside;
+    }
+
+    private Vector3 PaintCellCenterToWorld(int x, int y)
+    {
+        float x01 = (x + 0.5f) / Mathf.Max(1, _paintGridWidth);
+        float y01 = (y + 0.5f) / Mathf.Max(1, _paintGridHeight);
+
+        return new Vector3(
+            Mathf.Lerp(_paintGridBounds.min.x, _paintGridBounds.max.x, x01),
+            _paintGridBounds.center.y,
+            Mathf.Lerp(_paintGridBounds.min.z, _paintGridBounds.max.z, y01));
+    }
+
+    private static bool IsInsideCircleXZ(Vector3 sample, Vector3 center, float radius)
+    {
+        float dx = sample.x - center.x;
+        float dz = sample.z - center.z;
+        return dx * dx + dz * dz <= radius * radius;
+    }
+
+    private static bool ApproximatelySameBoundsXZ(Bounds a, Bounds b)
+    {
+        return Mathf.Approximately(a.min.x, b.min.x) &&
+            Mathf.Approximately(a.min.z, b.min.z) &&
+            Mathf.Approximately(a.max.x, b.max.x) &&
+            Mathf.Approximately(a.max.z, b.max.z);
     }
 }

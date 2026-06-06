@@ -2,9 +2,10 @@ using UnityEngine;
 
 public enum BulletAmmoType
 {
-    Attack,
-    Paint,
-    Special
+    AttackAndPaint = 3,
+    Attack = 0,
+    Paint = 1,
+    Special = 2
 }
 
 public abstract class BulletSO : ScriptableObject
@@ -12,9 +13,6 @@ public abstract class BulletSO : ScriptableObject
     [Header("Identity")]
     [SerializeField] private string bulletId = "bullet_default";
     [SerializeField] private string displayName = "Bullet";
-
-    [Header("Ammo Type")]
-    [SerializeField] private BulletAmmoType ammoType = BulletAmmoType.Special;
 
     [Header("UI")]
     [SerializeField] private Sprite icon;
@@ -33,12 +31,21 @@ public abstract class BulletSO : ScriptableObject
     [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
 
     [Header("Stat Modifiers")]
-    [Tooltip("Bullet bonus on top of current player stats. Example: AttackDamage FlatAdd +5, AttackDamage PercentAdd 0.2.")]
+    [Tooltip("Bullet-specific values on top of player stats. Supports damage, shots per second, paint radius, magazine size, and other player stats.")]
     [SerializeField] private PlayerStatModifier[] statModifiers;
 
     public string BulletId => bulletId;
     public string DisplayName => displayName;
-    public virtual BulletAmmoType AmmoType => ammoType;
+    public abstract BulletAmmoType AmmoType { get; }
+    public bool CanAttack =>
+        AmmoType == BulletAmmoType.AttackAndPaint ||
+        AmmoType == BulletAmmoType.Attack;
+    public bool CanPaint =>
+        AmmoType == BulletAmmoType.AttackAndPaint ||
+        AmmoType == BulletAmmoType.Paint;
+    public bool IsPrimary =>
+        AmmoType == BulletAmmoType.AttackAndPaint ||
+        AmmoType == BulletAmmoType.Attack;
     public Sprite Icon => icon;
 
     public GameObject BulletPrefab => bulletPrefab;

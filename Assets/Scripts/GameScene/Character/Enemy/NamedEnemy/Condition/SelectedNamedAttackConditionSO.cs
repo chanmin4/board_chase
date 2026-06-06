@@ -7,9 +7,9 @@ using VSplatter.StateMachine.ScriptableObjects;
     menuName = "State Machines/Named Enemy Conditions/Selected Named Attack")]
 public class SelectedNamedAttackConditionSO : StateConditionSO<SelectedNamedAttackCondition>
 {
-    [SerializeField] private NamedAttackIdSO _expectedAttack;
+    [SerializeField] private EnemyAttackConfigSO _expectedAttack;
 
-    public NamedAttackIdSO ExpectedAttack => _expectedAttack;
+    public EnemyAttackConfigSO ExpectedAttack => _expectedAttack;
 }
 
 public class SelectedNamedAttackCondition : Condition

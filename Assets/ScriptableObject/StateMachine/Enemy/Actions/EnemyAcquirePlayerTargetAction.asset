@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e4180185552460c9a5f2d7fe33e872a, type: 3}
+  m_Name: EnemyAcquirePlayerTargetAction
+  m_EditorClassIdentifier: 
+  description: 
+  _playerRuntimeReadyChannel: {fileID: 11400000, guid: 31d9f48afcfd69e41b6f414a4d32642b, type: 2}
+  _alertCondition: {fileID: 11400000, guid: 9dc038b820f65dc498d67d6b9ac843e6, type: 2}
+  _syncOnEnter: 1
+  _syncOnUpdate: 1
+  _clearTargetWhenAlertFalse: 1

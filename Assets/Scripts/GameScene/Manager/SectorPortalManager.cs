@@ -6,14 +6,14 @@ public class SectorPortalManager : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private SectorStateManager _sectorStateManager;
-    [SerializeField] private NamedSectorController _namedSectorController;
     [Header("Events")]
     [SerializeField] private SectorRuntimeEventChannelSO _moveSectorCameraEvent;
     [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
     [SerializeField] private SectorRuntimeEventChannelSO _sectorOpenedEvent;
-
+    [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
+    [SerializeField] private NamedSectorControllerReadyEventChannelSO _namedSectorControllerReadyChannel;
     private readonly Dictionary<Vector2Int, SectorRuntime> _sectorByCoord = new();
-
+    private NamedSectorController _namedSectorController;
     private bool _startSectorConsumed;
 
     private void Awake()
@@ -31,19 +31,39 @@ public class SectorPortalManager : MonoBehaviour
     {
         if (_sectorOpenedEvent != null)
             _sectorOpenedEvent.OnEventRaised += OnSectorOpened;
+        if (_sectorStateManagerReadyChannel != null)
+        {
+            _sectorStateManagerReadyChannel.OnEventRaised += HandleSectorStateManagerReady;
+
+            if (_sectorStateManagerReadyChannel.HasCurrent)
+                HandleSectorStateManagerReady(_sectorStateManagerReadyChannel.Current);
+        }
+
+        if (_namedSectorControllerReadyChannel != null)
+        {
+            _namedSectorControllerReadyChannel.OnEventRaised += HandleNamedSectorControllerReady;
+
+            if (_namedSectorControllerReadyChannel.HasCurrent)
+                HandleNamedSectorControllerReady(_namedSectorControllerReadyChannel.Current);
+        }
+    
     }
 
     private void OnDisable()
     {
         if (_sectorOpenedEvent != null)
             _sectorOpenedEvent.OnEventRaised -= OnSectorOpened;
+        if (_sectorStateManagerReadyChannel != null)
+            _sectorStateManagerReadyChannel.OnEventRaised -= HandleSectorStateManagerReady;
+
+        if (_namedSectorControllerReadyChannel != null)
+            _namedSectorControllerReadyChannel.OnEventRaised -= HandleNamedSectorControllerReady;
+    
     }
 
     private void Start()
     {
-        CacheSectors();
-        BindPortals();
-        RefreshAllPortals();
+        RebuildPortalLinks(resetStartSectorConsumed: false);
     }
 
     private void OnSectorOpened(SectorRuntime sector)
@@ -61,8 +81,12 @@ public class SectorPortalManager : MonoBehaviour
             return;
         }
 
-        SectorRuntime[] sectors = FindObjectsByType<SectorRuntime>(FindObjectsSortMode.None);
-        for (int i = 0; i < sectors.Length; i++)
+        IReadOnlyList<SectorRuntime> sectors = _sectorStateManager.Sectors;
+
+        if (sectors == null)
+            return;
+
+        for (int i = 0; i < sectors.Count; i++)
         {
             SectorRuntime sector = sectors[i];
             if (sector == null)
@@ -74,6 +98,16 @@ public class SectorPortalManager : MonoBehaviour
             if (!_sectorByCoord.ContainsKey(coord))
                 _sectorByCoord.Add(coord, sector);
         }
+    }
+
+    public void RebuildPortalLinks(bool resetStartSectorConsumed)
+    {
+        if (resetStartSectorConsumed)
+            _startSectorConsumed = false;
+
+        CacheSectors();
+        BindPortals();
+        RefreshAllPortals();
     }
 
     private void BindPortals()
@@ -167,6 +201,11 @@ public class SectorPortalManager : MonoBehaviour
         if (!source.isOpened)
         {
         
+            return false;
+        }
+
+        if (!source.IsCleared)
+        {
             return false;
         }
 
@@ -285,5 +324,20 @@ public class SectorPortalManager : MonoBehaviour
             _startSectorConsumed = true;
             RefreshAllPortals();
         }
+    }
+    private void HandleSectorStateManagerReady(SectorStateManager manager)
+    {
+        if (manager == null)
+            return;
+
+        _sectorStateManager = manager;
+        _sectorStateManager.EnsureInitialized();
+
+        RebuildPortalLinks(resetStartSectorConsumed: false);
+    }
+
+    private void HandleNamedSectorControllerReady(NamedSectorController controller)
+    {
+        _namedSectorController = controller;
     }
 }

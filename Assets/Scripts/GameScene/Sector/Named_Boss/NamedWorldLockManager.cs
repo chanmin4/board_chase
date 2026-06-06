@@ -18,6 +18,18 @@ public class NamedWorldLockManager : MonoBehaviour
     [Header("Options")]
     [SerializeField] private bool _cleanupOpenedOutsideSectorsOnBattleStart = true;
 
+    private void Awake()
+    {
+        if (_sectorStateManager == null)
+            _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
+
+        if (_sectorStateManager != null)
+            _sectorStateManager.EnsureInitialized();
+
+        if (_cleanupApplier == null)
+            _cleanupApplier = FindAnyObjectByType<SectorCleanupApplier>();
+    }
+
     private void OnEnable()
     {
         if (_sectorStateManagerReadyChannel != null)

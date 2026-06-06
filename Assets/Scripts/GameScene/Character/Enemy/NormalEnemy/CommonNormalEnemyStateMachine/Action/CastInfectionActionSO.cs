@@ -9,7 +9,8 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class CastInfectionActionSO : StateActionSO
 {
     [Header("Definition Config")]
-    [SerializeField] private NormalEnemyCastInfectionConfigSO _definitionConfig;
+    [Tooltip("Shared config for normal enemy wander/search/infection behavior.")]
+    [SerializeField] private NormalEnemyBehaviorConfigSO _behaviorConfig;
 
     [Header("Timing")]
     [SerializeField] private TimeElapsedConditionSO _castTimerCondition;
@@ -17,15 +18,15 @@ public class CastInfectionActionSO : StateActionSO
     [Header("Refs")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
-    public bool HasDefinitionConfig => _definitionConfig != null;
-    public float InfectionRadius => _definitionConfig.InfectionRadius;
-    public bool ApplyOnStateExit => _definitionConfig.ApplyOnStateExit;
-    public int PaintPriority => _definitionConfig.PaintPriority;
+    public bool HasBehaviorConfig => _behaviorConfig != null;
+    public float InfectionRadius => _behaviorConfig.CastInfectionRadius;
+    public bool ApplyOnStateExit => _behaviorConfig.CastApplyOnStateExit;
+    public int PaintPriority => _behaviorConfig.CastPaintPriority;
     public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
-    public bool DebugLogs => _definitionConfig.DebugLogs;
-    public bool DebugDraw => _definitionConfig.DebugDraw;
-    public float DebugDrawDuration => _definitionConfig.DebugDrawDuration;
-      public float CastDurationSeconds =>
+    public bool DebugLogs => _behaviorConfig.CastDebugLogs;
+    public bool DebugDraw => _behaviorConfig.CastDebugDraw;
+    public float DebugDrawDuration => _behaviorConfig.CastDebugDrawDuration;
+    public float CastDurationSeconds =>
         _castTimerCondition != null ? _castTimerCondition.ResolvedTimerLength : 0.5f;
 
     protected override StateAction CreateAction() => new CastInfectionAction();
@@ -49,11 +50,11 @@ public class CastInfectionAction : StateAction
 
     public override void OnStateEnter()
     {
-        _hasConfig = _config.HasDefinitionConfig;
+        _hasConfig = _config.HasBehaviorConfig;
 
         if (!_hasConfig)
         {
-            Debug.LogError("[CastInfectionAction] Definition Config is missing.", _enemy);
+            Debug.LogError("[CastInfectionAction] NormalEnemyBehaviorConfig is missing.", _enemy);
             return;
         }
 

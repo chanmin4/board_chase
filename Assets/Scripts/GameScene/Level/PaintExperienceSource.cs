@@ -63,7 +63,6 @@ public class PaintExperienceSource : MonoBehaviour
 
         if (xp <= 0f)
             return;
-        Debug.Log($"Gained {xp} XP from painting at {impact.worldPos}");
         _xpGainChannel.RaiseEvent(new PlayerExperienceGain(
             xp,
             PlayerExperienceSource.Paint,

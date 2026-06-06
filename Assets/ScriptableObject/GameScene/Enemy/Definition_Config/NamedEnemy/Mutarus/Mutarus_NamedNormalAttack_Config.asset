@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 169f2d4df6ec35142b4dd84aa94a599e, type: 3}
+  m_Name: Mutarus_NamedNormalAttack_Config
+  m_EditorClassIdentifier: 
+  _options:
+  - attackConfig: {fileID: 11400000, guid: e9770ecd888eb6b4b9d4aefcf8e09bcc, type: 2}
+    displayName: Charge
+    minRange: 0
+    maxRange: 30
+    weight: 1
+    enabled: 1
+  - attackConfig: {fileID: 11400000, guid: eff4f9b9d5649ef40a91a3b508c03cde, type: 2}
+    displayName: Projectile
+    minRange: 0
+    maxRange: 35
+    weight: 1
+    enabled: 1
+  - attackConfig: {fileID: 11400000, guid: 50a5565dc0987d9428f60c0d62541e2a, type: 2}
+    displayName: PoisonPuddle
+    minRange: 0
+    maxRange: 35
+    weight: 1
+    enabled: 1
+  _preferredMinRange: 15
+  _preferredMaxRange: 30

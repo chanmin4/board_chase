@@ -9,31 +9,32 @@ using VSplatter.StateMachine.ScriptableObjects;
 public class SearchInfectionTargetActionSO : StateActionSO
 {
     [Header("Definition Config")]
-    [SerializeField] private NormalEnemySearchInfectionTargetConfigSO _definitionConfig;
+    [Tooltip("Shared config for normal enemy wander/search/infection behavior.")]
+    [SerializeField] private NormalEnemyBehaviorConfigSO _behaviorConfig;
 
     [Header("Refs")]
     [SerializeField] private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
 
-    public bool HasDefinitionConfig => _definitionConfig != null;
-    public float SearchRadius => _definitionConfig.SearchRadius;
-    public int CandidateCount => _definitionConfig.CandidateCount;
-    public int MaxRetryCount => _definitionConfig.MaxRetryCount;
-    public bool SearchOnEnterOnly => _definitionConfig.SearchOnEnterOnly;
-    public float SearchIntervalSeconds => _definitionConfig.SearchIntervalSeconds;
-    public float MinimumScore => _definitionConfig.MinimumScore;
-    public float MinimumTravelDistance => _definitionConfig.MinimumTravelDistance;
-    public float SampleOffset => _definitionConfig.SampleOffset;
-    public int MinimumValidSamples => _definitionConfig.MinimumValidSamples;
-    public float NavMeshSampleMaxDistance => _definitionConfig.NavMeshSampleMaxDistance;
-    public float VaccineScore => _definitionConfig.VaccineScore;
-    public float NeutralScore => _definitionConfig.NeutralScore;
-    public float VirusScore => _definitionConfig.VirusScore;
+    public bool HasBehaviorConfig => _behaviorConfig != null;
+    public float SearchRadius => _behaviorConfig.SearchRadius;
+    public int CandidateCount => _behaviorConfig.SearchCandidateCount;
+    public int MaxRetryCount => _behaviorConfig.SearchMaxRetryCount;
+    public bool SearchOnEnterOnly => _behaviorConfig.SearchOnEnterOnly;
+    public float SearchIntervalSeconds => _behaviorConfig.SearchIntervalSeconds;
+    public float MinimumScore => _behaviorConfig.SearchMinimumScore;
+    public float MinimumTravelDistance => _behaviorConfig.SearchMinimumTravelDistance;
+    public float SampleOffset => _behaviorConfig.SearchSampleOffset;
+    public int MinimumValidSamples => _behaviorConfig.SearchMinimumValidSamples;
+    public float NavMeshSampleMaxDistance => _behaviorConfig.SearchNavMeshSampleMaxDistance;
+    public float VaccineScore => _behaviorConfig.SearchVaccineScore;
+    public float NeutralScore => _behaviorConfig.SearchNeutralScore;
+    public float VirusScore => _behaviorConfig.SearchVirusScore;
     public MaskRenderManagerEventChannelSO MaskRenderManagerReadyChannel => _maskRenderManagerReadyChannel;
-    public bool DebugLogs => _definitionConfig.DebugLogs;
-    public bool DebugDraw => _definitionConfig.DebugDraw;
-    public float DebugDrawDuration => _definitionConfig.DebugDrawDuration;
-    public bool PreferNearestOnTie => _definitionConfig.PreferNearestOnTie;
-    public float DistanceScoreWeight => _definitionConfig.DistanceScoreWeight;
+    public bool DebugLogs => _behaviorConfig.SearchDebugLogs;
+    public bool DebugDraw => _behaviorConfig.SearchDebugDraw;
+    public float DebugDrawDuration => _behaviorConfig.SearchDebugDrawDuration;
+    public bool PreferNearestOnTie => _behaviorConfig.SearchPreferNearestOnTie;
+    public float DistanceScoreWeight => _behaviorConfig.SearchDistanceScoreWeight;
 
     protected override StateAction CreateAction() => new SearchInfectionTargetAction();
 }
@@ -55,11 +56,11 @@ public class SearchInfectionTargetAction : StateAction
 
     public override void OnStateEnter()
     {
-        _hasConfig = _config.HasDefinitionConfig;
+        _hasConfig = _config.HasBehaviorConfig;
 
         if (!_hasConfig)
         {
-            Debug.LogError("[SearchInfectionTargetAction] Definition Config is missing.", _enemy);
+            Debug.LogError("[SearchInfectionTargetAction] NormalEnemyBehaviorConfig is missing.", _enemy);
             return;
         }
 
@@ -72,13 +73,13 @@ public class SearchInfectionTargetAction : StateAction
         if (!_hasConfig)
             return;
 
-        Debug.Log("SearchInfectionTargetAction OnUpdate");
+        //Debug.Log("SearchInfectionTargetAction OnUpdate");
         if (_config.SearchOnEnterOnly)
             return;
 
         if (Time.time < _nextSearchTime)
             return;
-        Debug.Log("SearchInfectionTargetAction OnUpdate Search");
+        //Debug.Log("SearchInfectionTargetAction OnUpdate Search");
         Search();
         _nextSearchTime = Time.time + Mathf.Max(0.1f, _config.SearchIntervalSeconds);
     }
@@ -118,7 +119,8 @@ public class SearchInfectionTargetAction : StateAction
 
             if (_config.DebugDraw)
                 DrawMarker(bestPosition, bestScore >= _config.MinimumScore ? Color.green : Color.yellow);
-            Debug.Log("bestscore : minimumscore " + bestScore + " : " + _config.MinimumScore);
+            if (_config.DebugLogs)
+                Debug.Log($"[SearchInfectionTarget] bestScore={bestScore:F2}, minimumScore={_config.MinimumScore:F2}");
             if (bestScore >= _config.MinimumScore)
             {
                 _enemy.SetInfectionTarget(bestPosition);

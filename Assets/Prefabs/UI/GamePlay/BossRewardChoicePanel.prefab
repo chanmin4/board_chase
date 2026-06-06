@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4099180040773555733}
   - component: {fileID: 1968713461694660239}
   - component: {fileID: 301171030102823606}
+  - component: {fileID: 6050267618544373284}
   m_Layer: 5
   m_Name: BossRewardChoicePanel
   m_TagString: Untagged
@@ -101,6 +102,26 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &6050267618544373284
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425561176486041885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ada2a59e0520a9409c6acd0080f3112, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _sourceGroup: {fileID: 4099180040773555733}
+  _suppressWhenSourceVisible: 1
+  _visibleAlphaThreshold: 0.01
+  _requireSourceBlocksRaycasts: 1
+  _requestChannel: {fileID: 11400000, guid: 7f9fe9c8b72808449bbe548a70eb2d11, type: 2}
+  _targetId: AimCursor
+  _sourceId: 
+  _debugLogs: 0
 --- !u!1001 &2500163248764732573
 PrefabInstance:
   m_ObjectHideFlags: 0

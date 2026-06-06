@@ -3,20 +3,16 @@ using UnityEngine;
 [CreateAssetMenu(
     fileName = "PoisonPuddleDamageConfig",
     menuName = "Game/Enemy/Poison Puddle Damage Config")]
-public class PoisonPuddleDamageConfigSO : ScriptableObject
+public class PoisonPuddleDamageConfigSO : NamedAttackConfigSO
 {
-    [Header("Tick")]
-    [SerializeField, Min(0.01f)] private float _tickInterval = 0.5f;
+    [Header("Damage Per Tick")]
+    [SerializeField, Min(0f)] private float _healthDamagePerTick = 1f;
+    [SerializeField, Min(0f)] private float _infectionGainPerTick = 1f;
 
-    [Header("Damage Per Second")]
-    [SerializeField, Min(0f)] private float _healthDamagePerSecond = 5f;
-    [SerializeField, Min(0f)] private float _infectionGainPerSecond = 12f;
-
-    public float TickInterval => Mathf.Max(0.01f, _tickInterval);
-    public float HealthDamagePerSecond => DifficultyRuntime.ApplyEnemyDamage(_healthDamagePerSecond);
-    public float InfectionGainPerSecond => DifficultyRuntime.ApplyPlayerInfectionGain(_infectionGainPerSecond);
+    public float HealthDamagePerTick => DifficultyRuntime.ApplyEnemyDamage(_healthDamagePerTick);
+    public float InfectionGainPerTick => DifficultyRuntime.ApplyPlayerInfectionGain(_infectionGainPerTick);
 
     public bool HasDamage =>
-        HealthDamagePerSecond > 0f ||
-        InfectionGainPerSecond > 0f;
+        HealthDamagePerTick > 0f ||
+        InfectionGainPerTick > 0f;
 }
