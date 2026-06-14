@@ -13,7 +13,7 @@ public class Enemy : MonoBehaviour
 	[ReadOnly] public Damageable currentTarget; // The StateMachine evaluates its health when needed
 
 	[ReadOnly] [SerializeField] private SectorRuntime _currentSector;
-	[ReadOnly] [SerializeField] private bool _isSpawnReady = true;
+	[ReadOnly] [SerializeField] private bool _isSpawnReady = false;
 	[ReadOnly] [SerializeField] private bool _searchSucceeded;
 	[ReadOnly] [SerializeField] private bool _infectionTargetValid;
 	[ReadOnly] [SerializeField] private bool _isKnockbackRequested;

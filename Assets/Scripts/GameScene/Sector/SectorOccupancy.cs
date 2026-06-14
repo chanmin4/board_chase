@@ -13,6 +13,7 @@ public enum SectorSpecialState
     BossActive = 1 << 2,
     MonsterLocked = 1 << 3
 }
+
 [Serializable]
 public struct SectorOccupancySnapshot
 {
@@ -27,36 +28,32 @@ public struct SectorOccupancySnapshot
     public float contestRequired;
 }
 
-
-
-
-
 [DisallowMultipleComponent]
 public class SectorOccupancy : MonoBehaviour
 {
     [SerializeField] private SectorPaint _paint;
-    [SerializeField] private SectorOccupancyRulesSO _rules;
+    [SerializeField] private SectorRulesSO _rules;
     [SerializeField] private SectorOccupancyEventChannelSO _changedChannel;
     [SerializeField] private SectorOwner _owner = SectorOwner.Neutral;
     [SerializeField] private SectorSpecialState _specialState = SectorSpecialState.None;
 
     private float _sampleTimer;
-    private float _judgeTimer;
+    private float _publishTimer;
     private float _playerRatio;
     private float _virusRatio;
-    private SectorOwner _candidateOwner = SectorOwner.Neutral;
-    private float _contestElapsed;
 
     public SectorOccupancySnapshot CurrentSnapshot => BuildSnapshot();
     public SectorSpecialState SpecialState => _specialState;
+
     private void Awake()
     {
-        if (!_paint) _paint = GetComponent<SectorPaint>();
+        if (_paint == null)
+            _paint = GetComponent<SectorPaint>();
     }
 
     private void OnEnable()
     {
-        Publish();
+        RefreshNow();
     }
 
     private void Update()
@@ -65,56 +62,52 @@ public class SectorOccupancy : MonoBehaviour
             return;
 
         _sampleTimer += Time.deltaTime;
-        _judgeTimer += Time.deltaTime;
+        _publishTimer += Time.deltaTime;
 
-        if (_sampleTimer >= _rules.sampleInterval)
+        if (_sampleTimer >= _rules.OccupancySampleInterval)
         {
             _sampleTimer = 0f;
             SampleRatios();
+            ApplyImmediateOwner();
         }
 
-        if (_judgeTimer >= _rules.judgeInterval)
+        if (_publishTimer >= _rules.OccupancyPublishInterval)
         {
-            float judgeDelta = _judgeTimer;
-            _judgeTimer = 0f;
-            Judge(judgeDelta);
+            _publishTimer = 0f;
             Publish();
         }
     }
 
+    public void RefreshNow()
+    {
+        if (_paint != null)
+        {
+            SampleRatios();
+            ApplyImmediateOwner();
+        }
+
+        Publish();
+    }
+
     private void SampleRatios()
     {
-        float playerAbs = _paint.GetCoverageRatio(MaskRenderManager.PaintChannel.Vaccine);
-        float virusAbs = _paint.GetCoverageRatio(MaskRenderManager.PaintChannel.Virus);
+        float playerAbs = _paint.GetCoverageRatio(PaintChannel.Vaccine);
+        float virusAbs = _paint.GetCoverageRatio(PaintChannel.Virus);
         float sum = playerAbs + virusAbs;
 
         _playerRatio = sum > 0.00001f ? playerAbs / sum : 0f;
         _virusRatio = sum > 0.00001f ? virusAbs / sum : 0f;
     }
 
-    private void Judge(float deltaTime)
+    private void ApplyImmediateOwner()
     {
-        SectorOwner dominant = GetDominantOwner();
+        SectorOwner nextOwner = GetDominantOwner();
 
-        if (dominant == SectorOwner.Neutral || dominant == _owner)
-        {
-            ResetContest();
+        if (_owner == nextOwner)
             return;
-        }
 
-        if (_candidateOwner != dominant)
-        {
-            _candidateOwner = dominant;
-            _contestElapsed = 0f;
-        }
-
-        _contestElapsed += deltaTime;
-
-        if (_contestElapsed >= _rules.captureHoldSeconds)
-        {
-            _owner = dominant;
-            ResetContest();
-        }
+        _owner = nextOwner;
+        Publish();
     }
 
     private SectorOwner GetDominantOwner()
@@ -122,30 +115,34 @@ public class SectorOccupancy : MonoBehaviour
         if (_playerRatio <= 0f && _virusRatio <= 0f)
             return SectorOwner.Neutral;
 
-        return _playerRatio >= _rules.captureThreshold ? SectorOwner.Player : SectorOwner.Virus;
-    }
+        float threshold = _rules != null ? _rules.DominanceThreshold : 0.5f;
 
-    private void ResetContest()
-    {
-        _candidateOwner = SectorOwner.Neutral;
-        _contestElapsed = 0f;
+        if (_playerRatio > threshold)
+            return SectorOwner.Player;
+
+        if (_virusRatio > threshold)
+            return SectorOwner.Virus;
+
+        return SectorOwner.Neutral;
     }
 
     private SectorOccupancySnapshot BuildSnapshot()
     {
+        SectorOwner dominantOwner = GetDominantOwner();
+
         return new SectorOccupancySnapshot
         {
             sector = _paint != null ? _paint.Runtime : null,
             owner = _owner,
-            dominantOwner = GetDominantOwner(),
-            contestState = _candidateOwner == SectorOwner.Player ? SectorContestState.PlayerCapturing :
-                           _candidateOwner == SectorOwner.Virus ? SectorContestState.VirusCapturing :
+            dominantOwner = dominantOwner,
+            contestState = dominantOwner == SectorOwner.Player ? SectorContestState.PlayerCapturing :
+                           dominantOwner == SectorOwner.Virus ? SectorContestState.VirusCapturing :
                            SectorContestState.None,
             specialState = _specialState,
             playerRatio = _playerRatio,
             virusRatio = _virusRatio,
-            contestElapsed = _contestElapsed,
-            contestRequired = _rules != null ? _rules.captureHoldSeconds : 5f
+            contestElapsed = 0f,
+            contestRequired = 0f
         };
     }
 
@@ -178,16 +175,15 @@ public class SectorOccupancy : MonoBehaviour
         _owner = owner;
         _playerRatio = Mathf.Clamp01(playerRatio);
         _virusRatio = Mathf.Clamp01(virusRatio);
-        ResetContest();
         Publish();
     }
+
     public void ResetToNeutral()
     {
         _owner = SectorOwner.Neutral;
         _specialState = SectorSpecialState.None;
         _playerRatio = 0f;
         _virusRatio = 0f;
-        ResetContest();
         Publish();
     }
 }

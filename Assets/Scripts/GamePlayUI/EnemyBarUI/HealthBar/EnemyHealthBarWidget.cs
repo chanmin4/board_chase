@@ -19,7 +19,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
     private EnemyHealthBarSettingsSO _settings;
     private float _emphasisUntilTime;
     private float _fillFullWidth;
-    private bool _managerVisible;
+    private bool _managerVisible = false;
     private bool _hasValidScreenPosition;
 
     public RectTransform Root => _root != null ? _root : (RectTransform)transform;
@@ -42,6 +42,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
 
         EnsureFillImageMode();
         ForceHiddenUntilPositioned();
+        _uicanvasgroupopacity?.HideImmediate();
     }
 
     public void Bind(EnemyScreenSpaceHPUIAnchor anchor)
@@ -53,6 +54,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
         _settings = anchor != null ? anchor.HealthBarSettings : null;
         _managerVisible = false;
         _hasValidScreenPosition = false;
+        _uicanvasgroupopacity?.HideImmediate();
 
         if (_damageable != null)
         {
@@ -89,7 +91,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
 
         if (!_managerVisible || !_hasValidScreenPosition)
         {
-            _uicanvasgroupopacity.Hide();
+            _uicanvasgroupopacity.HideImmediate();
             return;
         }
 

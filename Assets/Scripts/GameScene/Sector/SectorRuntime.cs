@@ -1,5 +1,7 @@
 // Assets/Scripts/GameScene/Sector/SectorRuntime.cs
+using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class SectorRuntime : MonoBehaviour
 {
@@ -19,11 +21,13 @@ public class SectorRuntime : MonoBehaviour
 
     public Transform cameraPoint;
 
-    [Tooltip("Enemy spawn positions in this sector.")]
-    public Transform[] enemySpawnPoints;
+    [Tooltip("Generic spawn positions used by enemies and sector objects.")]
+    [FormerlySerializedAs("enemySpawnPoints")]
+    public Transform[] objectSpawnPoints;
 
-    [Tooltip("Optional spawn metadata. Can be empty when enemySpawnPoints are enough.")]
-    [SerializeField] private EnemySpawnPoint[] _spawnPointMetadata;
+    [Tooltip("Optional generic spawn metadata. Can be empty when objectSpawnPoints are enough.")]
+    [FormerlySerializedAs("_spawnPointMetadata")]
+    [SerializeField] private SectorObjectSpawnPoint[] _objectSpawnPointMetadata;
 
     public SectorEdge XMin;
     public SectorEdge XMax;
@@ -38,7 +42,12 @@ public class SectorRuntime : MonoBehaviour
     public bool IsOpened => isOpened;
     public bool IsCleared => isCleared;
     public bool IsStartSector => is_startsector;
-    public EnemySpawnPoint[] SpawnPointMetadata => _spawnPointMetadata;
+    public Transform[] ObjectSpawnPoints => objectSpawnPoints;
+    public SectorObjectSpawnPoint[] ObjectSpawnPointMetadata => _objectSpawnPointMetadata;
+    [Obsolete("Use ObjectSpawnPoints.")]
+    public Transform[] enemySpawnPoints => objectSpawnPoints;
+    [Obsolete("Use ObjectSpawnPointMetadata.")]
+    public SectorObjectSpawnPoint[] SpawnPointMetadata => _objectSpawnPointMetadata;
     public Transform PatternObjectRoot => _PatternObjectRoot != null ? _PatternObjectRoot : transform;
     public Transform[] CleanupRoots => _cleanupRoots;
 
@@ -112,19 +121,19 @@ public class SectorRuntime : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if ((_spawnPointMetadata == null || _spawnPointMetadata.Length == 0) &&
-            enemySpawnPoints != null &&
-            enemySpawnPoints.Length > 0)
+        if ((_objectSpawnPointMetadata == null || _objectSpawnPointMetadata.Length == 0) &&
+            objectSpawnPoints != null &&
+            objectSpawnPoints.Length > 0)
         {
-            EnemySpawnPoint[] found = new EnemySpawnPoint[enemySpawnPoints.Length];
+            SectorObjectSpawnPoint[] found = new SectorObjectSpawnPoint[objectSpawnPoints.Length];
 
-            for (int i = 0; i < enemySpawnPoints.Length; i++)
+            for (int i = 0; i < objectSpawnPoints.Length; i++)
             {
-                Transform point = enemySpawnPoints[i];
-                found[i] = point != null ? point.GetComponent<EnemySpawnPoint>() : null;
+                Transform point = objectSpawnPoints[i];
+                found[i] = point != null ? point.GetComponent<SectorObjectSpawnPoint>() : null;
             }
 
-            _spawnPointMetadata = found;
+            _objectSpawnPointMetadata = found;
         }
     }
 #endif

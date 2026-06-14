@@ -34,7 +34,7 @@ public abstract class EnemyFireProjectileConfigSO : EnemyAttackConfigSO
     [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Ignore;
 
     [Header("Impact Paint")]
-    [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Virus;
+    [SerializeField] private PaintChannel _paintChannel = PaintChannel.Virus;
     [SerializeField, Min(0f)] private float _paintRadiusWorld = 1.25f;
     [SerializeField] private int _paintPriority = 0;
 
@@ -63,7 +63,7 @@ public abstract class EnemyFireProjectileConfigSO : EnemyAttackConfigSO
     public LayerMask ImpactMask => _impactMask;
     public QueryTriggerInteraction TriggerInteraction => _triggerInteraction;
 
-    public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
+    public PaintChannel PaintChannel => _paintChannel;
     public float PaintRadiusWorld => DifficultyRuntime.ApplyEnemyVirusPaintRadius(_paintRadiusWorld);
     public int PaintPriority => _paintPriority;
 }

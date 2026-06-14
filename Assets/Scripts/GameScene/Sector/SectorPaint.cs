@@ -5,10 +5,12 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class SectorPaint : MonoBehaviour
 {
+
+    [SerializeField] private PaintSurfaceState _coatingState = PaintSurfaceState.Neutral;
     [Serializable]
     public struct StoredCirclePaint
     {
-        public MaskRenderManager.PaintChannel channel;
+        public PaintChannel channel;
         public Vector3 worldPos;
         public float radiusWorld;
         public int priority;
@@ -20,6 +22,7 @@ public class SectorPaint : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private SectorRuntime runtime;
     
+
 
     [Header("Options")]
     [SerializeField] private bool allowPaintWhenClosed = false;
@@ -50,8 +53,8 @@ public class SectorPaint : MonoBehaviour
     private MaskRenderManager _maskRenderManager;
     private readonly List<StoredCirclePaint> _playerPaints = new();
     private readonly List<StoredCirclePaint> _enemyPaints = new();
-
-    private Bounds _paintGridBounds;
+    public PaintSurfaceState CoatingState => _coatingState;
+    public bool IsCoated => PaintTypeUtility.IsCoated(_coatingState);    private Bounds _paintGridBounds;
     private float[] _vaccineCoverage;
     private float[] _virusCoverage;
     private float[] _poisonPuddleCoverage;
@@ -113,6 +116,8 @@ public class SectorPaint : MonoBehaviour
 
     public bool CanPaintNow()
     {
+        if (IsCoated)
+            return false;
         if (runtime != null && runtime.IsCleared)
             return false;
 
@@ -182,7 +187,7 @@ public class SectorPaint : MonoBehaviour
             poisonPuddleDamageConfig = request.poisonPuddleDamageConfig
         };
 
-        if (request.channel == MaskRenderManager.PaintChannel.Vaccine)
+        if (request.channel == PaintChannel.Vaccine)
             _playerPaints.Add(stored);
         else
             _enemyPaints.Add(stored);
@@ -191,9 +196,9 @@ public class SectorPaint : MonoBehaviour
         OnCircleApplied?.Invoke(this, stored);
     }
 
-    public IReadOnlyList<StoredCirclePaint> GetStoredPaints(MaskRenderManager.PaintChannel channel)
+    public IReadOnlyList<StoredCirclePaint> GetStoredPaints(PaintChannel channel)
     {
-        if (channel == MaskRenderManager.PaintChannel.Vaccine)
+        if (channel == PaintChannel.Vaccine)
             return _playerPaints;
 
         return _enemyPaints;
@@ -205,9 +210,9 @@ public class SectorPaint : MonoBehaviour
         _enemyPaints.Clear();
     }
 
-    public void ClearStoredPaint(MaskRenderManager.PaintChannel channel)
+    public void ClearStoredPaint(PaintChannel channel)
     {
-        if (channel == MaskRenderManager.PaintChannel.Vaccine)
+        if (channel == PaintChannel.Vaccine)
             _playerPaints.Clear();
         else
             _enemyPaints.Clear();
@@ -234,40 +239,42 @@ public class SectorPaint : MonoBehaviour
     }
 
     public bool ApplyGameplayCircle(
-        MaskRenderManager.PaintChannel channel,
+        PaintChannel channel,
         Vector3 worldPos,
         float radiusWorld,
         bool overwriteOther = true)
     {
+        if (IsCoated)
+            return false;
         bool changed = false;
 
         switch (channel)
         {
-            case MaskRenderManager.PaintChannel.Vaccine:
-                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, true);
+            case PaintChannel.Vaccine:
+                changed |= PaintCoverageCircle(PaintChannel.Vaccine, worldPos, radiusWorld, true);
 
                 if (overwriteOther)
                 {
-                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, false);
-                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.PoisonPuddle, worldPos, radiusWorld, false);
+                    changed |= PaintCoverageCircle(PaintChannel.Virus, worldPos, radiusWorld, false);
+                    changed |= PaintCoverageCircle(PaintChannel.PoisonPuddle, worldPos, radiusWorld, false);
                 }
 
                 break;
 
-            case MaskRenderManager.PaintChannel.Virus:
-                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, true);
+            case PaintChannel.Virus:
+                changed |= PaintCoverageCircle(PaintChannel.Virus, worldPos, radiusWorld, true);
 
                 if (overwriteOther)
-                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, false);
+                    changed |= PaintCoverageCircle(PaintChannel.Vaccine, worldPos, radiusWorld, false);
 
                 break;
 
-            case MaskRenderManager.PaintChannel.PoisonPuddle:
-                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, true);
-                changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.PoisonPuddle, worldPos, radiusWorld, true);
+            case PaintChannel.PoisonPuddle:
+                changed |= PaintCoverageCircle(PaintChannel.Virus, worldPos, radiusWorld, true);
+                changed |= PaintCoverageCircle(PaintChannel.PoisonPuddle, worldPos, radiusWorld, true);
 
                 if (overwriteOther)
-                    changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, false);
+                    changed |= PaintCoverageCircle(PaintChannel.Vaccine, worldPos, radiusWorld, false);
 
                 break;
         }
@@ -283,60 +290,68 @@ public class SectorPaint : MonoBehaviour
         if (!IntersectsCircle(worldPos, radiusWorld + boundsPadding))
             return false;
 
-        bool changed = PaintCoverageCircle(MaskRenderManager.PaintChannel.Virus, worldPos, radiusWorld, true);
-        changed |= PaintCoverageCircle(MaskRenderManager.PaintChannel.Vaccine, worldPos, radiusWorld, false);
+        bool changed = PaintCoverageCircle(PaintChannel.Virus, worldPos, radiusWorld, true);
+        changed |= PaintCoverageCircle(PaintChannel.Vaccine, worldPos, radiusWorld, false);
         return changed;
     }
 
-    public void FillGameplay(MaskRenderManager.PaintChannel channel, bool clearOtherChannel)
+    public void FillGameplay(PaintChannel channel, bool clearOtherChannel)
     {
         EnsurePaintGrid();
 
         switch (channel)
         {
-            case MaskRenderManager.PaintChannel.Vaccine:
-                FillCoverage(MaskRenderManager.PaintChannel.Vaccine, 1f);
+            case PaintChannel.Vaccine:
+                FillCoverage(PaintChannel.Vaccine, 1f);
 
                 if (clearOtherChannel)
                 {
-                    FillCoverage(MaskRenderManager.PaintChannel.Virus, 0f);
-                    FillCoverage(MaskRenderManager.PaintChannel.PoisonPuddle, 0f);
+                    FillCoverage(PaintChannel.Virus, 0f);
+                    FillCoverage(PaintChannel.PoisonPuddle, 0f);
                 }
 
                 break;
 
-            case MaskRenderManager.PaintChannel.Virus:
-                FillCoverage(MaskRenderManager.PaintChannel.Virus, 1f);
+            case PaintChannel.Virus:
+                FillCoverage(PaintChannel.Virus, 1f);
 
                 if (clearOtherChannel)
-                    FillCoverage(MaskRenderManager.PaintChannel.Vaccine, 0f);
+                    FillCoverage(PaintChannel.Vaccine, 0f);
 
                 break;
 
-            case MaskRenderManager.PaintChannel.PoisonPuddle:
-                FillCoverage(MaskRenderManager.PaintChannel.Virus, 1f);
-                FillCoverage(MaskRenderManager.PaintChannel.PoisonPuddle, 1f);
+            case PaintChannel.PoisonPuddle:
+                FillCoverage(PaintChannel.Virus, 1f);
+                FillCoverage(PaintChannel.PoisonPuddle, 1f);
 
                 if (clearOtherChannel)
-                    FillCoverage(MaskRenderManager.PaintChannel.Vaccine, 0f);
+                    FillCoverage(PaintChannel.Vaccine, 0f);
 
                 break;
         }
     }
-
+    public void SetCoating(PaintChannel channel)
+    {
+        _coatingState = PaintTypeUtility.ToCoatedState(channel);
+    }
+    public void ClearCoating()
+    {
+        _coatingState = PaintSurfaceState.Neutral;
+    }
     public void ClearAllPaintCoverage()
     {
-        ClearCoverage(MaskRenderManager.PaintChannel.Vaccine);
-        ClearCoverage(MaskRenderManager.PaintChannel.Virus);
-        ClearCoverage(MaskRenderManager.PaintChannel.PoisonPuddle);
+        ClearCoverage(PaintChannel.Vaccine);
+        ClearCoverage(PaintChannel.Virus);
+        ClearCoverage(PaintChannel.PoisonPuddle);
+        ClearCoating();
     }
 
-    public bool HasPaintAtWorld(MaskRenderManager.PaintChannel channel, Vector3 worldPos)
+    public bool HasPaintAtWorld(PaintChannel channel, Vector3 worldPos)
     {
         return GetCoverageAtWorld(channel, worldPos) >= _paintQueryThreshold;
     }
 
-    public float GetCoverageAtWorld(MaskRenderManager.PaintChannel channel, Vector3 worldPos)
+    public float GetCoverageAtWorld(PaintChannel channel, Vector3 worldPos)
     {
         if (!HasCoverageGrid())
             return 0f;
@@ -349,7 +364,7 @@ public class SectorPaint : MonoBehaviour
         return GetCoverage(channel, y * _paintGridWidth + x);
     }
 
-    public float GetCoverageRatio(MaskRenderManager.PaintChannel channel)
+    public float GetCoverageRatio(PaintChannel channel)
     {
         if (!HasCoverageGrid())
             return 0f;
@@ -360,18 +375,25 @@ public class SectorPaint : MonoBehaviour
         return Mathf.Clamp01(GetCoverageSum(channel) / count);
     }
 
-    public MaskRenderManager.PaintState GetPaintStateAtWorld(Vector3 worldPos)
+    public PaintSurfaceState GetPaintStateAtWorld(Vector3 worldPos)
     {
-        float vaccine = GetCoverageAtWorld(MaskRenderManager.PaintChannel.Vaccine, worldPos);
-        float virus = GetCoverageAtWorld(MaskRenderManager.PaintChannel.Virus, worldPos);
+        if (IsCoated)
+            return _coatingState;
+
+        float vaccine = GetCoverageAtWorld(PaintChannel.Vaccine, worldPos);
+        float virus = GetCoverageAtWorld(PaintChannel.Virus, worldPos);
+        float poison = GetCoverageAtWorld(PaintChannel.PoisonPuddle, worldPos);
+
+        if (poison >= _paintQueryThreshold)
+            return PaintSurfaceState.PoisonPuddle;
 
         if (vaccine >= _paintQueryThreshold && vaccine >= virus)
-            return MaskRenderManager.PaintState.Vaccine;
+            return PaintSurfaceState.Vaccine;
 
         if (virus >= _paintQueryThreshold)
-            return MaskRenderManager.PaintState.Virus;
+            return PaintSurfaceState.Virus;
 
-        return MaskRenderManager.PaintState.Neutral;
+        return PaintSurfaceState.Neutral;
     }
 
     public bool TryWorldToMaskUV(Vector3 worldPos, out Vector2 uv)
@@ -428,7 +450,7 @@ public class SectorPaint : MonoBehaviour
         return true;
     }
 
-    public float GetCoverageAtCell(MaskRenderManager.PaintChannel channel, int x, int y)
+    public float GetCoverageAtCell(PaintChannel channel, int x, int y)
     {
         EnsurePaintGrid();
 
@@ -439,7 +461,7 @@ public class SectorPaint : MonoBehaviour
     }
 
     private bool PaintCoverageCircle(
-        MaskRenderManager.PaintChannel channel,
+        PaintChannel channel,
         Vector3 worldPos,
         float radiusWorld,
         bool add)
@@ -519,7 +541,7 @@ public class SectorPaint : MonoBehaviour
             _paintGridHeight > 0;
     }
 
-    private void ClearCoverage(MaskRenderManager.PaintChannel channel)
+    private void ClearCoverage(PaintChannel channel)
     {
         float[] coverage = GetCoverageArray(channel);
 
@@ -529,7 +551,7 @@ public class SectorPaint : MonoBehaviour
         SetCoverageSum(channel, 0f);
     }
 
-    private void FillCoverage(MaskRenderManager.PaintChannel channel, float value)
+    private void FillCoverage(PaintChannel channel, float value)
     {
         EnsurePaintGrid();
 
@@ -546,13 +568,13 @@ public class SectorPaint : MonoBehaviour
         SetCoverageSum(channel, value * coverage.Length);
     }
 
-    private float GetCoverage(MaskRenderManager.PaintChannel channel, int index)
+    private float GetCoverage(PaintChannel channel, int index)
     {
         float[] coverage = GetCoverageArray(channel);
         return coverage != null && index >= 0 && index < coverage.Length ? coverage[index] : 0f;
     }
 
-    private void SetCoverage(MaskRenderManager.PaintChannel channel, int index, float value)
+    private void SetCoverage(PaintChannel channel, int index, float value)
     {
         float[] coverage = GetCoverageArray(channel);
 
@@ -565,17 +587,17 @@ public class SectorPaint : MonoBehaviour
         AddCoverageSum(channel, value - previous);
     }
 
-    private float[] GetCoverageArray(MaskRenderManager.PaintChannel channel)
+    private float[] GetCoverageArray(PaintChannel channel)
     {
         switch (channel)
         {
-            case MaskRenderManager.PaintChannel.Vaccine:
+            case PaintChannel.Vaccine:
                 return _vaccineCoverage;
 
-            case MaskRenderManager.PaintChannel.Virus:
+            case PaintChannel.Virus:
                 return _virusCoverage;
 
-            case MaskRenderManager.PaintChannel.PoisonPuddle:
+            case PaintChannel.PoisonPuddle:
                 return _poisonPuddleCoverage;
 
             default:
@@ -583,17 +605,17 @@ public class SectorPaint : MonoBehaviour
         }
     }
 
-    private float GetCoverageSum(MaskRenderManager.PaintChannel channel)
+    private float GetCoverageSum(PaintChannel channel)
     {
         switch (channel)
         {
-            case MaskRenderManager.PaintChannel.Vaccine:
+            case PaintChannel.Vaccine:
                 return _vaccineCoverageSum;
 
-            case MaskRenderManager.PaintChannel.Virus:
+            case PaintChannel.Virus:
                 return _virusCoverageSum;
 
-            case MaskRenderManager.PaintChannel.PoisonPuddle:
+            case PaintChannel.PoisonPuddle:
                 return _poisonPuddleCoverageSum;
 
             default:
@@ -601,24 +623,24 @@ public class SectorPaint : MonoBehaviour
         }
     }
 
-    private void AddCoverageSum(MaskRenderManager.PaintChannel channel, float delta)
+    private void AddCoverageSum(PaintChannel channel, float delta)
     {
         SetCoverageSum(channel, GetCoverageSum(channel) + delta);
     }
 
-    private void SetCoverageSum(MaskRenderManager.PaintChannel channel, float value)
+    private void SetCoverageSum(PaintChannel channel, float value)
     {
         switch (channel)
         {
-            case MaskRenderManager.PaintChannel.Vaccine:
+            case PaintChannel.Vaccine:
                 _vaccineCoverageSum = value;
                 break;
 
-            case MaskRenderManager.PaintChannel.Virus:
+            case PaintChannel.Virus:
                 _virusCoverageSum = value;
                 break;
 
-            case MaskRenderManager.PaintChannel.PoisonPuddle:
+            case PaintChannel.PoisonPuddle:
                 _poisonPuddleCoverageSum = value;
                 break;
         }

@@ -22,7 +22,7 @@ public class PaintExperienceRewardSO : ScriptableObject
 
     public float CalculateXp(MaskRenderManager.CirclePaintImpact impact)
     {
-        if (impact.channel != MaskRenderManager.PaintChannel.Vaccine)
+        if (impact.channel != PaintChannel.Vaccine)
             return 0f;
 
         if (impact.ValidArea < minimumValidArea)

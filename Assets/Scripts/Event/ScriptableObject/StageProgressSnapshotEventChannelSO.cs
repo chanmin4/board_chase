@@ -18,11 +18,18 @@ public struct StageProgressSnapshot
     public bool isCompleted;
     public bool hasNextStage;
     public bool isStartSector;
-
+    public bool showPlayerTimer;
     public bool isResting;
     public float restRemainingSeconds;
     public float restDurationSeconds;
     public float restProgress01;
+
+    public SectorOwner dominantOwner;
+
+    public bool isResolveCountdown;
+    public SectorOwner resolveCountdownOwner;
+
+    public bool isFailureCountdown;
 }
 
 [CreateAssetMenu(
@@ -34,7 +41,7 @@ public class StageProgressSnapshotEventChannelSO : ScriptableObject
 
     private bool _hasCurrent;
     private StageProgressSnapshot _current;
-
+    
     public bool HasCurrent => _hasCurrent;
     public StageProgressSnapshot Current => _current;
 

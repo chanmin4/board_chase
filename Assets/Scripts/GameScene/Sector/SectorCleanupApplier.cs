@@ -30,6 +30,18 @@ public class SectorCleanupApplier : MonoBehaviour
             _maskRenderManagerReadyChannel.OnEventRaised -= HandleMaskRenderManagerReady;
     }
 
+    public void CleanupCombatObjects(SectorRuntime sector)
+    {
+        if (sector == null)
+            return;
+
+        if (_destroyEnemies)
+            DestroyComponentsInChildren<Enemy>(sector.transform);
+
+        if (_destroyCleanupRootChildren)
+            DestroyCleanupRootChildren(sector);
+    }
+
     public void CleanupSector(SectorRuntime sector)
     {
         CleanupSector(sector, _clearPaintMasks);
@@ -40,11 +52,7 @@ public class SectorCleanupApplier : MonoBehaviour
         if (sector == null)
             return;
 
-        if (_destroyEnemies)
-            DestroyComponentsInChildren<Enemy>(sector.transform);
-
-        if (_destroyCleanupRootChildren)
-            DestroyCleanupRootChildren(sector);
+        CleanupCombatObjects(sector);
 
         if (clearPaintMasks)
             ClearSectorPaint(sector);
@@ -55,6 +63,39 @@ public class SectorCleanupApplier : MonoBehaviour
 
     public void ApplyPlayerCompletedState(SectorRuntime sector)
     {
+        ApplyCoatingState(sector, PaintChannel.Vaccine, SectorOwner.Player, 1f, 0f);
+    }
+
+    public void ApplyVirusFailedState(SectorRuntime sector)
+    {
+        ApplyCoatingState(sector, PaintChannel.Virus, SectorOwner.Virus, 0f, 1f);
+    }
+
+    public void CleanupThenApplyPlayerCompletedState(SectorRuntime sector, bool clearPaintMasks)
+    {
+        if (sector == null)
+            return;
+
+        CleanupSector(sector, clearPaintMasks);
+        ApplyPlayerCompletedState(sector);
+    }
+
+    public void CleanupThenApplyVirusFailedState(SectorRuntime sector, bool clearPaintMasks)
+    {
+        if (sector == null)
+            return;
+
+        CleanupSector(sector, clearPaintMasks);
+        ApplyVirusFailedState(sector);
+    }
+
+    private void ApplyCoatingState(
+        SectorRuntime sector,
+        PaintChannel channel,
+        SectorOwner owner,
+        float playerRatio,
+        float virusRatio)
+    {
         if (sector == null)
             return;
 
@@ -64,25 +105,21 @@ public class SectorCleanupApplier : MonoBehaviour
         {
             if (_maskRenderManager != null)
             {
-                _maskRenderManager.FillSector(
-                    paint,
-                    MaskRenderManager.PaintChannel.Vaccine,
-                    clearOtherChannel: true);
+                _maskRenderManager.FillSector(paint, channel, clearOtherChannel: true);
             }
             else
             {
-                paint.FillGameplay(
-                    MaskRenderManager.PaintChannel.Vaccine,
-                    clearOtherChannel: true);
+                paint.FillGameplay(channel, clearOtherChannel: true);
                 paint.ClearAllStoredPaint();
             }
+
+            paint.SetCoating(channel);
         }
 
-        SectorOccupancy occupancy =
-            sector.GetComponentInChildren<SectorOccupancy>(true);
+        SectorOccupancy occupancy = sector.GetComponentInChildren<SectorOccupancy>(true);
 
         if (occupancy != null)
-            occupancy.ForceOwnerAndRatios(SectorOwner.Player, 1f, 0f);
+            occupancy.ForceOwnerAndRatios(owner, playerRatio, virusRatio);
     }
 
     private void HandleMaskRenderManagerReady(MaskRenderManager manager)
@@ -102,11 +139,13 @@ public class SectorCleanupApplier : MonoBehaviour
             paint.ClearAllPaintCoverage();
 
         paint.ClearAllStoredPaint();
+        paint.ClearCoating();
     }
 
     private void ResetSectorOccupancy(SectorRuntime sector)
     {
         SectorOccupancy occupancy = sector.GetComponentInChildren<SectorOccupancy>(true);
+
         if (occupancy != null)
             occupancy.ResetToNeutral();
     }
@@ -139,14 +178,5 @@ public class SectorCleanupApplier : MonoBehaviour
 
         for (int i = root.childCount - 1; i >= 0; i--)
             Destroy(root.GetChild(i).gameObject);
-    }
-    public void CleanupThenApplyPlayerCompletedState(SectorRuntime sector,
-    bool clearPaintMasks)
-    {
-        if (sector == null)
-            return;
-
-        CleanupSector(sector, clearPaintMasks);
-        ApplyPlayerCompletedState(sector);
     }
 }

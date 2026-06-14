@@ -66,7 +66,7 @@ public class MutarusPatternConfigSO : NamedPatternConfigSO
         [SerializeField] private AreaAttackTelegraphStyle _impactTelegraphStyle = default;
 
         [Header("Arc Bomb Paint")]
-        [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.PoisonPuddle;
+        [SerializeField] private PaintChannel _paintChannel = PaintChannel.PoisonPuddle;
         [SerializeField, Min(0f)] private float _paintRadiusWorld = 1.5f;
         [SerializeField] private int _paintPriority;
         [SerializeField] private PoisonPuddleDamageConfigSO _poisonPuddleDamageConfig;
@@ -91,7 +91,7 @@ public class MutarusPatternConfigSO : NamedPatternConfigSO
         [SerializeField, Min(0f)] private float _failureTelegraphRadiusCustom = 5f;
 
         [Header("Pattern Failed Bomb Paint")]
-        [SerializeField] private MaskRenderManager.PaintChannel _failurePaintChannel = MaskRenderManager.PaintChannel.PoisonPuddle;
+        [SerializeField] private PaintChannel _failurePaintChannel = PaintChannel.PoisonPuddle;
         [SerializeField, Min(0f)] private float _failurePaintRadiusWorld = 5f;
         [SerializeField] private int _failurePaintPriority = 10;
         [SerializeField] private PoisonPuddleDamageConfigSO _failurePoisonPuddleDamageConfig;
@@ -133,7 +133,7 @@ public class MutarusPatternConfigSO : NamedPatternConfigSO
         public float ImpactTelegraphRadius => ResolveRadius(_telegraphRadiusSource, Mathf.Max(0f, _telegraphRadiusCustom), DamageRadius, PaintRadiusWorld);
         public AreaAttackTelegraphStyle ImpactTelegraphStyle =>
             _impactTelegraphStyle.segments > 0 ? _impactTelegraphStyle : AreaAttackTelegraphStyle.Default;
-        public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
+        public PaintChannel PaintChannel => _paintChannel;
         public float PaintRadiusWorld => DifficultyRuntime.ApplyEnemyVirusPaintRadius(_paintRadiusWorld);
         public int PaintPriority => _paintPriority;
         public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _poisonPuddleDamageConfig;
@@ -151,7 +151,7 @@ public class MutarusPatternConfigSO : NamedPatternConfigSO
         public float FailureImpactHealthDamage => DifficultyRuntime.ApplyEnemyDamage(_failureImpactHealthDamage);
         public float FailureImpactInfectionDamage => DifficultyRuntime.ApplyPlayerInfectionGain(_failureImpactInfectionDamage);
         public float FailureImpactTelegraphRadius => ResolveRadius(_failureTelegraphRadiusSource, Mathf.Max(0f, _failureTelegraphRadiusCustom), FailureDamageRadius, FailurePaintRadiusWorld);
-        public MaskRenderManager.PaintChannel FailurePaintChannel => _failurePaintChannel;
+        public PaintChannel FailurePaintChannel => _failurePaintChannel;
         public int FailurePaintPriority => _failurePaintPriority;
         public PoisonPuddleDamageConfigSO FailurePoisonPuddleDamageConfig =>
             _failurePoisonPuddleDamageConfig != null ? _failurePoisonPuddleDamageConfig : _poisonPuddleDamageConfig;
@@ -207,7 +207,7 @@ public class MutarusPatternConfigSO : NamedPatternConfigSO
     public bool ShowImpactTelegraph => QTEPatternBomb.ShowImpactTelegraph;
     public float ImpactTelegraphRadius => QTEPatternBomb.ImpactTelegraphRadius;
     public AreaAttackTelegraphStyle ImpactTelegraphStyle => QTEPatternBomb.ImpactTelegraphStyle;
-    public MaskRenderManager.PaintChannel PaintChannel => QTEPatternBomb.PaintChannel;
+    public PaintChannel PaintChannel => QTEPatternBomb.PaintChannel;
     public float PaintRadiusWorld => QTEPatternBomb.PaintRadiusWorld;
     public int PaintPriority => QTEPatternBomb.PaintPriority;
     public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => QTEPatternBomb.PoisonPuddleDamageConfig;
@@ -222,7 +222,7 @@ public class MutarusPatternConfigSO : NamedPatternConfigSO
     public float FailureImpactHealthDamage => QTEPatternBomb.FailureImpactHealthDamage;
     public float FailureImpactInfectionDamage => QTEPatternBomb.FailureImpactInfectionDamage;
     public float FailureImpactTelegraphRadius => QTEPatternBomb.FailureImpactTelegraphRadius;
-    public MaskRenderManager.PaintChannel FailurePaintChannel => QTEPatternBomb.FailurePaintChannel;
+    public PaintChannel FailurePaintChannel => QTEPatternBomb.FailurePaintChannel;
     public float FailurePaintRadiusWorld => QTEPatternBomb.FailurePaintRadiusWorld;
     public int FailurePaintPriority => QTEPatternBomb.FailurePaintPriority;
     public PoisonPuddleDamageConfigSO FailurePoisonPuddleDamageConfig => QTEPatternBomb.FailurePoisonPuddleDamageConfig;

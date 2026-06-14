@@ -186,7 +186,7 @@ public class NamedRewardApplier : MonoBehaviour
 
         _maskRenderManager.FillSector(
             paint,
-            MaskRenderManager.PaintChannel.Vaccine,
+            PaintChannel.Vaccine,
             clearOtherChannel: true
         );
     }

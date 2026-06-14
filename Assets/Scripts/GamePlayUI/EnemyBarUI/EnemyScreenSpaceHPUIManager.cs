@@ -16,8 +16,6 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
     [Tooltip("Viewport margin for off-screen hiding. 0 means exact screen edge. 0.03 gives a small buffer.")]
     [SerializeField, Min(0f)] private float _viewportHideMargin = 0.03f;
 
-    [SerializeField, Min(0f)] private float _screenEdgePadding = 24f;
-
     [Header("Listening To")]
     [SerializeField] private WorldCameraEventChannelSO _worldCameraReadyChannel;
 
@@ -132,72 +130,33 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
             return;
         }
 
-        Vector3 worldPos = anchor.GetWorldUIPosition();
+        bool healthVisible = TryGetLocalPoint(
+            anchor,
+            anchor.GetHealthBarLayout(),
+            out Vector2 healthLocalPoint);
 
-        EnemyUIFollowSettingsSO follow = anchor.FollowSettings;
-
-        bool hideWhenBehindCamera = follow.HideWhenBehindCamera;
-
-        bool hideWhenOffScreen =  follow.HideWhenOffScreen;
-
-        bool clampToScreen = follow.ClampToScreen;
-
-        float screenEdgePadding = follow != null
-            ? follow.ScreenEdgePadding
-            : _screenEdgePadding;
-
-        Vector2 screenPixelOffset = follow != null
-            ? follow.ScreenPixelOffset
-            : Vector2.zero;
-
-        Vector3 viewportPos = _worldCamera.WorldToViewportPoint(worldPos);
-
-        if (hideWhenBehindCamera && viewportPos.z <= 0f)
-        {
-            SetEntryVisible(entry, false);
-            return;
-        }
-
-        bool isOffScreen =
-            viewportPos.x < -_viewportHideMargin ||
-            viewportPos.x > 1f + _viewportHideMargin ||
-            viewportPos.y < -_viewportHideMargin ||
-            viewportPos.y > 1f + _viewportHideMargin;
-
-        if (hideWhenOffScreen && isOffScreen)
-        {
-            SetEntryVisible(entry, false);
-            return;
-        }
-
-        Vector3 screenPos = _worldCamera.WorldToScreenPoint(worldPos);
-        Vector2 finalScreen = new Vector2(screenPos.x, screenPos.y);
-
-        if (clampToScreen)
-        {
-            finalScreen.x = Mathf.Clamp(finalScreen.x, screenEdgePadding, Screen.width - screenEdgePadding);
-            finalScreen.y = Mathf.Clamp(finalScreen.y, screenEdgePadding, Screen.height - screenEdgePadding);
-        }
-
-        finalScreen += screenPixelOffset;
-
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            _widgetRoot,
-            finalScreen,
-            null,
-            out Vector2 localPoint);
-
-        SetEntryVisible(entry, true);
+        bool castBarVisible = TryGetLocalPoint(
+            anchor,
+            anchor.GetInfectionCastBarLayout(),
+            out Vector2 castBarLocalPoint);
 
         if (entry.HealthBar != null)
         {
-            entry.HealthBar.SetScreenPosition(localPoint);
+            entry.HealthBar.SetManagerVisible(healthVisible);
+
+            if (healthVisible)
+                entry.HealthBar.SetScreenPosition(healthLocalPoint);
+
             entry.HealthBar.TickVisualState();
         }
 
         if (entry.CastBar != null)
         {
-            entry.CastBar.SetScreenPosition(localPoint);
+            entry.CastBar.SetManagerVisible(castBarVisible);
+
+            if (castBarVisible)
+                entry.CastBar.SetScreenPosition(castBarLocalPoint);
+
             entry.CastBar.TickVisualState();
         }
     }
@@ -212,5 +171,51 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
 
         if (entry.CastBar != null)
             entry.CastBar.SetManagerVisible(visible);
+    }
+
+    private bool TryGetLocalPoint(
+        EnemyScreenSpaceHPUIAnchor anchor,
+        EnemyScreenSpaceWidgetLayout layout,
+        out Vector2 localPoint)
+    {
+        localPoint = default;
+
+        if (anchor == null || layout == null)
+            return false;
+
+        Vector3 worldPos = anchor.GetWorldUIPosition(layout);
+        Vector3 viewportPos = _worldCamera.WorldToViewportPoint(worldPos);
+
+        if (layout.HideWhenBehindCamera && viewportPos.z <= 0f)
+            return false;
+
+        bool isOffScreen =
+            viewportPos.x < -_viewportHideMargin ||
+            viewportPos.x > 1f + _viewportHideMargin ||
+            viewportPos.y < -_viewportHideMargin ||
+            viewportPos.y > 1f + _viewportHideMargin;
+
+        if (layout.HideWhenOffScreen && isOffScreen)
+            return false;
+
+        Vector3 screenPos = _worldCamera.WorldToScreenPoint(worldPos);
+        Vector2 finalScreen = new Vector2(screenPos.x, screenPos.y);
+
+        if (layout.ClampToScreen)
+        {
+            float padding = layout.ScreenEdgePadding;
+            finalScreen.x = Mathf.Clamp(finalScreen.x, padding, Screen.width - padding);
+            finalScreen.y = Mathf.Clamp(finalScreen.y, padding, Screen.height - padding);
+        }
+
+        finalScreen += layout.ScreenPixelOffset;
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            _widgetRoot,
+            finalScreen,
+            null,
+            out localPoint);
+
+        return true;
     }
 }

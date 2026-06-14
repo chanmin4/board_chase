@@ -33,6 +33,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	// Shared between menus and dialogues
 	public event UnityAction MoveSelectionEvent = delegate { };
 	// Menus
+	public event UnityAction MapEvent = delegate { };
+
 	public event UnityAction Slot1Event = delegate { };
 	public event UnityAction Slot2Event = delegate { };
 	public event UnityAction Slot3Event = delegate { };
@@ -132,6 +134,12 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		switch (context.phase)
 		{
 			case InputActionPhase.Performed:
+				if (GameplayAttackInputBlocker.IsBlocked)
+				{
+					ShootCanceledEvent.Invoke();
+					return;
+				}
+
 				ShootEvent.Invoke();
 				break;
 			case InputActionPhase.Canceled:
@@ -144,6 +152,13 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		switch (context.phase)
 		{
 			case InputActionPhase.Performed:
+				if (GameplayAttackInputBlocker.IsBlocked)
+				{
+					SpecialShootHeld = false;
+					SpecialShootCanceledEvent.Invoke();
+					return;
+				}
+
 				SpecialShootHeld = true;
 				SpecialShootEvent.Invoke();
 				break;
@@ -188,6 +203,12 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		switch (context.phase)
 		{
 			case InputActionPhase.Performed:
+				if (GameplayAttackInputBlocker.IsBlocked)
+				{
+					ShockwaveCanceledEvent.Invoke();
+					return;
+				}
+
 				ShockwaveChargeEvent.Invoke();
 				break;
 			case InputActionPhase.Canceled:
@@ -231,44 +252,53 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 					break;
 			}
 		}
-		public void OnSlot2(InputAction.CallbackContext context)
+	public void OnSlot2(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
 		{
-			switch (context.phase)
-			{
-				case InputActionPhase.Performed:
-					Slot2Event.Invoke();
-					break;
-			}
+			case InputActionPhase.Performed:
+				Slot2Event.Invoke();
+				break;
 		}
-				public void OnSlot3(InputAction.CallbackContext context)
+	}
+			public void OnSlot3(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
 		{
-			switch (context.phase)
-			{
-				case InputActionPhase.Performed:
-					Slot3Event.Invoke();
-					break;
-			}
+			case InputActionPhase.Performed:
+				Slot3Event.Invoke();
+				break;
 		}
-				public void OnSlot4(InputAction.CallbackContext context)
+	}
+	public void OnSlot4(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
 		{
-			switch (context.phase)
-			{
-				case InputActionPhase.Performed:
-					Slot4Event.Invoke();
-					break;
-			}
+			case InputActionPhase.Performed:
+				Slot4Event.Invoke();
+				break;
 		}
-		public void OnSlot5(InputAction.CallbackContext context)
+	}
+	public void OnSlot5(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
 		{
-			switch (context.phase)
-			{
-				case InputActionPhase.Performed:
-					Slot5Event.Invoke();
-					break;
-			}
+			case InputActionPhase.Performed:
+				Slot5Event.Invoke();
+				break;
 		}
-
+	}
+	public void OnMap(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				MapEvent.Invoke();
+				break;
+		}
+	}
     // ---------------- Menu (UI) ----------------
+
 	public void OnMiddleClick(InputAction.CallbackContext context){}
     public void OnNavigate(InputAction.CallbackContext context) { }
     public void OnSubmit(InputAction.CallbackContext context) { } 

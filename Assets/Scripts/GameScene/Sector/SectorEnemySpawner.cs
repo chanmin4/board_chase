@@ -14,9 +14,13 @@ public class SectorEnemySpawner : MonoBehaviour
 
     [FormerlySerializedAs("_spawnTable")]
     [FormerlySerializedAs("_stageenemysetting")]
-    [SerializeField] private StageEnemySettingSO _stageEnemySetting;
+    [FormerlySerializedAs("_stageEnemySetting")]
+    [SerializeField] private StageBattleSettingsSO _stageBattleSettings;
 
     [SerializeField] private Transform _spawnedEnemiesRoot;
+
+    [Tooltip("Sector objects spawned by battle presets are parented here. Uses Spawned Enemies Root, then the sector transform when empty.")]
+    [SerializeField] private Transform _spawnedSectorObjectsRoot;
 
     [Header("Exclusion")]
     [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
@@ -26,32 +30,54 @@ public class SectorEnemySpawner : MonoBehaviour
     [SerializeField] private StageProgressSnapshotEventChannelSO _stageProgressChangedChannel;
 
     [Header("Named Battle Lock")]
-    [SerializeField] private BoolEventChannelSO _namedBattleWorldLockedChannel;
-    
-    
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
+
     [Header("Options")]
     [SerializeField] private bool _spawnOnlyWhenOpened = true;
-    [SerializeField] private bool _fillMinimumImmediately = false;
-    [SerializeField] private int _maxImmediateSpawnPerTick = 3;
 
     [Header("Runtime Don't Touch")]
+    [ReadOnly] [SerializeField] private bool _isBattleResolveCountdownLocked;
     [ReadOnly] [SerializeField] private int _currentStageIndex = -1;
-    [ReadOnly] [SerializeField] private int _resolvedMinAlive;
     [ReadOnly] [SerializeField] private int _resolvedMaxAlive;
-    [ReadOnly] [SerializeField] private int _resolvedSimultaneousSpawnCount = 1;
-    [ReadOnly] [SerializeField] private float _resolvedFirstSpawnInterval;
-    [ReadOnly] [SerializeField] private float _resolvedSpawnInterval;
-    [ReadOnly] [SerializeField] private bool _hasSpawnedFirstBatch;
+    [ReadOnly] [SerializeField] private int _resolvedEncounterTotalSpawnCount;
+    [ReadOnly] [SerializeField] private int _spawnedEncounterEnemyCount;
+    [ReadOnly] [SerializeField] private int _pendingEnemySpawnCount;
+    [ReadOnly] [SerializeField] private int _spawnedEncounterObjectCount;
+    [ReadOnly] [SerializeField] private bool _encounterSpawnFinished;
+    [ReadOnly] [SerializeField] private bool _encounterCleared;
     [ReadOnly] [SerializeField] private bool _isSectorActive;
-    [ReadOnly] [SerializeField] private bool _isNamedBattleWorldLocked;
+    [ReadOnly] [SerializeField] private bool _hasEncounterConfiguration;
+    [ReadOnly] [SerializeField] private string _selectedEncounterPresetName;
+    [ReadOnly] [SerializeField] private string _selectedObjectRoomPresetName;
+    [ReadOnly] [SerializeField] private int _aliveEncounterTargetCount;
+
     private SectorStateManager _sectorStateManager;
+    private StageBattleSettingsSO.StageSpawnRule _currentRule;
+    private StageBattleSettingsSO.NormalBattleEncounterPreset _selectedEncounterPreset;
+    private StageBattleSettingsSO.SectorObjectRoomPreset _selectedObjectRoomPreset;
+
     private readonly List<Enemy> _aliveEnemies = new();
     private readonly Dictionary<Enemy, Damageable> _trackedDamageables = new();
     private readonly Dictionary<Enemy, UnityAction> _deathHandlers = new();
+    private readonly List<Damageable> _aliveEncounterTargets = new();
+    private readonly Dictionary<Damageable, UnityAction> _encounterTargetDeathHandlers = new();
     private readonly List<Transform> _spawnPointBuffer = new();
+    private readonly List<StageBattleSettingsSO.EnemyWavePreset> _resolvedEnemyWavePresets = new();
+    private readonly Queue<EnemyStatConfigSO> _pendingEnemySpawnQueue = new();
+    private readonly HashSet<Transform> _objectOccupiedSpawnPoints = new();
+    private readonly List<GameObject> _clearWithRoomObjects = new();
+    private float _encounterStartTime;
+    private bool _encounterStarted;
+    private bool _sectorObjectsSpawned;
+    private int _nextEnemyWaveIndex;
+    private System.Random _spawnRng;
 
-    private float _nextSpawnTime;
+    public bool HasCompletedNormalBattleEncounter => _hasEncounterConfiguration && _encounterCleared;
+    public bool HasStartedNormalBattleEncounter => _encounterStarted;
+    public int AliveEnemyCount => _aliveEnemies.Count;
+    public int AliveEncounterTargetCount => _aliveEncounterTargets.Count;
+    public int SpawnedEncounterEnemyCount => _spawnedEncounterEnemyCount;
+    public int EncounterTotalSpawnCount => _resolvedEncounterTotalSpawnCount;
 
     private void Reset()
     {
@@ -80,10 +106,13 @@ public class SectorEnemySpawner : MonoBehaviour
             _sectorOpenedEvent.OnEventRaised += OnSectorOpened;
 
         if (_stageProgressChangedChannel != null)
+        {
             _stageProgressChangedChannel.OnEventRaised += OnStageProgressChanged;
 
-        if (_namedBattleWorldLockedChannel != null)
-            _namedBattleWorldLockedChannel.OnEventRaised += OnNamedBattleWorldLocked;
+            if (_stageProgressChangedChannel.HasCurrent)
+                OnStageProgressChanged(_stageProgressChangedChannel.Current);
+        }
+
         if (_sectorStateManagerReadyChannel != null)
         {
             _sectorStateManagerReadyChannel.OnEventRaised += HandleSectorStateManagerReady;
@@ -91,6 +120,7 @@ public class SectorEnemySpawner : MonoBehaviour
             if (_sectorStateManagerReadyChannel.HasCurrent)
                 HandleSectorStateManagerReady(_sectorStateManagerReadyChannel.Current);
         }
+
         RefreshResolvedSettings();
         RefreshSectorActivity();
     }
@@ -103,63 +133,26 @@ public class SectorEnemySpawner : MonoBehaviour
         if (_stageProgressChangedChannel != null)
             _stageProgressChangedChannel.OnEventRaised -= OnStageProgressChanged;
 
-        if (_namedBattleWorldLockedChannel != null)
-            _namedBattleWorldLockedChannel.OnEventRaised -= OnNamedBattleWorldLocked;
         if (_sectorStateManagerReadyChannel != null)
             _sectorStateManagerReadyChannel.OnEventRaised -= HandleSectorStateManagerReady;
+
         UnbindAllTrackedEnemies();
     }
 
     private void Update()
     {
         CleanupTrackedEnemies();
+        CleanupEncounterTargets();
         RefreshSectorActivity();
 
-        if (!CanSpawn())
+        if (!CanRunEncounter())
             return;
 
-        if (_aliveEnemies.Count >= _resolvedMaxAlive)
-            return;
-
-        if (_aliveEnemies.Count < _resolvedMinAlive)
-        {
-            if (!_fillMinimumImmediately && Time.time < _nextSpawnTime)
-                return;
-
-            int spawnedThisTick = 0;
-            int maxSpawnCount = Mathf.Max(1, _maxImmediateSpawnPerTick);
-
-            while (_aliveEnemies.Count < _resolvedMinAlive &&
-                   spawnedThisTick < maxSpawnCount &&
-                   _aliveEnemies.Count < _resolvedMaxAlive)
-            {
-                int spawned = TrySpawnEnemyBatch(maxSpawnCount - spawnedThisTick);
-
-                if (spawned <= 0)
-                    break;
-
-                spawnedThisTick += spawned;
-
-                if (!_fillMinimumImmediately)
-                    break;
-            }
-
-            if (spawnedThisTick > 0)
-                HandleSuccessfulSpawnBatch();
-
-            return;
-        }
-
-        if (Time.time < _nextSpawnTime)
-            return;
-
-        if (TrySpawnEnemyBatch(int.MaxValue) > 0)
-            HandleSuccessfulSpawnBatch();
-    }
-
-    private void OnNamedBattleWorldLocked(bool locked)
-    {
-        _isNamedBattleWorldLocked = locked;
+        EnsureEncounterStarted();
+        TickEnemyEncounterWaves();
+        TickPendingEnemySpawnQueue();
+        RefreshEncounterSpawnFinished();
+        RefreshEncounterCompletion();
     }
 
     private void OnSectorOpened(SectorRuntime sector)
@@ -172,79 +165,417 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private void OnStageProgressChanged(StageProgressSnapshot snapshot)
     {
-        if (_currentStageIndex == snapshot.stageIndex)
-            return;
+        bool isThisCurrentSector =
+            _sectorRuntime != null &&
+            _sectorStateManager != null &&
+            _sectorStateManager.CurrentSector == _sectorRuntime;
 
-        _currentStageIndex = snapshot.stageIndex;
-        RefreshResolvedSettings();
+        _isBattleResolveCountdownLocked =
+            snapshot.isResolveCountdown &&
+            isThisCurrentSector;
+
+        if (_currentStageIndex != snapshot.stageIndex)
+        {
+            _currentStageIndex = snapshot.stageIndex;
+            RefreshResolvedSettings();
+        }
+
+        RefreshSectorActivity();
     }
 
     private void RefreshResolvedSettings()
     {
-        _resolvedMinAlive = 0;
+        _objectOccupiedSpawnPoints.Clear();
+        _clearWithRoomObjects.Clear();
+        _currentRule = null;
         _resolvedMaxAlive = 0;
-        _resolvedSimultaneousSpawnCount = 1;
-        _resolvedFirstSpawnInterval = 0f;
-        _resolvedSpawnInterval = 0f;
-        _hasSpawnedFirstBatch = false;
-        _nextSpawnTime = float.PositiveInfinity;
+        _resolvedEncounterTotalSpawnCount = 0;
+        _spawnedEncounterEnemyCount = 0;
+        _pendingEnemySpawnCount = 0;
+        _spawnedEncounterObjectCount = 0;
+        _encounterSpawnFinished = false;
+        _encounterCleared = false;
+        _selectedEncounterPreset = null;
+        _selectedObjectRoomPreset = null;
+        _selectedEncounterPresetName = string.Empty;
+        _selectedObjectRoomPresetName = string.Empty;
+        _resolvedEnemyWavePresets.Clear();
+        _pendingEnemySpawnQueue.Clear();
+        _nextEnemyWaveIndex = 0;
+        _encounterStarted = false;
+        _encounterStartTime = 0f;
+        _sectorObjectsSpawned = false;
+        _hasEncounterConfiguration = false;
 
-        if (_stageEnemySetting == null)
+        if (_stageBattleSettings == null)
             return;
 
-        if (!_stageEnemySetting.TryGetRule(
+        if (!_stageBattleSettings.TryGetRule(
                 _currentStageIndex,
-                out StageEnemySettingSO.StageSpawnRule rule))
+                out StageBattleSettingsSO.StageSpawnRule rule))
         {
             return;
         }
 
-        _resolvedMinAlive = Mathf.Max(0, rule.sectorMinAlive);
-        _resolvedMaxAlive = Mathf.Max(_resolvedMinAlive, rule.sectorMaxAlive);
-        _resolvedSimultaneousSpawnCount = Mathf.Max(1, rule.SimultaneousSpawnCount);
-
-        _resolvedFirstSpawnInterval = DifficultyRuntime.ApplyEnemySpawnInterval(
-            rule.firstSpawnIntervalSeconds);
-
-        _resolvedSpawnInterval = DifficultyRuntime.ApplyEnemySpawnInterval(
-            rule.spawnIntervalSeconds);
-
-        ResetFirstSpawnSchedule();
+        _currentRule = rule;
+        SelectDeterministicPresets(rule);
+        ResetEncounterState();
     }
 
-    private void ResetFirstSpawnSchedule()
+    private void SelectDeterministicPresets(StageBattleSettingsSO.StageSpawnRule rule)
     {
-        _hasSpawnedFirstBatch = false;
-
-        _nextSpawnTime = _fillMinimumImmediately
-            ? Time.time
-            : Time.time + _resolvedFirstSpawnInterval;
-    }
-
-    private void HandleSuccessfulSpawnBatch()
-    {
-        _hasSpawnedFirstBatch = true;
-        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
-    }
-
-    private void ScheduleAfterEnemyRemoved()
-    {
-        if (!_hasSpawnedFirstBatch)
+        if (_stageBattleSettings == null || _sectorRuntime == null || rule == null)
             return;
 
-        _nextSpawnTime = Time.time + _resolvedSpawnInterval;
+        int stageSeed = ResolveStageSeed();
+        Vector2Int coord = _sectorRuntime.Coord;
+
+        if (_stageBattleSettings.TryPickNormalBattleEncounterPreset(
+                _currentStageIndex,
+                stageSeed,
+                coord,
+                out StageBattleSettingsSO.NormalBattleEncounterPreset encounterPreset))
+        {
+            _selectedEncounterPreset = encounterPreset;
+            _selectedEncounterPresetName = string.IsNullOrWhiteSpace(encounterPreset.displayName)
+                ? "EncounterPreset"
+                : encounterPreset.displayName;
+
+            _resolvedMaxAlive = Mathf.Max(0, encounterPreset.sectorMaxAlive);
+            ResolveEnemyWavePresetPlan(rule, stageSeed, coord);
+        }
+
+        if (_stageBattleSettings.TryPickSectorObjectRoomPreset(
+                _currentStageIndex,
+                stageSeed,
+                coord,
+                out StageBattleSettingsSO.SectorObjectRoomPreset objectPreset))
+        {
+            _selectedObjectRoomPreset = objectPreset;
+            _selectedObjectRoomPresetName = string.IsNullOrWhiteSpace(objectPreset.displayName)
+                ? "ObjectRoomPreset"
+                : objectPreset.displayName;
+        }
+
+        _hasEncounterConfiguration =
+            _selectedEncounterPreset != null ||
+            _selectedObjectRoomPreset != null;
+
+        _spawnRng = new System.Random(StageBattleSettingsSO.BuildSectorSeed(
+            stageSeed,
+            coord,
+            997));
+
+        if (!_hasEncounterConfiguration)
+        {
+            Debug.LogWarning(
+                $"[SectorEnemySpawner] NormalBattle room has no encounter preset and no object room preset. stage={_currentStageIndex}, sector={coord}",
+                this);
+        }
     }
 
-    private bool CanSpawn()
+    private void ResolveEnemyWavePresetPlan(
+        StageBattleSettingsSO.StageSpawnRule rule,
+        int stageSeed,
+        Vector2Int coord)
     {
-        if (_isNamedBattleWorldLocked)
+        _resolvedEnemyWavePresets.Clear();
+        _resolvedEncounterTotalSpawnCount = 0;
+
+        if (_selectedEncounterPreset == null ||
+            _selectedEncounterPreset.waves == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _selectedEncounterPreset.waves.Count; i++)
+        {
+            StageBattleSettingsSO.NormalBattleEnemyWave wave =
+                _selectedEncounterPreset.waves[i];
+
+            int seed = StageBattleSettingsSO.BuildSectorSeed(
+                stageSeed,
+                coord,
+                1100 + i);
+
+            if (_stageBattleSettings.TryPickEnemyWavePreset(
+                    rule,
+                    wave,
+                    seed,
+                    out StageBattleSettingsSO.EnemyWavePreset enemyWavePreset))
+            {
+                _resolvedEnemyWavePresets.Add(enemyWavePreset);
+                _resolvedEncounterTotalSpawnCount += enemyWavePreset.TotalSpawnCount;
+            }
+            else
+            {
+                _resolvedEnemyWavePresets.Add(null);
+                Debug.LogWarning(
+                    $"[SectorEnemySpawner] Failed to resolve enemy wave preset. stage={_currentStageIndex}, sector={coord}, waveIndex={i}",
+                    this);
+            }
+        }
+    }
+
+    private int ResolveStageSeed()
+    {
+        if (_sectorStateManager != null &&
+            _sectorStateManager.CurrentStageMapLayout != null)
+        {
+            return _sectorStateManager.CurrentStageMapLayout.stageSeed;
+        }
+
+        return StageMapGenerator.BuildStageSeed(0, _currentStageIndex);
+    }
+
+    private static int GetEncounterWaveCount(
+        StageBattleSettingsSO.NormalBattleEncounterPreset preset)
+    {
+        return preset != null && preset.waves != null
+            ? preset.waves.Count
+            : 0;
+    }
+
+    private void ResetEncounterState()
+    {
+        _spawnedEncounterEnemyCount = 0;
+        _pendingEnemySpawnCount = 0;
+        _spawnedEncounterObjectCount = 0;
+        _pendingEnemySpawnQueue.Clear();
+        RefreshEncounterSpawnFinished();
+        RefreshEncounterCompletion();
+    }
+
+    private void EnsureEncounterStarted()
+    {
+        if (_encounterStarted)
+            return;
+
+        _encounterStarted = true;
+        _encounterStartTime = Time.time;
+
+        SpawnSectorObjectRoomPreset();
+        RefreshEncounterSpawnFinished();
+        RefreshEncounterCompletion();
+    }
+
+    private void TickEnemyEncounterWaves()
+    {
+        if (_selectedEncounterPreset == null ||
+            _selectedEncounterPreset.waves == null ||
+            _nextEnemyWaveIndex >= _selectedEncounterPreset.waves.Count)
+        {
+            return;
+        }
+
+        while (_nextEnemyWaveIndex < _selectedEncounterPreset.waves.Count)
+        {
+            StageBattleSettingsSO.NormalBattleEnemyWave wave =
+                _selectedEncounterPreset.waves[_nextEnemyWaveIndex];
+
+            float delay = wave != null ? Mathf.Max(0f, wave.delaySeconds) : 0f;
+
+            if (Time.time < _encounterStartTime + delay)
+                return;
+
+            StageBattleSettingsSO.EnemyWavePreset enemyWavePreset =
+                _nextEnemyWaveIndex < _resolvedEnemyWavePresets.Count
+                    ? _resolvedEnemyWavePresets[_nextEnemyWaveIndex]
+                    : null;
+
+            EnqueueEnemyWavePreset(enemyWavePreset);
+            _nextEnemyWaveIndex++;
+        }
+    }
+
+    private void EnqueueEnemyWavePreset(StageBattleSettingsSO.EnemyWavePreset preset)
+    {
+        if (preset == null || preset.enemies == null)
+            return;
+
+        for (int i = 0; i < preset.enemies.Count; i++)
+        {
+            StageBattleSettingsSO.EnemyPresetSpawn spawn = preset.enemies[i];
+
+            if (spawn == null || spawn.archetype == null || !spawn.archetype.IsValid)
+                continue;
+
+            int count = Mathf.Max(1, spawn.count);
+
+            for (int j = 0; j < count; j++)
+                _pendingEnemySpawnQueue.Enqueue(spawn.archetype);
+        }
+
+        _pendingEnemySpawnCount = _pendingEnemySpawnQueue.Count;
+    }
+
+    private void TickPendingEnemySpawnQueue()
+    {
+        while (_pendingEnemySpawnQueue.Count > 0)
+        {
+            if (_resolvedMaxAlive > 0 && _aliveEnemies.Count >= _resolvedMaxAlive)
+                break;
+
+            EnemyStatConfigSO enemyConfig = _pendingEnemySpawnQueue.Peek();
+
+            if (!TrySpawnOne(enemyConfig))
+                break;
+
+            _pendingEnemySpawnQueue.Dequeue();
+            _spawnedEncounterEnemyCount++;
+            _pendingEnemySpawnCount = _pendingEnemySpawnQueue.Count;
+        }
+    }
+
+    private void SpawnSectorObjectRoomPreset()
+    {
+        if (_sectorObjectsSpawned)
+            return;
+
+        _sectorObjectsSpawned = true;
+
+        if (_selectedObjectRoomPreset == null ||
+            _selectedObjectRoomPreset.objects == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _selectedObjectRoomPreset.objects.Count; i++)
+        {
+            StageBattleSettingsSO.SectorObjectPresetSpawn spawn =
+                _selectedObjectRoomPreset.objects[i];
+
+        if (spawn == null || spawn.objectConfig == null ||!spawn.objectConfig.IsValid)
+        {
+            continue;
+        }
+
+            int count = Mathf.Max(1, spawn.count);
+
+            for (int j = 0; j < count; j++)
+            {
+                if (TrySpawnSectorObject(spawn))
+                    _spawnedEncounterObjectCount++;
+            }
+        }
+    }
+
+    private bool TrySpawnSectorObject(StageBattleSettingsSO.SectorObjectPresetSpawn spawn)
+    {
+        if (spawn == null ||
+            spawn.objectConfig == null ||
+            !spawn.objectConfig.IsValid)
+        {
+            return false;
+        }
+
+        if (!TryGetSpawnPoint(
+                SectorObjectSpawnPointUsage.SectorObject,
+                true,
+                out Transform spawnPoint))
+        {
+            return false;
+        }
+
+        Transform parent = _spawnedSectorObjectsRoot != null
+            ? _spawnedSectorObjectsRoot
+            : _spawnedEnemiesRoot != null
+                ? _spawnedEnemiesRoot
+                : _sectorRuntime.transform;
+
+        Quaternion rotation = spawn.objectConfig.ResolveSpawnRotation(spawnPoint, _spawnRng);
+
+        GameObject instance = Instantiate(
+            spawn.objectConfig.Prefab,
+            spawnPoint.position,
+            rotation,
+            parent);
+
+        if (instance == null)
             return false;
 
-        if (_sectorRuntime == null || _stageEnemySetting == null)
+        _objectOccupiedSpawnPoints.Add(spawnPoint);
+
+        if (spawn.objectConfig.ClearWithRoom)
+            _clearWithRoomObjects.Add(instance);
+
+        return true;
+    }
+
+    private void RefreshEncounterSpawnFinished()
+    {
+        if (!_hasEncounterConfiguration)
+        {
+            _encounterSpawnFinished = false;
+            return;
+        }
+
+        bool enemyWavesFinished =
+            _selectedEncounterPreset == null ||
+            _nextEnemyWaveIndex >= GetEncounterWaveCount(_selectedEncounterPreset);
+
+        bool pendingEnemiesFinished = _pendingEnemySpawnQueue.Count <= 0;
+
+        bool objectsFinished =
+            _selectedObjectRoomPreset == null ||
+            _sectorObjectsSpawned;
+
+        _encounterSpawnFinished =
+            enemyWavesFinished &&
+            pendingEnemiesFinished &&
+            objectsFinished;
+
+        _pendingEnemySpawnCount = _pendingEnemySpawnQueue.Count;
+    }
+
+    private void RefreshEncounterCompletion()
+    {
+        if (!_hasEncounterConfiguration)
+        {
+            _encounterCleared = false;
+            return;
+        }
+        bool wasCleared = _encounterCleared;
+
+        _encounterCleared =
+            _encounterSpawnFinished &&
+            _aliveEncounterTargets.Count == 0;
+
+        if (_encounterCleared && !wasCleared)
+            CleanupClearWithRoomObjects();
+    }
+    private void CleanupClearWithRoomObjects()
+    {
+        for (int i = _clearWithRoomObjects.Count - 1; i >= 0; i--)
+        {
+            GameObject instance = _clearWithRoomObjects[i];
+
+            if (instance != null)
+                Destroy(instance);
+        }
+
+        _clearWithRoomObjects.Clear();
+    }
+    private bool CanRunEncounter()
+    {
+
+        if (_sectorRuntime == null || _stageBattleSettings == null)
+            return false;
+
+        if (!_hasEncounterConfiguration)
             return false;
 
         if (_sectorExclusionRules != null &&
             _sectorExclusionRules.ExcludeFromEnemySpawn(_sectorRuntime.Coord))
+        {
+            return false;
+        }
+
+        if (_isBattleResolveCountdownLocked)
+            return false;
+
+        if (_sectorStateManager != null &&
+            _sectorStateManager.IsSectorFailed(_sectorRuntime))
         {
             return false;
         }
@@ -255,57 +586,39 @@ public class SectorEnemySpawner : MonoBehaviour
         if (_sectorRuntime.IsCleared)
             return false;
 
-        if (_resolvedMaxAlive <= 0)
+        if (_sectorRuntime.IsStartSector)
             return false;
+
+        if (_sectorStateManager != null &&
+            _sectorStateManager.HasCurrentStageMap)
+        {
+            if (!_sectorStateManager.TryGetStageRoomType(
+                    _sectorRuntime,
+                    out StageRoomType roomType) ||
+                roomType != StageRoomType.NormalBattle)
+            {
+                return false;
+            }
+        }
 
         return true;
     }
 
     private void RefreshSectorActivity()
     {
-        bool wasActive = _isSectorActive;
+        bool isFailed =
+            _sectorRuntime != null &&
+            _sectorStateManager != null &&
+            _sectorStateManager.IsSectorFailed(_sectorRuntime);
 
         _isSectorActive =
             _sectorRuntime != null &&
             _sectorStateManager != null &&
             _sectorStateManager.CurrentSector == _sectorRuntime &&
             (!_spawnOnlyWhenOpened || _sectorRuntime.IsOpened) &&
-            !_sectorRuntime.IsCleared;
-
-        if (_isSectorActive && !wasActive && float.IsPositiveInfinity(_nextSpawnTime))
-            ResetFirstSpawnSchedule();
-    }
-    private int TrySpawnEnemyBatch(int maxBatchLimit)
-    {
-        if (_sectorRuntime == null || _stageEnemySetting == null)
-            return 0;
-
-        int remainingCapacity = Mathf.Max(0, _resolvedMaxAlive - _aliveEnemies.Count);
-        int maxAllowedThisCall = Mathf.Max(1, maxBatchLimit);
-
-        int spawnCount = Mathf.Min(
-            _resolvedSimultaneousSpawnCount,
-            remainingCapacity,
-            maxAllowedThisCall);
-
-        int spawned = 0;
-
-        for (int i = 0; i < spawnCount; i++)
-        {
-            if (!_stageEnemySetting.TryPickArchetype(
-                    _currentStageIndex,
-                    out EnemyStatConfigSO enemyConfig))
-            {
-                break;
-            }
-
-            if (!TrySpawnOne(enemyConfig))
-                break;
-
-            spawned++;
-        }
-
-        return spawned;
+            !_sectorRuntime.IsCleared &&
+            !isFailed &&
+            !_isBattleResolveCountdownLocked;
     }
 
     private bool TrySpawnOne(EnemyStatConfigSO enemyConfig)
@@ -313,8 +626,13 @@ public class SectorEnemySpawner : MonoBehaviour
         if (enemyConfig == null || enemyConfig.EnemyPrefab == null)
             return false;
 
-        if (!TryGetSpawnPoint(out Transform spawnPoint))
+        if (!TryGetSpawnPoint(
+                SectorObjectSpawnPointUsage.Enemy,
+                true,
+                out Transform spawnPoint))
+        {
             return false;
+        }
 
         Transform parent = _spawnedEnemiesRoot != null
             ? _spawnedEnemiesRoot
@@ -329,6 +647,7 @@ public class SectorEnemySpawner : MonoBehaviour
         if (enemyInstance == null)
             return false;
 
+        enemyInstance.SetSpawnReady(false);
         enemyInstance.SetCurrentSector(_sectorRuntime);
         BindEnemyStatConfig(enemyInstance, enemyConfig);
         BindProjectileRoot(enemyInstance);
@@ -367,6 +686,12 @@ public class SectorEnemySpawner : MonoBehaviour
 
         for (int i = 0; i < killRewardSources.Length; i++)
             killRewardSources[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyScreenSpaceHPUIAnchor[] uiAnchors =
+            enemy.GetComponentsInChildren<EnemyScreenSpaceHPUIAnchor>(true);
+
+        for (int i = 0; i < uiAnchors.Length; i++)
+            uiAnchors[i].SetEnemyStatConfig(enemyConfig);
     }
 
     private void BindProjectileRoot(Enemy enemy)
@@ -382,8 +707,10 @@ public class SectorEnemySpawner : MonoBehaviour
                 rigs[i].SetProjectileRoot(_projectileRoot);
         }
     }
-
-    private bool TryGetSpawnPoint(out Transform spawnPoint)
+    private bool TryGetSpawnPoint(
+        SectorObjectSpawnPointUsage usage,
+        bool excludeObjectOccupiedPoints,
+        out Transform spawnPoint)
     {
         spawnPoint = null;
         _spawnPointBuffer.Clear();
@@ -391,7 +718,7 @@ public class SectorEnemySpawner : MonoBehaviour
         if (_sectorRuntime == null)
             return false;
 
-        Transform[] runtimePoints = _sectorRuntime.enemySpawnPoints;
+        Transform[] runtimePoints = _sectorRuntime.ObjectSpawnPoints;
 
         if (runtimePoints != null)
         {
@@ -402,9 +729,16 @@ public class SectorEnemySpawner : MonoBehaviour
                 if (point == null)
                     continue;
 
-                EnemySpawnPoint metadata = point.GetComponent<EnemySpawnPoint>();
+                if (excludeObjectOccupiedPoints &&
+                    _objectOccupiedSpawnPoints.Contains(point))
+                {
+                    continue;
+                }
 
-                if (metadata != null && !metadata.EnabledForSpawning)
+                SectorObjectSpawnPoint metadata =
+                    point.GetComponent<SectorObjectSpawnPoint>();
+
+                if (metadata != null && !metadata.CanUseFor(usage))
                     continue;
 
                 _spawnPointBuffer.Add(point);
@@ -412,27 +746,38 @@ public class SectorEnemySpawner : MonoBehaviour
         }
 
         if (_spawnPointBuffer.Count == 0 &&
-            _sectorRuntime.SpawnPointMetadata != null)
+            _sectorRuntime.ObjectSpawnPointMetadata != null)
         {
-            EnemySpawnPoint[] metadataPoints = _sectorRuntime.SpawnPointMetadata;
+            SectorObjectSpawnPoint[] metadataPoints =
+                _sectorRuntime.ObjectSpawnPointMetadata;
 
             for (int i = 0; i < metadataPoints.Length; i++)
             {
-                EnemySpawnPoint metadata = metadataPoints[i];
+                SectorObjectSpawnPoint metadata = metadataPoints[i];
 
-                if (metadata == null || !metadata.EnabledForSpawning)
+                if (metadata == null || !metadata.CanUseFor(usage))
                     continue;
 
-                _spawnPointBuffer.Add(metadata.transform);
+                Transform point = metadata.transform;
+
+                if (excludeObjectOccupiedPoints &&
+                    _objectOccupiedSpawnPoints.Contains(point))
+                {
+                    continue;
+                }
+
+                _spawnPointBuffer.Add(point);
             }
         }
 
         if (_spawnPointBuffer.Count <= 0)
             return false;
 
-        spawnPoint = _spawnPointBuffer[
-            UnityEngine.Random.Range(0, _spawnPointBuffer.Count)];
+        int index = _spawnRng != null
+            ? _spawnRng.Next(0, _spawnPointBuffer.Count)
+            : Random.Range(0, _spawnPointBuffer.Count);
 
+        spawnPoint = _spawnPointBuffer[index];
         return spawnPoint != null;
     }
 
@@ -451,12 +796,15 @@ public class SectorEnemySpawner : MonoBehaviour
 
             _trackedDamageables[enemy] = damageable;
             _deathHandlers[enemy] = handler;
+
+            TrackEncounterTarget(damageable);
         }
     }
 
     private void OnTrackedEnemyDied(Enemy enemy)
     {
         UntrackEnemy(enemy);
+        RefreshEncounterCompletion();
     }
 
     private void CleanupTrackedEnemies()
@@ -478,8 +826,68 @@ public class SectorEnemySpawner : MonoBehaviour
                 damageable.IsDead)
             {
                 UntrackEnemy(enemy);
+                RefreshEncounterCompletion();
             }
         }
+    }
+
+    private void TrackEncounterTarget(Damageable damageable)
+    {
+        if (damageable == null ||
+            _aliveEncounterTargets.Contains(damageable) ||
+            damageable.IsDead)
+        {
+            RefreshAliveEncounterTargetDebugCount();
+            return;
+        }
+
+        _aliveEncounterTargets.Add(damageable);
+
+        UnityAction handler = () => OnTrackedEncounterTargetDied(damageable);
+        damageable.OnDie += handler;
+        _encounterTargetDeathHandlers[damageable] = handler;
+
+        RefreshAliveEncounterTargetDebugCount();
+    }
+
+    private void OnTrackedEncounterTargetDied(Damageable damageable)
+    {
+        UntrackEncounterTarget(damageable);
+        RefreshEncounterCompletion();
+    }
+
+    private void CleanupEncounterTargets()
+    {
+        for (int i = _aliveEncounterTargets.Count - 1; i >= 0; i--)
+        {
+            Damageable damageable = _aliveEncounterTargets[i];
+
+            if (damageable == null || damageable.IsDead)
+            {
+                UntrackEncounterTarget(damageable);
+                RefreshEncounterCompletion();
+            }
+        }
+    }
+
+    private void UntrackEncounterTarget(Damageable damageable)
+    {
+        if (damageable != null &&
+            _encounterTargetDeathHandlers.TryGetValue(
+                damageable,
+                out UnityAction handler))
+        {
+            damageable.OnDie -= handler;
+            _encounterTargetDeathHandlers.Remove(damageable);
+        }
+
+        _aliveEncounterTargets.Remove(damageable);
+        RefreshAliveEncounterTargetDebugCount();
+    }
+
+    private void RefreshAliveEncounterTargetDebugCount()
+    {
+        _aliveEncounterTargetCount = _aliveEncounterTargets.Count;
     }
 
     private void RemoveDestroyedEnemyAt(int index)
@@ -491,12 +899,15 @@ public class SectorEnemySpawner : MonoBehaviour
 
         if (enemy != null)
         {
+            if (_trackedDamageables.TryGetValue(enemy, out Damageable damageable))
+                UntrackEncounterTarget(damageable);
+
             _trackedDamageables.Remove(enemy);
             _deathHandlers.Remove(enemy);
         }
 
         _aliveEnemies.RemoveAt(index);
-        ScheduleAfterEnemyRemoved();
+        RefreshEncounterCompletion();
     }
 
     private void UntrackEnemy(Enemy enemy)
@@ -504,7 +915,7 @@ public class SectorEnemySpawner : MonoBehaviour
         if (enemy == null)
         {
             _aliveEnemies.Remove(enemy);
-            ScheduleAfterEnemyRemoved();
+            RefreshEncounterCompletion();
             return;
         }
 
@@ -517,11 +928,12 @@ public class SectorEnemySpawner : MonoBehaviour
                 damageable.OnDie -= handler;
 
             _trackedDamageables.Remove(enemy);
+            UntrackEncounterTarget(damageable);
         }
 
         _deathHandlers.Remove(enemy);
         _aliveEnemies.Remove(enemy);
-        ScheduleAfterEnemyRemoved();
+        RefreshEncounterCompletion();
     }
 
     private void UnbindAllTrackedEnemies()
@@ -538,7 +950,18 @@ public class SectorEnemySpawner : MonoBehaviour
         _deathHandlers.Clear();
         _trackedDamageables.Clear();
         _aliveEnemies.Clear();
+
+        foreach (var pair in _encounterTargetDeathHandlers)
+        {
+            if (pair.Key != null && pair.Value != null)
+                pair.Key.OnDie -= pair.Value;
+        }
+
+        _encounterTargetDeathHandlers.Clear();
+        _aliveEncounterTargets.Clear();
+        RefreshAliveEncounterTargetDebugCount();
     }
+
     private void HandleSectorStateManagerReady(SectorStateManager manager)
     {
         if (manager == null)

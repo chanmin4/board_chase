@@ -91,6 +91,15 @@ public class UICanvasGroupOpacity : MonoBehaviour
         _isVisible = false;
         _targetAlpha = _settings != null ? _settings.HiddenAlpha : 0f;
     }
+    public void HideImmediate()
+    {
+        _isVisible = false;
+        _targetAlpha = _settings != null ? _settings.HiddenAlpha : 0f;
+        _velocity = 0f;
+
+        if (_canvasGroup != null)
+            _canvasGroup.alpha = _targetAlpha;
+    }
 
     public void SetAlpha(float alpha)
     {

@@ -112,6 +112,7 @@ MonoBehaviour:
   _invulnerabilityController: {fileID: 3207940816089234052}
   _applyPostHitInvulnerability: 0
   _postHitInvulnerabilityConfig: {fileID: 11400000, guid: 2661075ccaf59424f9bcf534625dddf9, type: 2}
+  _hitReceivedEvent: {fileID: 11400000, guid: 38bfe3f5cedaebb49bbadc6c6dfd4afb, type: 2}
   _updateHealthUI: {fileID: 11400000, guid: 2447a760b3f9f134f8730aa53c8d2ece, type: 2}
   _deathEvent: {fileID: 11400000, guid: 0a29544909be226418bc1677ec369790, type: 2}
   _restoreHealth: {fileID: 0}
@@ -298,8 +299,13 @@ MonoBehaviour:
   _damageable: {fileID: 4544002800027011311}
   _enemy: {fileID: 469768165924775885}
   _uiAnchor: {fileID: 7852430410609965579}
-  _followSettings: {fileID: 11400000, guid: 825432195fee4ff46b94cceb3acce643, type: 2}
   _healthBarSettings: {fileID: 11400000, guid: 72279adc02d91294087f66449bb59eee, type: 2}
+  _fallbackWorldOffset: {x: 0, y: 0, z: 0}
+  _fallbackScreenPixelOffset: {x: 0, y: 50}
+  _fallbackHideWhenBehindCamera: 1
+  _fallbackHideWhenOffScreen: 1
+  _fallbackClampToScreen: 1
+  _fallbackScreenEdgePadding: 24
 --- !u!114 &3592202219538704696
 MonoBehaviour:
   m_ObjectHideFlags: 0

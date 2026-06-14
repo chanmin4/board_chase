@@ -17,6 +17,15 @@ MonoBehaviour:
     displayName: 1_Stage
     roomGridSize: 2
     goalRoomType: 3
+    enableTreasureRooms: 1
+    treasureRoomMinCount: 1
+    treasureRoomMaxCount: 1
+    forceExactTreasureCountForStage: 1
+    forcedTreasureStageIndex: 1
+    forcedTreasureCount: 1
+    extraTreasureChancePerNoHitStage: 0.1
+    maxExtraTreasureChance: 1
+    excludeFirstRoomFromTreasure: 1
     timerSeconds: 30
     resetTimerWhenRequirementLost: 0
     useStartSectorOnly: 0
@@ -29,6 +38,15 @@ MonoBehaviour:
     displayName: 2_Stage
     roomGridSize: 3
     goalRoomType: 3
+    enableTreasureRooms: 1
+    treasureRoomMinCount: 1
+    treasureRoomMaxCount: 2
+    forceExactTreasureCountForStage: 1
+    forcedTreasureStageIndex: 1
+    forcedTreasureCount: 1
+    extraTreasureChancePerNoHitStage: 0.1
+    maxExtraTreasureChance: 1
+    excludeFirstRoomFromTreasure: 1
     timerSeconds: 60
     resetTimerWhenRequirementLost: 0
     useStartSectorOnly: 0
@@ -41,6 +59,15 @@ MonoBehaviour:
     displayName: 3_Stage
     roomGridSize: 4
     goalRoomType: 3
+    enableTreasureRooms: 1
+    treasureRoomMinCount: 1
+    treasureRoomMaxCount: 2
+    forceExactTreasureCountForStage: 1
+    forcedTreasureStageIndex: 1
+    forcedTreasureCount: 1
+    extraTreasureChancePerNoHitStage: 0.1
+    maxExtraTreasureChance: 1
+    excludeFirstRoomFromTreasure: 1
     timerSeconds: 120
     resetTimerWhenRequirementLost: 0
     useStartSectorOnly: 0

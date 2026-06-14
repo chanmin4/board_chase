@@ -19,7 +19,7 @@ public class EnemyArcBombProjectile : MonoBehaviour
     private QueryTriggerInteraction _triggerInteraction;
 
     private MaskRenderManagerEventChannelSO _maskRenderManagerReadyChannel;
-    private MaskRenderManager.PaintChannel _paintChannel;
+    private PaintChannel _paintChannel;
     private float _paintRadiusWorld;
     private int _paintPriority;
     private PoisonPuddleDamageConfigSO _poisonPuddleDamageConfig;
@@ -57,7 +57,7 @@ public class EnemyArcBombProjectile : MonoBehaviour
         LayerMask damageTargetMask,
         QueryTriggerInteraction triggerInteraction,
         MaskRenderManagerEventChannelSO maskRenderManagerReadyChannel,
-        MaskRenderManager.PaintChannel paintChannel,
+        PaintChannel paintChannel,
         float paintRadiusWorld,
         int paintPriority,
         PoisonPuddleDamageConfigSO poisonPuddleDamageConfig,
@@ -236,7 +236,7 @@ public class EnemyArcBombProjectile : MonoBehaviour
         if (manager == null)
             return;
 
-        if (_paintChannel == MaskRenderManager.PaintChannel.PoisonPuddle)
+        if (_paintChannel == PaintChannel.PoisonPuddle)
         {
             manager.RequestCircle(
                 _paintChannel,

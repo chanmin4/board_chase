@@ -5,16 +5,24 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class StageProgressionManager : MonoBehaviour
 {
+    private enum SectorJudgePhase
+    {
+        None,
+        Judging,
+        SuccessCountdown,
+        FailureCountdown,
+        Resolved
+    }
+
     [Header("Rules")]
     [Tooltip("stage별 방 크기, 목표 방 타입, PlayerTimer, stage 전환 조건을 담은 규칙 SO입니다.")]
     [SerializeField] private StageProgressionRulesSO _rules;
 
+    [Tooltip("점유 샘플링, NormalBattle 판정, 성공/실패 확정 규칙을 담은 Sector 공통 규칙 SO입니다.")]
+    [SerializeField] private SectorRulesSO _sectorRules;
+
     [Tooltip("게임 시작 시 적용할 stage index입니다. 보통 0으로 두고 StartSector 전용 시작 stage를 먼저 실행합니다.")]
     [SerializeField] private int _startingStageIndex = 0;
-
-    [Header("Room Completion")]
-    [Tooltip("방 클리어 시 해당 sector를 백신 100% 상태로 덮을지 여부입니다.")]
-    [SerializeField] private bool _fillCompletedSectorWithVaccine = true;
 
     [Header("Stage Transition")]
     [Tooltip("다음 stage로 넘어가기 전에 현재 stage sector들의 런타임 상태를 정리할지 여부입니다.")]
@@ -29,7 +37,6 @@ public class StageProgressionManager : MonoBehaviour
 
     [Tooltip("stage 전환 또는 방 완료 시 sector paint/runtime 상태를 정리하는 컴포넌트입니다.")]
     [SerializeField] private SectorCleanupApplier _sectorCleanupApplier;
-    
 
     [Tooltip("stage 시작 시 StageProgressionRulesSO의 roomGridSize를 기준으로 sector prefab을 생성하는 컴포넌트입니다.")]
     [SerializeField] private StageSectorInstantiator _stageSectorInstantiator;
@@ -41,9 +48,11 @@ public class StageProgressionManager : MonoBehaviour
     [Header("Broadcasting On")]
     [Tooltip("휴식 시간이 끝난 뒤 다음 stage 적용을 요청하는 이벤트입니다.")]
     [SerializeField] private VoidEventChannelSO _requestProgressNextStageChannel;
+
     [Header("Manager Ready")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     [SerializeField] private NamedSectorControllerReadyEventChannelSO _namedSectorControllerReadyChannel;
+
     [Tooltip("final stage 완료 시 발생시키는 이벤트입니다. 승리 UI나 결과 처리에서 구독합니다.")]
     [SerializeField] private VoidEventChannelSO _finalStageCompletedChannel;
 
@@ -53,12 +62,19 @@ public class StageProgressionManager : MonoBehaviour
     [Tooltip("stage 완료 보상으로 Infection Control을 회복시킬 때 발생시키는 이벤트입니다.")]
     [SerializeField] private FloatEventChannelSO _stageInfectionControlRecoverChannel;
 
+    [Header("No Hit Tracking")]
+    [Tooltip("Player hit event used to increase next-stage extra Treasure room chance when the current stage is cleared without damage.")]
+    [SerializeField] private HitReceivedEventChannelSO _playerHitReceivedChannel;
+
     private NamedSectorController _namedSectorController;
+
     public event Action FinalStageCompleted;
 
+    private SectorJudgePhase _sectorJudgePhase;
     private StageProgressionRulesSO.StageProgressRule _currentRule;
     private SectorRuntime _activeSector;
     private SectorOccupancy _activeOccupancy;
+    private SectorEnemySpawner _activeEnemySpawner;
 
     private int _currentStageIndex;
     private float _remainingSeconds;
@@ -70,12 +86,48 @@ public class StageProgressionManager : MonoBehaviour
     private bool _isResting;
     private bool _stageTransitionPending;
     private bool _finalStageCompleted;
+    private bool _currentStageTookPlayerHit;
+    private bool _currentStageResultRecorded;
+    private int _consecutiveNoHitStageCount;
 
+    private bool UseTimedNormalBattleJudge =>
+        _sectorRules != null && _sectorRules.UseTimedNormalBattleJudge;
+
+    private bool CompleteNormalBattleOnEnemyClear =>
+        _sectorRules == null || _sectorRules.CompleteNormalBattleOnEnemyClear;
+
+    private bool ApplyNormalBattleResolveCoatingEffects =>
+        _sectorRules != null && _sectorRules.ApplyNormalBattleResolveCoatingEffects;
+
+    private float SuccessCountdownSeconds =>
+        _sectorRules != null ? _sectorRules.SuccessCountdownSeconds : 5f;
+
+    private float FailureCountdownSeconds =>
+        _sectorRules != null ? _sectorRules.FailureCountdownSeconds : 5f;
+
+    private SectorOwner NeutralJudgeResult =>
+        _sectorRules != null ? _sectorRules.NeutralJudgeResult : SectorOwner.Neutral;
+
+    private bool FillCompletedSectorWithVaccine =>
+        _sectorRules != null &&
+        _sectorRules.ApplyNormalBattleResolveCoatingEffects &&
+        _sectorRules.FillCompletedSectorWithVaccine;
+
+    private bool FillFailedSectorWithVirus =>
+        _sectorRules != null &&
+        _sectorRules.ApplyNormalBattleResolveCoatingEffects &&
+        _sectorRules.FillFailedSectorWithVirus;
+
+    private bool ClearPaintMasksOnBattleResolve =>
+        _sectorRules == null || _sectorRules.ClearPaintMasksOnBattleResolve;
+    
     private void Awake()
     {
         if (_sectorStateManager == null)
             _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
 
+        if (_sectorCleanupApplier == null)
+            _sectorCleanupApplier = FindAnyObjectByType<SectorCleanupApplier>();
 
         if (_stageSectorInstantiator == null)
             _stageSectorInstantiator = FindAnyObjectByType<StageSectorInstantiator>();
@@ -106,6 +158,9 @@ public class StageProgressionManager : MonoBehaviour
         if (_stageAppliedChannel != null)
             _stageAppliedChannel.OnEventRaised += OnStageApplied;
 
+        if (_playerHitReceivedChannel != null)
+            _playerHitReceivedChannel.OnEventRaised += OnPlayerHitReceived;
+
         BeginStage(_startingStageIndex);
     }
 
@@ -119,6 +174,9 @@ public class StageProgressionManager : MonoBehaviour
 
         if (_stageAppliedChannel != null)
             _stageAppliedChannel.OnEventRaised -= OnStageApplied;
+
+        if (_playerHitReceivedChannel != null)
+            _playerHitReceivedChannel.OnEventRaised -= OnPlayerHitReceived;
 
         UnbindNamedSectorController();
     }
@@ -136,27 +194,30 @@ public class StageProgressionManager : MonoBehaviour
             return;
         }
 
+        if (TryCompleteNormalBattleByEnemyClear())
+            return;
+
+        if (_sectorJudgePhase == SectorJudgePhase.Judging)
+        {
+            TickNormalBattleJudge();
+            return;
+        }
+
+        if (_sectorJudgePhase == SectorJudgePhase.SuccessCountdown)
+        {
+            TickSuccessCountdown();
+            return;
+        }
+
+        if (_sectorJudgePhase == SectorJudgePhase.FailureCountdown)
+        {
+            TickFailureCountdown();
+            return;
+        }
         if (_isCompleted)
             return;
 
-        bool requirementMet = IsRequirementMet();
-
-        if (requirementMet)
-        {
-            _remainingSeconds -= Time.deltaTime;
-
-            if (_remainingSeconds <= 0f)
-            {
-                CompleteCurrentSector();
-                return;
-            }
-        }
-        else if (_currentRule.resetTimerWhenRequirementLost)
-        {
-            _remainingSeconds = _currentRule.timerSeconds;
-        }
-
-        PublishSnapshot();
+        TickLegacyStartSectorTimer();
     }
 
     private void CompleteCurrentSector()
@@ -166,6 +227,7 @@ public class StageProgressionManager : MonoBehaviour
 
         _remainingSeconds = 0f;
         _isCompleted = true;
+        _sectorJudgePhase = SectorJudgePhase.Resolved;
 
         bool completedStartSector =
             _sectorStateManager != null &&
@@ -178,11 +240,24 @@ public class StageProgressionManager : MonoBehaviour
 
         if (_sectorCleanupApplier != null)
         {
-            if (_fillCompletedSectorWithVaccine)
-                _sectorCleanupApplier.CleanupThenApplyPlayerCompletedState(_activeSector, clearPaintMasks: true);
+            if (ApplyNormalBattleResolveCoatingEffects && FillCompletedSectorWithVaccine)
+            {
+                _sectorCleanupApplier.CleanupThenApplyPlayerCompletedState(
+                    _activeSector,
+                    ClearPaintMasksOnBattleResolve);
+            }
+            else if (ApplyNormalBattleResolveCoatingEffects)
+            {
+                _sectorCleanupApplier.CleanupSector(
+                    _activeSector,
+                    ClearPaintMasksOnBattleResolve);
+            }
             else
-                _sectorCleanupApplier.CleanupSector(_activeSector, clearPaintMasks: true);
+            {
+                _sectorCleanupApplier.CleanupCombatObjects(_activeSector);
+            }
         }
+
         if (completedStartSector &&
             _currentRule.advanceStageOnStartSectorComplete &&
             _rules != null &&
@@ -195,11 +270,40 @@ public class StageProgressionManager : MonoBehaviour
 
         PublishSnapshot();
     }
+    private void ApplyPlayerCoating()
+    {
+        if (_activeSector == null)
+            return;
 
+        _remainingSeconds = 0f;
+        _sectorJudgePhase = SectorJudgePhase.Resolved;
+
+        if (_sectorCleanupApplier != null)
+        {
+            if (ApplyNormalBattleResolveCoatingEffects && FillCompletedSectorWithVaccine)
+            {
+                _sectorCleanupApplier.ApplyPlayerCompletedState(_activeSector);
+            }
+            else if (ApplyNormalBattleResolveCoatingEffects)
+            {
+                _sectorCleanupApplier.CleanupSector(
+                    _activeSector,
+                    ClearPaintMasksOnBattleResolve);
+            }
+            else
+            {
+                _sectorCleanupApplier.CleanupCombatObjects(_activeSector);
+            }
+        }
+
+        PublishSnapshot();
+    }
     private void BeginStageTransition()
     {
         if (_stageTransitionPending || _finalStageCompleted)
             return;
+
+        RecordCurrentStageResultForTreasureRoll();
 
         _stageTransitionPending = true;
 
@@ -293,10 +397,13 @@ public class StageProgressionManager : MonoBehaviour
 
     private void CompleteFinalStage()
     {
+        RecordCurrentStageResultForTreasureRoll();
+
         _finalStageCompleted = true;
         _isCompleted = true;
         _isResting = false;
         _remainingSeconds = 0f;
+        _sectorJudgePhase = SectorJudgePhase.Resolved;
 
         FinalStageCompleted?.Invoke();
         _finalStageCompletedChannel?.RaiseEvent();
@@ -333,12 +440,18 @@ public class StageProgressionManager : MonoBehaviour
         _currentStageIndex = stageIndex;
         _hasRule = _rules != null && _rules.TryGetRule(stageIndex, out _currentRule);
         _finalStageCompleted = false;
+        _sectorJudgePhase = SectorJudgePhase.None;
+        _currentStageTookPlayerHit = false;
+        _currentStageResultRecorded = false;
 
         if (_hasRule && _sectorStateManager != null)
         {
             bool generatedStageBuilt =
                 _stageSectorInstantiator != null &&
-                _stageSectorInstantiator.BuildStage(_currentRule, _sectorStateManager);
+                _stageSectorInstantiator.BuildStage(
+                    _currentRule,
+                    _sectorStateManager,
+                    _consecutiveNoHitStageCount);
 
             if (!generatedStageBuilt)
             {
@@ -378,15 +491,39 @@ public class StageProgressionManager : MonoBehaviour
         _activeOccupancy = sector != null
             ? sector.GetComponentInChildren<SectorOccupancy>(true)
             : null;
+        _activeEnemySpawner = sector != null
+            ? sector.GetComponentInChildren<SectorEnemySpawner>(true)
+            : null;
 
         _isResting = false;
         _restRemainingSeconds = 0f;
         _restDurationSeconds = 0f;
-        _isCompleted = sector != null && sector.IsCleared;
-        _remainingSeconds = _isCompleted || !_hasRule
-            ? 0f
-            : _currentRule.timerSeconds;
+        _sectorJudgePhase = SectorJudgePhase.None;
 
+        _isCompleted = sector != null && sector.IsCleared;
+        _remainingSeconds = 0f;
+
+        if (!_hasRule || sector == null || _isCompleted)
+        {
+            PublishSnapshot();
+            return;
+        }
+
+        if (!ShouldShowPlayerTimerForSector(sector))
+        {
+            PublishSnapshot();
+            return;
+        }
+
+        if (ShouldUseTimedNormalBattleJudge(sector))
+        {
+            _sectorJudgePhase = SectorJudgePhase.Judging;
+            _remainingSeconds = Mathf.Max(0f, _currentRule.timerSeconds);
+            PublishSnapshot();
+            return;
+        }
+
+        _remainingSeconds = _currentRule.timerSeconds;
         PublishSnapshot();
     }
 
@@ -395,10 +532,23 @@ public class StageProgressionManager : MonoBehaviour
         if (!_hasRule ||
             _activeSector == null ||
             _activeSector.IsCleared ||
-            _activeOccupancy == null)
+            (_activeOccupancy == null && !ShouldCompleteNormalBattleOnEnemyClear(_activeSector)))
         {
             return false;
         }
+
+        if (ShouldCompleteNormalBattleOnEnemyClear(_activeSector))
+            return _activeEnemySpawner != null &&
+                   _activeEnemySpawner.HasCompletedNormalBattleEncounter;
+
+        if (_sectorJudgePhase == SectorJudgePhase.SuccessCountdown)
+            return true;
+
+        if (_sectorJudgePhase == SectorJudgePhase.FailureCountdown)
+            return false;
+
+        if (_sectorJudgePhase == SectorJudgePhase.Judging)
+            return _activeOccupancy.CurrentSnapshot.dominantOwner == SectorOwner.Player;
 
         return _activeOccupancy.CurrentSnapshot.owner == SectorOwner.Player;
     }
@@ -407,28 +557,58 @@ public class StageProgressionManager : MonoBehaviour
     {
         if (_snapshotChangedChannel == null)
             return;
+
         bool isStartSector =
             _sectorStateManager != null &&
             _activeSector != null &&
             _sectorStateManager.IsStartSector(_activeSector);
+
+        SectorOwner dominantOwner = _activeOccupancy != null
+            ? _activeOccupancy.CurrentSnapshot.dominantOwner
+            : SectorOwner.Neutral;
+
         bool requirementMet = IsRequirementMet();
+        bool usesEnemyClearNormalBattle =
+            _activeSector != null &&
+            ShouldCompleteNormalBattleOnEnemyClear(_activeSector);
+        bool showPlayerTimer =
+            _isResting ||
+            _sectorJudgePhase == SectorJudgePhase.SuccessCountdown ||
+            _sectorJudgePhase == SectorJudgePhase.FailureCountdown ||
+            ShouldShowPlayerTimerForSector(_activeSector);
         bool playerOwned =
             _activeSector != null &&
             (_activeSector.IsCleared ||
-             (_activeOccupancy != null &&
-              _activeOccupancy.CurrentSnapshot.owner == SectorOwner.Player));
+             _sectorJudgePhase == SectorJudgePhase.SuccessCountdown ||
+             (!usesEnemyClearNormalBattle && dominantOwner == SectorOwner.Player));
 
+        float durationSeconds = _sectorJudgePhase == SectorJudgePhase.SuccessCountdown
+            ? SuccessCountdownSeconds
+            : _sectorJudgePhase == SectorJudgePhase.FailureCountdown
+                ? FailureCountdownSeconds
+                : _hasRule ? _currentRule.timerSeconds : 0f;
+        bool isResolveCountdown =
+            _sectorJudgePhase == SectorJudgePhase.SuccessCountdown ||
+            _sectorJudgePhase == SectorJudgePhase.FailureCountdown;
+
+        SectorOwner resolveCountdownOwner =
+            _sectorJudgePhase == SectorJudgePhase.SuccessCountdown ? SectorOwner.Player :
+            _sectorJudgePhase == SectorJudgePhase.FailureCountdown ? SectorOwner.Virus :
+            SectorOwner.Neutral;
         StageProgressSnapshot snapshot = new StageProgressSnapshot
         {
+            isResolveCountdown = isResolveCountdown,
+            resolveCountdownOwner = resolveCountdownOwner,
+            isFailureCountdown = _sectorJudgePhase == SectorJudgePhase.FailureCountdown,
             isStartSector = isStartSector,
             stageIndex = _currentStageIndex,
             displayName = _hasRule ? _currentRule.displayName : string.Empty,
 
             remainingSeconds = _remainingSeconds,
-            durationSeconds = _hasRule ? _currentRule.timerSeconds : 0f,
-            requiredPlayerOwnedCount = _activeSector != null ? 1 : 0,
+            durationSeconds = durationSeconds,
+            requiredPlayerOwnedCount = _activeSector != null && !isStartSector ? 1 : 0,
             currentPlayerOwnedCount = playerOwned ? 1 : 0,
-
+            showPlayerTimer = showPlayerTimer,
             requirementMet = requirementMet,
             isCompleted = _isCompleted,
             hasNextStage =
@@ -439,7 +619,9 @@ public class StageProgressionManager : MonoBehaviour
 
             isResting = _isResting,
             restRemainingSeconds = _restRemainingSeconds,
-            restDurationSeconds = _restDurationSeconds
+            restDurationSeconds = _restDurationSeconds,
+
+            dominantOwner = dominantOwner,
         };
 
         snapshot.progress01 = snapshot.durationSeconds > 0f
@@ -450,7 +632,6 @@ public class StageProgressionManager : MonoBehaviour
             ? 1f - Mathf.Clamp01(snapshot.restRemainingSeconds / snapshot.restDurationSeconds)
             : 0f;
 
-      
         _snapshotChangedChannel.RaiseEvent(snapshot);
     }
 
@@ -485,5 +666,272 @@ public class StageProgressionManager : MonoBehaviour
     {
         if (_namedSectorController != null)
             _namedSectorController.NamedBattleCompleted -= OnNamedBattleCompleted;
+    }
+
+    private void OnPlayerHitReceived(GameObject _)
+    {
+        if (!_hasRule || _currentStageIndex <= 0 || _isResting || _finalStageCompleted)
+            return;
+
+        _currentStageTookPlayerHit = true;
+    }
+
+    private void RecordCurrentStageResultForTreasureRoll()
+    {
+        if (_currentStageResultRecorded)
+            return;
+
+        _currentStageResultRecorded = true;
+
+        if (!_hasRule || _currentStageIndex <= 0)
+            return;
+
+        if (_playerHitReceivedChannel == null)
+        {
+            _consecutiveNoHitStageCount = 0;
+            return;
+        }
+
+        _consecutiveNoHitStageCount = _currentStageTookPlayerHit
+            ? 0
+            : _consecutiveNoHitStageCount + 1;
+    }
+
+    private bool ShouldUseTimedNormalBattleJudge(SectorRuntime sector)
+    {
+        if (!UseTimedNormalBattleJudge ||
+            sector == null ||
+            _activeOccupancy == null ||
+            _sectorStateManager == null ||
+            _sectorStateManager.IsStartSector(sector) ||
+            _sectorStateManager.IsSectorFailed(sector))
+        {
+            return false;
+        }
+
+        if (!_sectorStateManager.TryGetStageRoomType(sector, out StageRoomType roomType))
+            return false;
+
+        return roomType == StageRoomType.NormalBattle;
+    }
+
+    private bool ShouldCompleteNormalBattleOnEnemyClear(SectorRuntime sector)
+    {
+        if (!CompleteNormalBattleOnEnemyClear ||
+            sector == null ||
+            _sectorStateManager == null ||
+            _sectorStateManager.IsStartSector(sector) ||
+            _sectorStateManager.IsSectorFailed(sector))
+        {
+            return false;
+        }
+
+        if (!_sectorStateManager.TryGetStageRoomType(sector, out StageRoomType roomType))
+            return false;
+
+        return roomType == StageRoomType.NormalBattle;
+    }
+
+    private bool TryCompleteNormalBattleByEnemyClear()
+    {
+        if (_activeSector == null ||
+            _isCompleted ||
+            !ShouldCompleteNormalBattleOnEnemyClear(_activeSector) ||
+            _activeEnemySpawner == null ||
+            !_activeEnemySpawner.HasCompletedNormalBattleEncounter)
+        {
+            return false;
+        }
+
+        CompleteCurrentSector();
+        return true;
+    }
+
+    private void TickNormalBattleJudge()
+    {
+        _remainingSeconds = Mathf.Max(0f, _remainingSeconds - Time.deltaTime);
+
+        PublishSnapshot();
+    }
+
+    private void ResolveNormalBattleJudge()
+    {
+        if (_activeSector == null)
+            return;
+
+        if (_activeOccupancy != null)
+            _activeOccupancy.RefreshNow();
+
+        SectorOwner result = _activeOccupancy != null
+            ? _activeOccupancy.CurrentSnapshot.owner
+            : SectorOwner.Neutral;
+
+        if (result == SectorOwner.Neutral)
+            result = NeutralJudgeResult;
+
+        if (result == SectorOwner.Player)
+        {
+            if (_sectorCleanupApplier != null)
+                _sectorCleanupApplier.CleanupCombatObjects(_activeSector);
+
+            if (_sectorStateManager != null)
+                _sectorStateManager.CompleteSector(_activeSector);
+            else
+                _activeSector.SetCleared(true);
+
+            _isCompleted = true;
+            BeginSuccessCountdown();
+            return;
+        }
+
+        if (result == SectorOwner.Virus)
+        {
+            if (_sectorCleanupApplier != null)
+                _sectorCleanupApplier.CleanupCombatObjects(_activeSector);
+
+            if (_sectorStateManager != null)
+                _sectorStateManager.FailSector(_activeSector);
+
+            _isCompleted = false;
+            BeginFailureCountdown();
+            return;
+        }
+
+        _sectorJudgePhase = SectorJudgePhase.Resolved;
+        _remainingSeconds = 0f;
+        PublishSnapshot();
+    }
+
+    private void BeginSuccessCountdown()
+    {
+        _sectorJudgePhase = SectorJudgePhase.SuccessCountdown;
+        _remainingSeconds = Mathf.Max(0f, SuccessCountdownSeconds);
+
+        if (_remainingSeconds <= 0f)
+        {
+            CompleteCurrentSector();
+            return;
+        }
+
+        PublishSnapshot();
+    }
+
+    private void TickSuccessCountdown()
+    {
+        _remainingSeconds = Mathf.Max(0f, _remainingSeconds - Time.deltaTime);
+
+        if (_remainingSeconds <= 0f)
+        {
+            ApplyPlayerCoating();
+            return;
+        }
+
+        PublishSnapshot();
+    }
+
+    private void BeginFailureCountdown()
+    {
+        _sectorJudgePhase = SectorJudgePhase.FailureCountdown;
+        _remainingSeconds = Mathf.Max(0f, FailureCountdownSeconds);
+
+        if (_remainingSeconds <= 0f)
+        {
+            ApplyVirusCoating();
+            return;
+        }
+
+        PublishSnapshot();
+    }
+    
+
+    private void TickFailureCountdown()
+    {
+        _remainingSeconds = Mathf.Max(0f, _remainingSeconds - Time.deltaTime);
+
+        if (_remainingSeconds <= 0f)
+        {
+            ApplyVirusCoating();
+            return;
+        }
+
+        PublishSnapshot();
+    }
+
+    private void ApplyVirusCoating()
+    {
+        if (_activeSector == null)
+            return;
+
+        _sectorJudgePhase = SectorJudgePhase.Resolved;
+        _remainingSeconds = 0f;
+        _isCompleted = false;
+
+        if (_sectorCleanupApplier != null)
+        {
+            if (ApplyNormalBattleResolveCoatingEffects && FillFailedSectorWithVirus)
+            {
+                _sectorCleanupApplier.ApplyVirusFailedState(_activeSector);
+            }
+            else if (ApplyNormalBattleResolveCoatingEffects)
+            {
+                _sectorCleanupApplier.CleanupSector(
+                    _activeSector,
+                    ClearPaintMasksOnBattleResolve);
+            }
+            else
+            {
+                _sectorCleanupApplier.CleanupCombatObjects(_activeSector);
+            }
+        }
+
+        PublishSnapshot();
+    }
+
+    private void TickLegacyStartSectorTimer()
+    {
+        bool requirementMet = IsRequirementMet();
+
+        if (requirementMet)
+        {
+            _remainingSeconds -= Time.deltaTime;
+
+            if (_remainingSeconds <= 0f)
+            {
+                CompleteCurrentSector();
+                return;
+            }
+        }
+        else if (_currentRule.resetTimerWhenRequirementLost)
+        {
+            _remainingSeconds = _currentRule.timerSeconds;
+        }
+
+        PublishSnapshot();
+    }
+    private bool ShouldShowPlayerTimerForSector(SectorRuntime sector)
+    {
+        if (!_hasRule || sector == null)
+            return false;
+
+        if (_sectorStateManager != null &&
+            _sectorStateManager.IsStartSector(sector))
+        {
+            return false;
+        }
+
+        if (_sectorStateManager == null ||
+            !_sectorStateManager.HasCurrentStageMap)
+        {
+            return true;
+        }
+
+        if (!_sectorStateManager.TryGetStageRoomType(
+                sector,
+                out StageRoomType roomType))
+        {
+            return false;
+        }
+
+        return roomType == StageRoomType.NormalBattle;
     }
 }

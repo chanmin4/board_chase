@@ -39,7 +39,7 @@ public class EnemyFireArcBombActionSO : StateActionSO<EnemyFireArcBombAction>
     public LayerMask DamageTargetMask => _definitionConfig.DamageTargetMask;
     public QueryTriggerInteraction TriggerInteraction => _definitionConfig.TriggerInteraction;
 
-    public MaskRenderManager.PaintChannel PaintChannel => _definitionConfig.PaintChannel;
+    public PaintChannel PaintChannel => _definitionConfig.PaintChannel;
     public float PaintRadiusWorld => _definitionConfig.PaintRadiusWorld;
     public int PaintPriority => _definitionConfig.PaintPriority;
     public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _definitionConfig.PoisonPuddleDamageConfig;

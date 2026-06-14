@@ -4,7 +4,7 @@ using UnityEngine;
 public class Attack_PaintBullet : AttackBullet
 {
     private MaskRenderManager _maskRenderManager;
-    private MaskRenderManager.PaintChannel _paintChannel;
+    private PaintChannel _paintChannel;
     private float _paintRadiusWorld;
     private int _paintPriority;
     private object _paintSender;
@@ -22,10 +22,11 @@ public class Attack_PaintBullet : AttackBullet
         LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
         MaskRenderManager maskRenderManager,
-        MaskRenderManager.PaintChannel paintChannel,
+        PaintChannel paintChannel,
         float paintRadiusWorld,
         int paintPriority,
-        GameObject source)
+        GameObject source,
+        ShootHitConfirmedEventChannelSO shootHitConfirmedEvent)
     {
         _maskRenderManager = maskRenderManager;
         _paintChannel = paintChannel;
@@ -45,7 +46,8 @@ public class Attack_PaintBullet : AttackBullet
             damageTargetMask,
             impactMask,
             triggerInteraction,
-            source);
+            source,
+            shootHitConfirmedEvent);
     }
 
     protected override void OnCompleted(Vector3 worldPoint)

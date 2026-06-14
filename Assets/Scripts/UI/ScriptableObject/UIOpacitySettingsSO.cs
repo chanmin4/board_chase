@@ -15,7 +15,7 @@ public class UIOpacitySettingsSO : ScriptableObject
     [SerializeField, Min(0f)] private float _fadeOutDuration = 0.2f;
 
     public float DefaultAlpha => Mathf.Clamp(_defaultAlpha, MinAlpha, MaxAlpha);
-    public float HiddenAlpha => Mathf.Clamp(_hiddenAlpha, MinAlpha, MaxAlpha);
+    public float HiddenAlpha => Mathf.Clamp01(_hiddenAlpha);
     public float EmphasisAlpha => Mathf.Clamp(_emphasisAlpha, MinAlpha, MaxAlpha);
     public float MinAlpha => Mathf.Min(_minAlpha, _maxAlpha);
     public float MaxAlpha => Mathf.Max(_minAlpha, _maxAlpha);

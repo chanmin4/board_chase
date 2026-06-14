@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 [Serializable]
 public class NamedSectorRuntimeUnityEvent : UnityEvent<SectorRuntime>
@@ -44,7 +45,8 @@ public class NamedSectorController : MonoBehaviour
     [SerializeField] private NamedBattleSignalEventChannelSO _battleEndedEvent;
 
     [Header("Named Spawn")]
-    [SerializeField] private StageEnemySettingSO _stageEnemySetting;
+    [FormerlySerializedAs("_stageEnemySetting")]
+    [SerializeField] private StageBattleSettingsSO _stageBattleSettings;
     [SerializeField] private int _stageOverride = -1;
     [SerializeField] private Transform _namedSpawnPoint;
     [SerializeField] private Transform _namedRoot;
@@ -317,10 +319,10 @@ public class NamedSectorController : MonoBehaviour
         if (_firstCycleStarted)
             return;
 
-        if (_sectorStateManager == null || _stageEnemySetting == null)
+        if (_sectorStateManager == null || _stageBattleSettings == null)
             return;
 
-        if (!TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule))
+        if (!TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule))
             return;
 
         if (!rule.startNamedCycleOnReady)
@@ -348,7 +350,7 @@ public class NamedSectorController : MonoBehaviour
 
     private void ReserveRandomSector()
     {
-        if (!TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule))
+        if (!TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule))
         {
             SetPhase(NamedSectorPhase.None, null);
             PublishTimerSnapshot();
@@ -509,7 +511,7 @@ public class NamedSectorController : MonoBehaviour
         _selectedSector = null;
         NamedBattleCompleted?.Invoke(sourceSector);
 
-        if (!TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule))
+        if (!TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule))
         {
             SetPhase(NamedSectorPhase.None, null);
             PublishTimerSnapshot();
@@ -522,7 +524,7 @@ public class NamedSectorController : MonoBehaviour
 
     private void SpawnNamed()
     {
-        if (_stageEnemySetting == null || _namedSpawnPoint == null)
+        if (_stageBattleSettings == null || _namedSpawnPoint == null)
         {
             Debug.LogWarning("[NamedSectorController] Named spawn refs are missing.", this);
             return;
@@ -530,7 +532,7 @@ public class NamedSectorController : MonoBehaviour
 
         int stage = ResolveCurrentStage();
 
-        if (!_stageEnemySetting.TryPickNamedArchetype(stage, out EnemyStatConfigSO enemyConfig))
+        if (!_stageBattleSettings.TryPickNamedArchetype(stage, out EnemyStatConfigSO enemyConfig))
         {
             Debug.LogWarning($"[NamedSectorController] No named enemy entry for stage {stage}.", this);
             return;
@@ -595,15 +597,21 @@ public class NamedSectorController : MonoBehaviour
 
         for (int i = 0; i < killRewardSources.Length; i++)
             killRewardSources[i].SetEnemyStatConfig(enemyConfig);
+
+        EnemyScreenSpaceHPUIAnchor[] uiAnchors =
+            enemy.GetComponentsInChildren<EnemyScreenSpaceHPUIAnchor>(true);
+
+        for (int i = 0; i < uiAnchors.Length; i++)
+            uiAnchors[i].SetEnemyStatConfig(enemyConfig);
     }
-    private bool TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule)
+    private bool TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule)
     {
         rule = null;
 
-        if (_stageEnemySetting == null)
+        if (_stageBattleSettings == null)
             return false;
 
-        return _stageEnemySetting.TryGetNamedCycleRule(ResolveCurrentStage(), out rule);
+        return _stageBattleSettings.TryGetNamedCycleRule(ResolveCurrentStage(), out rule);
     }
 
     private int ResolveCurrentStage()
@@ -722,7 +730,7 @@ public class NamedSectorController : MonoBehaviour
         if (_timerPublishCooldown > 0f)
             return;
 
-        float interval = TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule)
+        float interval = TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule)
             ? rule.timerPublishInterval
             : 0.1f;
 
@@ -739,7 +747,7 @@ public class NamedSectorController : MonoBehaviour
         if (_debugLogCooldown > 0f)
             return;
 
-        float interval = TryGetCurrentNamedRule(out StageEnemySettingSO.StageSpawnRule rule)
+        float interval = TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule)
             ? rule.debugLogInterval
             : 1f;
 

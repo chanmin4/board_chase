@@ -17,7 +17,7 @@ public class PaintBullet : MonoBehaviour
     private int _paintPriority;
     private LayerMask _impactMask;
     private QueryTriggerInteraction _triggerInteraction;
-    private MaskRenderManager.PaintChannel _paintChannel;
+    private PaintChannel _paintChannel;
     private float _maxDistance;
     private float _travelledDistance;
     private float _lifeTime;
@@ -36,7 +36,7 @@ public class PaintBullet : MonoBehaviour
         LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
         MaskRenderManager maskRenderManager,
-        MaskRenderManager.PaintChannel paintChannel,
+        PaintChannel paintChannel,
         float paintRadiusWorld,
         int paintPriority,
         object sender)

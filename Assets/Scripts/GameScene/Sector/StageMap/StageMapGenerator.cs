@@ -9,6 +9,23 @@ public static class StageMapGenerator
         Vector2Int startSectorCoord,
         StageRoomType goalRoomType)
     {
+        return GenerateFullGrid(
+            runSeed,
+            stageIndex,
+            gridSize,
+            startSectorCoord,
+            goalRoomType,
+            StageTreasureRoomGenerationSettings.Disabled);
+    }
+
+    public static StageMapLayout GenerateFullGrid(
+        int runSeed,
+        int stageIndex,
+        int gridSize,
+        Vector2Int startSectorCoord,
+        StageRoomType goalRoomType,
+        StageTreasureRoomGenerationSettings treasureSettings)
+    {
         gridSize = Mathf.Max(0, gridSize);
 
         StageMapLayout layout = new StageMapLayout
@@ -55,6 +72,8 @@ public static class StageMapGenerator
             }
         }
 
+        ApplyTreasureRooms(layout, treasureSettings);
+
         return layout;
     }
 
@@ -90,5 +109,99 @@ public static class StageMapGenerator
             flags |= StageRoomConnectionFlags.Up;
 
         return flags;
+    }
+
+    private static void ApplyTreasureRooms(
+        StageMapLayout layout,
+        StageTreasureRoomGenerationSettings settings)
+    {
+        if (layout == null || !settings.Enabled || layout.gridSize <= 0)
+            return;
+
+        System.Random countRng = new System.Random(BuildSaltedSeed(layout.stageSeed, 1301));
+        int treasureCount = settings.RollTreasureRoomCount(layout.stageIndex, countRng);
+
+        if (treasureCount <= 0)
+            return;
+
+        StageRoomNode[] candidates = BuildTreasureCandidates(
+            layout,
+            settings.ExcludeFirstRoom);
+
+        if (candidates.Length < treasureCount && settings.ExcludeFirstRoom)
+            candidates = BuildTreasureCandidates(layout, excludeFirstRoom: false);
+
+        if (candidates.Length <= 0)
+            return;
+
+        treasureCount = Mathf.Min(treasureCount, candidates.Length);
+        System.Random pickRng = new System.Random(BuildSaltedSeed(layout.stageSeed, 1303));
+
+        for (int i = 0; i < treasureCount; i++)
+        {
+            int pickedIndex = pickRng.Next(i, candidates.Length);
+            StageRoomNode picked = candidates[pickedIndex];
+            candidates[pickedIndex] = candidates[i];
+            candidates[i] = picked;
+
+            candidates[i].roomType = StageRoomType.Treasure;
+        }
+    }
+
+    private static StageRoomNode[] BuildTreasureCandidates(
+        StageMapLayout layout,
+        bool excludeFirstRoom)
+    {
+        int count = 0;
+
+        for (int i = 0; i < layout.rooms.Count; i++)
+        {
+            if (IsTreasureCandidate(layout, layout.rooms[i], excludeFirstRoom))
+                count++;
+        }
+
+        StageRoomNode[] candidates = new StageRoomNode[count];
+        int cursor = 0;
+
+        for (int i = 0; i < layout.rooms.Count; i++)
+        {
+            StageRoomNode room = layout.rooms[i];
+
+            if (IsTreasureCandidate(layout, room, excludeFirstRoom))
+                candidates[cursor++] = room;
+        }
+
+        return candidates;
+    }
+
+    private static bool IsTreasureCandidate(
+        StageMapLayout layout,
+        StageRoomNode room,
+        bool excludeFirstRoom)
+    {
+        if (layout == null || room == null)
+            return false;
+
+        if (room.roomType != StageRoomType.NormalBattle)
+            return false;
+
+        if (room.coord == layout.goalRoomCoord)
+            return false;
+
+        if (excludeFirstRoom && room.coord == layout.firstRoomCoord)
+            return false;
+
+        return true;
+    }
+
+    private static int BuildSaltedSeed(int baseSeed, int salt)
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + baseSeed;
+            hash = hash * 31 + salt;
+            return hash;
+        }
     }
 }

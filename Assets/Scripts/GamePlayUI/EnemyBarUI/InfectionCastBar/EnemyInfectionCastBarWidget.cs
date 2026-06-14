@@ -9,9 +9,6 @@ public class EnemyInfectionCastBarWidget : MonoBehaviour
     [SerializeField] private Image _fillImage;
     [SerializeField] private UICanvasGroupOpacity _uicanvasgroupopacity;
 
-    [Header("Layout")]
-    [SerializeField] private Vector2 _screenOffset = new Vector2(0f, -10f);
-
     private Enemy _enemy;
     private float _fillFullWidth;
     private bool _managerVisible = true;
@@ -45,7 +42,7 @@ public class EnemyInfectionCastBarWidget : MonoBehaviour
 
     public void SetScreenPosition(Vector2 anchoredPosition)
     {
-        Root.anchoredPosition = anchoredPosition + _screenOffset;
+        Root.anchoredPosition = anchoredPosition;
     }
 
     public void TickVisualState()

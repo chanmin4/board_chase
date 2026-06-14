@@ -24,6 +24,29 @@ public class StageProgressionRulesSO : ScriptableObject
         [Tooltip("목표 방 좌표 (roomGridSize - 1, roomGridSize - 1)에 배치할 방 타입입니다. 현재 프로토타입은 Named 사용을 기준으로 합니다.")]
         public StageRoomType goalRoomType = StageRoomType.Named;
 
+        [Header("Treasure Rooms")]
+        [Tooltip("If enabled, this stage can replace some NormalBattle rooms with Treasure rooms.")]
+        public bool enableTreasureRooms = true;
+
+        [Min(0)]
+        [Tooltip("Minimum Treasure rooms generated for this stage, except forced-stage overrides.")]
+        public int treasureRoomMinCount = 1;
+
+        [Min(0)]
+        [Tooltip("Maximum Treasure rooms generated for this stage.")]
+        public int treasureRoomMaxCount = 2;
+
+        [Range(0f, 1f)]
+        [Tooltip("Extra Treasure room chance added per consecutive previous no-hit stage. 0.1 = +10%.")]
+        public float extraTreasureChancePerNoHitStage = 0.1f;
+
+        [Range(0f, 1f)]
+        [Tooltip("Maximum chance used when rolling each extra Treasure room slot.")]
+        public float maxExtraTreasureChance = 1f;
+
+        [Tooltip("If true, room (0,0) is not picked as Treasure unless there are not enough candidates.")]
+        public bool excludeFirstRoomFromTreasure = true;
+
         [Header("Clear Requirement")]
         [Tooltip("현재 방을 Player 소유 상태로 유지해야 하는 시간입니다. 조건을 만족하는 동안 줄어들고, 0이 되면 방 클리어입니다.")]
         [Min(0f)] public float timerSeconds = 30f;
@@ -53,6 +76,19 @@ public class StageProgressionRulesSO : ScriptableObject
         [Header("Reward")]
         [Tooltip("이 stage 목표 완료 시 Infection Control에 회복시킬 양입니다. 0이면 회복 보상을 주지 않습니다.")]
         [Min(0f)] public float infectionControlRecoverOnComplete = 0f;
+
+        public StageTreasureRoomGenerationSettings CreateTreasureRoomGenerationSettings(
+            int consecutiveNoHitStageCount)
+        {
+            return new StageTreasureRoomGenerationSettings(
+                enableTreasureRooms,
+                treasureRoomMinCount,
+                treasureRoomMaxCount,
+                consecutiveNoHitStageCount,
+                extraTreasureChancePerNoHitStage,
+                maxExtraTreasureChance,
+                excludeFirstRoomFromTreasure);
+        }
     }
 
     [Tooltip("stage별 진행 규칙 목록입니다. stageIndex 기준으로 현재 stage 규칙을 찾아 사용합니다.")]

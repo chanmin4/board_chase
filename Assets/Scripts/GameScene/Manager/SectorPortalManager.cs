@@ -181,39 +181,26 @@ public class SectorPortalManager : MonoBehaviour
         SectorRuntime target = portal.TargetSector;
 
         if (source == null)
-        {
-           
             return false;
-        }
 
         if (target == null)
-        {
-           
             return false;
-        }
 
         if (portal.TargetPortal == null)
-        {
-          
             return false;
-        }
 
         if (!source.isOpened)
-        {
-        
             return false;
-        }
 
-        if (!source.IsCleared)
-        {
+        bool sourceResolved =
+            source.IsCleared ||
+            (_sectorStateManager != null && _sectorStateManager.IsSectorFailed(source));
+
+        if (!sourceResolved)
             return false;
-        }
 
         if (!target.isOpened)
-        {
-        
             return false;
-        }
 
         if (_sectorStateManager != null &&
             _startSectorConsumed &&
@@ -226,7 +213,6 @@ public class SectorPortalManager : MonoBehaviour
         Debug.Log($"[SectorPortalManager] CanUsePortal true. portal={portal.name}, source={source.name}, target={target.name}");
         return true;
     }
-
     public bool TryMoveThroughPortal(SectorPortal sourcePortal, Transform player)
     {
         

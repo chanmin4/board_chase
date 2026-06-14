@@ -76,7 +76,7 @@ public class SectorStateManager : MonoBehaviour
     private readonly HashSet<SectorRuntime> _activeStageSectors = new();
     private readonly Dictionary<Vector2Int, StageRoomNode> _roomByCoord = new();
     private readonly Dictionary<SectorRuntime, StageRoomNode> _roomBySector = new();
-
+    private readonly HashSet<SectorRuntime> _failedSectors = new();
     private bool _isInitialized;
     private bool _stageMapConfigured;
     private bool _allowStartSectorAccess;
@@ -155,6 +155,7 @@ public class SectorStateManager : MonoBehaviour
 
     private void BuildSectorTable()
     {
+        _failedSectors.Clear();
         _sectorByCoord.Clear();
         _coordBySector.Clear();
         _runtimeSectors.Clear();
@@ -360,7 +361,7 @@ public class SectorStateManager : MonoBehaviour
 
         if (layout == null)
             return;
-
+        _failedSectors.Clear();
         _sectorByCoord.Clear();
         _coordBySector.Clear();
         _runtimeSectors.Clear();
@@ -547,7 +548,7 @@ public class SectorStateManager : MonoBehaviour
         {
             return false;
         }
-
+        _failedSectors.Remove(sector);
         sector.SetCleared(true);
 
         if (_roomBySector.TryGetValue(sector, out StageRoomNode room))
@@ -607,8 +608,53 @@ public class SectorStateManager : MonoBehaviour
 
     private void HandleCurrentSectorChanged(SectorRuntime sector)
     {
-        if (sector != null)
-            CurrentSector = sector;
+        if (sector == null)
+            return;
+
+        CurrentSector = sector;
+        RevealSector(sector);
+    }
+
+    public bool RevealSector(SectorRuntime sector)
+    {
+        EnsureInitialized();
+
+        if (!IsManagedSector(sector))
+            return false;
+
+        bool changed = false;
+
+        if (!sector.IsOpened)
+        {
+            sector.SetOpened(true);
+            changed = true;
+        }
+
+        if (_roomBySector.TryGetValue(sector, out StageRoomNode room))
+        {
+            if (!room.isOpened)
+            {
+                room.isOpened = true;
+                changed = true;
+            }
+
+            if (!room.isRevealed)
+            {
+                room.isRevealed = true;
+                changed = true;
+            }
+        }
+
+        if (sector == StartSector && !sector.IsCleared)
+        {
+            sector.SetCleared(true);
+            changed = true;
+        }
+
+        if (changed && _sectorOpenedEvent != null)
+            _sectorOpenedEvent.RaiseEvent(sector);
+
+        return changed;
     }
 
     public bool TryGetSector(Vector2Int coord, out SectorRuntime sector)
@@ -711,6 +757,80 @@ public class SectorStateManager : MonoBehaviour
 
         return _sectorByCoord.TryGetValue(coord, out SectorRuntime sector) &&
                sector.IsOpened;
+    }
+
+    public bool TryGetSectorRevealed(SectorRuntime sector, out bool isRevealed)
+    {
+        EnsureInitialized();
+
+        isRevealed = false;
+
+        if (sector == null)
+            return false;
+
+        if (sector == StartSector || IsStartSector(sector))
+        {
+            isRevealed = true;
+            return true;
+        }
+
+        if (_roomBySector.TryGetValue(sector, out StageRoomNode room))
+        {
+            isRevealed = room.isRevealed;
+            return true;
+        }
+
+        if (IsManagedSector(sector))
+        {
+            isRevealed = sector.IsOpened;
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool FailSector(SectorRuntime sector)
+    {
+        EnsureInitialized();
+
+        if (!IsManagedSector(sector) ||
+            !IsActiveStageSector(sector) ||
+            sector == StartSector ||
+            sector.IsCleared)
+        {
+            return false;
+        }
+
+        _failedSectors.Add(sector);
+        sector.SetCleared(false);
+
+        if (_roomBySector.TryGetValue(sector, out StageRoomNode room))
+        {
+            room.isOpened = true;
+            room.isRevealed = true;
+            room.isCleared = false;
+        }
+
+        if (_sectorOpenedEvent != null)
+            _sectorOpenedEvent.RaiseEvent(sector);
+
+        return true;
+    }
+
+    public bool IsSectorFailed(SectorRuntime sector)
+    {
+        EnsureInitialized();
+        return sector != null && _failedSectors.Contains(sector);
+    }
+
+    public void ClearSectorFailure(SectorRuntime sector)
+    {
+        EnsureInitialized();
+
+        if (sector == null)
+            return;
+
+        _failedSectors.Remove(sector);
     }
 
 #if UNITY_EDITOR

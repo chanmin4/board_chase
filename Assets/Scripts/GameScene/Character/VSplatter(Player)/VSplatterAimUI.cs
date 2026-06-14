@@ -22,6 +22,13 @@ public class VSplatterAimUI : MonoBehaviour
     [SerializeField] private Color _outOfRangeColor = Color.white;
     [SerializeField] private Color _progressColorMultiplier = new Color(1f, 1f, 1f, 0.6f);
 
+    [Header("Hit Crosshair")]
+    [SerializeField] private ShootHitConfirmedEventChannelSO _shootHitConfirmedEvent;
+    [SerializeField] private CanvasGroup _hitCrosshairCanvasGroup;
+    [SerializeField, Min(0.01f)] private float _hitFadeOutSeconds = 0.5f;
+    [SerializeField] private AnimationCurve _hitFadeCurve =
+        AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
+
     [Header("Options")]
     [SerializeField] private bool _hideCursorWhenNoAimPoint = true;
     [SerializeField] private bool _hideProgressWhenReady = true;
@@ -33,6 +40,8 @@ public class VSplatterAimUI : MonoBehaviour
     private Canvas _rootCanvas;
     private Image _crosshairImage;
     private Image _progressRingImage;
+
+    private float _hitFeedbackRemaining;
 
     private void Reset()
     {
@@ -50,6 +59,20 @@ public class VSplatterAimUI : MonoBehaviour
 
         RefreshCursorUI();
         SetCursorVisible(false);
+        CacheHitCrosshair();
+        HideHitCrosshairImmediate();
+    }
+
+    private void OnEnable()
+    {
+        if (_shootHitConfirmedEvent != null)
+            _shootHitConfirmedEvent.OnEventRaised += HandleAttackHitConfirmed;
+    }
+
+    private void OnDisable()
+    {
+        if (_shootHitConfirmedEvent != null)
+            _shootHitConfirmedEvent.OnEventRaised -= HandleAttackHitConfirmed;
     }
 
     private void Update()
@@ -58,6 +81,7 @@ public class VSplatterAimUI : MonoBehaviour
         EnsureCursorUI();
         UpdateCursorUIPosition();
         RefreshCursorUI();
+        UpdateHitCrosshair();
     }
 
     private void EnsureCursorCanvasRoot()
@@ -99,6 +123,7 @@ public class VSplatterAimUI : MonoBehaviour
             _cursorUIRect = go.AddComponent<RectTransform>();
 
         CacheCursorUIComponents();
+        CacheHitCrosshair();
     }
 
     private void CacheCursorUIComponents()
@@ -183,5 +208,77 @@ public class VSplatterAimUI : MonoBehaviour
     {
         if (_cursorUIRect != null)
             _cursorUIRect.gameObject.SetActive(visible);
+    }
+
+    private void CacheHitCrosshair()
+    {
+        if (_hitCrosshairCanvasGroup != null || _cursorUIRect == null)
+            return;
+
+        _hitCrosshairCanvasGroup =
+            _cursorUIRect.GetComponentInChildren<CanvasGroup>(true);
+    }
+    private void HandleAttackHitConfirmed()
+    {
+        EnsureCursorCanvasRoot();
+        EnsureCursorUI();
+        CacheHitCrosshair();
+
+        if (_hitCrosshairCanvasGroup == null)
+            return;
+
+        _hitFeedbackRemaining = _hitFadeOutSeconds;
+        _hitCrosshairCanvasGroup.alpha = 1f;
+    }
+
+    private void UpdateHitCrosshair()
+    {
+        if (_hitCrosshairCanvasGroup == null)
+            return;
+
+        if (_hitFeedbackRemaining <= 0f)
+        {
+            _hitCrosshairCanvasGroup.alpha = 0f;
+            return;
+        }
+
+        _hitFeedbackRemaining = Mathf.Max(
+            0f,
+            _hitFeedbackRemaining - Time.unscaledDeltaTime);
+
+        float t = 1f - (_hitFeedbackRemaining / Mathf.Max(0.01f, _hitFadeOutSeconds));
+        float alpha = _hitFadeCurve != null
+            ? _hitFadeCurve.Evaluate(t)
+            : 1f - t;
+
+        _hitCrosshairCanvasGroup.alpha = Mathf.Clamp01(alpha);
+    }
+
+    private void HideHitCrosshairImmediate()
+    {
+        _hitFeedbackRemaining = 0f;
+
+        if (_hitCrosshairCanvasGroup != null)
+            _hitCrosshairCanvasGroup.alpha = 0f;
+    }
+
+    private static Transform FindChildRecursive(Transform root, string childName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(childName))
+            return null;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+
+            if (child.name == childName)
+                return child;
+
+            Transform nested = FindChildRecursive(child, childName);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
     }
 }

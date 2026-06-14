@@ -23,6 +23,9 @@ public class StageSectorInstantiator : MonoBehaviour
     [Tooltip("Prefab used for NormalBattle rooms.")]
     [SerializeField] private SectorRuntime _normalBattleSectorPrefab;
 
+    [Tooltip("Prefab used for Treasure rooms. Falls back to NormalBattle when empty.")]
+    [SerializeField] private SectorRuntime _treasureSectorPrefab;
+
     [Tooltip("Prefab used for Named goal rooms. Falls back to NormalBattle when empty.")]
     [SerializeField] private SectorRuntime _namedSectorPrefab;
 
@@ -72,6 +75,17 @@ public class StageSectorInstantiator : MonoBehaviour
         StageProgressionRulesSO.StageProgressRule rule,
         SectorStateManager sectorStateManager)
     {
+        return BuildStage(
+            rule,
+            sectorStateManager,
+            consecutiveNoHitStageCount: 0);
+    }
+
+    public bool BuildStage(
+        StageProgressionRulesSO.StageProgressRule rule,
+        SectorStateManager sectorStateManager,
+        int consecutiveNoHitStageCount)
+    {
         if (rule == null || sectorStateManager == null)
             return false;
 
@@ -99,7 +113,8 @@ public class StageSectorInstantiator : MonoBehaviour
             rule.stageIndex,
             rule.roomGridSize,
             _startSectorCoord,
-            rule.goalRoomType);
+            rule.goalRoomType,
+            rule.CreateTreasureRoomGenerationSettings(consecutiveNoHitStageCount));
 
         Vector3 roomStep = ResolveRoomStep();
 
@@ -169,6 +184,11 @@ public class StageSectorInstantiator : MonoBehaviour
         {
             case StageRoomType.Start:
                 return _startSectorPrefab;
+
+            case StageRoomType.Treasure:
+                return _treasureSectorPrefab != null
+                    ? _treasureSectorPrefab
+                    : _normalBattleSectorPrefab;
 
             case StageRoomType.Named:
                 return _namedSectorPrefab != null

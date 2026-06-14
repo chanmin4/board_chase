@@ -53,7 +53,7 @@ public class MutarusQTEPatternActionSO : StateActionSO<MutarusQTEPatternAction>
     public LayerMask DamageTargetMask => _patternConfig.DamageTargetMask;
     public QueryTriggerInteraction TriggerInteraction => _patternConfig.TriggerInteraction;
 
-    public MaskRenderManager.PaintChannel PaintChannel => _patternConfig.PaintChannel;
+    public PaintChannel PaintChannel => _patternConfig.PaintChannel;
     public float PaintRadiusWorld => _patternConfig.PaintRadiusWorld;
     public int PaintPriority => _patternConfig.PaintPriority;
     public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => _patternConfig.PoisonPuddleDamageConfig;
@@ -71,7 +71,7 @@ public class MutarusQTEPatternActionSO : StateActionSO<MutarusQTEPatternAction>
     public float FailureImpactInfectionDamage => _patternConfig.FailureImpactInfectionDamage;
     public float FailureImpactTelegraphRadius => _patternConfig.FailureImpactTelegraphRadius;
 
-    public MaskRenderManager.PaintChannel FailurePaintChannel => _patternConfig.FailurePaintChannel;
+    public PaintChannel FailurePaintChannel => _patternConfig.FailurePaintChannel;
     public float FailurePaintRadiusWorld => _patternConfig.FailurePaintRadiusWorld;
     public int FailurePaintPriority => _patternConfig.FailurePaintPriority;
     public PoisonPuddleDamageConfigSO FailurePoisonPuddleDamageConfig => _patternConfig.FailurePoisonPuddleDamageConfig;
@@ -403,7 +403,7 @@ public class MutarusQTEPatternAction : StateAction
         float damageRadius,
         float impactHealthDamage,
         float impactInfectionDamage,
-        MaskRenderManager.PaintChannel paintChannel,
+        PaintChannel paintChannel,
         float paintRadiusWorld,
         int paintPriority,
         PoisonPuddleDamageConfigSO poisonPuddleDamageConfig,

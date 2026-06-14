@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42d6a1a3a9e15b44e8c69a88a0920e95, type: 3}
+  m_Name: StageBattleSettings
+  m_EditorClassIdentifier: 
+  _rules:
+  - stageIndex: 1
+    displayName: 1_Stage
+    enemyWavePresetLibrary:
+    - displayName: worms
+      enemies:
+      - archetype: {fileID: 11400000, guid: 05a93a8afe4cc65408f9b9cd16591e31, type: 2}
+        count: 3
+    normalBattleEncounterPresets:
+    - displayName: 
+      weight: 0
+      sectorMaxAlive: 0
+      waves: []
+    sectorObjectRoomPresets:
+    - displayName: Object1
+      weight: 1
+      objects:
+      - prefab: {fileID: 0}
+        count: 0
+        spawnPointTag: 
+        countAsEncounterTarget: 0
+    namedCycleEnabled: 0
+    namedEnemyEntries: []
+    startNamedCycleOnReady: 0
+    reserveFirstSectorImmediately: 0
+    firstReservationDelay: 0
+    reservationDuration: 0
+    respawnCooldownAfterKill: 0
+    retryDelayWhenNoCandidate: 0
+    timerPublishInterval: 0
+    debugLogInterval: 0

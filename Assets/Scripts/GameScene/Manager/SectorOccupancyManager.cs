@@ -38,8 +38,8 @@ public class SectorOccupancyManager : MonoBehaviour
     [Header("Exclusion")]
     [SerializeField] private SectorExclusionRulesSO _sectorExclusionRules;
 
-    [Tooltip("After player leaves start sector, start sector is hidden from minimap.")]
-    [SerializeField] private bool _hideStartSectorFromMapAfterLeaving = true;
+    [Tooltip("Legacy option. Keep false for the current stage-map flow so the start sector stays visible on MiniMap and FullMap.")]
+    [SerializeField] private bool _hideStartSectorFromMapAfterLeaving = false;
     private readonly Dictionary<SectorRuntime, SectorOccupancySnapshot> _snapshots = new();
     private Vector2Int _currentSectorCoord;
     private bool _hasCurrentSectorCoord;
@@ -134,6 +134,21 @@ public class SectorOccupancyManager : MonoBehaviour
             }
         }
 
+        if (_sectorStateManager != null && _sectorStateManager.CurrentSector != null)
+        {
+            _sectorStateManager.RevealSector(_sectorStateManager.CurrentSector);
+            _currentSectorCoord = GetSectorCoord(_sectorStateManager.CurrentSector);
+            _hasCurrentSectorCoord = true;
+        }
+        else if (!_hasCurrentSectorCoord &&
+            _sectorStateManager != null &&
+            _sectorStateManager.StartSector != null)
+        {
+            _sectorStateManager.RevealSector(_sectorStateManager.StartSector);
+            _currentSectorCoord = GetSectorCoord(_sectorStateManager.StartSector);
+            _hasCurrentSectorCoord = true;
+        }
+
         PublishSummary();
         PublishMapSnapshot();
     }
@@ -143,6 +158,7 @@ public class SectorOccupancyManager : MonoBehaviour
             return;
 
         bool isStartSector = IsStartSector(currentSector);
+        _sectorStateManager?.RevealSector(currentSector);
 
         if (_hideStartSectorFromMapAfterLeaving && !isStartSector)
             _hasLeftStartSector = true;
@@ -228,11 +244,18 @@ public class SectorOccupancyManager : MonoBehaviour
             if (ShouldHideFromMap(sector, coord))
                 continue;
 
+            bool isStartSector = IsStartSector(sector);
+            bool isRevealed = ResolveIsRevealed(sector, isStartSector);
+
             cells.Add(new SectorMapCellSnapshot
             {
                 coord = coord,
                 isOpened = sector.isOpened,
-                isLocked = !sector.isOpened,
+                isRevealed = isRevealed,
+                isLocked = !isRevealed,
+                isStartSector = isStartSector,
+                isCleared = sector.IsCleared,
+                roomType = ResolveRoomType(sector, isStartSector),
                 owner = snapshot.owner,
                 dominantOwner = snapshot.dominantOwner,
                 contestState = snapshot.contestState,
@@ -244,6 +267,8 @@ public class SectorOccupancyManager : MonoBehaviour
             });
         }
 
+        AddStartSectorMapCellIfMissing(cells);
+
         SectorMapSnapshot snapshotMap = new SectorMapSnapshot
         {
             currentSectorCoord = GetMapSnapshotCenterCoord(),
@@ -251,6 +276,57 @@ public class SectorOccupancyManager : MonoBehaviour
         };
 
         _mapSnapshotChangedChannel.RaiseEvent(snapshotMap);
+    }
+
+    private void AddStartSectorMapCellIfMissing(List<SectorMapCellSnapshot> cells)
+    {
+        if (_sectorStateManager == null || _sectorStateManager.StartSector == null)
+            return;
+
+        SectorRuntime startSector = _sectorStateManager.StartSector;
+        Vector2Int startCoord = GetSectorCoord(startSector);
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (cells[i].coord == startCoord)
+                return;
+        }
+
+        cells.Add(new SectorMapCellSnapshot
+        {
+            coord = startCoord,
+            isOpened = startSector.isOpened,
+            isRevealed = true,
+            isLocked = false,
+            isStartSector = true,
+            isCleared = startSector.IsCleared,
+            roomType = StageRoomType.Start,
+            owner = SectorOwner.Neutral,
+            dominantOwner = SectorOwner.Neutral,
+            contestState = SectorContestState.None,
+            specialState = SectorSpecialState.None,
+            playerRatio = 0f,
+            virusRatio = 0f,
+            contestElapsed = 0f,
+            contestRequired = 0f
+        });
+    }
+
+    private bool ResolveIsRevealed(SectorRuntime sector, bool isStartSector)
+    {
+        if (sector == null)
+            return false;
+
+        if (isStartSector)
+            return true;
+
+        if (_sectorStateManager != null &&
+            _sectorStateManager.TryGetSectorRevealed(sector, out bool isRevealed))
+        {
+            return isRevealed;
+        }
+
+        return sector.isOpened;
     }
 
     private bool IsStartSector(SectorRuntime sector)
@@ -273,14 +349,21 @@ public class SectorOccupancyManager : MonoBehaviour
             return true;
         }
 
-        if (_hideStartSectorFromMapAfterLeaving &&
-            _hasLeftStartSector &&
-            IsStartSector(sector))
+        return false;
+    }
+
+    private StageRoomType ResolveRoomType(SectorRuntime sector, bool isStartSector)
+    {
+        if (isStartSector)
+            return StageRoomType.Start;
+
+        if (_sectorStateManager != null &&
+            _sectorStateManager.TryGetStageRoomType(sector, out StageRoomType roomType))
         {
-            return true;
+            return roomType;
         }
 
-        return false;
+        return StageRoomType.NormalBattle;
     }
 
     private void OnNamedSectorPhaseChanged(NamedSectorPhaseChange change)

@@ -458,6 +458,7 @@ MonoBehaviour:
   _startSectorCoord: {x: -1, y: 0}
   _startSectorPrefab: {fileID: 4825967042133263012, guid: d0fd2a52a0454af429616b2f155a855b, type: 3}
   _normalBattleSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
+  _treasureSectorPrefab: {fileID: 0}
   _namedSectorPrefab: {fileID: 1399724844744912947, guid: 78d71b9d1e7ebb6418acacce9f9d0099, type: 3}
   _bossSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
   _generatedRoot: {fileID: 85564729}
@@ -924,32 +925,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3eef10a8e418e434fa4f7571d4343eaf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _sectors:
-  - sector: {fileID: 0}
-    coord: {x: -1, y: 0}
-  - sector: {fileID: 0}
-    coord: {x: 0, y: 0}
-  - sector: {fileID: 0}
-    coord: {x: 1, y: 0}
-  - sector: {fileID: 0}
-    coord: {x: 2, y: 0}
-  - sector: {fileID: 0}
-    coord: {x: 0, y: 1}
-  - sector: {fileID: 0}
-    coord: {x: 1, y: 1}
-  - sector: {fileID: 0}
-    coord: {x: 2, y: 1}
-  - sector: {fileID: 0}
-    coord: {x: 0, y: 2}
-  - sector: {fileID: 0}
-    coord: {x: 1, y: 2}
-  - sector: {fileID: 0}
-    coord: {x: 2, y: 2}
+  _sectors: []
   _stageSectorUnlock: {fileID: 11400000, guid: bd34a234a9aa24e4c888999f7b2e008a, type: 2}
   _useStageSectorUnlocks: 0
   _openAdjacentSectorsOnClear: 1
   _startSectorCoord: {x: -1, y: 0}
-  _initialStage: 0
+  _initialStage: 1
   _openOnlyStartSectorOnBoot: 1
   _requestUnlockStageEvent: {fileID: 11400000, guid: 5bdd9abfafb6a1348ad71870dcd4133b, type: 2}
   _requestProgressNextStageEvent: {fileID: 11400000, guid: 100a7f585768ad947aaf1ec572ade37a, type: 2}
@@ -1224,8 +1205,8 @@ MonoBehaviour:
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _battleStartedEvent: {fileID: 11400000, guid: cf2ea5b742a68ab4eb3268d8dadd27cb, type: 2}
   _battleEndedEvent: {fileID: 11400000, guid: d9d938b77ef305a4e8cfe195f0e30c6c, type: 2}
-  _namedWorldLockedmanagerchannel: {fileID: 11400000, guid: 13322fa37fe3afa4eadbd823711b4d3d, type: 2}
-  _cleanupOpenedOutsideSectorsOnBattleStart: 1
+  _namedBattleActiveChannel: {fileID: 11400000, guid: 21e78c1468862464a8d8e0c7b18a1669, type: 2}
+  _cleanupOpenedSectorsOnBattleStart: 1
 --- !u!1 &1448688622
 GameObject:
   m_ObjectHideFlags: 0
@@ -1313,8 +1294,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _rules: {fileID: 11400000, guid: a5028b5fd1d3c044e86715ac9bd21ed1, type: 2}
+  _sectorRules: {fileID: 11400000, guid: 4af1e3f270a51fa4aa997f0d02e9d8c0, type: 2}
   _startingStageIndex: 1
-  _fillCompletedSectorWithVaccine: 1
   _cleanupBeforeNextStage: 1
   _clearPaintOnStageTransition: 1
   _sectorStateManager: {fileID: 998436593}
@@ -1327,6 +1308,7 @@ MonoBehaviour:
   _finalStageCompletedChannel: {fileID: 11400000, guid: 92bd65b92c9bac44fbbec273db5f8271, type: 2}
   _snapshotChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
   _stageInfectionControlRecoverChannel: {fileID: 11400000, guid: 2cd9d23abd5992b49bc9a777ebc764bf, type: 2}
+  _playerHitReceivedChannel: {fileID: 11400000, guid: 38bfe3f5cedaebb49bbadc6c6dfd4afb, type: 2}
 --- !u!4 &1636498291
 Transform:
   m_ObjectHideFlags: 0

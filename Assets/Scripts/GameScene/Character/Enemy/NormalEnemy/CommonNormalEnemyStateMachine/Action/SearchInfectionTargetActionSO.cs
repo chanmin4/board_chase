@@ -268,15 +268,18 @@ public class SearchInfectionTargetAction : StateAction
         if (_maskRenderManager == null)
             return _config.NeutralScore;
 
-        if (!_maskRenderManager.TryGetStateAtWorld(sample, out MaskRenderManager.PaintState state, false))
+        if (!_maskRenderManager.TryGetStateAtWorld(sample, out PaintSurfaceState state, false))
             return _config.NeutralScore;
 
         switch (state)
         {
-            case MaskRenderManager.PaintState.Vaccine:
+            case PaintSurfaceState.Vaccine:
+            case PaintSurfaceState.CoatedVaccine:
                 return _config.VaccineScore;
 
-            case MaskRenderManager.PaintState.Virus:
+            case PaintSurfaceState.Virus:
+            case PaintSurfaceState.PoisonPuddle:
+            case PaintSurfaceState.CoatedVirus:
                 return _config.VirusScore;
 
             default:

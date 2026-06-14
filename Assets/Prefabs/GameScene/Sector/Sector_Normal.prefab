@@ -31,6 +31,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7669391515981891068}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &414968950062264688
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3514047391517136663}
+  m_Layer: 9
+  m_Name: SectorObjectContainer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3514047391517136663
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 414968950062264688}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7669391515981891068}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1033814081270328838
 GameObject:
   m_ObjectHideFlags: 0
@@ -93,7 +124,7 @@ MonoBehaviour:
   isCleared: 0
   is_startsector: 1
   cameraPoint: {fileID: 3681902135282496780}
-  enemySpawnPoints:
+  objectSpawnPoints:
   - {fileID: 5970389941769330879}
   - {fileID: 4056486321165193270}
   - {fileID: 2791268970252300116}
@@ -102,7 +133,7 @@ MonoBehaviour:
   - {fileID: 6929960178211775702}
   - {fileID: 3819484595021649826}
   - {fileID: 5111818346640668918}
-  _spawnPointMetadata:
+  _objectSpawnPointMetadata:
   - {fileID: 3723156481121807696}
   - {fileID: 6990200984966656330}
   - {fileID: 5014898564898788013}
@@ -166,7 +197,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1250647317207467268}
   m_Layer: 9
-  m_Name: EnemySpawnPoint
+  m_Name: ObjectSpawnPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -352,6 +383,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1a6de695c9b5514b8bd90f8f8d5c1cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _coatingState: 0
   runtime: {fileID: 4825967042133263012}
   allowPaintWhenClosed: 0
   boundsPadding: 0.1
@@ -420,6 +452,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &4388893967187028636
@@ -467,6 +501,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &4529445939286553745
@@ -501,6 +537,7 @@ Transform:
   - {fileID: 7906589407410488691}
   - {fileID: 3433957654936252752}
   - {fileID: 5386892105590353657}
+  - {fileID: 3514047391517136663}
   m_Father: {fileID: 7518838868959679074}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4769714486390680621
@@ -548,6 +585,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &5151560168109380746
@@ -595,6 +634,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &6419847359079524556
@@ -642,6 +683,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &6494252995380865997
@@ -689,6 +732,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &7473509583489320350
@@ -736,6 +781,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1 &7714255551219768320
@@ -815,25 +862,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _sectorRuntime: {fileID: 4825967042133263012}
   _projectileRoot: {fileID: 7906589407410488691}
-  _stageEnemySetting: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
+  _stageBattleSettings: {fileID: 11400000, guid: 7dba41b9141dc1e4f98493a57d1492ac, type: 2}
   _spawnedEnemiesRoot: {fileID: 3433957654936252752}
+  _spawnedSectorObjectsRoot: {fileID: 3514047391517136663}
   _sectorExclusionRules: {fileID: 11400000, guid: 498279093e5b5634291755e780b4ac69, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
   _stageProgressChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
-  _namedBattleWorldLockedChannel: {fileID: 11400000, guid: 13322fa37fe3afa4eadbd823711b4d3d, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _spawnOnlyWhenOpened: 1
-  _fillMinimumImmediately: 0
-  _maxImmediateSpawnPerTick: 4
+  _isBattleResolveCountdownLocked: 0
   _currentStageIndex: 0
-  _resolvedMinAlive: 0
   _resolvedMaxAlive: 0
-  _resolvedSimultaneousSpawnCount: 1
-  _resolvedFirstSpawnInterval: 0
-  _resolvedSpawnInterval: 0
-  _hasSpawnedFirstBatch: 0
+  _resolvedEncounterTotalSpawnCount: 0
+  _spawnedEncounterEnemyCount: 0
+  _pendingEnemySpawnCount: 0
+  _spawnedEncounterObjectCount: 0
+  _encounterSpawnFinished: 0
+  _encounterCleared: 0
   _isSectorActive: 0
-  _isNamedBattleWorldLocked: 0
+  _hasEncounterConfiguration: 0
+  _selectedEncounterPresetName: 
+  _selectedObjectRoomPresetName: 
+  _aliveEncounterTargetCount: 0
 --- !u!1 &8006060086097752367
 GameObject:
   m_ObjectHideFlags: 0
@@ -879,6 +929,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1001 &4583193242400312868

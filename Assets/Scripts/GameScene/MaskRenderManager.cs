@@ -6,19 +6,6 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class MaskRenderManager : MonoBehaviour
 {
-    public enum PaintChannel
-    {
-        Vaccine,
-        Virus,
-        PoisonPuddle
-    }
-
-    public enum PaintState
-    {
-        Neutral,
-        Vaccine,
-        Virus
-    }
 
     [Serializable]
     public struct CirclePaintRequest
@@ -500,10 +487,10 @@ public class MaskRenderManager : MonoBehaviour
 
     public bool TryGetStateAtWorld(
         Vector3 worldPos,
-        out PaintState state,
+        out PaintSurfaceState  state,
         bool requireOpened = true)
     {
-        state = PaintState.Neutral;
+        state = PaintSurfaceState .Neutral;
 
         for (int i = 0; i < _registeredSectors.Count; i++)
         {
@@ -525,10 +512,10 @@ public class MaskRenderManager : MonoBehaviour
         return false;
     }
 
-    public PaintState GetStateAtWorld(SectorPaint sector, Vector3 worldPos)
+    public PaintSurfaceState  GetStateAtWorld(SectorPaint sector, Vector3 worldPos)
     {
         if (sector == null)
-            return PaintState.Neutral;
+            return PaintSurfaceState .Neutral;
 
         return sector.GetPaintStateAtWorld(worldPos);
     }

@@ -105,7 +105,7 @@ public class CastInfectionAction : StateAction
         }
 
         bool accepted = _maskRenderManager.RequestCircle(
-            MaskRenderManager.PaintChannel.Virus,
+            PaintChannel.Virus,
             center,
             _config.InfectionRadius,
             _config.PaintPriority,

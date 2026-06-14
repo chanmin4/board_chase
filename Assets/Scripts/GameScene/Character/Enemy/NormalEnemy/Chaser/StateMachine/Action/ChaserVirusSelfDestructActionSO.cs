@@ -102,7 +102,7 @@ public class ChaserVirusSelfDestructAction : StateAction
             return;
 
         manager.RequestCircle(
-            MaskRenderManager.PaintChannel.Virus,
+            PaintChannel.Virus,
             center,
             _config.VirusPaintRadius,
             _config.PaintPriority,

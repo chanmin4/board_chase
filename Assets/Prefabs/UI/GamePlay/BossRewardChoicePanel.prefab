@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1968713461694660239}
   - component: {fileID: 301171030102823606}
   - component: {fileID: 6050267618544373284}
+  - component: {fileID: 3315881376551358471}
   m_Layer: 5
   m_Name: BossRewardChoicePanel
   m_TagString: Untagged
@@ -122,6 +123,28 @@ MonoBehaviour:
   _targetId: AimCursor
   _sourceId: 
   _debugLogs: 0
+--- !u!114 &3315881376551358471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425561176486041885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 992b6d980dccac04fade785161772730, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _id: 5
+  _canvasGroup: {fileID: 4099180040773555733}
+  _hideOnAwake: 1
+  _hideHudWhileOpen: 0
+  _onShown:
+    m_PersistentCalls:
+      m_Calls: []
+  _onHidden:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &2500163248764732573
 PrefabInstance:
   m_ObjectHideFlags: 0

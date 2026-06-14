@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
-[CreateAssetMenu(fileName = "GetHitEffectConfig", menuName = "EntityConfig/Get Hit Effect Config")]
-public class GetHitEffectConfigSO : ScriptableObject
+[CreateAssetMenu(fileName = "DamageFlash_GetHitConfig", menuName = "EntityConfig/DamageFlash GetHitConfig")]
+public class DamageFlash_GetHitConfigSO : ScriptableObject
 {
 	[SerializeField] private Color _getHitFlashingColor = default;
 	[SerializeField] private float _getHitFlashingDuration = 0.5f;

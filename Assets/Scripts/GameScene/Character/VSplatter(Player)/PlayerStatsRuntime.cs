@@ -18,6 +18,9 @@ public class PlayerStatsRuntime : MonoBehaviour
     [SerializeField] private SaveSystem _saveSystem;
     [SerializeField] private bool _loadMetaSaveOnEnable = true;
 
+    [Header("Passive Items")]
+    [SerializeField] private PlayerPassiveInventoryRuntime _passiveInventory;
+
     [Header("Base Weapon")]
     [SerializeField] private VSplatterWeaponHolder _weaponHolder;
     [SerializeField] private WeaponSO _fallbackWeapon;
@@ -61,10 +64,16 @@ public class PlayerStatsRuntime : MonoBehaviour
 
         if (_weaponHolder == null)
             _weaponHolder = GetComponent<VSplatterWeaponHolder>();
+
+        if (_passiveInventory == null)
+            _passiveInventory = GetComponent<PlayerPassiveInventoryRuntime>();
     }
 
     private void OnEnable()
     {
+        if (_passiveInventory == null)
+            _passiveInventory = GetComponent<PlayerPassiveInventoryRuntime>();
+
         if (_loadMetaSaveOnEnable && _saveSystem != null)
             _saveSystem.LoadSaveDataFromDisk();
 
@@ -73,6 +82,9 @@ public class PlayerStatsRuntime : MonoBehaviour
 
         if (_weaponHolder != null)
             _weaponHolder.OnWeaponChanged += OnWeaponChanged;
+
+        if (_passiveInventory != null)
+            _passiveInventory.OnChanged += RebuildAndPublish;
 
         RebuildAndPublish();
 
@@ -87,6 +99,9 @@ public class PlayerStatsRuntime : MonoBehaviour
 
         if (_weaponHolder != null)
             _weaponHolder.OnWeaponChanged -= OnWeaponChanged;
+
+        if (_passiveInventory != null)
+            _passiveInventory.OnChanged -= RebuildAndPublish;
 
         if (_statsRuntimeReadyChannel != null)
             _statsRuntimeReadyChannel.Clear(this);
@@ -109,6 +124,7 @@ public class PlayerStatsRuntime : MonoBehaviour
         ApplyTrackEffects(PlayerUpgradeTrack.Control, ref flags);
         ApplyBossUpgradeEffects();
         ApplyMetaUpgradeEffects();
+        ApplyPassiveItemEffects(ref flags);
 
         WeaponSO weapon = CurrentWeapon;
         PlayerStatsConfigSO config = _playerStatsConfig;
@@ -224,6 +240,25 @@ public class PlayerStatsRuntime : MonoBehaviour
 
         _saveSystem.saveData.EnsureRuntimeDefaults();
         _metaUpgradeCatalog.ApplyMetaModifiers(_saveSystem.saveData.MetaUpgrades, ApplyModifier);
+    }
+
+    private void ApplyPassiveItemEffects(ref PlayerFeatureFlags flags)
+    {
+        if (_passiveInventory == null)
+            return;
+
+        IReadOnlyList<PassiveItemSO> items = _passiveInventory.Items;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            PassiveItemSO item = items[i];
+
+            if (item == null)
+                continue;
+
+            ApplyModifiers(item.StatModifiers);
+            ApplyFeatureFlags(item.FeatureFlags, ref flags);
+        }
     }
 
     private void ApplyModifiers(PlayerStatModifier[] modifiers)

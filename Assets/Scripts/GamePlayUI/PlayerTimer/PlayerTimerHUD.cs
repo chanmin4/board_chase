@@ -21,7 +21,9 @@ public class PlayerTimerHUD : MonoBehaviour
     [SerializeField] private TableReference _stageStringTable = "UI_PlayerTimer";
     [SerializeField] private string _stageEntryKey = "PlayerTimer_Stage";
     [SerializeField] private string _stageBreakEntryKey = "PlayerTimer_StageBreakTime";
-
+    [SerializeField] private string _vaccineCountdownEntryKey = "PlayerTimer_VaccineCountdown";
+    [SerializeField] private string _virusCountdownEntryKey = "PlayerTimer_VirusCountdown";
+    [SerializeField] private string _neutralCountdownEntryKey = "PlayerTimer_NeutralCountdown";
     [Header("Display")]
     [SerializeField] private bool _showStageName = true;
     [SerializeField] private bool _showCondition = true;
@@ -35,7 +37,7 @@ public class PlayerTimerHUD : MonoBehaviour
     [Header("Colors")]
     [SerializeField] private Color _normalColor = new Color(0.2f, 0.75f, 1f, 1f);
     [SerializeField] private Color _readyColor = new Color(0.25f, 1f, 0.45f, 1f);
-    [SerializeField] private Color _blockedColor = new Color(0.65f, 0.65f, 0.65f, 1f);
+    [SerializeField] private Color _filledColor = new Color(0.65f, 0.65f, 0.65f, 1f);
     [SerializeField] private Color _completedColor = new Color(1f, 0.85f, 0.2f, 1f);
     [SerializeField] private Color _breakTimeColor = new Color(0.85f, 0.55f, 1f, 1f);
     
@@ -89,8 +91,10 @@ public class PlayerTimerHUD : MonoBehaviour
     {
         _hasSnapshot = true;
 
-        _targetFill = snapshot.isStartSector && !snapshot.isResting
-            ? 1f
+        bool showTimer = snapshot.showPlayerTimer || snapshot.isResting;
+
+        _targetFill = !showTimer
+            ? 0f
             : snapshot.isResting
                 ? 1f - Mathf.Clamp01(snapshot.restProgress01)
                 : 1f - Mathf.Clamp01(snapshot.progress01);
@@ -104,36 +108,50 @@ public class PlayerTimerHUD : MonoBehaviour
 
     private void ApplyTexts(StageProgressSnapshot snapshot)
     {
-        bool hideTimer = snapshot.isStartSector && !snapshot.isResting;
+        bool showTimer = snapshot.showPlayerTimer || snapshot.isResting;
 
         if (_timeText != null)
         {
-            _timeText.text = hideTimer
-                ? string.Empty
-                : FormatTime(snapshot.isResting
+            _timeText.text = showTimer
+                ? FormatTime(snapshot.isResting
                     ? snapshot.restRemainingSeconds
-                    : snapshot.remainingSeconds);
+                    : snapshot.remainingSeconds)
+                : string.Empty;
         }
 
         if (_fillImage != null)
-            _fillImage.enabled = true;
+            _fillImage.enabled = showTimer;
 
         if (_conditionText != null)
-        {
-            if (hideTimer || snapshot.isResting || !_showCondition)
-                _conditionText.text = string.Empty;
-            else
-                _conditionText.text = $"{snapshot.currentPlayerOwnedCount}/{snapshot.requiredPlayerOwnedCount}";
-        }
+            _conditionText.text = string.Empty;
 
         ApplyStageText(snapshot);
     }
-
     private void ApplyStageText(StageProgressSnapshot snapshot)
     {
         if (!_showStageName)
         {
             SetStageText(string.Empty);
+            return;
+        }
+
+        if (snapshot.isResolveCountdown)
+        {
+            switch (snapshot.resolveCountdownOwner)
+            {
+                case SectorOwner.Player:
+                    ApplyStageLocalizedKey(_vaccineCountdownEntryKey, false, 0);
+                    break;
+
+                case SectorOwner.Virus:
+                    ApplyStageLocalizedKey(_virusCountdownEntryKey, false, 0);
+                    break;
+
+                default:
+                    ApplyStageLocalizedKey(_neutralCountdownEntryKey, false, 0);
+                    break;
+            }
+
             return;
         }
 
@@ -145,7 +163,6 @@ public class PlayerTimerHUD : MonoBehaviour
 
         ApplyStageLocalizedKey(_stageEntryKey, true, Mathf.Max(1, snapshot.stageIndex));
     }
-
 
 
     private void ApplyStageLocalizedKey(string key, bool prefixStageNumber, int stageNumber)
@@ -181,13 +198,14 @@ public class PlayerTimerHUD : MonoBehaviour
 
     private void ApplyColor(StageProgressSnapshot snapshot)
     {
-        if (snapshot.isStartSector && !snapshot.isResting)
+        if (_fillImage == null)
+            return;
+
+        if (!snapshot.showPlayerTimer && !snapshot.isResting)
         {
             _fillImage.color = _normalColor;
             return;
         }
-        if (_fillImage == null)
-            return;
 
         if (snapshot.isResting)
         {
@@ -203,13 +221,12 @@ public class PlayerTimerHUD : MonoBehaviour
 
         if (!snapshot.requirementMet)
         {
-            _fillImage.color = _blockedColor;
+            _fillImage.color = _filledColor;
             return;
         }
 
         _fillImage.color = snapshot.hasNextStage ? _normalColor : _readyColor;
     }
-
     private string FormatTime(float seconds)
     {
         seconds = Mathf.Max(0f, seconds);

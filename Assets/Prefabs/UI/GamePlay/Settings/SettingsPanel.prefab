@@ -978,6 +978,7 @@ GameObject:
   - component: {fileID: 4303774797236998948}
   - component: {fileID: 4303774797236998964}
   - component: {fileID: 4303774797236998971}
+  - component: {fileID: 988422341763935350}
   m_Layer: 5
   m_Name: SettingsPanel
   m_TagString: Untagged
@@ -1049,6 +1050,28 @@ MonoBehaviour:
     m_TableCollectionName: UI_Settings
   _settingsTitleEntryKey: Settings_Title
   _settingsTitleText: {fileID: 4303774797236998880}
+--- !u!114 &988422341763935350
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4303774797236998949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 992b6d980dccac04fade785161772730, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _id: 6
+  _canvasGroup: {fileID: 4303774797236998964}
+  _hideOnAwake: 1
+  _hideHudWhileOpen: 0
+  _onShown:
+    m_PersistentCalls:
+      m_Calls: []
+  _onHidden:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &4303774797236998951
 GameObject:
   m_ObjectHideFlags: 0

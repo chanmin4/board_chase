@@ -6,7 +6,11 @@ public struct SectorMapCellSnapshot
 {
     public Vector2Int coord;
     public bool isOpened;
+    public bool isRevealed;
     public bool isLocked;
+    public bool isStartSector;
+    public bool isCleared;
+    public StageRoomType roomType;
 
     public SectorOwner owner;
     public SectorOwner dominantOwner;

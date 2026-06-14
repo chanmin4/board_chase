@@ -3,15 +3,15 @@
 [DisallowMultipleComponent]
 public class VSplatter_Character_Audio : CharacterAudio
 {
-    [Header("Need Ref - Player Components")]
+    [Header("Refs")]
     [SerializeField] private VSplatter_Character _character;
-    [SerializeField] private VSplatterAttack _attack;
-    [SerializeField] private VSplatterPaint _paint;
+    [SerializeField] private VSplatterShoot _shoot;
     [SerializeField] private VSplatterDashController _dashController;
     [SerializeField] private Damageable _damageable;
     [SerializeField] private CharacterController _characterController;
 
-    [Header("Need Ref - Audio Cues")]
+    [Header("Audio Cues")]
+    [SerializeField] private AudioCueSO _shootCue;
     [SerializeField] private AudioCueSO _attackCue;
     [SerializeField] private AudioCueSO _paintCue;
     [SerializeField] private AudioCueSO _specialCue;
@@ -22,13 +22,13 @@ public class VSplatter_Character_Audio : CharacterAudio
     [SerializeField] private AudioCueSO _shockwaveChargeCue;
     [SerializeField] private AudioCueSO _shockwaveReleaseCue;
 
-    [Header("Footstep")]
+    [Header("Footsteps")]
     [SerializeField] private bool _playFootstepsWhileMoving = true;
     [SerializeField, Min(0.01f)] private float _footstepInterval = 0.35f;
     [SerializeField, Min(0f)] private float _movementThreshold = 0.12f;
     [SerializeField] private bool _requireGroundedForFootsteps = true;
 
-    [Header("Don't Touch Ref Auto")]
+    [Header("Debug")]
     [SerializeField] private float _debugLastHealth;
     [SerializeField] private float _debugFootstepTimer;
 
@@ -71,11 +71,8 @@ public class VSplatter_Character_Audio : CharacterAudio
         if (_character == null)
             _character = GetComponent<VSplatter_Character>();
 
-        if (_attack == null)
-            _attack = GetComponent<VSplatterAttack>();
-
-        if (_paint == null)
-            _paint = GetComponent<VSplatterPaint>();
+        if (_shoot == null)
+            _shoot = GetComponent<VSplatterShoot>();
 
         if (_dashController == null)
             _dashController = GetComponent<VSplatterDashController>();
@@ -92,11 +89,8 @@ public class VSplatter_Character_Audio : CharacterAudio
         if (_subscribed)
             return;
 
-        if (_attack != null)
-            _attack.Fired += PlayAttack;
-
-        if (_paint != null)
-            _paint.Fired += PlayPaint;
+        if (_shoot != null)
+            _shoot.Fired += HandleShotFired;
 
         if (_dashController != null)
             _dashController.DashStarted += PlayDash;
@@ -115,11 +109,8 @@ public class VSplatter_Character_Audio : CharacterAudio
         if (!_subscribed)
             return;
 
-        if (_attack != null)
-            _attack.Fired -= PlayAttack;
-
-        if (_paint != null)
-            _paint.Fired -= PlayPaint;
+        if (_shoot != null)
+            _shoot.Fired -= HandleShotFired;
 
         if (_dashController != null)
             _dashController.DashStarted -= PlayDash;
@@ -131,6 +122,29 @@ public class VSplatter_Character_Audio : CharacterAudio
         }
 
         _subscribed = false;
+    }
+
+    private void HandleShotFired(BulletAmmoType ammoType)
+    {
+        switch (ammoType)
+        {
+            case BulletAmmoType.AttackAndPaint:
+            case BulletAmmoType.Attack:
+                PlayAttack();
+                break;
+
+            case BulletAmmoType.Paint:
+                PlayPaint();
+                break;
+
+            case BulletAmmoType.Special:
+                PlaySpecial();
+                break;
+
+            default:
+                PlayShoot();
+                break;
+        }
     }
 
     private void HandleHealthChanged(Damageable damageable)
@@ -193,20 +207,28 @@ public class VSplatter_Character_Audio : CharacterAudio
         PlayFootstep();
     }
 
-	public void PlayAttack()
-	{
-		Debug.Log("[VSplatterAudio] PlayAttack", this);
-		PlayAudio(_attackCue, _audioConfig, transform.position);
-	}
-	public void PlayPaint()
-	{
-		Debug.Log("[VSplatterAudio] PlayPaint", this);
-		PlayAudio(_paintCue, _audioConfig, transform.position);
-	}
+    public void PlayAttack()
+    {
+        AudioCueSO cue = _shootCue != null ? _shootCue : _attackCue;
+        PlayAudio(cue, _audioConfig, transform.position);
+    }
+
+    public void PlayPaint()
+    {
+        AudioCueSO cue = _shootCue != null ? _shootCue : _paintCue;
+        PlayAudio(cue, _audioConfig, transform.position);
+    }
+
+    public void PlayShoot()
+    {
+        AudioCueSO cue = _shootCue != null ? _shootCue : _attackCue;
+        PlayAudio(cue, _audioConfig, transform.position);
+    }
 
     public void PlaySpecial()
     {
-        PlayAudio(_specialCue, _audioConfig, transform.position);
+        AudioCueSO cue = _specialCue != null ? _specialCue : _shootCue;
+        PlayAudio(cue, _audioConfig, transform.position);
     }
 
     public void PlayDash()

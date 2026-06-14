@@ -320,6 +320,60 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         return true;
     }
 
+    public bool TryGrantBullet(
+        BulletSO bullet,
+        int bundleAmount,
+        float sellPriceRate,
+        out int slotIndex,
+        out string message,
+        int totalPrice = 0)
+    {
+        slotIndex = -1;
+        message = string.Empty;
+
+        if (!IsRuntimeReady())
+        {
+            message = "Ammo runtime is not ready.";
+            return false;
+        }
+
+        if (bullet == null)
+        {
+            message = "Bullet is missing.";
+            return false;
+        }
+
+        if (!TryFindEmptyCompatibleSlot(bullet, out slotIndex))
+        {
+            message = "Please empty a compatible ammo slot first.";
+            return false;
+        }
+
+        int resolvedBundleAmount = Mathf.Max(1, bundleAmount);
+        int magazineSize = GetMagazineSize(bullet);
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        slot.bullet = bullet;
+        slot.currentAmmo = Mathf.Min(magazineSize, resolvedBundleAmount);
+        slot.reserveAmmo = Mathf.Max(0, resolvedBundleAmount - slot.currentAmmo);
+        slot.infiniteReserve = false;
+        slot.requiredDefault = false;
+        slot.sellPricePerAmmo = totalPrice > 0
+            ? Mathf.Max(
+                1,
+                Mathf.FloorToInt(totalPrice * Mathf.Clamp01(sellPriceRate) / resolvedBundleAmount))
+            : 0;
+
+        SetActiveSlot(bullet.AmmoType, slotIndex);
+        _lastSelectedSlotIndex = slotIndex;
+
+        PublishSnapshot();
+
+        message = $"{bullet.DisplayName} equipped to slot {slotIndex + 1}.";
+        return true;
+    }
+
     private bool CanReloadSlot(int slotIndex)
     {
         if (!IsValidSlot(slotIndex))
@@ -437,48 +491,15 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
 
     private void HandleShopPurchaseRequested(WeaponAmmoShopPurchaseRequest request)
     {
-        if (!IsRuntimeReady())
-        {
-            RaisePurchaseResult(request, false, -1, "Ammo runtime is not ready.");
-            return;
-        }
+        bool granted = TryGrantBullet(
+            request.bullet,
+            request.bundleAmount,
+            request.sellPriceRate,
+            out int slotIndex,
+            out string message,
+            request.totalPrice);
 
-        if (request.bullet == null)
-        {
-            RaisePurchaseResult(request, false, -1, "Bullet is missing.");
-            return;
-        }
-
-        if (!TryFindEmptyCompatibleSlot(request.bullet, out int slotIndex))
-        {
-            RaisePurchaseResult(request, false, -1, "Please empty a compatible ammo slot first.");
-            return;
-        }
-
-        int bundleAmount = Mathf.Max(1, request.bundleAmount);
-        int magazineSize = GetMagazineSize(request.bullet);
-
-        AmmoSlotState slot = _slots[slotIndex];
-
-        slot.bullet = request.bullet;
-        slot.currentAmmo = Mathf.Min(magazineSize, bundleAmount);
-        slot.reserveAmmo = Mathf.Max(0, bundleAmount - slot.currentAmmo);
-        slot.infiniteReserve = false;
-        slot.requiredDefault = false;
-        slot.sellPricePerAmmo = Mathf.Max(
-            1,
-            Mathf.FloorToInt(request.totalPrice * request.sellPriceRate / bundleAmount));
-
-        SetActiveSlot(request.bullet.AmmoType, slotIndex);
-        _lastSelectedSlotIndex = slotIndex;
-
-        PublishSnapshot();
-
-        RaisePurchaseResult(
-            request,
-            true,
-            slotIndex,
-            $"{request.bullet.DisplayName} equipped to slot {slotIndex + 1}.");
+        RaisePurchaseResult(request, granted, slotIndex, message);
     }
 
     private void HandleSellConfirmRequested(WeaponAmmoSellConfirmRequest request)

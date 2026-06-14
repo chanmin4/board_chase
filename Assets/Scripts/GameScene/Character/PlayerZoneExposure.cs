@@ -105,20 +105,25 @@ public class PlayerZoneExposure : MonoBehaviour
 
         if (!_maskRenderManager.TryGetStateAtWorld(
                 _samplePoint.position,
-                out MaskRenderManager.PaintState state,
+                out PaintSurfaceState state,
                 _requireOpenedSector))
         {
             return;
         }
-
         switch (state)
         {
-            case MaskRenderManager.PaintState.Virus:
+            case PaintSurfaceState.Virus:
+            case PaintSurfaceState.CoatedVirus:
                 exposureKind = ExposureKind.Virus;
                 break;
 
-            case MaskRenderManager.PaintState.Vaccine:
+            case PaintSurfaceState.Vaccine:
+            case PaintSurfaceState.CoatedVaccine:
                 exposureKind = ExposureKind.Vaccine;
+                break;
+
+            case PaintSurfaceState.PoisonPuddle:// PoisonPuddle은 위에서 TryGetPoisonPuddleAtWorld()로 먼저 처리
+                exposureKind = ExposureKind.PoisonPuddle;
                 break;
         }
     }

@@ -37,6 +37,12 @@ public abstract class EnemyStatConfigSO : EntityStatConfigSO
     [SerializeField, Min(0f)] private float _virusTrailSpacing = 0.75f;
     [SerializeField, Min(1)] private int _virusTrailMaxSteps = 3;
 
+    [Header("Enemy Screen Space UI")]
+    [SerializeField] private EnemyScreenSpaceWidgetLayout _healthBarUI =
+        new EnemyScreenSpaceWidgetLayout(new Vector2(0f, 50f));
+    [SerializeField] private EnemyScreenSpaceWidgetLayout _infectionCastBarUI =
+        new EnemyScreenSpaceWidgetLayout(new Vector2(0f, 40f));
+
     public override float InitialHealth => Mathf.Max(1f, _initialHealth);
 
     public override float ReferenceMoveSpeed =>
@@ -80,4 +86,7 @@ public abstract class EnemyStatConfigSO : EntityStatConfigSO
     public float VirusTrailMaxPaintSegmentDistance => Mathf.Max(0f, _virusTrailMaxPaintSegmentDistance);
     public float VirusTrailSpacing => Mathf.Max(0f, _virusTrailSpacing);
     public int VirusTrailMaxSteps => Mathf.Max(1, _virusTrailMaxSteps);
+
+    public EnemyScreenSpaceWidgetLayout HealthBarUI => _healthBarUI;
+    public EnemyScreenSpaceWidgetLayout InfectionCastBarUI => _infectionCastBarUI;
 }

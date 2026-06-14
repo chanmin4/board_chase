@@ -25,7 +25,7 @@ public class EnemyProjectile : MonoBehaviour
     private QueryTriggerInteraction _triggerInteraction;
 
     private MaskRenderManager _maskRenderManager;
-    private MaskRenderManager.PaintChannel _paintChannel;
+    private PaintChannel _paintChannel;
     private float _paintRadiusWorld;
     private int _paintPriority;
 
@@ -42,7 +42,7 @@ public class EnemyProjectile : MonoBehaviour
         LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
         MaskRenderManager maskRenderManager,
-        MaskRenderManager.PaintChannel paintChannel,
+        PaintChannel paintChannel,
         float paintRadiusWorld,
         int paintPriority,
         GameObject source)

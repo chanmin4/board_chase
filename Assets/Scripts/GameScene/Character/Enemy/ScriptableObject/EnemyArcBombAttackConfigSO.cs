@@ -41,7 +41,7 @@ public class EnemyArcBombAttackConfigSO : PoisonPuddleDamageConfigSO
     [SerializeField] private AreaAttackTelegraphStyle _impactTelegraphStyle = default;
 
     [Header("Paint")]
-    [SerializeField] private MaskRenderManager.PaintChannel _paintChannel = MaskRenderManager.PaintChannel.Virus;
+    [SerializeField] private PaintChannel _paintChannel = PaintChannel.Virus;
     [SerializeField, Min(0f)] private float _paintRadiusWorld = 1.5f;
     [SerializeField] private int _paintPriority;
 
@@ -65,7 +65,7 @@ public class EnemyArcBombAttackConfigSO : PoisonPuddleDamageConfigSO
     public bool ShowImpactTelegraph => _showImpactTelegraph;
     public AreaAttackTelegraphStyle ImpactTelegraphStyle =>
         _impactTelegraphStyle.segments > 0 ? _impactTelegraphStyle : AreaAttackTelegraphStyle.Default;
-    public MaskRenderManager.PaintChannel PaintChannel => _paintChannel;
+    public PaintChannel PaintChannel => _paintChannel;
     public float PaintRadiusWorld => DifficultyRuntime.ApplyEnemyVirusPaintRadius(_paintRadiusWorld);
     public int PaintPriority => _paintPriority;
     public PoisonPuddleDamageConfigSO PoisonPuddleDamageConfig => this;

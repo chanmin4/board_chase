@@ -37,7 +37,7 @@ public class Damageable : MonoBehaviour
     [ReadOnly] [SerializeField] private float _debugDamageTakenMultiplier = 1f;
 
     [Header("Combat")]
-    [SerializeField] private GetHitEffectConfigSO _getHitEffectSO;
+    [SerializeField] private DamageFlash_GetHitConfigSO _getHitEffectSO;
     [SerializeField] private Renderer _mainMeshRenderer;
     [SerializeField] private DroppableRewardConfigSO _droppableRewardSO;
 
@@ -46,6 +46,7 @@ public class Damageable : MonoBehaviour
     [SerializeField] private bool _applyPostHitInvulnerability = false;
     [SerializeField] private InvulnerabilityConfigSO _postHitInvulnerabilityConfig;
     [Header("Broadcasting On")]
+    [SerializeField] private HitReceivedEventChannelSO _hitReceivedEvent = default;
     [SerializeField] private VoidEventChannelSO _updateHealthUI = default;
     [SerializeField] private VoidEventChannelSO _deathEvent = default;
 
@@ -65,8 +66,7 @@ public class Damageable : MonoBehaviour
     public event UnityAction<Damageable> OnDamageMultiplierChanged;
     public event UnityAction<Damageable> OnHealthChanged;
     public event UnityAction OnDie;
-
-    public GetHitEffectConfigSO GetHitEffectConfig => _getHitEffectSO;
+    public DamageFlash_GetHitConfigSO GetHitEffectConfig => _getHitEffectSO;
     public Renderer MainMeshRenderer => _mainMeshRenderer;
 
     public bool IsInvulnerable =>
@@ -118,6 +118,7 @@ public class Damageable : MonoBehaviour
 
         SyncRuntimeHealthDebug();
         GetHit = true;
+        _hitReceivedEvent?.RaiseEvent(gameObject);
 
         bool diedThisHit = !useHealthFloor && _currentHealth <= 0f;
 

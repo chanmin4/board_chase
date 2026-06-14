@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8178480547751757602}
   - component: {fileID: 8553056154817656350}
   - component: {fileID: 8915449583003510043}
+  - component: {fileID: 2170330125524986627}
   m_Layer: 5
   m_Name: StageText
   m_TagString: Untagged
@@ -70,8 +71,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
-  m_sharedMaterial: {fileID: -3010159193059958693, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 7efae31f9c04566448572a54ac5b3dae, type: 2}
+  m_sharedMaterial: {fileID: 6603940989296512970, guid: 7efae31f9c04566448572a54ac5b3dae, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -140,6 +141,34 @@ MonoBehaviour:
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &8915449583003510043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1138382213517197128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls: []
+  references:
+    version: 2
+    RefIds: []
+--- !u!114 &2170330125524986627
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -236,8 +265,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
-  m_sharedMaterial: {fileID: -3010159193059958693, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 7efae31f9c04566448572a54ac5b3dae, type: 2}
+  m_sharedMaterial: {fileID: 6603940989296512970, guid: 7efae31f9c04566448572a54ac5b3dae, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -365,17 +394,20 @@ MonoBehaviour:
     m_TableCollectionName: UI_PlayerTimer
   _stageEntryKey: PlayerTimer_Stage
   _stageBreakEntryKey: PlayerTimer_StageBreakTime
+  _vaccineCountdownEntryKey: PlayerTimer_VaccineCountdown
+  _virusCountdownEntryKey: PlayerTimer_VirusCountdown
+  _neutralCountdownEntryKey: PlayerTimer_NeutralCountdown
   _showStageName: 1
   _showCondition: 1
   _showDecimalSeconds: 0
   _smoothFill: 1
   _smoothSpeed: 8
   _useUnscaledTime: 1
-  _normalColor: {r: 0.52036566, g: 0.9150943, b: 0.4963955, a: 1}
-  _readyColor: {r: 0.9479299, g: 1, b: 0.25098038, a: 1}
-  _blockedColor: {r: 0.65, g: 0.65, b: 0.65, a: 1}
-  _completedColor: {r: 1, g: 0.85, b: 0.2, a: 1}
-  _breakTimeColor: {r: 0.10417364, g: 0.9811321, b: 0, a: 1}
+  _normalColor: {r: 1, g: 1, b: 1, a: 1}
+  _readyColor: {r: 1, g: 1, b: 1, a: 1}
+  _filledColor: {r: 1, g: 1, b: 1, a: 1}
+  _completedColor: {r: 1, g: 1, b: 1, a: 1}
+  _breakTimeColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &5335634561267445865
 GameObject:
   m_ObjectHideFlags: 0
@@ -446,9 +478,9 @@ MonoBehaviour:
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 0
-  m_FillAmount: 1
+  m_FillAmount: 0
   m_FillClockwise: 1
-  m_FillOrigin: 1
+  m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
 --- !u!1 &7159453480794462089
@@ -520,8 +552,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
-  m_sharedMaterial: {fileID: -3010159193059958693, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 7efae31f9c04566448572a54ac5b3dae, type: 2}
+  m_sharedMaterial: {fileID: 6603940989296512970, guid: 7efae31f9c04566448572a54ac5b3dae, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -713,14 +745,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.9528302, g: 0.9384759, b: 0.32809716, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f3d120c9966886a4ca81783af691849f, type: 3}
+  m_Sprite: {fileID: 21300032, guid: 56d84991286850f428b4e7df0cca7380, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

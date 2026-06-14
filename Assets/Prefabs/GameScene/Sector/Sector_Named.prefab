@@ -273,25 +273,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _sectorRuntime: {fileID: 1399724844744912947}
   _projectileRoot: {fileID: 1418144889954438944}
-  _stageEnemySetting: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
+  _stageBattleSettings: {fileID: 11400000, guid: 7dba41b9141dc1e4f98493a57d1492ac, type: 2}
   _spawnedEnemiesRoot: {fileID: 8761316128307464955}
+  _spawnedSectorObjectsRoot: {fileID: 6860423384964349537}
   _sectorExclusionRules: {fileID: 11400000, guid: 498279093e5b5634291755e780b4ac69, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
   _stageProgressChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
-  _namedBattleWorldLockedChannel: {fileID: 11400000, guid: 13322fa37fe3afa4eadbd823711b4d3d, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _spawnOnlyWhenOpened: 1
-  _fillMinimumImmediately: 0
-  _maxImmediateSpawnPerTick: 4
+  _isBattleResolveCountdownLocked: 0
   _currentStageIndex: 0
-  _resolvedMinAlive: 0
   _resolvedMaxAlive: 0
-  _resolvedSimultaneousSpawnCount: 1
-  _resolvedFirstSpawnInterval: 0
-  _resolvedSpawnInterval: 0
-  _hasSpawnedFirstBatch: 0
+  _resolvedEncounterTotalSpawnCount: 0
+  _spawnedEncounterEnemyCount: 0
+  _pendingEnemySpawnCount: 0
+  _spawnedEncounterObjectCount: 0
+  _encounterSpawnFinished: 0
+  _encounterCleared: 0
   _isSectorActive: 0
-  _isNamedBattleWorldLocked: 0
+  _hasEncounterConfiguration: 0
+  _selectedEncounterPresetName: 
+  _selectedObjectRoomPresetName: 
+  _aliveEncounterTargetCount: 0
 --- !u!1 &3087310284613070715
 GameObject:
   m_ObjectHideFlags: 0
@@ -370,6 +373,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1a6de695c9b5514b8bd90f8f8d5c1cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _coatingState: 0
   runtime: {fileID: 1399724844744912947}
   allowPaintWhenClosed: 0
   boundsPadding: 0.1
@@ -493,9 +497,9 @@ MonoBehaviour:
   isCleared: 0
   is_startsector: 1
   cameraPoint: {fileID: 3116319525940045081}
-  enemySpawnPoints:
+  objectSpawnPoints:
   - {fileID: 5978653604206007493}
-  _spawnPointMetadata:
+  _objectSpawnPointMetadata:
   - {fileID: 2872226087644989136}
   XMin:
     bound: {fileID: 4735389564363011560}
@@ -538,7 +542,7 @@ MonoBehaviour:
   _timerSnapshotEvent: {fileID: 11400000, guid: 2f378e6ef4638754e99a1a9d3907e07f, type: 2}
   _battleStartedEvent: {fileID: 11400000, guid: cf2ea5b742a68ab4eb3268d8dadd27cb, type: 2}
   _battleEndedEvent: {fileID: 11400000, guid: d9d938b77ef305a4e8cfe195f0e30c6c, type: 2}
-  _stageEnemySetting: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
+  _stageBattleSettings: {fileID: 11400000, guid: 50915e0555f02494693fdf88e393415e, type: 2}
   _stageOverride: -1
   _namedSpawnPoint: {fileID: 5978653604206007493}
   _namedRoot: {fileID: 8761316128307464955}
@@ -837,6 +841,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1085362779872800617}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7857529636800879397
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6860423384964349537}
+  m_Layer: 9
+  m_Name: SectorObjectContainer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6860423384964349537
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7857529636800879397}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1085362779872800617}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7908187928412567981
 GameObject:
   m_ObjectHideFlags: 0
@@ -870,6 +905,7 @@ Transform:
   - {fileID: 1418144889954438944}
   - {fileID: 8019063675666989520}
   - {fileID: 8761316128307464955}
+  - {fileID: 6860423384964349537}
   m_Father: {fileID: 229609393604538625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9160384888326008588
@@ -917,6 +953,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabledForSpawning: 1
+  _usage: 3
+  _spawnPointTag: 
   _gizmoRadius: 0.25
   _gizmoColor: {r: 1, g: 0.35, b: 0.1, a: 0.9}
 --- !u!1001 &668563831554775836

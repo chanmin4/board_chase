@@ -20,6 +20,7 @@ public class AttackBullet : MonoBehaviour
     private LayerMask _damageTargetMask;
     private LayerMask _impactMask;
     private QueryTriggerInteraction _triggerInteraction;
+    private ShootHitConfirmedEventChannelSO _shootHitConfirmedEvent;
 
     private float _travelledDistance;
     private float _lifeTime;
@@ -38,7 +39,8 @@ public class AttackBullet : MonoBehaviour
         LayerMask damageTargetMask,
         LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
-        GameObject source)
+        GameObject source,
+        ShootHitConfirmedEventChannelSO shootHitConfirmedEvent)
     {
         direction.y = 0f;
 
@@ -68,6 +70,7 @@ public class AttackBullet : MonoBehaviour
         _impactMask = impactMask;
         _triggerInteraction = triggerInteraction;
         _source = source;
+        _shootHitConfirmedEvent = shootHitConfirmedEvent;
 
         _travelledDistance = 0f;
         _lifeTime = 0f;
@@ -294,6 +297,7 @@ public class AttackBullet : MonoBehaviour
         }
 
         damageable.ReceiveAnAttack(_damage, _source);
+        _shootHitConfirmedEvent?.RaiseEvent();
     }
 
     private bool TryGetProjectileHurtbox(

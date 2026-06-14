@@ -91,6 +91,14 @@ public class VSplatterShockwaveController : MonoBehaviour
         _cooldownRemaining = CooldownRemaining;
         PublishCooldownSnapshotIfNeeded();
 
+        if (GameplayAttackInputBlocker.IsBlocked)
+        {
+            if (_isCharging)
+                CancelCharge(false);
+
+            return;
+        }
+
         if (_character == null)
             return;
 

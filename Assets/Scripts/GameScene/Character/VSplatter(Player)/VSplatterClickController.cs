@@ -3,18 +3,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class VSplatterClickController : MonoBehaviour
 {
-    public enum FireMode
-    {
-        None,
-        Attack,
-        Paint
-    }
-
     [Header("Refs")]
     [SerializeField] private VSplatter_Character _character;
     [SerializeField] private VSplatterAimAction _aimAction;
-    [SerializeField] private VSplatterAttack _attack;
-    [SerializeField] private VSplatterPaint _paint;
+    [SerializeField] private VSplatterShoot _shoot;
     [SerializeField] private VSplatterActionGate _actionGate;
     [SerializeField] private PlayerBulletLoadoutRuntime _bulletLoadout;
 
@@ -38,11 +30,8 @@ public class VSplatterClickController : MonoBehaviour
         if (_aimAction == null)
             _aimAction = GetComponent<VSplatterAimAction>();
 
-        if (_attack == null)
-            _attack = GetComponent<VSplatterAttack>();
-
-        if (_paint == null)
-            _paint = GetComponent<VSplatterPaint>();
+        if (_shoot == null)
+            _shoot = GetComponent<VSplatterShoot>();
 
         if (_actionGate == null)
             _actionGate = GetComponent<VSplatterActionGate>();
@@ -64,17 +53,24 @@ public class VSplatterClickController : MonoBehaviour
             return;
         }
 
+        if (GameplayAttackInputBlocker.IsBlocked)
+        {
+            _wasHoldingLastFrame = false;
+            return;
+        }
+
         if (_character == null ||
             _aimAction == null ||
-            _bulletLoadout == null)
+            _bulletLoadout == null ||
+            _shoot == null)
         {
             _wasHoldingLastFrame = false;
             return;
         }
 
         if (!_character.shootInput ||
-            !TryGetSelectedFireMode(out FireMode mode) ||
-            !CanUseMode(mode))
+            !TryGetSelectedShootAmmoType(out BulletAmmoType ammoType) ||
+            !CanUseAmmoType(ammoType))
         {
             _wasHoldingLastFrame = false;
             return;
@@ -86,53 +82,30 @@ public class VSplatterClickController : MonoBehaviour
             return;
         }
 
-        VSplatterAimAction.FireKind fireKind =
-            mode == FireMode.Paint
-                ? VSplatterAimAction.FireKind.Paint
-                : VSplatterAimAction.FireKind.Attack;
-
-        if (!_aimAction.CanFireNowFor(fireKind))
+        if (!_aimAction.CanFireNowFor(ammoType))
             return;
 
-        switch (mode)
-        {
-            case FireMode.Attack:
-                _attack?.TryFireOnce();
-                break;
-
-            case FireMode.Paint:
-                _paint?.TryFireOnce();
-                break;
-        }
+        _shoot.TryFireOnce(ammoType);
     }
 
-    private bool TryGetSelectedFireMode(out FireMode mode)
+    private bool TryGetSelectedShootAmmoType(out BulletAmmoType ammoType)
     {
-        mode = FireMode.None;
+        ammoType = default;
 
-        if (!_bulletLoadout.TryGetSelectedAmmoType(
-                out BulletAmmoType ammoType))
-        {
+        if (!_bulletLoadout.TryGetSelectedAmmoType(out ammoType))
             return false;
-        }
 
-        mode = ammoType switch
-        {
-            BulletAmmoType.AttackAndPaint => FireMode.Attack,
-            BulletAmmoType.Attack => FireMode.Attack,
-            BulletAmmoType.Paint => FireMode.Paint,
-            _ => FireMode.None
-        };
-
-        return mode != FireMode.None;
+        return ammoType == BulletAmmoType.AttackAndPaint ||
+               ammoType == BulletAmmoType.Attack ||
+               ammoType == BulletAmmoType.Paint;
     }
 
-    private bool CanUseMode(FireMode mode)
+    private bool CanUseAmmoType(BulletAmmoType ammoType)
     {
         if (_actionGate == null)
             return true;
 
-        return mode == FireMode.Paint
+        return ammoType == BulletAmmoType.Paint
             ? _actionGate.CanUsePaint
             : _actionGate.CanUseAttack;
     }

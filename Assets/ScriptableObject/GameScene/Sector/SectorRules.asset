@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5a0838d1a1567f4d8e5f402ff67f48c, type: 3}
+  m_Name: SectorRules
+  m_EditorClassIdentifier: 
+  _occupancySampleInterval: 0.25
+  _occupancyPublishInterval: 0.25
+  _dominanceThreshold: 0.5
+  _useTimedNormalBattleJudge: 1
+  _successCountdownSeconds: 5
+  _failureCountdownSeconds: 5
+  _neutralJudgeResult: 0
+  _completeNormalBattleOnEnemyClear: 1
+  _applyNormalBattleResolveCoatingEffects: 0
+  _fillCompletedSectorWithVaccine: 0
+  _fillFailedSectorWithVirus: 0
+  _clearPaintMasksOnBattleResolve: 1

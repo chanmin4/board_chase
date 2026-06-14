@@ -14,6 +14,7 @@ public enum InteractionType
 public class InteractionManager : MonoBehaviour
 {
     [SerializeField] private InputReader _inputReader = default;
+    [SerializeField] private InteractionConfigSO _interactionConfig;
 
     [Header("Actor")]
     [SerializeField] private Transform _interactionActor;
@@ -31,6 +32,7 @@ public class InteractionManager : MonoBehaviour
     [SerializeField] private InteractionPromptEventChannelSO _interactionPromptChannel;
     [SerializeField] private string _interactionKeyLabel = "E";
     private LinkedList<Interaction> _potentialInteractions = new LinkedList<Interaction>();
+    private float _nextPortalInteractAllowedTime;
 
     private Transform InteractionActor
     {
@@ -125,6 +127,9 @@ public class InteractionManager : MonoBehaviour
         if (interaction.interactableObject == null)
             return;
 
+        if (Time.time < _nextPortalInteractAllowedTime)
+            return;
+
         SectorPortal portal = interaction.interactableObject.GetComponent<SectorPortal>();
         if (portal == null)
             portal = interaction.interactableObject.GetComponentInParent<SectorPortal>();
@@ -136,6 +141,8 @@ public class InteractionManager : MonoBehaviour
 
         if (moved)
         {
+            _nextPortalInteractAllowedTime =
+                Time.time + ResolvePortalInteractCooldown();
             currentInteractionType = InteractionType.None;
             _potentialInteractions.Clear();
             RequestUpdateUI(false);
@@ -378,6 +385,14 @@ public class InteractionManager : MonoBehaviour
 
             node = next;
         }
+    }
+
+    private float ResolvePortalInteractCooldown()
+    {
+        if (_interactionConfig == null)
+            return 1f;
+
+        return _interactionConfig.PortalInteractCooldownSeconds;
     }
 
 }
