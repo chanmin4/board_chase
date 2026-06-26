@@ -24,6 +24,12 @@ public class GroundGravityAction : StateAction
 
 	public override void OnUpdate()
 	{
+		if (GamePause.IsPaused || Time.timeScale <= 0f)
+			return;
+
+		if (_vsplatterScript == null)
+			return;
+
 		_vsplatterScript.movementVector.y = _originSO.verticalPull;
 	}
 	

@@ -18,8 +18,8 @@ public class RotateActionSO : StateActionSO<RotateAction>
 
 public class RotateAction : StateAction
 {
-    private VSplatterAimAction _aimAction;
-    private VSplatterWeaponHolder _weaponHolder;
+    private PlayerAimAction _aimAction;
+    private EntityWeaponHolder _weaponHolder;
     private Transform _transform;
     private VSplatter_Character _character;
 
@@ -43,12 +43,12 @@ public class RotateAction : StateAction
         stateMachine.TryGetComponent(out _characterController);
 
         if (_aimAction == null)
-            _aimAction = stateMachine.GetComponentInChildren<VSplatterAimAction>() ??
-                        stateMachine.GetComponentInParent<VSplatterAimAction>();
+            _aimAction = stateMachine.GetComponentInChildren<PlayerAimAction>() ??
+                        stateMachine.GetComponentInParent<PlayerAimAction>();
 
         if (_weaponHolder == null)
-            _weaponHolder = stateMachine.GetComponentInChildren<VSplatterWeaponHolder>() ??
-                            stateMachine.GetComponentInParent<VSplatterWeaponHolder>();
+            _weaponHolder = stateMachine.GetComponentInChildren<EntityWeaponHolder>() ??
+                            stateMachine.GetComponentInParent<EntityWeaponHolder>();
 
         if (_character == null)
             _character = stateMachine.GetComponentInChildren<VSplatter_Character>() ??

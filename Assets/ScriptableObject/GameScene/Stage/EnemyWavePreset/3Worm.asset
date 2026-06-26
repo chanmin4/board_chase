@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73e46e6985825554e8d79c2aec5ffed6, type: 3}
+  m_Name: 3Worm
+  m_EditorClassIdentifier: 
+  _displayName: 3Worm
+  _enemies:
+  - archetype: {fileID: 11400000, guid: 05a93a8afe4cc65408f9b9cd16591e31, type: 2}
+    count: 3

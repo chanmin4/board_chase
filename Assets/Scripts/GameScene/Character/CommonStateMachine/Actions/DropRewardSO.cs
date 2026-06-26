@@ -64,7 +64,7 @@ public class DropReward : StateAction
 			if (_currentRate >= dropDice)
 			{
 				item = dropItem.Item;
-				itemPrefab = dropItem.Item.Prefab;
+				itemPrefab = dropItem.Item.WorldItemPrefab;
 				break;
 			}
 		}

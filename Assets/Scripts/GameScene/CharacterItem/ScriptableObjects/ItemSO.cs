@@ -1,41 +1,34 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Localization;
-[CreateAssetMenu(fileName = "Item", menuName = "Inventory/Item")]
+using UnityEngine.Serialization;
+
+[CreateAssetMenu(fileName = "Item", menuName = "Item")]
 public class ItemSO : SerializableScriptableObject
 {
-	[Tooltip("The name of the item")]
-	[SerializeField] private LocalizedString _name = default;
+    [Header("Display")]
+    [Tooltip("The localized name of the item.")]
+    [SerializeField] private LocalizedString _name = default;
 
-	[Tooltip("A preview image for the item")]
-	[SerializeField]
-	private Sprite _previewImage = default;
+    [Tooltip("A preview image used by UI, shop, treasure, inventory, etc.")]
+    [SerializeField] private Sprite _previewImage = default;
 
-	[Tooltip("A description of the item")]
-	[SerializeField]
-	private LocalizedString _description = default;
+    [Tooltip("The localized description of the item.")]
+    [SerializeField] private LocalizedString _description = default;
 
-	[Tooltip("A description of the item")]
-	[SerializeField]
-	private int _healthResorationValue = default;
-/*
-	[Tooltip("The type of item")]
-	[SerializeField]
-	private ItemTypeSO _itemType = default;
-*/
-	[Tooltip("A prefab reference for the model of the item")]
-	[SerializeField]
-	private GameObject _prefab = default;
+    [Header("Loot")]
+    [Tooltip("Rarity used by treasure rooms, shop rooms, and shop UI.")]
+    [SerializeField] private PlayerShopItemRarity _rarity = PlayerShopItemRarity.Normal;
 
+   	[Tooltip("World pickup prefab spawned into the scene when this item appears as loot.")]
+    [FormerlySerializedAs("_prefab")]
+    [SerializeField] private GameObject _worldItemPrefab = default;
 
-	public LocalizedString Name => _name;
-	public Sprite PreviewImage => _previewImage;
-	public LocalizedString Description => _description;
-	public int HealthResorationValue => _healthResorationValue;
-	//public ItemTypeSO ItemType => _itemType;
-	public GameObject Prefab => _prefab;
-	//public virtual List<ItemStack> IngredientsList { get; }
-	public virtual bool IsLocalized { get; }
-	public virtual LocalizedSprite LocalizePreviewImage { get; }
+    public LocalizedString Name => _name;
+    public Sprite PreviewImage => _previewImage;
+    public LocalizedString Description => _description;
+    public PlayerShopItemRarity Rarity => _rarity;
+    public GameObject WorldItemPrefab => _worldItemPrefab;
 
+    public virtual bool IsLocalized { get; }
+    public virtual LocalizedSprite LocalizePreviewImage { get; }
 }

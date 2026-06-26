@@ -14,6 +14,7 @@ public class EnemyScreenSpaceHPUIAnchor : MonoBehaviour
     [SerializeField] private Enemy _enemy;
     [SerializeField] private Transform _uiAnchor;
     [SerializeField] private EnemyHealthBarSettingsSO _healthBarSettings;
+    private VisionVisibilityTarget _visionVisibilityTarget;
 
     private EnemyStatConfigSO _enemyStatConfig;
 
@@ -21,6 +22,14 @@ public class EnemyScreenSpaceHPUIAnchor : MonoBehaviour
     public Enemy Enemy => _enemy;
     public Transform UIAnchor => _uiAnchor != null ? _uiAnchor : transform;
     public EnemyHealthBarSettingsSO HealthBarSettings => _healthBarSettings;
+    public bool IsVisionVisible
+    {
+        get
+        {
+            ResolveVisionVisibilityTarget();
+            return _visionVisibilityTarget == null || _visionVisibilityTarget.IsVisible;
+        }
+    }
 
     private void Reset()
     {
@@ -29,10 +38,16 @@ public class EnemyScreenSpaceHPUIAnchor : MonoBehaviour
 
         if (_enemy == null)
             _enemy = GetComponent<Enemy>();
+
+        if (_visionVisibilityTarget == null)
+            _visionVisibilityTarget =
+                GetComponent<VisionVisibilityTarget>() ??
+                GetComponentInParent<VisionVisibilityTarget>();
     }
 
     private void OnEnable()
     {
+        ResolveVisionVisibilityTarget();
         EnemyScreenSpaceHPUIManager.Instance?.Register(this);
     }
 
@@ -49,6 +64,11 @@ public class EnemyScreenSpaceHPUIAnchor : MonoBehaviour
     public void SetEnemyStatConfig(EnemyStatConfigSO enemyStatConfig)
     {
         _enemyStatConfig = enemyStatConfig;
+    }
+
+    public void SetVisionVisibilityTarget(VisionVisibilityTarget target)
+    {
+        _visionVisibilityTarget = target;
     }
 
     public EnemyScreenSpaceWidgetLayout GetHealthBarLayout()
@@ -75,5 +95,15 @@ public class EnemyScreenSpaceHPUIAnchor : MonoBehaviour
             : Vector3.zero;
 
         return anchorPos + offset;
+    }
+
+    private void ResolveVisionVisibilityTarget()
+    {
+        if (_visionVisibilityTarget != null)
+            return;
+
+        _visionVisibilityTarget =
+            GetComponent<VisionVisibilityTarget>() ??
+            GetComponentInParent<VisionVisibilityTarget>();
     }
 }

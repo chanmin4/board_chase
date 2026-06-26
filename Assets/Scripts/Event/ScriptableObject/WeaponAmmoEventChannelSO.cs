@@ -19,7 +19,7 @@ public struct WeaponAmmoSnapshot
         float reload01)
     {
         this.weapon = weapon;
-        this.weaponIcon = weapon != null ? weapon.Icon : null;
+        this.weaponIcon = weapon != null ? weapon.PreviewImage : null;
         this.currentAmmo = currentAmmo;
         this.maxAmmo = maxAmmo;
         this.isReloading = isReloading;

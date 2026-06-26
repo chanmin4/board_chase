@@ -9,147 +9,71 @@ using UnityEngine.Serialization;
 public class StageBattleSettingsSO : ScriptableObject
 {
     [Serializable]
-    public class NamedEnemySpawnEntry
+    public class WeightedEncounterPreset
     {
-        public EnemyStatConfigSO archetype;
+        [Tooltip("Reusable normal battle encounter preset used by this stage.")]
+        public StageBattleEncounterPresetSO preset;
 
-        [Min(0)]
-        public int weight = 1;
+        [Tooltip("Weighted chance when selecting an encounter preset for a NormalBattle room.")]
+        [Min(0)] public int weight = 1;
     }
 
     [Serializable]
-    public class EnemyPresetSpawn
+    public class WeightedPlayerStageObjectRoomPreset
     {
-        public EnemyStatConfigSO archetype;
+        [Tooltip("Reusable player-side object room preset.")]
+        public PlayerStageObjectRoomPresetSO preset;
 
-        [Min(1)]
-        public int count = 1;
+        [Tooltip("Weighted chance when picking player-side object presets for a room.")]
+        [Min(0)] public int weight = 1;
     }
 
     [Serializable]
-    public class EnemyWavePreset
+    public class WeightedEnemyStageObjectRoomPreset
     {
-        public string displayName;
-        public List<EnemyPresetSpawn> enemies = new();
+        [Tooltip("Reusable enemy-side object room preset.")]
+        public EnemyStageObjectRoomPresetSO preset;
 
-        public int TotalSpawnCount
-        {
-            get
-            {
-                int total = 0;
-
-                if (enemies == null)
-                    return 0;
-
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    EnemyPresetSpawn spawn = enemies[i];
-
-                    if (IsEnemyPresetSpawnValid(spawn))
-                        total += Mathf.Max(1, spawn.count);
-                }
-
-                return total;
-            }
-        }
-    }
-
-    [Serializable]
-    public class EnemyWavePresetCandidate
-    {
-        [Min(0)]
-        [Tooltip("Index into this stage rule's Enemy Wave Preset Library.")]
-        public int enemyWavePresetIndex;
-
-        [Min(0)]
-        public int weight = 1;
-    }
-
-    [Serializable]
-    public class NormalBattleEnemyWave
-    {
-        [Min(0f)]
-        public float delaySeconds;
-
-        public List<EnemyWavePresetCandidate> enemyPresetCandidates = new();
-    }
-
-    [Serializable]
-    public class NormalBattleEncounterPreset
-    {
-        public string displayName;
-
-        [Min(0)]
-        public int weight = 1;
-
-        [Min(0)]
-        [Tooltip("Maximum enemies alive at the same time. 0 means no cap.")]
-        public int sectorMaxAlive = 0;
-
-        public List<NormalBattleEnemyWave> waves = new();
-    }
-
-    [Serializable]
-    public class SectorObjectPresetSpawn
-    {
-        public SectorObjectConfigSO objectConfig;
-
-        [Min(1)]
-        public int count = 1;
-    }
-
-    [Serializable]
-    public class SectorObjectRoomPreset
-    {
-        public string displayName;
-
-        [Min(0)]
-        public int weight = 1;
-
-        public List<SectorObjectPresetSpawn> objects = new();
+        [Tooltip("Weighted chance when picking enemy-side object presets for a room.")]
+        [Min(0)] public int weight = 1;
     }
 
     [Serializable]
     public class StageSpawnRule
     {
+        [Tooltip("Stage index this battle setting applies to.")]
         public int stageIndex;
+
+        [Tooltip("Inspector-only label for this stage battle setting.")]
         public string displayName;
 
-        [Header("Normal Battle Enemy Wave Library")]
-        public List<EnemyWavePreset> enemyWavePresetLibrary = new();
+        [Header("Normal Battle Encounters")]
+        [FormerlySerializedAs("normalBattleEncounterPresets")]
+        [Tooltip("NormalBattle rooms pick one encounter preset from this list. Goal-room encounters live in StageProgressionRulesSO.")]
+        public List<WeightedEncounterPreset> normalBattleEncounters = new();
 
-        [Header("Normal Battle Encounter Presets")]
-        [FormerlySerializedAs("normalBattleEnemyPresets")]
-        public List<NormalBattleEncounterPreset> normalBattleEncounterPresets = new();
+        [Header("Normal Battle Timer")]
+        [Tooltip("NormalBattle and BigMonsterWave room timer duration. The timer applies pressure but does not clear/fail the room by itself.")]
+        [Min(0f)] public float normalBattleTimerSeconds = 30f;
 
-        [Header("Normal Battle Sector Object Presets")]
-        [FormerlySerializedAs("sectorObjectPresets")]
-        public List<SectorObjectRoomPreset> sectorObjectRoomPresets = new();
+        [Tooltip("Legacy non-generated sector timer option. If true, timer resets when its requirement is lost.")]
+        public bool resetTimerWhenRequirementLost = false;
 
-        [Header("Named Enemy Spawn")]
-        public bool namedCycleEnabled = true;
-        public List<NamedEnemySpawnEntry> namedEnemyEntries = new();
+        [Header("Player Stage Objects")]
+        [FormerlySerializedAs("playerStageObjectPresetPickCount")]
+        [Tooltip("How many actual player-side stage objects are spawned in one battle room. Each spawn rolls one weighted preset from the candidate list, then one object from that preset.")]
+        [Min(0)] public int playerStageObjectSpawnCount = 2;
 
-        [Header("Named Boot")]
-        public bool startNamedCycleOnReady = true;
-        public bool reserveFirstSectorImmediately = true;
+        [Tooltip("Candidate player-side object room presets for this stage.")]
+        public List<WeightedPlayerStageObjectRoomPreset> playerStageObjectPresets = new();
 
-        [Min(0f)]
-        public float firstReservationDelay = 0f;
+        [Header("Enemy Stage Objects")]
+        [FormerlySerializedAs("enemyStageObjectPresetPickCount")]
+        [Tooltip("How many actual enemy-side stage objects are spawned in one battle room. Each spawn rolls one weighted preset from the candidate list, then one object from that preset.")]
+        [Min(0)] public int enemyStageObjectSpawnCount = 2;
 
-        [Header("Named Cycle")]
-        [Min(0f)]
-        public float reservationDuration = 30f;
-
-        [Min(0f)]
-        public float respawnCooldownAfterKill = 120f;
-
-        [Min(0f)]
-        public float retryDelayWhenNoCandidate = 5f;
-
-        [Header("Named Publish")]
-        [Min(0.01f)]
-        public float timerPublishInterval = 0.1f;
+        [Tooltip("Candidate enemy-side object room presets for this stage.")]
+        public List<WeightedEnemyStageObjectRoomPreset> enemyStageObjectPresets = new();
 
         [Header("Debug")]
         [Min(0.1f)]
@@ -175,114 +99,128 @@ public class StageBattleSettingsSO : ScriptableObject
         return false;
     }
 
-    public bool TryPickNormalBattleEncounterPreset(
+    public bool TryPickBattleEncounterPreset(
         int stageIndex,
         int stageSeed,
         Vector2Int sectorCoord,
-        out NormalBattleEncounterPreset preset)
+        StageRoomType roomType,
+        out StageBattleEncounterPresetSO preset)
     {
         preset = null;
 
+        if (roomType != StageRoomType.NormalBattle)
+            return false;
+
         if (!TryGetRule(stageIndex, out StageSpawnRule rule) ||
-            rule.normalBattleEncounterPresets == null)
+            rule.normalBattleEncounters == null)
         {
             return false;
         }
 
         int seed = BuildSectorSeed(stageSeed, sectorCoord, 101);
-        return TryPickWeightedEncounterPreset(rule, seed, out preset);
+        return TryPickWeightedEncounterPreset(rule.normalBattleEncounters, seed, out preset);
     }
 
-    public bool TryPickEnemyWavePreset(
-        StageSpawnRule rule,
-        NormalBattleEnemyWave wave,
-        int seed,
-        out EnemyWavePreset preset)
-    {
-        preset = null;
-
-        if (rule == null ||
-            wave == null ||
-            wave.enemyPresetCandidates == null)
-        {
-            return false;
-        }
-
-        return TryPickWeightedEnemyWavePreset(
-            rule,
-            wave.enemyPresetCandidates,
-            seed,
-            out preset);
-    }
-
-    public bool TryPickSectorObjectRoomPreset(
+    public bool TryGetNormalBattleTimerSettings(
         int stageIndex,
-        int stageSeed,
-        Vector2Int sectorCoord,
-        out SectorObjectRoomPreset preset)
+        out float timerSeconds,
+        out bool resetTimerWhenRequirementLost)
     {
-        preset = null;
+        timerSeconds = 30f;
+        resetTimerWhenRequirementLost = false;
 
-        if (!TryGetRule(stageIndex, out StageSpawnRule rule) ||
-            rule.sectorObjectRoomPresets == null)
-        {
-            return false;
-        }
-
-        int seed = BuildSectorSeed(stageSeed, sectorCoord, 307);
-        return TryPickWeightedSectorObjectRoomPreset(
-            rule.sectorObjectRoomPresets,
-            seed,
-            out preset);
-    }
-
-    public bool TryPickNamedArchetype(int stageIndex, out EnemyStatConfigSO archetype)
-    {
-        archetype = null;
-
-        if (!TryGetRule(stageIndex, out StageSpawnRule rule) ||
-            rule.namedEnemyEntries == null)
-        {
-            return false;
-        }
-
-        return TryPickWeightedNamed(rule.namedEnemyEntries, out archetype);
-    }
-
-    public bool CanStartNamedCycle(int stageIndex)
-    {
         if (!TryGetRule(stageIndex, out StageSpawnRule rule))
             return false;
 
-        if (!rule.namedCycleEnabled || !rule.startNamedCycleOnReady)
-            return false;
-
-        return HasValidNamedEntry(stageIndex);
+        timerSeconds = Mathf.Max(0f, rule.normalBattleTimerSeconds);
+        resetTimerWhenRequirementLost = rule.resetTimerWhenRequirementLost;
+        return true;
     }
 
-    public bool HasValidNamedEntry(int stageIndex)
+    public int GetPlayerStageObjectSpawnCount(int stageIndex)
     {
+        return TryGetRule(stageIndex, out StageSpawnRule rule)
+            ? Mathf.Max(0, rule.playerStageObjectSpawnCount)
+            : 0;
+    }
+
+    public int GetEnemyStageObjectSpawnCount(int stageIndex)
+    {
+        return TryGetRule(stageIndex, out StageSpawnRule rule)
+            ? Mathf.Max(0, rule.enemyStageObjectSpawnCount)
+            : 0;
+    }
+
+    public bool TryPickPlayerStageObjectConfig(
+        int stageIndex,
+        int stageSeed,
+        Vector2Int sectorCoord,
+        int spawnIndex,
+        out PlayerStageObjectConfigSO objectConfig)
+    {
+        objectConfig = null;
+
         if (!TryGetRule(stageIndex, out StageSpawnRule rule) ||
-            rule.namedEnemyEntries == null)
+            rule.playerStageObjectPresets == null ||
+            rule.playerStageObjectSpawnCount <= 0)
         {
             return false;
         }
 
-        for (int i = 0; i < rule.namedEnemyEntries.Count; i++)
+        int safeSpawnIndex = Mathf.Max(0, spawnIndex);
+        int presetSeed = BuildSectorSeed(stageSeed, sectorCoord, 307 + safeSpawnIndex * 37);
+
+        if (!TryPickWeighted(
+            rule.playerStageObjectPresets,
+            presetSeed,
+            IsPlayerStageObjectCandidateValid,
+            candidate => Mathf.Max(0, candidate.weight),
+            candidate => candidate.preset,
+            out PlayerStageObjectRoomPresetSO preset))
         {
-            if (IsNamedEntryValid(rule.namedEnemyEntries[i]))
-                return true;
+            return false;
         }
 
-        return false;
+        return TryPickPlayerStageObjectFromPreset(
+            preset,
+            BuildSectorSeed(stageSeed, sectorCoord, 1307 + safeSpawnIndex * 37),
+            out objectConfig);
     }
 
-    public bool TryGetNamedCycleRule(int stageIndex, out StageSpawnRule rule)
+    public bool TryPickEnemyStageObjectConfig(
+        int stageIndex,
+        int stageSeed,
+        Vector2Int sectorCoord,
+        int spawnIndex,
+        out EnemyStageObjectConfigSO objectConfig)
     {
-        if (!TryGetRule(stageIndex, out rule))
-            return false;
+        objectConfig = null;
 
-        return rule.namedCycleEnabled && HasValidNamedEntry(stageIndex);
+        if (!TryGetRule(stageIndex, out StageSpawnRule rule) ||
+            rule.enemyStageObjectPresets == null ||
+            rule.enemyStageObjectSpawnCount <= 0)
+        {
+            return false;
+        }
+
+        int safeSpawnIndex = Mathf.Max(0, spawnIndex);
+        int presetSeed = BuildSectorSeed(stageSeed, sectorCoord, 409 + safeSpawnIndex * 41);
+
+        if (!TryPickWeighted(
+            rule.enemyStageObjectPresets,
+            presetSeed,
+            IsEnemyStageObjectCandidateValid,
+            candidate => Mathf.Max(0, candidate.weight),
+            candidate => candidate.preset,
+            out EnemyStageObjectRoomPresetSO preset))
+        {
+            return false;
+        }
+
+        return TryPickEnemyStageObjectFromPreset(
+            preset,
+            BuildSectorSeed(stageSeed, sectorCoord, 1409 + safeSpawnIndex * 41),
+            out objectConfig);
     }
 
     public static int BuildSectorSeed(int stageSeed, Vector2Int sectorCoord, int salt)
@@ -299,63 +237,22 @@ public class StageBattleSettingsSO : ScriptableObject
     }
 
     private static bool TryPickWeightedEncounterPreset(
-        StageSpawnRule rule,
+        List<WeightedEncounterPreset> candidates,
         int seed,
-        out NormalBattleEncounterPreset pickedPreset)
+        out StageBattleEncounterPresetSO pickedPreset)
     {
         pickedPreset = null;
-        int totalWeight = 0;
 
-        for (int i = 0; i < rule.normalBattleEncounterPresets.Count; i++)
-        {
-            NormalBattleEncounterPreset preset = rule.normalBattleEncounterPresets[i];
-
-            if (!IsNormalBattleEncounterPresetValid(rule, preset))
-                continue;
-
-            totalWeight += Mathf.Max(0, preset.weight);
-        }
-
-        if (totalWeight <= 0)
+        if (candidates == null)
             return false;
 
-        int roll = new System.Random(seed).Next(0, totalWeight);
-
-        for (int i = 0; i < rule.normalBattleEncounterPresets.Count; i++)
-        {
-            NormalBattleEncounterPreset preset = rule.normalBattleEncounterPresets[i];
-
-            if (!IsNormalBattleEncounterPresetValid(rule, preset))
-                continue;
-
-            int weight = Mathf.Max(0, preset.weight);
-
-            if (roll < weight)
-            {
-                pickedPreset = preset;
-                return true;
-            }
-
-            roll -= weight;
-        }
-
-        return false;
-    }
-
-    private static bool TryPickWeightedEnemyWavePreset(
-        StageSpawnRule rule,
-        List<EnemyWavePresetCandidate> candidates,
-        int seed,
-        out EnemyWavePreset pickedPreset)
-    {
-        pickedPreset = null;
         int totalWeight = 0;
 
         for (int i = 0; i < candidates.Count; i++)
         {
-            EnemyWavePresetCandidate candidate = candidates[i];
+            WeightedEncounterPreset candidate = candidates[i];
 
-            if (!IsEnemyWavePresetCandidateValid(rule, candidate))
+            if (!IsEncounterCandidateValid(candidate))
                 continue;
 
             totalWeight += Mathf.Max(0, candidate.weight);
@@ -368,15 +265,18 @@ public class StageBattleSettingsSO : ScriptableObject
 
         for (int i = 0; i < candidates.Count; i++)
         {
-            EnemyWavePresetCandidate candidate = candidates[i];
+            WeightedEncounterPreset candidate = candidates[i];
 
-            if (!IsEnemyWavePresetCandidateValid(rule, candidate))
+            if (!IsEncounterCandidateValid(candidate))
                 continue;
 
             int weight = Mathf.Max(0, candidate.weight);
 
             if (roll < weight)
-                return TryResolveEnemyWavePreset(rule, candidate, out pickedPreset);
+            {
+                pickedPreset = candidate.preset;
+                return true;
+            }
 
             roll -= weight;
         }
@@ -384,22 +284,26 @@ public class StageBattleSettingsSO : ScriptableObject
         return false;
     }
 
-    private static bool TryPickWeightedSectorObjectRoomPreset(
-        List<SectorObjectRoomPreset> presets,
+    private static bool TryPickWeighted<TCandidate, TResult>(
+        IReadOnlyList<TCandidate> source,
         int seed,
-        out SectorObjectRoomPreset pickedPreset)
+        Func<TCandidate, bool> isValid,
+        Func<TCandidate, int> getWeight,
+        Func<TCandidate, TResult> getResult,
+        out TResult result)
     {
-        pickedPreset = null;
+        result = default;
+
+        if (source == null)
+            return false;
+
         int totalWeight = 0;
-
-        for (int i = 0; i < presets.Count; i++)
+        for (int i = 0; i < source.Count; i++)
         {
-            SectorObjectRoomPreset preset = presets[i];
+            TCandidate candidate = source[i];
 
-            if (!IsSectorObjectRoomPresetValid(preset))
-                continue;
-
-            totalWeight += Mathf.Max(0, preset.weight);
+            if (isValid(candidate))
+                totalWeight += Mathf.Max(0, getWeight(candidate));
         }
 
         if (totalWeight <= 0)
@@ -407,18 +311,18 @@ public class StageBattleSettingsSO : ScriptableObject
 
         int roll = new System.Random(seed).Next(0, totalWeight);
 
-        for (int i = 0; i < presets.Count; i++)
+        for (int i = 0; i < source.Count; i++)
         {
-            SectorObjectRoomPreset preset = presets[i];
+            TCandidate candidate = source[i];
 
-            if (!IsSectorObjectRoomPresetValid(preset))
+            if (!isValid(candidate))
                 continue;
 
-            int weight = Mathf.Max(0, preset.weight);
+            int weight = Mathf.Max(0, getWeight(candidate));
 
             if (roll < weight)
             {
-                pickedPreset = preset;
+                result = getResult(candidate);
                 return true;
             }
 
@@ -428,163 +332,91 @@ public class StageBattleSettingsSO : ScriptableObject
         return false;
     }
 
-    private static bool TryPickWeightedNamed(
-        List<NamedEnemySpawnEntry> entries,
-        out EnemyStatConfigSO archetype)
+    private static bool TryPickPlayerStageObjectFromPreset(
+        PlayerStageObjectRoomPresetSO preset,
+        int seed,
+        out PlayerStageObjectConfigSO objectConfig)
     {
-        archetype = null;
-        int totalWeight = 0;
+        objectConfig = null;
 
-        for (int i = 0; i < entries.Count; i++)
-        {
-            NamedEnemySpawnEntry entry = entries[i];
-
-            if (!IsNamedEntryValid(entry))
-                continue;
-
-            totalWeight += Mathf.Max(0, entry.weight);
-        }
-
-        if (totalWeight <= 0)
+        if (preset == null || preset.Objects == null)
             return false;
 
-        int roll = UnityEngine.Random.Range(0, totalWeight);
+        List<PlayerStageObjectConfigSO> validObjects = new();
 
-        for (int i = 0; i < entries.Count; i++)
+        for (int i = 0; i < preset.Objects.Count; i++)
         {
-            NamedEnemySpawnEntry entry = entries[i];
+            PlayerStageObjectRoomPresetSO.ObjectSpawn spawn = preset.Objects[i];
 
-            if (!IsNamedEntryValid(entry))
-                continue;
-
-            int weight = Mathf.Max(0, entry.weight);
-
-            if (roll < weight)
+            if (spawn != null &&
+                spawn.objectConfig != null &&
+                spawn.objectConfig.IsValid)
             {
-                archetype = entry.archetype;
-                return true;
+                validObjects.Add(spawn.objectConfig);
             }
-
-            roll -= weight;
         }
 
-        return false;
-    }
-
-    private static bool TryResolveEnemyWavePreset(
-        StageSpawnRule rule,
-        EnemyWavePresetCandidate candidate,
-        out EnemyWavePreset preset)
-    {
-        preset = null;
-
-        if (rule == null ||
-            candidate == null ||
-            rule.enemyWavePresetLibrary == null)
-        {
-            return false;
-        }
-
-        int index = candidate.enemyWavePresetIndex;
-
-        if (index < 0 || index >= rule.enemyWavePresetLibrary.Count)
+        if (validObjects.Count <= 0)
             return false;
 
-        preset = rule.enemyWavePresetLibrary[index];
-        return IsEnemyWavePresetValid(preset);
-    }
-
-    private static bool IsNormalBattleEncounterPresetValid(
-        StageSpawnRule rule,
-        NormalBattleEncounterPreset preset)
-    {
-        if (rule == null ||
-            preset == null ||
-            preset.weight <= 0 ||
-            preset.waves == null ||
-            preset.waves.Count <= 0)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < preset.waves.Count; i++)
-        {
-            if (!IsNormalBattleEnemyWaveValid(rule, preset.waves[i]))
-                return false;
-        }
-
+        objectConfig = validObjects[new System.Random(seed).Next(0, validObjects.Count)];
         return true;
     }
 
-    private static bool IsNormalBattleEnemyWaveValid(
-        StageSpawnRule rule,
-        NormalBattleEnemyWave wave)
+    private static bool TryPickEnemyStageObjectFromPreset(
+        EnemyStageObjectRoomPresetSO preset,
+        int seed,
+        out EnemyStageObjectConfigSO objectConfig)
     {
-        if (wave == null || wave.enemyPresetCandidates == null)
+        objectConfig = null;
+
+        if (preset == null || preset.Objects == null)
             return false;
 
-        for (int i = 0; i < wave.enemyPresetCandidates.Count; i++)
+        List<EnemyStageObjectConfigSO> validObjects = new();
+
+        for (int i = 0; i < preset.Objects.Count; i++)
         {
-            if (IsEnemyWavePresetCandidateValid(rule, wave.enemyPresetCandidates[i]))
-                return true;
+            EnemyStageObjectRoomPresetSO.ObjectSpawn spawn = preset.Objects[i];
+
+            if (spawn != null &&
+                spawn.objectConfig != null &&
+                spawn.objectConfig.IsValid)
+            {
+                validObjects.Add(spawn.objectConfig);
+            }
         }
 
-        return false;
+        if (validObjects.Count <= 0)
+            return false;
+
+        objectConfig = validObjects[new System.Random(seed).Next(0, validObjects.Count)];
+        return true;
     }
 
-    private static bool IsEnemyWavePresetCandidateValid(
-        StageSpawnRule rule,
-        EnemyWavePresetCandidate candidate)
+    private static bool IsEncounterCandidateValid(WeightedEncounterPreset candidate)
     {
         return candidate != null &&
                candidate.weight > 0 &&
-               TryResolveEnemyWavePreset(rule, candidate, out _);
+               candidate.preset != null &&
+               candidate.preset.IsValid;
     }
 
-    private static bool IsEnemyWavePresetValid(EnemyWavePreset preset)
+    private static bool IsPlayerStageObjectCandidateValid(
+        WeightedPlayerStageObjectRoomPreset candidate)
     {
-        return preset != null && preset.TotalSpawnCount > 0;
+        return candidate != null &&
+               candidate.weight > 0 &&
+               candidate.preset != null &&
+               candidate.preset.IsValid;
     }
 
-    private static bool IsEnemyPresetSpawnValid(EnemyPresetSpawn spawn)
+    private static bool IsEnemyStageObjectCandidateValid(
+        WeightedEnemyStageObjectRoomPreset candidate)
     {
-        return spawn != null &&
-               spawn.archetype != null &&
-               spawn.archetype.IsValid &&
-               spawn.count > 0;
-    }
-
-    private static bool IsSectorObjectRoomPresetValid(SectorObjectRoomPreset preset)
-    {
-        if (preset == null ||
-            preset.weight <= 0 ||
-            preset.objects == null)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < preset.objects.Count; i++)
-        {
-            if (IsSectorObjectPresetSpawnValid(preset.objects[i]))
-                return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsSectorObjectPresetSpawnValid(SectorObjectPresetSpawn spawn)
-    {
-        return spawn != null &&
-               spawn.objectConfig != null &&
-               spawn.objectConfig.IsValid &&
-               spawn.count > 0;
-    }
-
-    private static bool IsNamedEntryValid(NamedEnemySpawnEntry entry)
-    {
-        return entry != null &&
-               entry.archetype != null &&
-               entry.archetype.IsValid &&
-               entry.weight > 0;
+        return candidate != null &&
+               candidate.weight > 0 &&
+               candidate.preset != null &&
+               candidate.preset.IsValid;
     }
 }

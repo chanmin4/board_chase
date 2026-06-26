@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 294f4c0238c50334cb4be1a12dce5779, type: 3}
+  m_Name: Revolver
+  m_EditorClassIdentifier: 
+  _guid: 19b686301c9d44c44943a0dd0b1046f6
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: 56ef28eaaac46f34eb5536edc41f38ed, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _worldItemPrefab: {fileID: 6875246725044659727, guid: fe1f507cf0e3b5e40951a2e28712248e, type: 3}
+  _weaponId: weapon
+  _displayName: Weapon
+  _weaponViewPrefab: {fileID: 2874331260001655343, guid: fe1f507cf0e3b5e40951a2e28712248e, type: 3}
+  _weaponViewLocalPosition: {x: 0, y: 0, z: 0}
+  _weaponViewLocalEulerAngles: {x: -0, y: 90, z: 0}
+  _weaponViewLocalScale: {x: 1, y: 1, z: 1}
+  _fireAudioCue: {fileID: 11400000, guid: 50c0285c566a0ab40b0947ab9dadfc38, type: 2}
+  _hitConfirmAudioCue: {fileID: 11400000, guid: 1370460f65ab9ca47baa2bec9cf50eb3, type: 2}
+  _playerReloadAudioCue: {fileID: 11400000, guid: 493a5514a6533054ea7332f887f6432e, type: 2}
+  _enemyReloadAudioCue: {fileID: 0}
+  _statModifiers: []
+  _gunshotSoundRadiusMultiplier: 1
+  _gunshotSoundRadiusAdd: 0
+  references:
+    version: 2
+    RefIds: []

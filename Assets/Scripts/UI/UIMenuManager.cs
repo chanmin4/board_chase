@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIMenuManager : MonoBehaviour
 {
@@ -9,6 +10,12 @@ public class UIMenuManager : MonoBehaviour
 
     [SerializeField] private UISettingsController _settingsPanel;
     [SerializeField] private CanvasGroup _settingsGroup;
+
+    [SerializeField] private CreditPanel _creditPanel;
+    [SerializeField] private CanvasGroup _creditGroup;
+
+    [SerializeField] private CanvasGroup _achievementGroup;
+    [SerializeField] private Button _achievementBackButton;
 
     [SerializeField] private UIMainMenu _mainMenuPanel;
     [SerializeField] private CanvasGroup _mainMenuGroup;
@@ -30,6 +37,8 @@ public class UIMenuManager : MonoBehaviour
     {
         SetVisible(_mainMenuGroup, true);
         SetVisible(_settingsGroup, false);
+        SetVisible(_creditGroup, false);
+        SetVisible(_achievementGroup, false);
         SetVisible(_metaSystemGroup, false);
         SetVisible(_popupGroup, false);
     }
@@ -46,28 +55,36 @@ public class UIMenuManager : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_mainMenuPanel == null)
-            return;
+        if (_mainMenuPanel != null)
+        {
+            _mainMenuPanel.ContinueButtonAction += ContinueGame;
+            _mainMenuPanel.NewGameButtonAction += ButtonStartNewGameClicked;
+            _mainMenuPanel.PlayerUpgradeButtonAction += OpenMetaSystemScreen;
+            _mainMenuPanel.AchievementButtonAction += OpenAchievementScreen;
+            _mainMenuPanel.CreditButtonAction += OpenCreditScreen;
+            _mainMenuPanel.SettingsButtonAction += OpenSettingsScreen;
+            _mainMenuPanel.QuitButtonAction += ShowExitConfirmationPopup;
+        }
 
-        _mainMenuPanel.ContinueButtonAction += ContinueGame;
-        _mainMenuPanel.NewGameButtonAction += ButtonStartNewGameClicked;
-        _mainMenuPanel.PlayerUpgradeButtonAction += OpenMetaSystemScreen;
-        _mainMenuPanel.AchievementButtonAction += OpenAchievementScreen;
-        _mainMenuPanel.SettingsButtonAction += OpenSettingsScreen;
-        _mainMenuPanel.QuitButtonAction += ShowExitConfirmationPopup;
+        if (_achievementBackButton != null)
+            _achievementBackButton.onClick.AddListener(CloseAchievementScreen);
     }
 
     private void OnDisable()
     {
-        if (_mainMenuPanel == null)
-            return;
+        if (_mainMenuPanel != null)
+        {
+            _mainMenuPanel.ContinueButtonAction -= ContinueGame;
+            _mainMenuPanel.NewGameButtonAction -= ButtonStartNewGameClicked;
+            _mainMenuPanel.PlayerUpgradeButtonAction -= OpenMetaSystemScreen;
+            _mainMenuPanel.AchievementButtonAction -= OpenAchievementScreen;
+            _mainMenuPanel.CreditButtonAction -= OpenCreditScreen;
+            _mainMenuPanel.SettingsButtonAction -= OpenSettingsScreen;
+            _mainMenuPanel.QuitButtonAction -= ShowExitConfirmationPopup;
+        }
 
-        _mainMenuPanel.ContinueButtonAction -= ContinueGame;
-        _mainMenuPanel.NewGameButtonAction -= ButtonStartNewGameClicked;
-        _mainMenuPanel.PlayerUpgradeButtonAction -= OpenMetaSystemScreen;
-        _mainMenuPanel.AchievementButtonAction -= OpenAchievementScreen;
-        _mainMenuPanel.SettingsButtonAction -= OpenSettingsScreen;
-        _mainMenuPanel.QuitButtonAction -= ShowExitConfirmationPopup;
+        if (_achievementBackButton != null)
+            _achievementBackButton.onClick.RemoveListener(CloseAchievementScreen);
     }
 
     private void RefreshMenuScreen()
@@ -143,7 +160,22 @@ public class UIMenuManager : MonoBehaviour
 
     public void OpenAchievementScreen()
     {
-        // TODO: Achievement panel도 CanvasGroup 방식으로 연결.
+        if (_achievementGroup == null)
+        {
+            Debug.LogError("[UIMenuManager] Achievement group is missing.", this);
+            return;
+        }
+
+        SetVisible(_mainMenuGroup, false);
+        SetVisible(_achievementGroup, true);
+    }
+
+    public void CloseAchievementScreen()
+    {
+        SetVisible(_achievementGroup, false);
+        SetVisible(_mainMenuGroup, true);
+
+        RefreshMenuScreen();
     }
 
     public void OpenMetaSystemScreen()
@@ -173,33 +205,60 @@ public class UIMenuManager : MonoBehaviour
         RefreshMenuScreen();
     }
 
-	public void OpenSettingsScreen()
-	{
-		if (_settingsPanel == null)
-		{
-			Debug.LogError("[UIMenuManager] Settings panel is missing.", this);
-			return;
-		}
+    public void OpenSettingsScreen()
+    {
+        if (_settingsPanel == null)
+        {
+            Debug.LogError("[UIMenuManager] Settings panel is missing.", this);
+            return;
+        }
 
-		SetVisible(_mainMenuGroup, false);
-		SetVisible(_settingsGroup, true);
+        SetVisible(_mainMenuGroup, false);
+        SetVisible(_settingsGroup, true);
 
-		_settingsPanel.Closed -= CloseSettingsScreen;
-		_settingsPanel.Closed += CloseSettingsScreen;
-		_settingsPanel.OpenSettingsScreen();
-	}
+        _settingsPanel.Closed -= CloseSettingsScreen;
+        _settingsPanel.Closed += CloseSettingsScreen;
+        _settingsPanel.OpenSettingsScreen();
+    }
 
     public void CloseSettingsScreen()
-	{
-		if (_settingsPanel != null)
-			_settingsPanel.Closed -= CloseSettingsScreen;
+    {
+        if (_settingsPanel != null)
+            _settingsPanel.Closed -= CloseSettingsScreen;
 
-		SetVisible(_settingsGroup, false);
-		SetVisible(_mainMenuGroup, true);
+        SetVisible(_settingsGroup, false);
+        SetVisible(_mainMenuGroup, true);
 
-		RefreshMenuScreen();
-	}
+        RefreshMenuScreen();
+    }
 
+    public void OpenCreditScreen()
+    {
+        Debug.Log("[UIMenuManager] OpenCreditScreen", this);
+        if (_creditPanel == null)
+        {
+            Debug.LogError("[UIMenuManager] Credit panel is missing.", this);
+            return;
+        }
+
+        SetVisible(_mainMenuGroup, false);
+        SetVisible(_creditGroup, true);
+
+        _creditPanel.Closed -= CloseCreditScreen;
+        _creditPanel.Closed += CloseCreditScreen;
+        _creditPanel.OpenCreditPanel();
+    }
+
+    public void CloseCreditScreen()
+    {
+        if (_creditPanel != null)
+            _creditPanel.Closed -= CloseCreditScreen;
+
+        SetVisible(_creditGroup, false);
+        SetVisible(_mainMenuGroup, true);
+
+        RefreshMenuScreen();
+    }
 
     public void ShowExitConfirmationPopup()
     {
@@ -236,15 +295,21 @@ public class UIMenuManager : MonoBehaviour
 
         if (_metaSystemPanel != null)
             _metaSystemPanel.Closed -= CloseMetaSystemScreen;
+
+        if (_creditPanel != null)
+            _creditPanel.Closed -= CloseCreditScreen;
+
+        if (_achievementBackButton != null)
+            _achievementBackButton.onClick.RemoveListener(CloseAchievementScreen);
     }
 
-	private static void SetVisible(CanvasGroup group, bool visible)
-	{
-		if (group == null)
-			return;
+    private static void SetVisible(CanvasGroup group, bool visible)
+    {
+        if (group == null)
+            return;
 
-		group.alpha = visible ? 1f : 0f;
-		group.interactable = visible;
-		group.blocksRaycasts = visible;
-	}
+        group.alpha = visible ? 1f : 0f;
+        group.interactable = visible;
+        group.blocksRaycasts = visible;
+    }
 }

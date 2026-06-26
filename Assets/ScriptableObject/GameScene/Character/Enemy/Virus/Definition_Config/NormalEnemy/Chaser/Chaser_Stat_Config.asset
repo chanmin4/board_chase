@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897440c63eef82e4c91172b6c01afca0, type: 3}
+  m_Name: Chaser_Stat_Config
+  m_EditorClassIdentifier: 
+  _paintMark:
+    _usePaintMark: 1
+    _markAmountPerStack: 100
+    _maxVaccineMarkStacks: 3
+    _maxVirusMarkStacks: 3
+    _startWithVirusMark: 0
+    _startingVirusMarkAmount: 0
+    _paintMarkTickInterval: 0.1
+    _vaccinePaintMarkAmountPerTick: 1
+    _virusPaintMarkAmountPerTick: 1
+    _virusMarkAmountOnDamagingPlayer: 20
+    _inactiveSlowDecayAmountPerTick: 0
+    _activeSlowDecayAmountPerTick: 0.5
+    _oppositePaintFastDecayAmountPerTick: 1
+    _vaccineDamageTakenAddPerStack: 0.15
+    _virusDamageTakenAddPerStack: -0.15
+  _id: enemy_common
+  _displayName: Chaser
+  _enemyPrefab: {fileID: 469768165924775885, guid: 3d3a30cac380cf54f8328cc5264d60de, type: 3}
+  _initialHealth: 20
+  _normalMovementSpeed: 25
+  _playerChaseMovementSpeed: 28
+  _contactHealthDamage: 5
+  _contactInfectionDamage: 5
+  _contactHitCooldown: 1
+  _xpOnDeath: 25
+  _runCurrencyOnDeath: 5
+  _virusTrailEnabled: 1
+  _virusTrailRadius: 0.4
+  _virusTrailMinSegmentDistance: 0.5
+  _virusTrailPaintPriority: 10
+  _virusTrailMinMoveSpeed: 0.05
+  _virusTrailTeleportResetDistance: 10
+  _virusTrailStampInterval: 0.04
+  _virusTrailMaxPaintSegmentDistance: 1
+  _virusTrailSpacing: 0.5
+  _virusTrailMaxSteps: 3
+  _healthBarUI:
+    _worldOffset: {x: 0, y: 0, z: 0}
+    _screenPixelOffset: {x: 0, y: 50}
+    _hideWhenBehindCamera: 1
+    _hideWhenOffScreen: 1
+    _clampToScreen: 1
+    _screenEdgePadding: 24
+  _infectionCastBarUI:
+    _worldOffset: {x: 0, y: 0, z: 0}
+    _screenPixelOffset: {x: 0, y: 40}
+    _hideWhenBehindCamera: 1
+    _hideWhenOffScreen: 1
+    _clampToScreen: 1
+    _screenEdgePadding: 24
+  _attackOptions:
+  - attackConfig: {fileID: 11400000, guid: 5593b6913535736449020287949c7410, type: 2}
+    weight: 1
+    enabled: 1

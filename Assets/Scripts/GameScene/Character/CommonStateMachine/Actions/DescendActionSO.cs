@@ -28,6 +28,12 @@ public class DescendAction : StateAction
 
 	public override void OnUpdate()
 	{
+		if (GamePause.IsPaused || Time.timeScale <= 0f)
+			return;
+
+		if (_vsplatterScript == null)
+			return;
+
 		//Note that deltaTime is used even though it's going to be used in ApplyMovementVectorAction, this is because it represents an acceleration, not a speed
 		_verticalMovement += Physics.gravity.y * VSplatter_Character.GRAVITY_MULTIPLIER * Time.deltaTime;
 		//Note that even if it's added, the above value is negative due to Physics.gravity.y

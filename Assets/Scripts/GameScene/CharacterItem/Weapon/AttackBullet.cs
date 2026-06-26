@@ -16,6 +16,8 @@ public class AttackBullet : MonoBehaviour
     private float _maxDistance;
     private float _maxLifetime;
     private float _damage;
+    private float _vaccineMarkAmountOnHit;
+    private float _virusMarkAmountOnHit;
 
     private LayerMask _damageTargetMask;
     private LayerMask _impactMask;
@@ -36,6 +38,8 @@ public class AttackBullet : MonoBehaviour
         float castRadius,
         float maxLifetime,
         float damage,
+        float vaccineMarkAmountOnHit,
+        float virusMarkAmountOnHit,
         LayerMask damageTargetMask,
         LayerMask impactMask,
         QueryTriggerInteraction triggerInteraction,
@@ -65,6 +69,8 @@ public class AttackBullet : MonoBehaviour
         _castRadius = Mathf.Max(0.001f, castRadius);
         _maxLifetime = Mathf.Max(0.01f, maxLifetime);
         _damage = Mathf.Max(0f, damage);
+        _vaccineMarkAmountOnHit = Mathf.Max(0f, vaccineMarkAmountOnHit);
+        _virusMarkAmountOnHit = Mathf.Max(0f, virusMarkAmountOnHit);
 
         _damageTargetMask = damageTargetMask;
         _impactMask = impactMask;
@@ -229,7 +235,7 @@ public class AttackBullet : MonoBehaviour
 
     private bool TrySelectClosestHit(
         RaycastHit[] hits,
-        bool requireProjectileHurtbox,
+        bool requireDamageableTarget,
         out RaycastHit closestHit)
     {
         closestHit = default;
@@ -254,8 +260,8 @@ public class AttackBullet : MonoBehaviour
                 continue;
             }
 
-            if (requireProjectileHurtbox &&
-                !TryGetProjectileHurtbox(collider, out _))
+            if (requireDamageableTarget &&
+                !TryResolveDamageableTarget(collider, out _))
             {
                 continue;
             }
@@ -276,14 +282,7 @@ public class AttackBullet : MonoBehaviour
         if (_damage <= 0f || hit.collider == null)
             return;
 
-        if (!TryGetProjectileHurtbox(
-                hit.collider,
-                out EnemyProjectileHurtbox hurtbox))
-        {
-            return;
-        }
-
-        if (!hurtbox.TryGetDamageable(out Damageable damageable))
+        if (!TryResolveDamageableTarget(hit.collider, out Damageable damageable))
             return;
 
         if (!damageable.CanReceiveDamage)
@@ -297,7 +296,35 @@ public class AttackBullet : MonoBehaviour
         }
 
         damageable.ReceiveAnAttack(_damage, _source);
+        TryApplyPaintMark(damageable);
         _shootHitConfirmedEvent?.RaiseEvent();
+    }
+
+    private void TryApplyPaintMark(Damageable damageable)
+    {
+        if (damageable == null ||
+            (_vaccineMarkAmountOnHit <= 0f && _virusMarkAmountOnHit <= 0f))
+        {
+            return;
+        }
+
+        EntityPaintMarkController mark =
+            damageable.GetComponent<EntityPaintMarkController>();
+
+        if (mark == null)
+            mark = damageable.GetComponentInParent<EntityPaintMarkController>();
+
+        if (mark == null)
+            mark = damageable.GetComponentInChildren<EntityPaintMarkController>(true);
+
+        if (mark == null)
+            return;
+
+        if (_vaccineMarkAmountOnHit > 0f)
+            mark.AddMark(PaintMarkFaction.Vaccine, _vaccineMarkAmountOnHit);
+
+        if (_virusMarkAmountOnHit > 0f)
+            mark.AddMark(PaintMarkFaction.Virus, _virusMarkAmountOnHit);
     }
 
     private bool TryGetProjectileHurtbox(
@@ -349,6 +376,37 @@ public class AttackBullet : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool TryResolveDamageableTarget(
+        Collider collider,
+        out Damageable damageable)
+    {
+        damageable = null;
+
+        if (collider == null)
+            return false;
+
+        if (TryGetProjectileHurtbox(collider, out EnemyProjectileHurtbox hurtbox) &&
+            hurtbox.TryGetDamageable(out damageable))
+        {
+            return damageable != null;
+        }
+
+        damageable = collider.GetComponent<Damageable>();
+
+        if (damageable != null)
+            return !HasConfiguredProjectileHurtbox(damageable);
+
+        damageable = collider.GetComponentInParent<Damageable>();
+        return damageable != null &&
+               !HasConfiguredProjectileHurtbox(damageable);
+    }
+
+    private static bool HasConfiguredProjectileHurtbox(Damageable damageable)
+    {
+        return damageable != null &&
+               damageable.GetComponentInChildren<EnemyProjectileHurtbox>(true) != null;
     }
 
     private static bool IsAcceptedHurtbox(

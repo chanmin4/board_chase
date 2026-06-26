@@ -67,23 +67,12 @@ public class MetaUpgradeCatalogSO : ScriptableObject
         new MetaUpgradeDefinition
         {
             id = MetaUpgradeId.AttackSpeed,
-            displayName = "Attack Speed",
-            description = "Permanently increases attack shots per second.",
-            statId = PlayerStatId.AttackShotsPerSecond,
+            displayName = "Shot Speed",
+            description = "Permanently increases shots per second.",
+            statId = PlayerStatId.ShotsPerSecond,
             modifierType = StatModifierType.FlatAdd,
             valueFormat = "+{0:0.##}/s",
             effectPerLevel = new float[] { 0.1f, 0.10f, 0.10f, 0.20f },
-            costPerLevel = new int[] { 100, 100, 100, 200 }
-        },
-        new MetaUpgradeDefinition
-        {
-            id = MetaUpgradeId.PaintSpeed,
-            displayName = "Paint Speed",
-            description = "Permanently increases paint shots per second.",
-            statId = PlayerStatId.PaintShotsPerSecond,
-            modifierType = StatModifierType.FlatAdd,
-            valueFormat = "+{0:0.##}/s",
-            effectPerLevel = new float[] { 0.10f, 0.10f, 0.10f, 0.20f },
             costPerLevel = new int[] { 100, 100, 100, 200 }
         }
     };

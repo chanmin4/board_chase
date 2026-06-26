@@ -4,9 +4,10 @@ using UnityEngine;
 
 public enum PlayerShopItemRarity
 {
-    Normal,
-    Rare,
-    Legendary
+    Normal = 0,
+    Rare = 1,
+    Unique = 3,
+    Legendary = 2
 }
 
 [CreateAssetMenu(
@@ -31,14 +32,14 @@ public class PlayerShopCatalogSO : ScriptableObject
     public sealed class BulletShopEntry
     {
         [SerializeField] private BulletSO _bullet;
-        [SerializeField] private PlayerShopItemRarity _rarity;
         [SerializeField, Min(0)] private int _price = 10;
         [SerializeField, Min(1)] private int _stock = 1;
         [SerializeField, Min(1)] private int _bundleAmount = 20;
         [SerializeField, TextArea] private string _description;
 
         public BulletSO Bullet => _bullet;
-        public PlayerShopItemRarity Rarity => _rarity;
+        public PlayerShopItemRarity Rarity =>
+            _bullet != null ? _bullet.Rarity : PlayerShopItemRarity.Normal;
         public int Price => Mathf.Max(0, _price);
         public int Stock => Mathf.Max(1, _stock);
         public int BundleAmount => Mathf.Max(1, _bundleAmount);
@@ -59,8 +60,9 @@ public class PlayerShopCatalogSO : ScriptableObject
     [SerializeField] private RarityWeight[] _rarityWeights =
     {
         new RarityWeight(PlayerShopItemRarity.Normal, 65f),
-        new RarityWeight(PlayerShopItemRarity.Rare, 30f),
-        new RarityWeight(PlayerShopItemRarity.Legendary, 5f),
+        new RarityWeight(PlayerShopItemRarity.Rare, 25f),
+        new RarityWeight(PlayerShopItemRarity.Unique, 8f),
+        new RarityWeight(PlayerShopItemRarity.Legendary, 2f),
     };
 
     [Header("Bullet Pool")]

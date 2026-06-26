@@ -28,7 +28,6 @@ public enum SettingFieldType
     Attack,
     Paint,
     Dash,
-    Shockwave,
     Interact,
     UpgradePanel,
     QTEInteract,

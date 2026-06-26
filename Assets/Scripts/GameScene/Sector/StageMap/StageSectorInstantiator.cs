@@ -26,11 +26,17 @@ public class StageSectorInstantiator : MonoBehaviour
     [Tooltip("Prefab used for Treasure rooms. Falls back to NormalBattle when empty.")]
     [SerializeField] private SectorRuntime _treasureSectorPrefab;
 
+    [Tooltip("Prefab used for Shop rooms. Falls back to NormalBattle when empty.")]
+    [SerializeField] private SectorRuntime _shopSectorPrefab;
+
     [Tooltip("Prefab used for Named goal rooms. Falls back to NormalBattle when empty.")]
     [SerializeField] private SectorRuntime _namedSectorPrefab;
 
     [Tooltip("Prefab used for Boss goal rooms. Falls back to Named, then NormalBattle when empty.")]
     [SerializeField] private SectorRuntime _bossSectorPrefab;
+
+    [Tooltip("Prefab used for BigMonsterWave goal rooms. Falls back to NormalBattle when empty.")]
+    [SerializeField] private SectorRuntime _bigMonsterWaveSectorPrefab;
 
     [Header("Placement")]
     [Tooltip("Parent transform for generated sectors. Uses this transform when empty.")]
@@ -43,6 +49,12 @@ public class StageSectorInstantiator : MonoBehaviour
     [SerializeField] private Vector2 _roomSpacingXZ = new Vector2(40f, 40f);
 
     [Header("Refs")]
+    [Tooltip("Stage-specific Treasure room generation and reward settings.")]
+    [SerializeField] private StageTreasureSettingsSO _stageTreasureSettings;
+
+    [Tooltip("Stage-specific Shop room generation and inventory settings.")]
+    [SerializeField] private StageShopSettingsSO _stageShopSettings;
+
     [Tooltip("Receives generated sectors and owns opened/cleared/current sector state.")]
     [SerializeField] private SectorStateManager _sectorStateManager;
 
@@ -113,8 +125,15 @@ public class StageSectorInstantiator : MonoBehaviour
             rule.stageIndex,
             rule.roomGridSize,
             _startSectorCoord,
-            rule.goalRoomType,
-            rule.CreateTreasureRoomGenerationSettings(consecutiveNoHitStageCount));
+            rule.GoalStageRoomType,
+            _stageTreasureSettings != null
+                ? _stageTreasureSettings.CreateTreasureRoomGenerationSettings(
+                    rule.stageIndex,
+                    consecutiveNoHitStageCount)
+                : StageTreasureRoomGenerationSettings.Disabled,
+            _stageShopSettings != null
+                ? _stageShopSettings.CreateShopRoomGenerationSettings(rule.stageIndex)
+                : StageShopRoomGenerationSettings.Disabled);
 
         Vector3 roomStep = ResolveRoomStep();
 
@@ -190,6 +209,11 @@ public class StageSectorInstantiator : MonoBehaviour
                     ? _treasureSectorPrefab
                     : _normalBattleSectorPrefab;
 
+            case StageRoomType.Shop:
+                return _shopSectorPrefab != null
+                    ? _shopSectorPrefab
+                    : _normalBattleSectorPrefab;
+
             case StageRoomType.Named:
                 return _namedSectorPrefab != null
                     ? _namedSectorPrefab
@@ -201,6 +225,11 @@ public class StageSectorInstantiator : MonoBehaviour
 
                 return _namedSectorPrefab != null
                     ? _namedSectorPrefab
+                    : _normalBattleSectorPrefab;
+
+            case StageRoomType.BigMonsterWave:
+                return _bigMonsterWaveSectorPrefab != null
+                    ? _bigMonsterWaveSectorPrefab
                     : _normalBattleSectorPrefab;
 
             default:

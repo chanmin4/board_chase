@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1da07c84c620e174a903d1b3a910fb09, type: 3}
+  m_Name: ShopRoomDropTable
+  m_EditorClassIdentifier: 
+  _offerCount: 3
+  _allowDuplicateOffers: 1
+  _rerollCost: 5
+  _sellPriceRate: 0.5
+  _rewardKindWeights:
+  - kind: 0
+    weight: 0
+  - kind: 1
+    weight: 100
+  _rarityWeights:
+  - rarity: 0
+    weight: 65
+  - rarity: 1
+    weight: 25
+  - rarity: 3
+    weight: 8
+  - rarity: 2
+    weight: 2
+  _normalPool:
+  - item: {fileID: 11400000, guid: 57dc2c60507b0064d961077f4f5aeb9b, type: 2}
+    rarity: 0
+    weight: 1
+    price: 5
+    stock: 1
+    bulletBundleAmount: 30
+    descriptionOverride: 
+  _rarePool: []
+  _uniquePool: []
+  _legendaryPool: []

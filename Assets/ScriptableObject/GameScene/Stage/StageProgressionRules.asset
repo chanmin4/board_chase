@@ -15,19 +15,33 @@ MonoBehaviour:
   _rules:
   - stageIndex: 1
     displayName: 1_Stage
-    roomGridSize: 2
-    goalRoomType: 3
-    enableTreasureRooms: 1
-    treasureRoomMinCount: 1
-    treasureRoomMaxCount: 1
-    forceExactTreasureCountForStage: 1
-    forcedTreasureStageIndex: 1
-    forcedTreasureCount: 1
-    extraTreasureChancePerNoHitStage: 0.1
-    maxExtraTreasureChance: 1
-    excludeFirstRoomFromTreasure: 1
-    timerSeconds: 30
-    resetTimerWhenRequirementLost: 0
+    roomGridSize: 3
+    goalRoomType: 7
+    namedGoal:
+      cycleEnabled: 0
+      enemyEntries: []
+      startCycleOnReady: 0
+      reserveFirstSectorImmediately: 0
+      firstReservationDelay: 0
+      reservationDuration: 0
+      respawnCooldownAfterKill: 0
+      retryDelayWhenNoCandidate: 0
+      timerPublishInterval: 0.01
+    bossGoal:
+      cycleEnabled: 0
+      enemyEntries: []
+      startCycleOnReady: 0
+      reserveFirstSectorImmediately: 0
+      firstReservationDelay: 0
+      reservationDuration: 0
+      respawnCooldownAfterKill: 0
+      retryDelayWhenNoCandidate: 0
+      timerPublishInterval: 0.1
+    bigMonsterWaveGoal:
+      encounters:
+      - preset: {fileID: 11400000, guid: bdeab7e257548904cb70dbd79e762b9f, type: 2}
+        weight: 1
+    goalDebugLogInterval: 1
     useStartSectorOnly: 0
     advanceStageOnStartSectorComplete: 0
     advanceStageOnBossBattleComplete: 0
@@ -36,19 +50,31 @@ MonoBehaviour:
     infectionControlRecoverOnComplete: 50
   - stageIndex: 2
     displayName: 2_Stage
-    roomGridSize: 3
+    roomGridSize: 4
     goalRoomType: 3
-    enableTreasureRooms: 1
-    treasureRoomMinCount: 1
-    treasureRoomMaxCount: 2
-    forceExactTreasureCountForStage: 1
-    forcedTreasureStageIndex: 1
-    forcedTreasureCount: 1
-    extraTreasureChancePerNoHitStage: 0.1
-    maxExtraTreasureChance: 1
-    excludeFirstRoomFromTreasure: 1
-    timerSeconds: 60
-    resetTimerWhenRequirementLost: 0
+    namedGoal:
+      cycleEnabled: 1
+      enemyEntries: []
+      startCycleOnReady: 1
+      reserveFirstSectorImmediately: 1
+      firstReservationDelay: 0
+      reservationDuration: 30
+      respawnCooldownAfterKill: 120
+      retryDelayWhenNoCandidate: 5
+      timerPublishInterval: 0.1
+    bossGoal:
+      cycleEnabled: 1
+      enemyEntries: []
+      startCycleOnReady: 1
+      reserveFirstSectorImmediately: 1
+      firstReservationDelay: 0
+      reservationDuration: 30
+      respawnCooldownAfterKill: 120
+      retryDelayWhenNoCandidate: 5
+      timerPublishInterval: 0.1
+    bigMonsterWaveGoal:
+      encounters: []
+    goalDebugLogInterval: 1
     useStartSectorOnly: 0
     advanceStageOnStartSectorComplete: 0
     advanceStageOnBossBattleComplete: 0
@@ -59,17 +85,29 @@ MonoBehaviour:
     displayName: 3_Stage
     roomGridSize: 4
     goalRoomType: 3
-    enableTreasureRooms: 1
-    treasureRoomMinCount: 1
-    treasureRoomMaxCount: 2
-    forceExactTreasureCountForStage: 1
-    forcedTreasureStageIndex: 1
-    forcedTreasureCount: 1
-    extraTreasureChancePerNoHitStage: 0.1
-    maxExtraTreasureChance: 1
-    excludeFirstRoomFromTreasure: 1
-    timerSeconds: 120
-    resetTimerWhenRequirementLost: 0
+    namedGoal:
+      cycleEnabled: 1
+      enemyEntries: []
+      startCycleOnReady: 1
+      reserveFirstSectorImmediately: 1
+      firstReservationDelay: 0
+      reservationDuration: 30
+      respawnCooldownAfterKill: 120
+      retryDelayWhenNoCandidate: 5
+      timerPublishInterval: 0.1
+    bossGoal:
+      cycleEnabled: 1
+      enemyEntries: []
+      startCycleOnReady: 1
+      reserveFirstSectorImmediately: 1
+      firstReservationDelay: 0
+      reservationDuration: 30
+      respawnCooldownAfterKill: 120
+      retryDelayWhenNoCandidate: 5
+      timerPublishInterval: 0.1
+    bigMonsterWaveGoal:
+      encounters: []
+    goalDebugLogInterval: 1
     useStartSectorOnly: 0
     advanceStageOnStartSectorComplete: 0
     advanceStageOnBossBattleComplete: 0

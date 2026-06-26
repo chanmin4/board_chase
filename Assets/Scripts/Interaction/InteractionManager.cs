@@ -5,10 +5,11 @@ using UnityEngine.Playables;
 public enum InteractionType
 {
     None = 0,
-    PickUp,
-    Talk,
-    Portal,
-    QTE
+    PickUp = 1,
+    Talk = 2,
+    Portal = 3,
+    QTE = 4,
+    Shop = 5
 }
 
 public class InteractionManager : MonoBehaviour
@@ -112,10 +113,16 @@ public class InteractionManager : MonoBehaviour
 				break;
 
 			case InteractionType.PickUp:
+                TryUsePickup(interaction);
 				break;
 
 			case InteractionType.Talk:
 				break;
+
+            case InteractionType.Shop:
+                TryUseShop(interaction);
+                break;
+
             case InteractionType.QTE:
                 TryUseQTEStation(interaction);
                 break;
@@ -148,6 +155,49 @@ public class InteractionManager : MonoBehaviour
             RequestUpdateUI(false);
         }
     }
+
+    private void TryUsePickup(Interaction interaction)
+    {
+        if (interaction.interactableObject == null)
+            return;
+
+        GameObject pickupObject = interaction.interactableObject;
+
+        TreasureRoomRewardPickup pickup =
+            pickupObject.GetComponent<TreasureRoomRewardPickup>() ??
+            pickupObject.GetComponentInParent<TreasureRoomRewardPickup>();
+
+        if (pickup == null || !pickup.CanInteract)
+            return;
+
+        bool picked = pickup.TryPickup(InteractionActor);
+
+        if (!picked)
+            return;
+
+        currentInteractionType = InteractionType.None;
+        RemovePotentialInteraction(pickupObject);
+    }
+
+    private void TryUseShop(Interaction interaction)
+    {
+        if (interaction.interactableObject == null)
+            return;
+
+        SectorShop shop =
+            interaction.interactableObject.GetComponent<SectorShop>() ??
+            interaction.interactableObject.GetComponentInParent<SectorShop>();
+
+        if (shop == null || !shop.CanInteract)
+            return;
+
+        if (shop.TryInteract(InteractionActor))
+        {
+            currentInteractionType = InteractionType.None;
+            RequestUpdateUI(false);
+        }
+    }
+
     private void TryUseQTEStation(Interaction interaction)
     {
         if (interaction.interactableObject == null)
@@ -237,6 +287,23 @@ public class InteractionManager : MonoBehaviour
             interaction = new Interaction(InteractionType.QTE, qteStation.gameObject);
             return true;
         }
+
+        TreasureRoomRewardPickup pickup =
+            obj.GetComponentInParent<TreasureRoomRewardPickup>();
+
+        if (pickup != null && pickup.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.PickUp, pickup.gameObject);
+            return true;
+        }
+
+        SectorShop shop = obj.GetComponentInParent<SectorShop>();
+
+        if (shop != null && shop.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.Shop, shop.gameObject);
+            return true;
+        }
 		//Debug.Log($"[InteractionManager] No valid interaction type. obj={obj.name}");
 		return false;
 	}
@@ -253,6 +320,15 @@ public class InteractionManager : MonoBehaviour
         MutarusQTEStation qteStation = obj.GetComponentInParent<MutarusQTEStation>();
         if (qteStation != null)
             return qteStation.gameObject;
+
+        TreasureRoomRewardPickup pickup =
+            obj.GetComponentInParent<TreasureRoomRewardPickup>();
+        if (pickup != null)
+            return pickup.gameObject;
+
+        SectorShop shop = obj.GetComponentInParent<SectorShop>();
+        if (shop != null)
+            return shop.gameObject;
 
         return obj;
     }
@@ -364,6 +440,7 @@ public class InteractionManager : MonoBehaviour
             InteractionType.Portal => "",
             InteractionType.QTE => "",
             InteractionType.PickUp => "",
+            InteractionType.Shop => "",
             InteractionType.Talk => "",
             _ => ""
         };

@@ -1,6 +1,8 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "InfectionControlRules", menuName = "Game/Infection Control Rules")]
+[CreateAssetMenu(
+    fileName = "InfectionControlRules",
+    menuName = "Game/Infection Control Rules")]
 public class InfectionControlRulesSO : ScriptableObject
 {
     [Header("Control")]
@@ -12,6 +14,10 @@ public class InfectionControlRulesSO : ScriptableObject
     [SerializeField] private float _drainPerVirusOwnedSector = 2f;
     [SerializeField, Min(1)] private int _extraDrainEveryVirusSectorCount = 2;
     [SerializeField] private float _extraDrainPerGroup = 2f;
+
+    [Header("Normal Battle Timer")]
+    [Tooltip("Extra Infection Control amount lost instantly when a NormalBattle room timer reaches 0. This is added on top of the normal per-second drain.")]
+    [SerializeField, Min(0f)] private float _normalBattleTimerExpiredExtraDrain = 0f;
 
     [Header("Special Drain From Sector Summary")]
     [Tooltip("Extra drain per named active sector counted by SectorOccupancySummary. Usually keep 0 if Named Phase Drain is used.")]
@@ -33,24 +39,29 @@ public class InfectionControlRulesSO : ScriptableObject
 
     public float MaxControl => _maxControl;
     public float StartControl => Mathf.Clamp(_startControl, 0f, _maxControl);
+    
+    public float BaseDrainPerSecond => Mathf.Max(0f, _baseDrainPerSecond);
+    public float NormalBattleTimerExpiredExtraDrain =>
+        Mathf.Max(0f, _normalBattleTimerExpiredExtraDrain);
     public float NamedPresentDrainPerSecond => Mathf.Max(0f, _namedPresentDrainPerSecond);
     public float NamedBattleDrainPerSecond => Mathf.Max(0f, _namedBattleDrainPerSecond);
-    public float RecoverOnNamedDefeated => _recoverOnNamedDefeated;
-    public float RecoverOnSectorExpanded => _recoverOnSectorExpanded;
+
+    public float RecoverOnNamedDefeated => Mathf.Max(0f, _recoverOnNamedDefeated);
+    public float RecoverOnSectorExpanded => Mathf.Max(0f, _recoverOnSectorExpanded);
 
     public float CalculateDrainPerSecond(SectorOccupancySummary summary)
     {
         int virusOwnedCount = Mathf.Max(0, summary.virusOwnedCount);
 
-        float drain = _baseDrainPerSecond;
-        drain += virusOwnedCount * _drainPerVirusOwnedSector;
+        float drain = BaseDrainPerSecond;
+        drain += virusOwnedCount * Mathf.Max(0f, _drainPerVirusOwnedSector);
 
         int groupSize = Mathf.Max(1, _extraDrainEveryVirusSectorCount);
         int extraGroups = virusOwnedCount / groupSize;
-        drain += extraGroups * _extraDrainPerGroup;
+        drain += extraGroups * Mathf.Max(0f, _extraDrainPerGroup);
 
-        drain += summary.namedActiveCount * _namedDrainBonus;
-        drain += summary.bossActiveCount * _bossDrainBonus;
+        drain += summary.namedActiveCount * Mathf.Max(0f, _namedDrainBonus);
+        drain += summary.bossActiveCount * Mathf.Max(0f, _bossDrainBonus);
 
         return Mathf.Max(0f, drain);
     }

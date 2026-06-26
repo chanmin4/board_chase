@@ -26,9 +26,7 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
         AttackDamage,
         NamedBossDamageMultiplier,
         MaxRange,
-        AttackShotsPerSecond,
-        PaintShotsPerSecond,
-        ReloadSpeedMultiplier,
+        ShotsPerSecond,
         ReloadDurationSeconds,
         MagazineSize,
 
@@ -37,16 +35,16 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
         OccupationWinThreshold,
 
         MoveSpeed,
+        VisionRange,
         DashCooldownSeconds,
         DashDistanceMultiplier,
 
         MaxHealth,
+        DodgeChance,
 
-        ShockwaveCooldownSeconds,
 
         LeaveVaccineOnEnemyKill,
         PaintBulletLeavesTrail,
-        ShockwavePaintsVaccine
     }
 
     [Serializable]
@@ -88,8 +86,7 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
         new SummaryRowDefinition { enabled = true, displayName = "Attack Damage", statId = SummaryStatId.AttackDamage, valueFormat = "{0:0.##}" },
         new SummaryRowDefinition { enabled = true, displayName = "Boss Damage", statId = SummaryStatId.NamedBossDamageMultiplier, valueFormat = "x{0:0.00}" },
         new SummaryRowDefinition { enabled = true, displayName = "Range", statId = SummaryStatId.MaxRange, valueFormat = "{0:0.##}" },
-        new SummaryRowDefinition { enabled = true, displayName = "Attack Speed", statId = SummaryStatId.AttackShotsPerSecond, valueFormat = "{0:0.##}/s" },
-        new SummaryRowDefinition { enabled = true, displayName = "Paint Speed", statId = SummaryStatId.PaintShotsPerSecond, valueFormat = "{0:0.##}/s" },
+        new SummaryRowDefinition { enabled = true, displayName = "Shot Speed", statId = SummaryStatId.ShotsPerSecond, valueFormat = "{0:0.##}/s" },
         new SummaryRowDefinition { enabled = true, displayName = "Reload", statId = SummaryStatId.ReloadDurationSeconds, valueFormat = "{0:0.##}s" },
         new SummaryRowDefinition { enabled = true, displayName = "Magazine", statId = SummaryStatId.MagazineSize, valueFormat = "{0:0}" },
 
@@ -97,11 +94,12 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
         new SummaryRowDefinition { enabled = true, displayName = "Occupation", statId = SummaryStatId.OccupationWinThreshold, valueFormat = "{0:0}%" },
 
         new SummaryRowDefinition { enabled = true, displayName = "Move Speed", statId = SummaryStatId.MoveSpeed, valueFormat = "{0:0.##}" },
+        new SummaryRowDefinition { enabled = true, displayName = "Vision Range", statId = SummaryStatId.VisionRange, valueFormat = "{0:0.##}" },
         new SummaryRowDefinition { enabled = true, displayName = "Dash Cooldown", statId = SummaryStatId.DashCooldownSeconds, valueFormat = "{0:0.##}s" },
         new SummaryRowDefinition { enabled = true, displayName = "Dash Distance", statId = SummaryStatId.DashDistanceMultiplier, valueFormat = "x{0:0.00}" },
 
         new SummaryRowDefinition { enabled = true, displayName = "Max HP", statId = SummaryStatId.MaxHealth, valueFormat = "{0:0}" },
-        new SummaryRowDefinition { enabled = true, displayName = "Shockwave CD", statId = SummaryStatId.ShockwaveCooldownSeconds, valueFormat = "{0:0.##}s" }
+        new SummaryRowDefinition { enabled = true, displayName = "Dodge", statId = SummaryStatId.DodgeChance, valueFormat = "{0:0}%" },
     };
 
     private readonly List<PlayerStatsSummaryRowUI> _rows = new();
@@ -237,14 +235,8 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
             case SummaryStatId.MaxRange:
                 return FormatNumber(definition, _latestStatsSnapshot.weapon.maxRange);
 
-            case SummaryStatId.AttackShotsPerSecond:
-                return FormatNumber(definition, _latestStatsSnapshot.weapon.attackShotsPerSecond);
-
-            case SummaryStatId.PaintShotsPerSecond:
-                return FormatNumber(definition, _latestStatsSnapshot.weapon.paintShotsPerSecond);
-
-            case SummaryStatId.ReloadSpeedMultiplier:
-                return FormatNumber(definition, _latestStatsSnapshot.weapon.reloadSpeedMultiplier);
+            case SummaryStatId.ShotsPerSecond:
+                return FormatNumber(definition, _latestStatsSnapshot.weapon.shotsPerSecond);
 
             case SummaryStatId.ReloadDurationSeconds:
                 return FormatNumber(definition, _latestStatsSnapshot.weapon.reloadDurationSeconds);
@@ -264,6 +256,9 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
             case SummaryStatId.MoveSpeed:
                 return FormatNumber(definition, _latestStatsSnapshot.movement.moveSpeed);
 
+            case SummaryStatId.VisionRange:
+                return FormatNumber(definition, _latestStatsSnapshot.vision.visionRange);
+
             case SummaryStatId.DashCooldownSeconds:
                 return FormatNumber(definition, _latestStatsSnapshot.movement.dashCooldownSeconds);
 
@@ -273,17 +268,14 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
             case SummaryStatId.MaxHealth:
                 return FormatNumber(definition, _latestStatsSnapshot.survival.maxHealth);
 
-            case SummaryStatId.ShockwaveCooldownSeconds:
-                return FormatNumber(definition, _latestStatsSnapshot.shockwave.cooldownSeconds);
-
+            case SummaryStatId.DodgeChance:
+                return FormatNumber(definition, _latestStatsSnapshot.survival.dodgeChance * 100f);
             case SummaryStatId.LeaveVaccineOnEnemyKill:
                 return FormatBool(_latestStatsSnapshot.features.leaveVaccineOnEnemyKill);
 
             case SummaryStatId.PaintBulletLeavesTrail:
                 return FormatBool(_latestStatsSnapshot.features.paintBulletLeavesTrail);
 
-            case SummaryStatId.ShockwavePaintsVaccine:
-                return FormatBool(_latestStatsSnapshot.features.shockwavePaintsVaccine);
 
             default:
                 return "-";

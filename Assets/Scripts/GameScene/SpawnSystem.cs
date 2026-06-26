@@ -64,8 +64,8 @@ public class SpawnSystem : MonoBehaviour
 
         _spawnedPlayer = playerInstance.transform;
 
-        VSplatterWeaponHolder weaponHolder =
-            playerInstance.GetComponentInChildren<VSplatterWeaponHolder>();
+        EntityWeaponHolder weaponHolder =
+            playerInstance.GetComponentInChildren<EntityWeaponHolder>();
 
         if (weaponHolder != null)
             weaponHolder.SetProjectilesRoot(_projectilesRoot);

@@ -12,18 +12,53 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85167ab920714184c90133883c35fbf9, type: 3}
   m_Name: PlayerBaseStatsConfig
   m_EditorClassIdentifier: 
-  attackDamage: 5
-  maxRange: 25
-  attackShotsPerSecond: 6
-  paintShotsPerSecond: 6
-  reloadDurationSeconds: 2
-  magazineSize: 12
+  _initialHealth: 100
+  _moveSpeed: 25
+  _paintMark:
+    _usePaintMark: 1
+    _markAmountPerStack: 100
+    _maxVaccineMarkStacks: 3
+    _maxVirusMarkStacks: 3
+    _startWithVirusMark: 0
+    _startingVirusMarkAmount: 0
+    _paintMarkTickInterval: 0.1
+    _vaccinePaintMarkAmountPerTick: 5
+    _virusPaintMarkAmountPerTick: 5
+    _virusMarkAmountOnDamagingPlayer: 20
+    _inactiveSlowDecayAmountPerTick: 0
+    _activeSlowDecayAmountPerTick: 0.5
+    _oppositePaintFastDecayAmountPerTick: 1
+    _vaccineDamageTakenAddPerStack: 0.15
+    _virusDamageTakenAddPerStack: -0.15
+  _vision:
+    _visionRange: 30
+    _useLineOfSight: 0
+    _lineOfSightBlockerMask:
+      serializedVersion: 2
+      m_Bits: 2176
+    _eyeHeight: 1
+    _targetHeight: 1
+  _shooter:
+    _attackDamage: 25
+    _maxRange: 25
+    _shotsPerSecond: 2
+    _reloadDurationSeconds: 2
+    _magazineSize: 6
+    _paintRadius: 1.5
+    _paintPriority: 0
+    _aimSpeed: 3
+    _aimRangeMultiplier: 1.25
+    _aimMoveSpeedMultiplier: 0.6
+    _hipFireSpreadAngleDeg: 6
+    _aimSpreadAngleDeg: 0.5
+    _recoilAngleDeg: 1
+    _recoilRecoverySpeedDegPerSecond: 18
+    _gunshotSoundRadius: 16
+    _soundInvestigateDelaySeconds: 0.25
+    _footstepSoundRadius: 5
+    _footstepSoundInterval: 0.35
   startingRunCurrency: 0
   startingRoguelikeCurrencyForNewSave: 0
-  paintRadius: 3
-  paintPriority: 0
-  occupationWinThreshold: 0.5
-  moveSpeed: 25
+  occupationWinThreshold: 0
   dashCooldownSeconds: 5
-  maxHealth: 100
-  shockwaveCooldownSeconds: 30
+  dodgeChance: 0

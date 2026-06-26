@@ -13,7 +13,7 @@ public class UIOverlayPanel : MonoBehaviour
     [SerializeField] private bool _hideOnAwake = true;
 
     [Header("Gameplay Input")]
-    [Tooltip("If true, blocks only attack-style input while this overlay is open: shoot, special shoot, and shockwave. Movement, dash, and interact stay enabled.")]
+    [Tooltip("If true, blocks only attack-style input while this overlay is open: shoot, special shoot, Movement, dash, and interact stay enabled.")]
     [SerializeField] private bool _blockAttackInputWhileOpen = false;
 
     [Header("Events")]

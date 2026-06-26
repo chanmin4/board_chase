@@ -20,11 +20,11 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 0.17176929, g: 0.17740594, b: 0.18867922, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
@@ -458,135 +458,18 @@ MonoBehaviour:
   _startSectorCoord: {x: -1, y: 0}
   _startSectorPrefab: {fileID: 4825967042133263012, guid: d0fd2a52a0454af429616b2f155a855b, type: 3}
   _normalBattleSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
-  _treasureSectorPrefab: {fileID: 0}
+  _treasureSectorPrefab: {fileID: 4825967042133263012, guid: 0a33a9535caeadd4a9330665a33f58c2, type: 3}
+  _shopSectorPrefab: {fileID: 4825967042133263012, guid: c2c7754e7427d7e42be714c61166833c, type: 3}
   _namedSectorPrefab: {fileID: 1399724844744912947, guid: 78d71b9d1e7ebb6418acacce9f9d0099, type: 3}
   _bossSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
+  _bigMonsterWaveSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
   _generatedRoot: {fileID: 85564729}
   _gridOrigin: {fileID: 906134983}
-  _roomSpacingXZ: {x: 1000, y: 1000}
+  _roomSpacingXZ: {x: 3000, y: 3000}
+  _stageTreasureSettings: {fileID: 11400000, guid: 7af47b5280b58054082b38d46b3b63a9, type: 2}
+  _stageShopSettings: {fileID: 11400000, guid: 137167026e0b4394090347526a713e0e, type: 2}
   _sectorStateManager: {fileID: 998436593}
   _sectorPortalManager: {fileID: 1095890178}
---- !u!1 &410087039
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 410087041}
-  - component: {fileID: 410087040}
-  - component: {fileID: 410087042}
-  m_Layer: 0
-  m_Name: Directional Light
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!108 &410087040
-Light:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 410087039}
-  m_Enabled: 1
-  serializedVersion: 11
-  m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1.4
-  m_Range: 10
-  m_SpotAngle: 30
-  m_InnerSpotAngle: 21.80208
-  m_CookieSize: 10
-  m_Shadows:
-    m_Type: 2
-    m_Resolution: -1
-    m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
-    m_CullingMatrixOverride:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: 0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: 0
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: 0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
-  m_DrawHalo: 0
-  m_Flare: {fileID: 0}
-  m_RenderMode: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingLayerMask: 1
-  m_Lightmapping: 4
-  m_LightShadowCasterMode: 0
-  m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
-  m_ColorTemperature: 5000
-  m_UseColorTemperature: 1
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_UseBoundingSphereOverride: 0
-  m_UseViewFrustumForShadowCasterCull: 1
-  m_ForceVisible: 0
-  m_ShadowRadius: 0
-  m_ShadowAngle: 0
-  m_LightUnit: 1
-  m_LuxAtDistance: 1
-  m_EnableSpotReflector: 1
---- !u!4 &410087041
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 410087039}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.6830127, y: -0.18301266, z: 0.18301266, w: 0.6830127}
-  m_LocalPosition: {x: 15, y: 0, z: 15}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: -30, z: 0}
---- !u!114 &410087042
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 410087039}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Version: 3
-  m_UsePipelineSettings: 1
-  m_AdditionalLightsShadowResolutionTier: 2
-  m_LightLayerMask: 1
-  m_RenderingLayers: 1
-  m_CustomShadowLayers: 0
-  m_ShadowLayerMask: 1
-  m_ShadowRenderingLayers: 1
-  m_LightCookieSize: {x: 1, y: 1}
-  m_LightCookieOffset: {x: 0, y: 0}
-  m_SoftShadowQuality: 1
 --- !u!1 &575892661
 GameObject:
   m_ObjectHideFlags: 0
@@ -926,7 +809,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _sectors: []
-  _stageSectorUnlock: {fileID: 11400000, guid: bd34a234a9aa24e4c888999f7b2e008a, type: 2}
   _useStageSectorUnlocks: 0
   _openAdjacentSectorsOnClear: 1
   _startSectorCoord: {x: -1, y: 0}
@@ -1018,6 +900,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _sectorStateManager: {fileID: 998436593}
+  _cameraManager: {fileID: 1179592891}
   _moveSectorCameraEvent: {fileID: 11400000, guid: 39a5f91256655a246b994dac453b9d88, type: 2}
   _currentSectorChangedEvent: {fileID: 11400000, guid: cb39fc0f8d034346a9164254d2f477d7, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
@@ -1295,6 +1178,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _rules: {fileID: 11400000, guid: a5028b5fd1d3c044e86715ac9bd21ed1, type: 2}
   _sectorRules: {fileID: 11400000, guid: 4af1e3f270a51fa4aa997f0d02e9d8c0, type: 2}
+  _stageBattleSettings: {fileID: 11400000, guid: 7dba41b9141dc1e4f98493a57d1492ac, type: 2}
   _startingStageIndex: 1
   _cleanupBeforeNextStage: 1
   _clearPaintOnStageTransition: 1
@@ -1305,6 +1189,7 @@ MonoBehaviour:
   _requestProgressNextStageChannel: {fileID: 11400000, guid: 100a7f585768ad947aaf1ec572ade37a, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _namedSectorControllerReadyChannel: {fileID: 11400000, guid: 8c62595ebdcaadf4b8c64c1af8378e2c, type: 2}
+  _infectionControlManagerReadyChannel: {fileID: 11400000, guid: 53066018a5f6f1c47a4217f83ff95b83, type: 2}
   _finalStageCompletedChannel: {fileID: 11400000, guid: 92bd65b92c9bac44fbbec273db5f8271, type: 2}
   _snapshotChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
   _stageInfectionControlRecoverChannel: {fileID: 11400000, guid: 2cd9d23abd5992b49bc9a777ebc764bf, type: 2}
@@ -1481,7 +1366,6 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1667146347}
   - {fileID: 7365048888662993115}

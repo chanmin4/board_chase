@@ -9,89 +9,130 @@ using UnityEngine.Serialization;
 public class StageProgressionRulesSO : ScriptableObject
 {
     [Serializable]
+    public class WeightedGoalEncounterPreset
+    {
+        [Tooltip("Goal-room encounter preset. Currently used by BigMonsterWave goal rooms.")]
+        public StageBattleEncounterPresetSO preset;
+
+        [Tooltip("Weighted chance when selecting this goal encounter preset.")]
+        [Min(0)] public int weight = 1;
+    }
+
+    [Serializable]
+    public class NamedOrBossEnemyEntry
+    {
+        [Tooltip("Named/Boss enemy config spawned for this stage goal.")]
+        public EnemyStatConfigSO archetype;
+
+        [Tooltip("Weighted chance when selecting the Named/Boss enemy config.")]
+        [Min(0)] public int weight = 1;
+    }
+
+    [Serializable]
+    public class NamedOrBossGoalOptions
+    {
+        [Tooltip("If disabled, this stage goal will not start the Named/Boss reservation cycle.")]
+        public bool cycleEnabled = true;
+
+        [Tooltip("Candidate Named/Boss enemies for this stage goal.")]
+        public List<NamedOrBossEnemyEntry> enemyEntries = new();
+
+        [Tooltip("If true, the cycle starts when managers are ready or a stage is applied.")]
+        public bool startCycleOnReady = true;
+
+        [Tooltip("If true, the goal sector is reserved immediately instead of waiting for First Reservation Delay.")]
+        public bool reserveFirstSectorImmediately = true;
+
+        [Tooltip("Delay before the first Named/Boss reservation when immediate reservation is disabled.")]
+        [Min(0f)] public float firstReservationDelay = 0f;
+
+        [Tooltip("How long the selected Named/Boss sector stays reserved before it is presented.")]
+        [Min(0f)] public float reservationDuration = 30f;
+
+        [Tooltip("Cooldown before the next Named/Boss cycle after the enemy is killed and reward is confirmed.")]
+        [Min(0f)] public float respawnCooldownAfterKill = 120f;
+
+        [Tooltip("Retry delay when no valid sector candidate exists.")]
+        [Min(0f)] public float retryDelayWhenNoCandidate = 5f;
+
+        [Tooltip("How often Named/Boss timer snapshots are published to UI.")]
+        [Min(0.01f)] public float timerPublishInterval = 0.1f;
+    }
+
+    [Serializable]
+    public class BigMonsterWaveGoalOptions
+    {
+        [Tooltip("Candidate encounter presets for BigMonsterWave goal rooms.")]
+        public List<WeightedGoalEncounterPreset> encounters = new();
+    }
+
+    [Serializable]
     public class StageProgressRule
     {
-        [Tooltip("stage 번호입니다. 0은 StartSector 전용 시작 stage로 쓰고, 1부터 실제 NxN stage로 쓰는 구조입니다.")]
+        [Tooltip("Stage index. 0 can be used as the StartSector-only intro stage.")]
         public int stageIndex;
 
-        [Tooltip("HUD나 결과 기록에 표시할 stage 이름입니다. 비어 있으면 코드에서 기본 stage 이름을 사용합니다.")]
+        [Tooltip("HUD/result display name. If empty, code fallback is used.")]
         public string displayName;
 
         [Header("Stage Map")]
-        [Tooltip("이 stage에서 생성할 일반 방 grid 크기입니다. 2면 2x2, 3이면 3x3입니다. 0은 StartSector만 쓰는 stage입니다.")]
+        [Tooltip("Generated room grid size for this stage. 2 = 2x2, 3 = 3x3. 0 can be used for StartSector-only stage.")]
         [Min(0)] public int roomGridSize = 1;
 
-        [Tooltip("목표 방 좌표 (roomGridSize - 1, roomGridSize - 1)에 배치할 방 타입입니다. 현재 프로토타입은 Named 사용을 기준으로 합니다.")]
-        public StageRoomType goalRoomType = StageRoomType.Named;
+        [Tooltip("Goal battle type placed at the stage goal coordinate. Only Named, Boss, and BigMonsterWave are exposed here.")]
+        public StageGoalRoomType goalRoomType = StageGoalRoomType.Named;
 
-        [Header("Treasure Rooms")]
-        [Tooltip("If enabled, this stage can replace some NormalBattle rooms with Treasure rooms.")]
-        public bool enableTreasureRooms = true;
+        [Tooltip("Settings used only when Goal Room Type is Named.")]
+        public NamedOrBossGoalOptions namedGoal = new();
 
-        [Min(0)]
-        [Tooltip("Minimum Treasure rooms generated for this stage, except forced-stage overrides.")]
-        public int treasureRoomMinCount = 1;
+        [Tooltip("Settings used only when Goal Room Type is Boss.")]
+        public NamedOrBossGoalOptions bossGoal = new();
 
-        [Min(0)]
-        [Tooltip("Maximum Treasure rooms generated for this stage.")]
-        public int treasureRoomMaxCount = 2;
+        [Tooltip("Settings used only when Goal Room Type is BigMonsterWave.")]
+        public BigMonsterWaveGoalOptions bigMonsterWaveGoal = new();
 
-        [Range(0f, 1f)]
-        [Tooltip("Extra Treasure room chance added per consecutive previous no-hit stage. 0.1 = +10%.")]
-        public float extraTreasureChancePerNoHitStage = 0.1f;
+        [Tooltip("Debug log interval for goal-room timer logs.")]
+        [Min(0.1f)] public float goalDebugLogInterval = 1f;
 
-        [Range(0f, 1f)]
-        [Tooltip("Maximum chance used when rolling each extra Treasure room slot.")]
-        public float maxExtraTreasureChance = 1f;
+        public StageRoomType GoalStageRoomType => goalRoomType.ToStageRoomType();
 
-        [Tooltip("If true, room (0,0) is not picked as Treasure unless there are not enough candidates.")]
-        public bool excludeFirstRoomFromTreasure = true;
+        public NamedOrBossGoalOptions CurrentNamedOrBossGoalOptions
+        {
+            get
+            {
+                return goalRoomType switch
+                {
+                    StageGoalRoomType.Named => namedGoal,
+                    StageGoalRoomType.Boss => bossGoal,
+                    _ => null
+                };
+            }
+        }
 
-        [Header("Clear Requirement")]
-        [Tooltip("현재 방을 Player 소유 상태로 유지해야 하는 시간입니다. 조건을 만족하는 동안 줄어들고, 0이 되면 방 클리어입니다.")]
-        [Min(0f)] public float timerSeconds = 30f;
-
-        [Tooltip("켜면 방 점유 조건을 잃었을 때 PlayerTimer가 처음 시간으로 리셋됩니다. 끄면 남은 시간이 유지됩니다.")]
-        public bool resetTimerWhenRequirementLost = false;
-
-        [Tooltip("이 stage에서 생성 방을 만들지 않고 StartSector 하나만 플레이 대상으로 씁니다.")]
+        [Tooltip("If true, this stage uses only StartSector and does not generate room grid.")]
         [FormerlySerializedAs("useStartSectorAsRequirement")]
         public bool useStartSectorOnly = false;
 
         [Header("Stage Completion")]
-        [Tooltip("StartSector의 PlayerTimer가 끝났을 때 다음 stage로 진행할지 여부입니다. 보통 stage 0 시작방 전용으로 사용합니다.")]
+        [Tooltip("If true, completing StartSector advances to the next stage.")]
         public bool advanceStageOnStartSectorComplete = false;
 
-        [Tooltip("목표 방의 Named/Boss 전투가 끝났을 때 다음 stage로 진행할지 여부입니다.")]
+        [Tooltip("If true, completing the goal Named/Boss battle advances to the next stage.")]
         [FormerlySerializedAs("advanceStageOnNamedBattleComplete")]
         public bool advanceStageOnBossBattleComplete = true;
 
-        [Tooltip("이 stage의 목표 방 전투 완료 시 다음 stage로 가지 않고 최종 승리 이벤트를 발생시킵니다.")]
+        [Tooltip("If true, this stage ends the run instead of advancing to another stage.")]
         public bool isFinalStage = false;
 
         [Header("Stage Rest")]
-        [Tooltip("stage 완료 후 다음 stage로 넘어가기 전 대기 시간입니다. HUD에는 Stage Break Time으로 표시됩니다.")]
+        [Tooltip("Break time before the next stage.")]
         [Min(0f)] public float restSecondsBeforeNextStage = 5f;
 
         [Header("Reward")]
-        [Tooltip("이 stage 목표 완료 시 Infection Control에 회복시킬 양입니다. 0이면 회복 보상을 주지 않습니다.")]
+        [Tooltip("Infection Control recovered when this stage is completed.")]
         [Min(0f)] public float infectionControlRecoverOnComplete = 0f;
-
-        public StageTreasureRoomGenerationSettings CreateTreasureRoomGenerationSettings(
-            int consecutiveNoHitStageCount)
-        {
-            return new StageTreasureRoomGenerationSettings(
-                enableTreasureRooms,
-                treasureRoomMinCount,
-                treasureRoomMaxCount,
-                consecutiveNoHitStageCount,
-                extraTreasureChancePerNoHitStage,
-                maxExtraTreasureChance,
-                excludeFirstRoomFromTreasure);
-        }
     }
 
-    [Tooltip("stage별 진행 규칙 목록입니다. stageIndex 기준으로 현재 stage 규칙을 찾아 사용합니다.")]
     [SerializeField] private List<StageProgressRule> _rules = new();
 
     public bool TryGetRule(int stageIndex, out StageProgressRule rule)
@@ -112,5 +153,228 @@ public class StageProgressionRulesSO : ScriptableObject
     public bool HasNextRule(int stageIndex)
     {
         return TryGetRule(stageIndex + 1, out _);
+    }
+
+    public bool TryGetNamedOrBossOptions(
+        int stageIndex,
+        out NamedOrBossGoalOptions options)
+    {
+        options = null;
+
+        if (!TryGetRule(stageIndex, out StageProgressRule rule))
+            return false;
+
+        options = rule.CurrentNamedOrBossGoalOptions;
+        return options != null;
+    }
+
+    public bool TryPickGoalEncounterPreset(
+        int stageIndex,
+        int stageSeed,
+        Vector2Int sectorCoord,
+        StageRoomType roomType,
+        out StageBattleEncounterPresetSO preset)
+    {
+        preset = null;
+
+        if (!TryGetRule(stageIndex, out StageProgressRule rule))
+            return false;
+
+        if (rule.GoalStageRoomType != roomType ||
+            roomType != StageRoomType.BigMonsterWave ||
+            rule.bigMonsterWaveGoal == null)
+        {
+            return false;
+        }
+
+        int seed = BuildSectorSeed(stageSeed, sectorCoord, 701);
+        return TryPickWeightedEncounterPreset(
+            rule.bigMonsterWaveGoal.encounters,
+            seed,
+            out preset);
+    }
+
+    public bool TryPickNamedOrBossArchetype(
+        int stageIndex,
+        out EnemyStatConfigSO archetype)
+    {
+        archetype = null;
+
+        if (!TryGetNamedOrBossOptions(stageIndex, out NamedOrBossGoalOptions options))
+            return false;
+
+        int seed = unchecked(stageIndex * 73856093) ^ Environment.TickCount;
+        return TryPickWeightedNamedOrBoss(options.enemyEntries, seed, out archetype);
+    }
+
+    public bool CanStartNamedOrBossCycle(int stageIndex)
+    {
+        return TryGetNamedOrBossOptions(stageIndex, out NamedOrBossGoalOptions options) &&
+               options.cycleEnabled &&
+               HasValidNamedOrBossEntry(stageIndex);
+    }
+
+    public bool HasValidNamedOrBossEntry(int stageIndex)
+    {
+        return TryGetNamedOrBossOptions(stageIndex, out NamedOrBossGoalOptions options) &&
+               HasValidNamedOrBossEntry(options);
+    }
+
+    public bool TryGetNamedOrBossCycleRule(
+        int stageIndex,
+        out StageProgressRule rule)
+    {
+        rule = null;
+
+        if (!TryGetRule(stageIndex, out StageProgressRule foundRule))
+            return false;
+
+        if (foundRule.CurrentNamedOrBossGoalOptions == null)
+            return false;
+
+        rule = foundRule;
+        return true;
+    }
+
+    public static int BuildSectorSeed(int stageSeed, Vector2Int sectorCoord, int salt)
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + stageSeed;
+            hash = hash * 31 + sectorCoord.x;
+            hash = hash * 31 + sectorCoord.y;
+            hash = hash * 31 + salt;
+            return hash;
+        }
+    }
+
+    private static bool TryPickWeightedEncounterPreset(
+        List<WeightedGoalEncounterPreset> candidates,
+        int seed,
+        out StageBattleEncounterPresetSO pickedPreset)
+    {
+        pickedPreset = null;
+
+        if (candidates == null)
+            return false;
+
+        int totalWeight = 0;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            WeightedGoalEncounterPreset candidate = candidates[i];
+
+            if (!IsEncounterCandidateValid(candidate))
+                continue;
+
+            totalWeight += Mathf.Max(0, candidate.weight);
+        }
+
+        if (totalWeight <= 0)
+            return false;
+
+        int roll = new System.Random(seed).Next(0, totalWeight);
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            WeightedGoalEncounterPreset candidate = candidates[i];
+
+            if (!IsEncounterCandidateValid(candidate))
+                continue;
+
+            int weight = Mathf.Max(0, candidate.weight);
+
+            if (roll < weight)
+            {
+                pickedPreset = candidate.preset;
+                return true;
+            }
+
+            roll -= weight;
+        }
+
+        return false;
+    }
+
+    private static bool TryPickWeightedNamedOrBoss(
+        List<NamedOrBossEnemyEntry> candidates,
+        int seed,
+        out EnemyStatConfigSO pickedArchetype)
+    {
+        pickedArchetype = null;
+
+        if (candidates == null)
+            return false;
+
+        int totalWeight = 0;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            NamedOrBossEnemyEntry candidate = candidates[i];
+
+            if (!IsNamedOrBossEntryValid(candidate))
+                continue;
+
+            totalWeight += Mathf.Max(0, candidate.weight);
+        }
+
+        if (totalWeight <= 0)
+            return false;
+
+        int roll = new System.Random(seed).Next(0, totalWeight);
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            NamedOrBossEnemyEntry candidate = candidates[i];
+
+            if (!IsNamedOrBossEntryValid(candidate))
+                continue;
+
+            int weight = Mathf.Max(0, candidate.weight);
+
+            if (roll < weight)
+            {
+                pickedArchetype = candidate.archetype;
+                return true;
+            }
+
+            roll -= weight;
+        }
+
+        return false;
+    }
+
+    private static bool HasValidNamedOrBossEntry(
+        NamedOrBossGoalOptions options)
+    {
+        if (options == null || options.enemyEntries == null)
+            return false;
+
+        for (int i = 0; i < options.enemyEntries.Count; i++)
+        {
+            if (IsNamedOrBossEntryValid(options.enemyEntries[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsEncounterCandidateValid(
+        WeightedGoalEncounterPreset candidate)
+    {
+        return candidate != null &&
+               candidate.weight > 0 &&
+               candidate.preset != null &&
+               candidate.preset.IsValid;
+    }
+
+    private static bool IsNamedOrBossEntryValid(
+        NamedOrBossEnemyEntry candidate)
+    {
+        return candidate != null &&
+               candidate.weight > 0 &&
+               candidate.archetype != null &&
+               candidate.archetype.EnemyPrefab != null;
     }
 }

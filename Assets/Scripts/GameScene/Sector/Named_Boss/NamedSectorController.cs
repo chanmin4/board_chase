@@ -46,7 +46,9 @@ public class NamedSectorController : MonoBehaviour
 
     [Header("Named Spawn")]
     [FormerlySerializedAs("_stageEnemySetting")]
-    [SerializeField] private StageBattleSettingsSO _stageBattleSettings;
+    [FormerlySerializedAs("_stageBattleSettings")]
+    [FormerlySerializedAs("_stageGoalSettings")]
+    [SerializeField] private StageProgressionRulesSO _stageProgressionRules;
     [SerializeField] private int _stageOverride = -1;
     [SerializeField] private Transform _namedSpawnPoint;
     [SerializeField] private Transform _namedRoot;
@@ -319,25 +321,25 @@ public class NamedSectorController : MonoBehaviour
         if (_firstCycleStarted)
             return;
 
-        if (_sectorStateManager == null || _stageBattleSettings == null)
+        if (_sectorStateManager == null || _stageProgressionRules == null)
             return;
 
-        if (!TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule))
+        if (!TryGetCurrentNamedOptions(out StageProgressionRulesSO.NamedOrBossGoalOptions options))
             return;
 
-        if (!rule.startNamedCycleOnReady)
+        if (!options.startCycleOnReady)
             return;
 
         _firstCycleStarted = true;
 
-        if (rule.reserveFirstSectorImmediately)
+        if (options.reserveFirstSectorImmediately)
         {
             ReserveRandomSector();
             return;
         }
 
         StartReservationTimer(
-            DifficultyRuntime.ApplyNamedFirstReservationDelay(rule.firstReservationDelay));
+            DifficultyRuntime.ApplyNamedFirstReservationDelay(options.firstReservationDelay));
     }
 
     private void HandlePlayerEnteredSector(SectorRuntime sector)
@@ -350,7 +352,7 @@ public class NamedSectorController : MonoBehaviour
 
     private void ReserveRandomSector()
     {
-        if (!TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule))
+        if (!TryGetCurrentNamedOptions(out StageProgressionRulesSO.NamedOrBossGoalOptions options))
         {
             SetPhase(NamedSectorPhase.None, null);
             PublishTimerSnapshot();
@@ -362,13 +364,13 @@ public class NamedSectorController : MonoBehaviour
             Debug.LogWarning("[NamedSectorController] No valid opened sector candidate.", this);
 
             StartReservationTimer(
-                DifficultyRuntime.ApplyNamedRetryDelay(rule.retryDelayWhenNoCandidate));
+                DifficultyRuntime.ApplyNamedRetryDelay(options.retryDelayWhenNoCandidate));
 
             return;
         }
 
         _selectedSector = sector;
-        _timer = DifficultyRuntime.ApplyNamedReservationDuration(rule.reservationDuration);
+        _timer = DifficultyRuntime.ApplyNamedReservationDuration(options.reservationDuration);
         _timerDuration = _timer;
         _timerPublishCooldown = 0f;
 
@@ -511,7 +513,7 @@ public class NamedSectorController : MonoBehaviour
         _selectedSector = null;
         NamedBattleCompleted?.Invoke(sourceSector);
 
-        if (!TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule))
+        if (!TryGetCurrentNamedOptions(out StageProgressionRulesSO.NamedOrBossGoalOptions options))
         {
             SetPhase(NamedSectorPhase.None, null);
             PublishTimerSnapshot();
@@ -519,12 +521,12 @@ public class NamedSectorController : MonoBehaviour
         }
 
         StartReservationTimer(
-            DifficultyRuntime.ApplyNamedRespawnCooldown(rule.respawnCooldownAfterKill));
+            DifficultyRuntime.ApplyNamedRespawnCooldown(options.respawnCooldownAfterKill));
     }
 
     private void SpawnNamed()
     {
-        if (_stageBattleSettings == null || _namedSpawnPoint == null)
+        if (_stageProgressionRules == null || _namedSpawnPoint == null)
         {
             Debug.LogWarning("[NamedSectorController] Named spawn refs are missing.", this);
             return;
@@ -532,7 +534,7 @@ public class NamedSectorController : MonoBehaviour
 
         int stage = ResolveCurrentStage();
 
-        if (!_stageBattleSettings.TryPickNamedArchetype(stage, out EnemyStatConfigSO enemyConfig))
+        if (!_stageProgressionRules.TryPickNamedOrBossArchetype(stage, out EnemyStatConfigSO enemyConfig))
         {
             Debug.LogWarning($"[NamedSectorController] No named enemy entry for stage {stage}.", this);
             return;
@@ -574,23 +576,26 @@ public class NamedSectorController : MonoBehaviour
         if (enemy == null || enemyConfig == null)
             return;
 
-        EnemyMovementStatsProvider[] movementProviders =
-            enemy.GetComponentsInChildren<EnemyMovementStatsProvider>(true);
+        if (enemyConfig is CreatureEnemyStatConfigSO creatureConfig)
+        {
+            EnemyMovementStatsProvider[] movementProviders =
+                enemy.GetComponentsInChildren<EnemyMovementStatsProvider>(true);
 
-        for (int i = 0; i < movementProviders.Length; i++)
-            movementProviders[i].SetEnemyStatConfig(enemyConfig);
+            for (int i = 0; i < movementProviders.Length; i++)
+                movementProviders[i].SetEnemyStatConfig(creatureConfig);
 
-        EnemyContactDamage[] contactDamages =
-            enemy.GetComponentsInChildren<EnemyContactDamage>(true);
+            EnemyContactDamage[] contactDamages =
+                enemy.GetComponentsInChildren<EnemyContactDamage>(true);
 
-        for (int i = 0; i < contactDamages.Length; i++)
-            contactDamages[i].SetEnemyStatConfig(enemyConfig);
+            for (int i = 0; i < contactDamages.Length; i++)
+                contactDamages[i].SetEnemyStatConfig(creatureConfig);
 
-        EnemyVirusTrail[] virusTrails =
-            enemy.GetComponentsInChildren<EnemyVirusTrail>(true);
+            EnemyVirusTrail[] virusTrails =
+                enemy.GetComponentsInChildren<EnemyVirusTrail>(true);
 
-        for (int i = 0; i < virusTrails.Length; i++)
-            virusTrails[i].SetEnemyStatConfig(enemyConfig);
+            for (int i = 0; i < virusTrails.Length; i++)
+                virusTrails[i].SetEnemyStatConfig(creatureConfig);
+        }
 
         EnemyKillRewardSource[] killRewardSources =
             enemy.GetComponentsInChildren<EnemyKillRewardSource>(true);
@@ -603,15 +608,35 @@ public class NamedSectorController : MonoBehaviour
 
         for (int i = 0; i < uiAnchors.Length; i++)
             uiAnchors[i].SetEnemyStatConfig(enemyConfig);
+
+        if (enemy is EnemyShooter shooter &&
+            enemyConfig is EnemyShooterConfigSO shooterConfig)
+        {
+            shooter.SetEnemyShooterConfig(shooterConfig);
+        }
     }
-    private bool TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule)
+    private bool TryGetCurrentNamedRule(out StageProgressionRulesSO.StageProgressRule rule)
     {
         rule = null;
 
-        if (_stageBattleSettings == null)
+        if (_stageProgressionRules == null)
             return false;
 
-        return _stageBattleSettings.TryGetNamedCycleRule(ResolveCurrentStage(), out rule);
+        return _stageProgressionRules.TryGetNamedOrBossCycleRule(ResolveCurrentStage(), out rule);
+    }
+
+    private bool TryGetCurrentNamedOptions(out StageProgressionRulesSO.NamedOrBossGoalOptions options)
+    {
+        options = null;
+
+        if (_stageProgressionRules == null)
+            return false;
+
+        if (!_stageProgressionRules.TryGetNamedOrBossOptions(ResolveCurrentStage(), out options))
+            return false;
+
+        return options.cycleEnabled &&
+               _stageProgressionRules.HasValidNamedOrBossEntry(ResolveCurrentStage());
     }
 
     private int ResolveCurrentStage()
@@ -730,8 +755,8 @@ public class NamedSectorController : MonoBehaviour
         if (_timerPublishCooldown > 0f)
             return;
 
-        float interval = TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule)
-            ? rule.timerPublishInterval
+        float interval = TryGetCurrentNamedOptions(out StageProgressionRulesSO.NamedOrBossGoalOptions options)
+            ? options.timerPublishInterval
             : 0.1f;
 
         _timerPublishCooldown = Mathf.Max(0.01f, interval);
@@ -747,8 +772,8 @@ public class NamedSectorController : MonoBehaviour
         if (_debugLogCooldown > 0f)
             return;
 
-        float interval = TryGetCurrentNamedRule(out StageBattleSettingsSO.StageSpawnRule rule)
-            ? rule.debugLogInterval
+        float interval = TryGetCurrentNamedRule(out StageProgressionRulesSO.StageProgressRule rule)
+            ? rule.goalDebugLogInterval
             : 1f;
 
         _debugLogCooldown = Mathf.Max(0.1f, interval);

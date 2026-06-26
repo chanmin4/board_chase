@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// One shop item view.
-/// Displays a bullet offer, handles buy/reroll clicks, SOLD OUT visual state,
+/// Displays a shop offer, handles buy/reroll clicks, SOLD OUT visual state,
 /// and shows tooltip only when hovering the assigned info hover graphic.
 /// </summary>
 [DisallowMultipleComponent]
@@ -30,7 +30,7 @@ public class PlayerShopItemUI : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float _soldOutContentAlpha = 0.35f;
 
     [Header("Need Ref - Images")]
-    [Tooltip("Bullet icon image.")]
+    [Tooltip("Item icon image.")]
     [SerializeField] private Image _bulletIcon;
 
     [Tooltip("Optional rarity background image.")]
@@ -76,6 +76,7 @@ public class PlayerShopItemUI : MonoBehaviour
     [Header("Options - Rarity Colors")]
     [SerializeField] private Color _normalColor = Color.white;
     [SerializeField] private Color _rareColor = new Color(0.25f, 0.55f, 1f);
+    [SerializeField] private Color _uniqueColor = new Color(0.65f, 0.3f, 1f);
     [SerializeField] private Color _legendaryColor = new Color(1f, 0.75f, 0.15f);
 
     [Header("Don't Touch Ref Auto")]
@@ -157,16 +158,14 @@ public class PlayerShopItemUI : MonoBehaviour
             return;
         }
 
-        BulletSO bullet = _offer.Bullet;
-
         if (_bulletIcon != null)
         {
-            _bulletIcon.sprite = bullet != null ? bullet.Icon : null;
+            _bulletIcon.sprite = _offer.Icon;
             _bulletIcon.enabled = _bulletIcon.sprite != null;
         }
 
         if (_nameText != null)
-            _nameText.text = bullet != null ? bullet.DisplayName : "-";
+            _nameText.text = _offer.DisplayName;
 
         if (_rarityText != null)
             _rarityText.text = _offer.Rarity.ToString();
@@ -178,7 +177,7 @@ public class PlayerShopItemUI : MonoBehaviour
             _stockText.text = _offer.RemainingStock.ToString();
 
         if (_bundleText != null)
-            _bundleText.text = $"x{_offer.BundleAmount}";
+            _bundleText.text = _offer.IsBullet ? $"x{_offer.BundleAmount}" : string.Empty;
 
         if (_rarityBackground != null)
             _rarityBackground.color = GetRarityColor(_offer.Rarity);
@@ -336,9 +335,11 @@ public class PlayerShopItemUI : MonoBehaviour
         if (tooltip == null)
             return;
 
-        string title = _offer.Bullet != null ? _offer.Bullet.DisplayName : "-";
+        string title = _offer.DisplayName;
         string price = string.Format(_priceFormat, _offer.Price);
-        string bundle = string.Format(_bundleFormat, _offer.BundleAmount);
+        string bundle = _offer.IsBullet
+            ? string.Format(_bundleFormat, _offer.BundleAmount)
+            : string.Empty;
 
         tooltip.ShowText(
             title,
@@ -408,6 +409,7 @@ public class PlayerShopItemUI : MonoBehaviour
         return rarity switch
         {
             PlayerShopItemRarity.Rare => _rareColor,
+            PlayerShopItemRarity.Unique => _uniqueColor,
             PlayerShopItemRarity.Legendary => _legendaryColor,
             _ => _normalColor
         };

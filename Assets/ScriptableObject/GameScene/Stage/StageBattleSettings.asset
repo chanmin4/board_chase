@@ -15,31 +15,15 @@ MonoBehaviour:
   _rules:
   - stageIndex: 1
     displayName: 1_Stage
-    enemyWavePresetLibrary:
-    - displayName: worms
-      enemies:
-      - archetype: {fileID: 11400000, guid: 05a93a8afe4cc65408f9b9cd16591e31, type: 2}
-        count: 3
-    normalBattleEncounterPresets:
-    - displayName: 
-      weight: 0
-      sectorMaxAlive: 0
-      waves: []
-    sectorObjectRoomPresets:
-    - displayName: Object1
+    normalBattleEncounters:
+    - preset: {fileID: 11400000, guid: bdeab7e257548904cb70dbd79e762b9f, type: 2}
       weight: 1
-      objects:
-      - prefab: {fileID: 0}
-        count: 0
-        spawnPointTag: 
-        countAsEncounterTarget: 0
-    namedCycleEnabled: 0
-    namedEnemyEntries: []
-    startNamedCycleOnReady: 0
-    reserveFirstSectorImmediately: 0
-    firstReservationDelay: 0
-    reservationDuration: 0
-    respawnCooldownAfterKill: 0
-    retryDelayWhenNoCandidate: 0
-    timerPublishInterval: 0
+    normalBattleTimerSeconds: 30
+    resetTimerWhenRequirementLost: 0
+    playerStageObjectSpawnCount: 3
+    playerStageObjectPresets:
+    - preset: {fileID: 11400000, guid: 13454a1dd2aa22743b67d7832cd9f1b6, type: 2}
+      weight: 1
+    enemyStageObjectSpawnCount: 0
+    enemyStageObjectPresets: []
     debugLogInterval: 0

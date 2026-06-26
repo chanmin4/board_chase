@@ -18,9 +18,9 @@ public class SectorStateManager : MonoBehaviour
     [Tooltip("씬에 미리 배치된 sector와 논리 좌표를 연결하는 테이블입니다. 생성형 stage에서도 StartSector는 이 테이블에서 가져옵니다.")]
     [SerializeField] private SectorEntry[] _sectors;
 
-    [Header("Stage Unlock")]
-    [Tooltip("구형 stage별 sector 해금 규칙입니다. 생성형 StageMap 흐름에서는 보통 사용하지 않습니다.")]
-    [SerializeField] private StageSectorUnlockSO _stageSectorUnlock;
+    //[Header("Stage Unlock")]
+    //[Tooltip("구형 stage별 sector 해금 규칙입니다. 생성형 StageMap 흐름에서는 보통 사용하지 않습니다.")]
+    //[SerializeField] private StageSectorUnlockSO _stageSectorUnlock;
 
     [Tooltip("구형 StageSectorUnlockSO 기반 해금 흐름을 사용할 때만 켭니다. 생성형 StageMap을 쓰는 동안은 보통 꺼둡니다.")]
     [SerializeField] private bool _useStageSectorUnlocks = false;
@@ -257,7 +257,7 @@ public class SectorStateManager : MonoBehaviour
             if (StartSector != null)
                 OpenSector(StartSector);
 
-            ApplyStageUnlocksUpTo(CurrentStage);
+           // ApplyStageUnlocksUpTo(CurrentStage);
         }
 
         if (_stageAppliedEvent != null)
@@ -474,14 +474,14 @@ public class SectorStateManager : MonoBehaviour
         if (_currentSectorChangedEvent != null && CurrentSector != null)
             _currentSectorChangedEvent.RaiseEvent(CurrentSector);
     }
-
+/*
     private void ApplyStageUnlocksUpTo(int stage)
     {
-        if (_stageSectorUnlock == null)
-        {
-            Debug.LogWarning("[SectorStateManager] StageSectorUnlockSO is missing.");
-            return;
-        }
+        //if (_stageSectorUnlock == null)
+        //{
+        //    Debug.LogWarning("[SectorStateManager] StageSectorUnlockSO is missing.");
+        //    return;
+        //}
 
         for (int stageIndex = 0; stageIndex <= stage; stageIndex++)
         {
@@ -505,7 +505,7 @@ public class SectorStateManager : MonoBehaviour
             }
         }
     }
-
+*/
     public void OpenSector(SectorRuntime sector)
     {
         if (sector == null)

@@ -30,6 +30,12 @@ public class AscendAction : StateAction
 
 	public override void OnUpdate()
 	{
+		if (GamePause.IsPaused || Time.timeScale <= 0f)
+			return;
+
+		if (_vsplatterScript == null)
+			return;
+
 		_gravityContributionMultiplier += VSplatter_Character.GRAVITY_COMEBACK_MULTIPLIER;
 		_gravityContributionMultiplier *= VSplatter_Character.GRAVITY_DIVIDER; //Reduce the gravity effect
 

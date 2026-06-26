@@ -12,8 +12,7 @@ public class MetaStatsPanelUI : MonoBehaviour
         MagazineSize,
         MoveSpeed,
         ReloadDurationSeconds,
-        AttackShotsPerSecond,
-        PaintShotsPerSecond
+        ShotsPerSecond
     }
 
     [Serializable]
@@ -45,8 +44,7 @@ public class MetaStatsPanelUI : MonoBehaviour
         new MetaSummaryRowDefinition { enabled = true, displayName = "Magazine", statId = MetaSummaryStatId.MagazineSize, valueFormat = "{0:0}" },
         new MetaSummaryRowDefinition { enabled = true, displayName = "Move Speed", statId = MetaSummaryStatId.MoveSpeed, valueFormat = "{0:0.##}" },
         new MetaSummaryRowDefinition { enabled = true, displayName = "Reload", statId = MetaSummaryStatId.ReloadDurationSeconds, valueFormat = "{0:0.##}s" },
-        new MetaSummaryRowDefinition { enabled = true, displayName = "Attack Speed", statId = MetaSummaryStatId.AttackShotsPerSecond, valueFormat = "{0:0.##}/s" },
-        new MetaSummaryRowDefinition { enabled = true, displayName = "Paint Speed", statId = MetaSummaryStatId.PaintShotsPerSecond, valueFormat = "{0:0.##}/s" }
+        new MetaSummaryRowDefinition { enabled = true, displayName = "Shot Speed", statId = MetaSummaryStatId.ShotsPerSecond, valueFormat = "{0:0.##}/s" }
     };
 
     private readonly List<PlayerStatsSummaryRowUI> _rows = new();
@@ -142,8 +140,7 @@ public class MetaStatsPanelUI : MonoBehaviour
             MetaSummaryStatId.MagazineSize => Mathf.RoundToInt(Resolve(PlayerStatId.MagazineSize, config != null ? config.MagazineSize : 6, 1f)),
             MetaSummaryStatId.MoveSpeed => Resolve(PlayerStatId.MoveSpeed, config != null ? config.MoveSpeed : 8f, 0f),
             MetaSummaryStatId.ReloadDurationSeconds => Resolve(PlayerStatId.ReloadDurationSeconds, config != null ? config.ReloadDurationSeconds : 1.2f, 0.01f),
-            MetaSummaryStatId.AttackShotsPerSecond => Resolve(PlayerStatId.AttackShotsPerSecond, config != null ? config.AttackShotsPerSecond : 2f, 0.01f),
-            MetaSummaryStatId.PaintShotsPerSecond => Resolve(PlayerStatId.PaintShotsPerSecond, config != null ? config.PaintShotsPerSecond : 1f, 0.01f),
+            MetaSummaryStatId.ShotsPerSecond => Resolve(PlayerStatId.ShotsPerSecond, config != null ? config.ShotsPerSecond : 2f, 0.01f),
             _ => 0f
         };
 
@@ -204,7 +201,7 @@ public class MetaStatsPanelUI : MonoBehaviour
             if (_hasOverride)
                 return _overrideValue;
 
-            return (baseValue + _flatAdd) * (1f + _percentAdd);
+            return (baseValue + _flatAdd) * (1f + _percentAdd * 0.01f);
         }
     }
 }

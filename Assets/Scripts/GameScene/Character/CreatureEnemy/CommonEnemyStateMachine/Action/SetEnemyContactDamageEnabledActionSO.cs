@@ -1,0 +1,75 @@
+using UnityEngine;
+using VSplatter.StateMachine;
+using VSplatter.StateMachine.ScriptableObjects;
+
+[CreateAssetMenu(
+    fileName = "SetEnemyContactDamageEnabledAction",
+    menuName = "State Machines/Enemy Actions/Set Enemy Contact Damage Enabled")]
+public class SetEnemyContactDamageEnabledActionSO : StateActionSO
+{
+    [SerializeField] private StateAction.SpecificMoment _moment = StateAction.SpecificMoment.OnStateEnter;
+    [SerializeField] private bool _enabledValue = true;
+
+    public StateAction.SpecificMoment Moment => _moment;
+    public bool EnabledValue => _enabledValue;
+
+    protected override StateAction CreateAction() => new SetEnemyContactDamageEnabledAction();
+}
+
+public class SetEnemyContactDamageEnabledAction : StateAction
+{
+    private EnemyContactDamage _contactDamage;
+    private new SetEnemyContactDamageEnabledActionSO OriginSO => (SetEnemyContactDamageEnabledActionSO)base.OriginSO;
+
+    public override void Awake(StateMachine stateMachine)
+    {
+        _contactDamage = ResolveInOwnerHierarchy<EnemyContactDamage>(stateMachine);
+    }
+
+    public override void OnUpdate()
+    {
+        if (OriginSO.Moment == SpecificMoment.OnUpdate)
+            Apply();
+    }
+
+    public override void OnStateEnter()
+    {
+        if (OriginSO.Moment == SpecificMoment.OnStateEnter)
+            Apply();
+    }
+
+    public override void OnStateExit()
+    {
+        if (OriginSO.Moment == SpecificMoment.OnStateExit)
+            Apply();
+    }
+
+    private void Apply()
+    {
+        if (_contactDamage != null)
+            _contactDamage.enabled = OriginSO.EnabledValue;
+    }
+
+    private static T ResolveInOwnerHierarchy<T>(StateMachine stateMachine) where T : Component
+    {
+        if (stateMachine.TryGetComponent(out T component))
+            return component;
+
+        component = stateMachine.GetComponentInChildren<T>(true);
+        if (component != null)
+            return component;
+
+        Transform current = stateMachine.transform.parent;
+
+        while (current != null)
+        {
+            component = current.GetComponentInChildren<T>(true);
+            if (component != null)
+                return component;
+
+            current = current.parent;
+        }
+
+        return null;
+    }
+}

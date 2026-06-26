@@ -6,6 +6,7 @@ public class SectorPortalManager : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private SectorStateManager _sectorStateManager;
+    [SerializeField] private CameraManager _cameraManager;
     [Header("Events")]
     [SerializeField] private SectorRuntimeEventChannelSO _moveSectorCameraEvent;
     [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
@@ -18,6 +19,8 @@ public class SectorPortalManager : MonoBehaviour
 
     private void Awake()
     {
+        if (_cameraManager == null)
+            _cameraManager = FindAnyObjectByType<CameraManager>();
         if (_sectorStateManager == null)
             _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
 
@@ -247,6 +250,8 @@ public class SectorPortalManager : MonoBehaviour
         if (controller != null)
             controller.enabled = true;
 
+        if (_cameraManager != null)
+            _cameraManager.SnapToTarget();
         if (_moveSectorCameraEvent != null)
             _moveSectorCameraEvent.RaiseEvent(targetSector);
 

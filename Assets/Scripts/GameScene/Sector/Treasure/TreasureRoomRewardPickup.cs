@@ -7,6 +7,7 @@ public class TreasureRoomRewardPickup : MonoBehaviour
     [SerializeField] private TreasureRewardKind _rewardKind;
     [SerializeField] private PassiveItemSO _passiveItem;
     [SerializeField] private BulletSO _bullet;
+    [SerializeField] private ArmorItemSO _armorItem;
     [SerializeField, Min(1)] private int _bulletBundleAmount = 20;
     [SerializeField, Range(0f, 1f)] private float _bulletSellPriceRate = 0f;
 
@@ -15,25 +16,47 @@ public class TreasureRoomRewardPickup : MonoBehaviour
     [SerializeField] private bool _logPickupFailures = true;
 
     [Header("Broadcasting")]
-    [Tooltip("Optional legacy item pickup event. Passive rewards raise this after they are added to PlayerPassiveInventoryRuntime.")]
+    [Tooltip("Optional passive item pickup event. Passive rewards raise this after they are added to PlayerPassiveInventoryRuntime.")]
     [SerializeField] private ItemEventChannelSO _passiveItemPickedUpChannel;
+
+    private bool _pickedUp;
+
+    public TreasureRewardKind RewardKind => _rewardKind;
+    public PassiveItemSO PassiveItem => _passiveItem;
+    public BulletSO Bullet => _bullet;
+    public ArmorItemSO ArmorItem => _armorItem;
+    public bool CanInteract => !_pickedUp && HasReward;
+
+    private bool HasReward
+    {
+        get
+        {
+            return _rewardKind switch
+            {
+                TreasureRewardKind.Passive => _passiveItem != null,
+                TreasureRewardKind.Bullet => _bullet != null,
+                TreasureRewardKind.Armor => _armorItem != null,
+                _ => false
+            };
+        }
+    }
 
     public void Initialize(TreasureRoomReward reward)
     {
         _rewardKind = reward.Kind;
         _passiveItem = reward.PassiveItem;
         _bullet = reward.Bullet;
+        _armorItem = reward.ArmorItem;
         _bulletBundleAmount = Mathf.Max(1, reward.BulletBundleAmount);
         _bulletSellPriceRate = Mathf.Clamp01(reward.BulletSellPriceRate);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        TryPickup(other);
+        _pickedUp = false;
     }
 
     public bool TryPickup(Component picker)
     {
+        if (!CanInteract)
+            return false;
+
         if (picker == null)
             return false;
 
@@ -54,13 +77,22 @@ public class TreasureRoomRewardPickup : MonoBehaviour
                 picked = TryPickupBullet(player);
                 break;
 
+            case TreasureRewardKind.Armor:
+                picked = TryPickupArmor(player);
+                break;
+
             default:
                 picked = false;
                 break;
         }
 
-        if (picked && _destroyOnPickup)
-            Destroy(gameObject);
+        if (picked)
+        {
+            _pickedUp = true;
+
+            if (_destroyOnPickup)
+                Destroy(gameObject);
+        }
 
         return picked;
     }
@@ -109,7 +141,7 @@ public class TreasureRoomRewardPickup : MonoBehaviour
             return false;
         }
 
-        bool granted = loadout.TryGrantBullet(
+        bool granted = loadout.TryAcquireTreasureBullet(
             _bullet,
             _bulletBundleAmount,
             _bulletSellPriceRate,
@@ -120,6 +152,27 @@ public class TreasureRoomRewardPickup : MonoBehaviour
             LogPickupFailure(message);
 
         return granted;
+    }
+
+    private bool TryPickupArmor(VSplatter_Character player)
+    {
+        if (_armorItem == null)
+        {
+            LogPickupFailure("Armor item is missing.");
+            return false;
+        }
+
+        EntityEquipmentRuntime equipment =
+            player.GetComponentInParent<EntityEquipmentRuntime>();
+
+        if (equipment == null)
+        {
+            LogPickupFailure("EntityEquipmentRuntime is missing on player hierarchy.");
+            return false;
+        }
+
+        equipment.EquipArmor(_armorItem);
+        return true;
     }
 
     private void LogPickupFailure(string message)

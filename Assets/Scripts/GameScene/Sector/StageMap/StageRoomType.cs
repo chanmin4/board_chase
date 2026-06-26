@@ -8,7 +8,8 @@ public enum StageRoomType
     Named = 3,
     Treasure = 4,
     Shop = 5,
-    Boss = 6
+    Boss = 6,
+    BigMonsterWave = 7
 }
 
 [Flags]

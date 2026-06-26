@@ -12,6 +12,7 @@ public class UIMainMenu : MonoBehaviour
     [SerializeField] private Button _playerUpgradeButton;
     [SerializeField] private Button _settingsButton;
     [SerializeField] private Button _achievementButton;
+    [SerializeField] private Button _creditButton;
     [SerializeField] private Button _quitButton;
 
     [Header("Text Localization")]
@@ -23,6 +24,7 @@ public class UIMainMenu : MonoBehaviour
     [SerializeField] private LocalizeStringEvent _playerUpgradeText;
     [SerializeField] private LocalizeStringEvent _settingsText;
     [SerializeField] private LocalizeStringEvent _achievementText;
+    [SerializeField] private LocalizeStringEvent _creditText;
     [SerializeField] private LocalizeStringEvent _quitText;
 
     [Header("Localization Keys")]
@@ -31,6 +33,7 @@ public class UIMainMenu : MonoBehaviour
     [SerializeField] private string _playerUpgradeKey = "MainMenu_PlayerUpgrade";
     [SerializeField] private string _settingsKey = "MainMenu_Settings";
     [SerializeField] private string _achievementKey = "MainMenu_Achievement";
+    [SerializeField] private string _creditKey = "MainMenu_Credit";
     [SerializeField] private string _quitKey = "MainMenu_Quit";
 
     public event UnityAction NewGameButtonAction = delegate { };
@@ -38,6 +41,7 @@ public class UIMainMenu : MonoBehaviour
     public event UnityAction PlayerUpgradeButtonAction = delegate { };
     public event UnityAction SettingsButtonAction = delegate { };
     public event UnityAction AchievementButtonAction = delegate { };
+    public event UnityAction CreditButtonAction = delegate { };
     public event UnityAction QuitButtonAction = delegate { };
 
     private void Awake()
@@ -62,6 +66,9 @@ public class UIMainMenu : MonoBehaviour
         if (_achievementButton != null)
             _achievementButton.onClick.AddListener(HandleAchievementClicked);
 
+        if (_creditButton != null)
+            _creditButton.onClick.AddListener(HandleCreditClicked);
+
         if (_quitButton != null)
             _quitButton.onClick.AddListener(HandleQuitClicked);
 
@@ -85,6 +92,9 @@ public class UIMainMenu : MonoBehaviour
         if (_achievementButton != null)
             _achievementButton.onClick.RemoveListener(HandleAchievementClicked);
 
+        if (_creditButton != null)
+            _creditButton.onClick.RemoveListener(HandleCreditClicked);
+
         if (_quitButton != null)
             _quitButton.onClick.RemoveListener(HandleQuitClicked);
     }
@@ -107,6 +117,7 @@ public class UIMainMenu : MonoBehaviour
         ApplyTextKey(_playerUpgradeText, _playerUpgradeKey);
         ApplyTextKey(_settingsText, _settingsKey);
         ApplyTextKey(_achievementText, _achievementKey);
+        ApplyTextKey(_creditText, _creditKey);
         ApplyTextKey(_quitText, _quitKey);
     }
 
@@ -143,6 +154,12 @@ public class UIMainMenu : MonoBehaviour
     private void HandleAchievementClicked()
     {
         AchievementButtonAction.Invoke();
+    }
+
+    private void HandleCreditClicked()
+    {
+        Debug.Log("[UIMainMenu] Credit clicked", this);
+        CreditButtonAction.Invoke();
     }
 
     private void HandleQuitClicked()

@@ -198,8 +198,14 @@ public class EscPauseMenuController : MonoBehaviour
 
     private void MovePlayerToCurrentSectorCenter()
     {
-        if (_sectorCenterRescue != null)
-            _sectorCenterRescue.TryMovePlayerToCurrentSectorCenter();
+        if (_sectorCenterRescue == null)
+        {
+            Debug.LogWarning("[EscPauseMenuController] Sector center rescue requested, but rescue component is not assigned.", this);
+            return;
+        }
+
+        bool moved = _sectorCenterRescue.TryMovePlayerToCurrentSectorCenter();
+        Debug.Log($"[EscPauseMenuController] Sector center rescue result={moved}", this);
     }
 
     private static void SetVisible(CanvasGroup group, bool visible)

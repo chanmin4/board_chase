@@ -5,8 +5,15 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class PlayerShopPanelUI : MonoBehaviour
 {
+    [Header("Panel")]
+    [SerializeField] private CanvasGroup _panelGroup;
+
     [Header("Catalog")]
     [SerializeField] private PlayerShopCatalogSO _shopCatalog;
+
+    [Header("Player")]
+    [SerializeField] private PlayerPassiveInventoryRuntime _passiveInventory;
+    [SerializeField] private EntityEquipmentRuntime _equipmentRuntime;
 
     [Header("Currency Placeholder")]
     [SerializeField] private TextMeshProUGUI _currencyText;
@@ -31,9 +38,18 @@ public class PlayerShopPanelUI : MonoBehaviour
     private readonly List<PlayerShopOffer> _offers = new();
     private readonly Dictionary<int, PlayerShopOffer> _pendingPurchases = new();
 
+    private ShopRoomDropTableSO _activeShopRoomDropTable;
     private int _debugCurrency;
     private int _nextRequestId;
+    private float _activeSellPriceRate = 0.5f;
+    private bool _usingExternalOffers;
+    private bool _activeAllowReroll = true;
     private bool _initialized;
+
+    private void Reset()
+    {
+        _panelGroup = GetComponent<CanvasGroup>();
+    }
 
     private void OnEnable()
     {
@@ -61,6 +77,38 @@ public class PlayerShopPanelUI : MonoBehaviour
         RefreshAll();
     }
 
+    public void OpenWithOffers(
+        IReadOnlyList<PlayerShopOffer> offers,
+        ShopRoomDropTableSO dropTable,
+        bool allowReroll)
+    {
+        _usingExternalOffers = true;
+        _activeShopRoomDropTable = dropTable;
+        _activeAllowReroll = allowReroll;
+        _activeSellPriceRate = dropTable != null ? dropTable.SellPriceRate : 0.5f;
+        _initialized = true;
+
+        _offers.Clear();
+        _pendingPurchases.Clear();
+
+        if (offers != null)
+        {
+            for (int i = 0; i < offers.Count; i++)
+            {
+                if (offers[i] != null)
+                    _offers.Add(offers[i]);
+            }
+        }
+
+        SetPanelVisible(true);
+        RefreshAll();
+    }
+
+    public void ClosePanel()
+    {
+        SetPanelVisible(false);
+    }
+
     public void ResetShopForNewRun()
     {
         _initialized = false;
@@ -77,6 +125,11 @@ public class PlayerShopPanelUI : MonoBehaviour
         _debugCurrency = _shopCatalog != null
             ? _shopCatalog.StartingDebugCurrency
             : 0;
+
+        _usingExternalOffers = false;
+        _activeShopRoomDropTable = null;
+        _activeAllowReroll = true;
+        _activeSellPriceRate = _shopCatalog != null ? _shopCatalog.SellPriceRate : 0.5f;
 
         RollAllOffers();
 
@@ -115,7 +168,7 @@ public class PlayerShopPanelUI : MonoBehaviour
         if (_itemSlots == null)
             return;
 
-        int rerollCost = _shopCatalog != null ? _shopCatalog.RerollCost : 0;
+        int rerollCost = ResolveRerollCost();
 
         for (int i = 0; i < _itemSlots.Length; i++)
         {
@@ -150,6 +203,24 @@ public class PlayerShopPanelUI : MonoBehaviour
             return;
         }
 
+        if (offer.IsPassive)
+        {
+            TryPurchasePassive(offer);
+            return;
+        }
+
+        if (offer.IsArmor)
+        {
+            TryPurchaseArmor(offer);
+            return;
+        }
+
+        if (!offer.IsBullet)
+        {
+            RaiseMessage("Invalid shop item.");
+            return;
+        }
+
         if (_purchaseRequestChannel == null)
         {
             RaiseMessage("Purchase system is not connected.");
@@ -165,19 +236,28 @@ public class PlayerShopPanelUI : MonoBehaviour
                 offer.Bullet,
                 offer.BundleAmount,
                 offer.Price,
-                _shopCatalog != null ? _shopCatalog.SellPriceRate : 0.5f));
+                _activeSellPriceRate));
     }
 
     private void HandleRerollRequested(PlayerShopItemUI itemUI)
     {
-        if (_shopCatalog == null || itemUI == null)
+        if (itemUI == null)
             return;
 
         int index = FindItemSlotIndex(itemUI);
         if (index < 0)
             return;
 
-        int cost = _shopCatalog.RerollCost;
+        if (_usingExternalOffers)
+        {
+            HandleExternalReroll(index);
+            return;
+        }
+
+        if (_shopCatalog == null)
+            return;
+
+        int cost = ResolveRerollCost();
 
         if (_rerollConsumesDebugCurrency && _debugCurrency < cost)
         {
@@ -205,6 +285,44 @@ public class PlayerShopPanelUI : MonoBehaviour
 
         _offers[index] = new PlayerShopOffer(entry);
 
+        RefreshAll();
+    }
+
+    private void HandleExternalReroll(int index)
+    {
+        if (!_activeAllowReroll || _activeShopRoomDropTable == null)
+        {
+            RaiseMessage("Reroll is not available.");
+            return;
+        }
+
+        int cost = ResolveRerollCost();
+
+        if (_rerollConsumesDebugCurrency && _debugCurrency < cost)
+        {
+            RaiseMessage("Not enough currency.");
+            return;
+        }
+
+        IReadOnlyList<ItemSO> excluded = _activeShopRoomDropTable.AllowDuplicateOffers
+            ? null
+            : BuildExcludedItems(index);
+
+        int seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+
+        if (!_activeShopRoomDropTable.TryCreateOffer(seed, excluded, out PlayerShopOffer offer))
+        {
+            RaiseMessage("No shop item available.");
+            return;
+        }
+
+        if (_rerollConsumesDebugCurrency)
+            _debugCurrency -= cost;
+
+        while (_offers.Count <= index)
+            _offers.Add(null);
+
+        _offers[index] = offer;
         RefreshAll();
     }
 
@@ -238,6 +356,74 @@ public class PlayerShopPanelUI : MonoBehaviour
         }
 
         return -1;
+    }
+
+    private List<ItemSO> BuildExcludedItems(int ignoreIndex)
+    {
+        List<ItemSO> excluded = new();
+
+        for (int i = 0; i < _offers.Count; i++)
+        {
+            if (i == ignoreIndex)
+                continue;
+
+            PlayerShopOffer offer = _offers[i];
+
+            if (offer != null && offer.Item != null)
+                excluded.Add(offer.Item);
+        }
+
+        return excluded;
+    }
+
+    private void TryPurchasePassive(PlayerShopOffer offer)
+    {
+        if (offer == null || !offer.IsPassive)
+            return;
+
+        ResolvePassiveInventory();
+
+        if (_passiveInventory == null)
+        {
+            RaiseMessage("Passive inventory is not connected.");
+            return;
+        }
+
+        if (!_passiveInventory.TryAdd(offer.PassiveItem))
+        {
+            RaiseMessage("Passive item already owned or rejected.");
+            return;
+        }
+
+        if (!_ignoreCurrencyUntilImplemented)
+            _debugCurrency -= offer.Price;
+
+        offer.TryConsumeStock();
+        RaiseMessage($"{offer.DisplayName} purchased.");
+        RefreshAll();
+    }
+
+    private void TryPurchaseArmor(PlayerShopOffer offer)
+    {
+        if (offer == null || !offer.IsArmor)
+            return;
+
+        ResolveEquipmentRuntime();
+
+        if (_equipmentRuntime == null)
+        {
+            RaiseMessage("Equipment runtime is not connected.");
+            return;
+        }
+
+        _equipmentRuntime.EquipArmor(offer.ArmorItem);
+
+        if (!_ignoreCurrencyUntilImplemented)
+            _debugCurrency -= offer.Price;
+
+        offer.TryConsumeStock();
+        RaiseMessage($"{offer.DisplayName} equipped.");
+        RefreshAll();
     }
 
     private void HandlePurchaseResult(WeaponAmmoShopPurchaseResult result)
@@ -284,5 +470,42 @@ public class PlayerShopPanelUI : MonoBehaviour
             _systemMessageChannel.RaiseEvent(message);
         else
             Debug.Log($"[Shop] {message}", this);
+    }
+
+    private int ResolveRerollCost()
+    {
+        if (_usingExternalOffers)
+            return _activeShopRoomDropTable != null ? _activeShopRoomDropTable.RerollCost : 0;
+
+        return _shopCatalog != null ? _shopCatalog.RerollCost : 0;
+    }
+
+    private void ResolvePassiveInventory()
+    {
+        if (_passiveInventory != null)
+            return;
+
+        _passiveInventory = FindAnyObjectByType<PlayerPassiveInventoryRuntime>();
+    }
+
+    private void ResolveEquipmentRuntime()
+    {
+        if (_equipmentRuntime != null)
+            return;
+
+        _equipmentRuntime = FindAnyObjectByType<EntityEquipmentRuntime>();
+    }
+
+    private void SetPanelVisible(bool visible)
+    {
+        if (_panelGroup == null)
+            _panelGroup = GetComponent<CanvasGroup>();
+
+        if (_panelGroup == null)
+            return;
+
+        _panelGroup.alpha = visible ? 1f : 0f;
+        _panelGroup.interactable = visible;
+        _panelGroup.blocksRaycasts = visible;
     }
 }

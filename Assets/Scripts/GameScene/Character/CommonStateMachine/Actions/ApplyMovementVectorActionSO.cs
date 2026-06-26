@@ -19,6 +19,16 @@ public class ApplyMovementVectorAction : StateAction
 
 	public override void OnUpdate()
 	{
+		if (GamePause.IsPaused || Time.timeScale <= 0f)
+			return;
+
+		if (_vsplatterScript == null ||
+			_characterController == null ||
+			!_characterController.enabled)
+		{
+			return;
+		}
+
 		//Debug.Log($"grounded={_characterController.isGrounded}, pos={_characterController.transform.position}, moveVec={_vsplatterScript.movementVector}");
 		_characterController.Move(_vsplatterScript.movementVector * Time.deltaTime);
 		_vsplatterScript.movementVector = _characterController.velocity;

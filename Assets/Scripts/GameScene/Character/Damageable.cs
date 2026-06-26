@@ -41,6 +41,10 @@ public class Damageable : MonoBehaviour
     [SerializeField] private Renderer _mainMeshRenderer;
     [SerializeField] private DroppableRewardConfigSO _droppableRewardSO;
 
+    [Header("Stats Runtime")]
+    [SerializeField] private ShooterStatsRuntime _statsRuntime;
+    [SerializeField] private EntityEquipmentRuntime _equipmentRuntime;
+
     [Header("Invulnerability")]
     [SerializeField] private InvulnerabilityController _invulnerabilityController;
     [SerializeField] private bool _applyPostHitInvulnerability = false;
@@ -52,7 +56,8 @@ public class Damageable : MonoBehaviour
 
     [Header("Listening To")]
     [SerializeField] private FloatEventChannelSO _restoreHealth = default;
-
+    
+    [SerializeField] private float _paintMarkDamageTakenAdditive = 0f;
     public DroppableRewardConfigSO DroppableRewardConfig => _droppableRewardSO;
 
     public bool GetHit { get; set; }
@@ -62,7 +67,13 @@ public class Damageable : MonoBehaviour
     public float CurrentHealth => _currentHealth;
     public float HealthNormalized => _maxHealth > 0f ? Mathf.Clamp01(_currentHealth / _maxHealth) : 0f;
     public float DamageTakenMultiplier => _damageTakenMultiplier;
-
+    public EntityStatConfigSO StatConfig => _statConfig;
+    public float PaintMarkDamageTakenAdditive => _paintMarkDamageTakenAdditive;
+    public float ArmorDamageTakenAdditive =>
+        _equipmentRuntime != null ? _equipmentRuntime.ArmorDamageTakenAdditive : 0f;
+    public float FinalDamageTakenMultiplier => Mathf.Max(
+        0f,
+        _damageTakenMultiplier + _paintMarkDamageTakenAdditive + ArmorDamageTakenAdditive);
     public event UnityAction<Damageable> OnDamageMultiplierChanged;
     public event UnityAction<Damageable> OnHealthChanged;
     public event UnityAction OnDie;
@@ -80,6 +91,12 @@ public class Damageable : MonoBehaviour
     {
         InitializeHealthFromConfig();
 
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<ShooterStatsRuntime>() ?? GetComponentInParent<ShooterStatsRuntime>();
+
+        if (_equipmentRuntime == null)
+            _equipmentRuntime = GetComponent<EntityEquipmentRuntime>() ?? GetComponentInParent<EntityEquipmentRuntime>();
+
         if (_invulnerabilityController == null)
             TryGetComponent(out _invulnerabilityController);
 
@@ -91,12 +108,18 @@ public class Damageable : MonoBehaviour
     {
         if (_restoreHealth != null)
             _restoreHealth.OnEventRaised += Cure;
+
+        if (_equipmentRuntime != null)
+            _equipmentRuntime.OnEquipmentChanged += NotifyDamageMultiplierChanged;
     }
 
     private void OnDisable()
     {
         if (_restoreHealth != null)
             _restoreHealth.OnEventRaised -= Cure;
+
+        if (_equipmentRuntime != null)
+            _equipmentRuntime.OnEquipmentChanged -= NotifyDamageMultiplierChanged;
     }
 
     public void ReceiveAnAttack(float damage, GameObject attacker = null)
@@ -104,7 +127,10 @@ public class Damageable : MonoBehaviour
         if (!CanReceiveDamage)
             return;
 
-        float finalDamage = Mathf.Max(0f, damage * _damageTakenMultiplier);
+        if (TryDodgeIncomingAttack())
+            return;
+
+        float finalDamage = Mathf.Max(0f, damage * FinalDamageTakenMultiplier);
         if (finalDamage <= 0f)
             return;
 
@@ -131,8 +157,11 @@ public class Damageable : MonoBehaviour
             _invulnerabilityController.Begin(_postHitInvulnerabilityConfig);
         }
 
-        if (!diedThisHit && attacker != null && TryGetComponent(out Enemy enemy))
-            enemy.NotifyDamagedBy(attacker);
+        if (!diedThisHit && attacker != null)
+        {
+            Enemy enemy = GetComponent<Enemy>() ?? GetComponentInParent<Enemy>();
+            enemy?.NotifyDamagedBy(attacker);
+        }
 
         NotifyHealthChanged();
 
@@ -269,6 +298,18 @@ public class Damageable : MonoBehaviour
         return Mathf.Clamp(multiplier, min, max);
     }
 
+    private bool TryDodgeIncomingAttack()
+    {
+        if (_statsRuntime == null)
+            _statsRuntime = GetComponent<ShooterStatsRuntime>() ?? GetComponentInParent<ShooterStatsRuntime>();
+
+        float dodgeChance = _statsRuntime != null
+            ? Mathf.Clamp01(_statsRuntime.DodgeChance)
+            : 0f;
+
+        return dodgeChance > 0f && Random.value < dodgeChance;
+    }
+
     private void SyncRuntimeHealthDebug()
     {
         _debugHealthNormalized = HealthNormalized;
@@ -304,5 +345,18 @@ public class Damageable : MonoBehaviour
         OnDamageMultiplierChanged?.Invoke(this);
         OnHealthChanged?.Invoke(this);
         _updateHealthUI?.RaiseEvent();
+    }
+    public void SetPaintMarkDamageTakenAdditive(float additive)
+    {
+        if (Mathf.Approximately(_paintMarkDamageTakenAdditive, additive))
+            return;
+
+        _paintMarkDamageTakenAdditive = additive;
+        NotifyDamageMultiplierChanged();
+    }
+
+    public void ResetPaintMarkDamageTakenAdditive()
+    {
+        SetPaintMarkDamageTakenAdditive(0f);
     }
 }

@@ -13,18 +13,15 @@ MonoBehaviour:
   m_Name: Worm_Virus_MODE
   m_EditorClassIdentifier: 
   _transitions:
-  - FromState: {fileID: 11400000, guid: 6f5c7ee9dba8d7647875b89039120b5f, type: 2}
-    ToState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
+  - FromState: {fileID: 11400000, guid: d0d381d240574e4a8b85a47b7a6cf001, type: 2}
+    ToState: {fileID: 11400000, guid: d0d381d240574e4a8b85a47b7a6cf002, type: 2}
     Conditions:
     - ExpectedResult: 0
       Condition: {fileID: 11400000, guid: e2a6a9cd7ab5cc44b829a27dfdc087ce, type: 2}
       Operator: 0
-  - FromState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
-    ToState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
+  - FromState: {fileID: 11400000, guid: d0d381d240574e4a8b85a47b7a6cf002, type: 2}
+    ToState: {fileID: 11400000, guid: d0d381d240574e4a8b85a47b7a6cf003, type: 2}
     Conditions:
     - ExpectedResult: 0
       Condition: {fileID: 11400000, guid: c8bfb14271ab3d74ea981c6fda7746d9, type: 2}
       Operator: 0
-  - FromState: {fileID: 11400000, guid: 358c79127ed4d4d4fbed7d9ce771ff56, type: 2}
-    ToState: {fileID: 11400000, guid: b30c8cd2f78341d4493acc08d63f1332, type: 2}
-    Conditions: []

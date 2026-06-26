@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 294f4c0238c50334cb4be1a12dce5779, type: 3}
+  m_Name: SniperRifle2
+  m_EditorClassIdentifier: 
+  _guid: 97b81463ac3d52148a21df4ab341b1ff
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: eff0e5c924e75124c8e4fb30648b76d0, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _worldItemPrefab: {fileID: 6875246725044659727, guid: 7301f13414921584491a1b53b336318b, type: 3}
+  _weaponId: weapon
+  _displayName: Weapon
+  _weaponViewPrefab: {fileID: 2874331260001655343, guid: 7301f13414921584491a1b53b336318b, type: 3}
+  _weaponViewLocalPosition: {x: 0, y: 0.1, z: -0.1}
+  _weaponViewLocalEulerAngles: {x: -0, y: 90, z: 0}
+  _weaponViewLocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  _fireAudioCue: {fileID: 11400000, guid: a1ba1c741fd2c124887d7c4967a4662b, type: 2}
+  _hitConfirmAudioCue: {fileID: 11400000, guid: 1370460f65ab9ca47baa2bec9cf50eb3, type: 2}
+  _playerReloadAudioCue: {fileID: 11400000, guid: 65fa96f1cec58a144b81264ae215841d, type: 2}
+  _enemyReloadAudioCue: {fileID: 0}
+  _statModifiers: []
+  _gunshotSoundRadiusMultiplier: 1
+  _gunshotSoundRadiusAdd: 0
+  references:
+    version: 2
+    RefIds: []

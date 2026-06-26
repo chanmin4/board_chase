@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99ca85af63a94240aa97cd468d889997, type: 3}
+  m_Name: Chicken
+  m_EditorClassIdentifier: 
+  _guid: 6b938a6d2afcf1948b61ade42f17115d
+  _name:
+    m_TableReference:
+      m_TableCollectionName: GUID:2432e5d59ba4d8f4dbf84e68b4e04bf4
+    m_TableEntryReference:
+      m_KeyId: 54795395072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: dd205811177c7c0478c3b284a082b740, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _healthResorationValue: 0
+  _worldItemPrefab: {fileID: 8988515678152213101, guid: cb99d64b042af74489045c5d7cca6c91, type: 3}
+  _allowDuplicatePickup: 0
+  _statModifiers:
+  - stat: 11
+    type: 0
+    value: 15
+  _featureFlags: []
+  references:
+    version: 2
+    RefIds: []

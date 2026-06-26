@@ -130,6 +130,12 @@ public class EnemyScreenSpaceHPUIManager : MonoBehaviour
             return;
         }
 
+        if (!anchor.IsVisionVisible)
+        {
+            SetEntryVisible(entry, false);
+            return;
+        }
+
         bool healthVisible = TryGetLocalPoint(
             anchor,
             anchor.GetHealthBarLayout(),

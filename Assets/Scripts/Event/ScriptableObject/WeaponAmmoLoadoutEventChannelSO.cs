@@ -35,7 +35,7 @@ public struct WeaponAmmoSlotSnapshot
         this.slotIndex = slotIndex;
         this.bullet = bullet;
         bulletType = bullet != null ? bullet.AmmoType : BulletAmmoType.Special;
-        bulletIcon = bullet != null ? bullet.Icon : null;
+        bulletIcon = bullet != null ? bullet.PreviewImage : null;
         displayName = bullet != null ? bullet.DisplayName : string.Empty;
         this.currentAmmo = currentAmmo;
         this.reserveAmmo = reserveAmmo;

@@ -100,15 +100,7 @@ public class AnimatorParameterAction : StateAction
             return;
         }
 
-        if (!stateMachine.TryGetComponent(out _animator))
-            _animator = stateMachine.GetComponentInChildren<Animator>(true);
-
-        if (_animator == null)
-        {
-            Enemy enemy = stateMachine.GetComponentInParent<Enemy>();
-            if (enemy != null)
-                _animator = enemy.GetComponentInChildren<Animator>(true);
-        }
+        _animator = ResolveInOwnerHierarchy<Animator>(stateMachine);
 
         if (_animator == null)
         {
@@ -293,5 +285,28 @@ public class AnimatorParameterAction : StateAction
         }
 
         return false;
+    }
+
+    private static T ResolveInOwnerHierarchy<T>(StateMachine stateMachine) where T : Component
+    {
+        if (stateMachine.TryGetComponent(out T component))
+            return component;
+
+        component = stateMachine.GetComponentInChildren<T>(true);
+        if (component != null)
+            return component;
+
+        Transform current = stateMachine.transform.parent;
+
+        while (current != null)
+        {
+            component = current.GetComponentInChildren<T>(true);
+            if (component != null)
+                return component;
+
+            current = current.parent;
+        }
+
+        return null;
     }
 }

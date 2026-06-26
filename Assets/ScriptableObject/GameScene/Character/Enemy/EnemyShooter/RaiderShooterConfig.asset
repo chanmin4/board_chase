@@ -1,0 +1,144 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e27a454e74f73745b473c6fafffc143, type: 3}
+  m_Name: RaiderShooterConfig
+  m_EditorClassIdentifier: 
+  _initialHealth: 40
+  _moveSpeed: 5
+  _paintMark:
+    _usePaintMark: 1
+    _markAmountPerStack: 100
+    _maxVaccineMarkStacks: 3
+    _maxVirusMarkStacks: 3
+    _startWithVirusMark: 0
+    _startingVirusMarkAmount: 0
+    _paintMarkTickInterval: 0.1
+    _vaccinePaintMarkAmountPerTick: 5
+    _virusPaintMarkAmountPerTick: 5
+    _virusMarkAmountOnDamagingPlayer: 20
+    _inactiveSlowDecayAmountPerTick: 0
+    _activeSlowDecayAmountPerTick: 0.5
+    _oppositePaintFastDecayAmountPerTick: 1
+    _vaccineDamageTakenAddPerStack: 0.15
+    _virusDamageTakenAddPerStack: -0.15
+  _vision:
+    _visionRange: 30
+    _useLineOfSight: 0
+    _lineOfSightBlockerMask:
+      serializedVersion: 2
+      m_Bits: 2176
+    _eyeHeight: 1
+    _targetHeight: 1
+  _id: Shooter
+  _displayName: Raider
+  _xpOnDeath: 25
+  _runCurrencyOnDeath: 0
+  _healthBarUI:
+    _worldOffset: {x: 0, y: 0, z: 0}
+    _screenPixelOffset: {x: 0, y: 50}
+    _hideWhenBehindCamera: 1
+    _hideWhenOffScreen: 1
+    _clampToScreen: 1
+    _screenEdgePadding: 24
+  _infectionCastBarUI:
+    _worldOffset: {x: 0, y: 0, z: 0}
+    _screenPixelOffset: {x: 0, y: 40}
+    _hideWhenBehindCamera: 1
+    _hideWhenOffScreen: 1
+    _clampToScreen: 1
+    _screenEdgePadding: 24
+  _enemyShooterPrefab: {fileID: 0}
+  _shooter:
+    _attackDamage: 10
+    _maxRange: 12
+    _shotsPerSecond: 2
+    _reloadDurationSeconds: 1.2
+    _magazineSize: 6
+    _paintRadius: 1.25
+    _paintPriority: 0
+    _aimSpeed: 8
+    _aimRangeMultiplier: 1.25
+    _aimMoveSpeedMultiplier: 0.6
+    _hipFireSpreadAngleDeg: 6
+    _aimSpreadAngleDeg: 0.5
+    _recoilAngleDeg: 1
+    _recoilRecoverySpeedDegPerSecond: 18
+    _gunshotSoundRadius: 16
+    _soundInvestigateDelaySeconds: 0.25
+    _footstepSoundRadius: 5
+    _footstepSoundInterval: 0.35
+  _bullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
+  _paintChannel: 1
+  _alertOnDamaged: 1
+  _targetSearchInterval: 0.5
+  _targetMemorySeconds: 10
+  _chaseLastKnownPosition: 1
+  _attackStartRange: 0
+  _attackKeepRange: 0
+  _chaseStoppingDistance: 0
+  _reactionTime: 0.35
+  _burstCount: 2
+  _burstInterval: 0.5
+  _moveWhileAttacking: 0
+  _combatMoveRefreshInterval: 0.1
+  _patrolRadius: 8
+  _patrolDestinationRefreshInterval: 1.25
+  _patrolArriveDistance: 0.5
+  _navMeshSampleDistance: 3
+  _aimTrackingSpeedDegPerSecond: 720
+  _aimErrorAngleDeg: 0
+  _targetLeadSeconds: 0
+  _avoidVaccinePaint: 0
+  _avoidVaccinePaintWhileAttacking: 0
+  _paintAvoidanceCheckInterval: 0.2
+  _paintAvoidanceSearchRadius: 4
+  _paintAvoidanceSampleCount: 8
+  _paintAvoidanceNavMeshSampleDistance: 2
+  _weaponEntries:
+  - weapon: {fileID: 11400000, guid: e2ae47b96800d3944b44e462d3b3ef6b, type: 2}
+    weight: 6
+    bulletEntries:
+    - bullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
+      weight: 1
+  - weapon: {fileID: 11400000, guid: 354172926f99b4446b917baa42f6a51e, type: 2}
+    weight: 6
+    bulletEntries:
+    - bullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
+      weight: 1
+  - weapon: {fileID: 11400000, guid: 9fdf29b08a95b724c968000d0c5eaba8, type: 2}
+    weight: 1.5
+    bulletEntries:
+    - bullet: {fileID: 11400000, guid: 525c2f6ced1fe5c44a14cf4eee6562f8, type: 2}
+      weight: 8
+    - bullet: {fileID: 11400000, guid: 11704fc8a3ba6ad4b8e91397f68fd4a2, type: 2}
+      weight: 2
+  - weapon: {fileID: 11400000, guid: 3634bd08e7d774240b33474483be6122, type: 2}
+    weight: 1.5
+    bulletEntries:
+    - bullet: {fileID: 11400000, guid: 525c2f6ced1fe5c44a14cf4eee6562f8, type: 2}
+      weight: 8
+    - bullet: {fileID: 11400000, guid: 11704fc8a3ba6ad4b8e91397f68fd4a2, type: 2}
+      weight: 2
+  - weapon: {fileID: 11400000, guid: 687f9395b88424645bc7819f8fac8988, type: 2}
+    weight: 1.5
+    bulletEntries:
+    - bullet: {fileID: 11400000, guid: b4c246f2fdedc0143912e4cf82fb0213, type: 2}
+      weight: 8
+    - bullet: {fileID: 11400000, guid: 58de4d745b804654699a43d5a74c9a71, type: 2}
+      weight: 2
+  - weapon: {fileID: 11400000, guid: e22925020438b754c9b939561dc6f53e, type: 2}
+    weight: 1.5
+    bulletEntries:
+    - bullet: {fileID: 11400000, guid: b4c246f2fdedc0143912e4cf82fb0213, type: 2}
+      weight: 8
+    - bullet: {fileID: 11400000, guid: 58de4d745b804654699a43d5a74c9a71, type: 2}
+      weight: 2

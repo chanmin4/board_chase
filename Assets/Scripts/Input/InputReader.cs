@@ -14,9 +14,6 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	
 	public event UnityAction DashEvent = delegate { };
 	public event UnityAction DashCanceledEvent = delegate { };
-	public event UnityAction ShockwaveChargeEvent = delegate { };
-	public event UnityAction ShockwaveExpelEvent = delegate { };
-	public event UnityAction ShockwaveCanceledEvent = delegate { };
 	public event UnityAction ShootEvent = delegate { };
 	public event UnityAction ShootCanceledEvent = delegate { };
 	public event UnityAction SpecialShootEvent = delegate { };
@@ -116,7 +113,6 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		MoveEvent.Invoke(Vector2.zero);
 		ShootCanceledEvent.Invoke();
 		DashCanceledEvent.Invoke();
-		ShockwaveCanceledEvent.Invoke();
 		ReloadInputHeld = false;
 		SpecialShootHeld = false;
 		SpecialShootCanceledEvent.Invoke();
@@ -197,24 +193,6 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 			return;
 
 		UpgradeStatsEvent.Invoke();
-	}
-    public void OnShockwave(InputAction.CallbackContext context)
-	{
-		switch (context.phase)
-		{
-			case InputActionPhase.Performed:
-				if (GameplayAttackInputBlocker.IsBlocked)
-				{
-					ShockwaveCanceledEvent.Invoke();
-					return;
-				}
-
-				ShockwaveChargeEvent.Invoke();
-				break;
-			case InputActionPhase.Canceled:
-				ShockwaveCanceledEvent.Invoke();
-				break;
-		}
 	}
     public void OnDash(InputAction.CallbackContext context)
 	{

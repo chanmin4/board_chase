@@ -8,5 +8,6 @@ public enum UIOverlayId
     BossReward = 5,
     Pause = 6,
     ConfirmPopup = 7,
-    MetaUpgrade = 8
+    MetaUpgrade = 8,
+    Credit = 9
 }

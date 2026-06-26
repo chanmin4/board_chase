@@ -17,6 +17,10 @@ public class SectorEnemySpawner : MonoBehaviour
     [FormerlySerializedAs("_stageEnemySetting")]
     [SerializeField] private StageBattleSettingsSO _stageBattleSettings;
 
+    [Tooltip("Stage progression and goal room settings. BigMonsterWave goal rooms read their encounter preset from this SO.")]
+    [FormerlySerializedAs("_stageGoalSettings")]
+    [SerializeField] private StageProgressionRulesSO _stageProgressionRules;
+
     [SerializeField] private Transform _spawnedEnemiesRoot;
 
     [Tooltip("Sector objects spawned by battle presets are parented here. Uses Spawned Enemies Root, then the sector transform when empty.")]
@@ -29,7 +33,7 @@ public class SectorEnemySpawner : MonoBehaviour
     [SerializeField] private SectorRuntimeEventChannelSO _sectorOpenedEvent;
     [SerializeField] private StageProgressSnapshotEventChannelSO _stageProgressChangedChannel;
 
-    [Header("Named Battle Lock")]
+    [Header("Manager Ready")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
 
     [Header("Options")]
@@ -43,18 +47,22 @@ public class SectorEnemySpawner : MonoBehaviour
     [ReadOnly] [SerializeField] private int _spawnedEncounterEnemyCount;
     [ReadOnly] [SerializeField] private int _pendingEnemySpawnCount;
     [ReadOnly] [SerializeField] private int _spawnedEncounterObjectCount;
+    [ReadOnly] [SerializeField] private int _resolvedPlayerStageObjectSpawnCount;
+    [ReadOnly] [SerializeField] private int _resolvedEnemyStageObjectSpawnCount;
     [ReadOnly] [SerializeField] private bool _encounterSpawnFinished;
     [ReadOnly] [SerializeField] private bool _encounterCleared;
     [ReadOnly] [SerializeField] private bool _isSectorActive;
     [ReadOnly] [SerializeField] private bool _hasEncounterConfiguration;
+    [ReadOnly] [SerializeField] private bool _hasEnemyEncounterConfiguration;
+    [ReadOnly] [SerializeField] private bool _hasObjectConfiguration;
     [ReadOnly] [SerializeField] private string _selectedEncounterPresetName;
-    [ReadOnly] [SerializeField] private string _selectedObjectRoomPresetName;
+    [ReadOnly] [SerializeField] private string _selectedPlayerObjectRoomPresetName;
+    [ReadOnly] [SerializeField] private string _selectedEnemyObjectRoomPresetName;
     [ReadOnly] [SerializeField] private int _aliveEncounterTargetCount;
 
     private SectorStateManager _sectorStateManager;
     private StageBattleSettingsSO.StageSpawnRule _currentRule;
-    private StageBattleSettingsSO.NormalBattleEncounterPreset _selectedEncounterPreset;
-    private StageBattleSettingsSO.SectorObjectRoomPreset _selectedObjectRoomPreset;
+    private StageBattleEncounterPresetSO _selectedEncounterPreset;
 
     private readonly List<Enemy> _aliveEnemies = new();
     private readonly Dictionary<Enemy, Damageable> _trackedDamageables = new();
@@ -62,17 +70,20 @@ public class SectorEnemySpawner : MonoBehaviour
     private readonly List<Damageable> _aliveEncounterTargets = new();
     private readonly Dictionary<Damageable, UnityAction> _encounterTargetDeathHandlers = new();
     private readonly List<Transform> _spawnPointBuffer = new();
-    private readonly List<StageBattleSettingsSO.EnemyWavePreset> _resolvedEnemyWavePresets = new();
+    private readonly List<StageEnemyWavePresetSO> _resolvedEnemyWavePresets = new();
     private readonly Queue<EnemyStatConfigSO> _pendingEnemySpawnQueue = new();
     private readonly HashSet<Transform> _objectOccupiedSpawnPoints = new();
     private readonly List<GameObject> _clearWithRoomObjects = new();
     private float _encounterStartTime;
     private bool _encounterStarted;
     private bool _sectorObjectsSpawned;
+    private int _spawnedPlayerStageObjectCount;
+    private int _spawnedEnemyStageObjectCount;
     private int _nextEnemyWaveIndex;
     private System.Random _spawnRng;
 
-    public bool HasCompletedNormalBattleEncounter => _hasEncounterConfiguration && _encounterCleared;
+    public bool HasCompletedNormalBattleEncounter =>
+        _hasEnemyEncounterConfiguration && _encounterCleared;
     public bool HasStartedNormalBattleEncounter => _encounterStarted;
     public int AliveEnemyCount => _aliveEnemies.Count;
     public int AliveEncounterTargetCount => _aliveEncounterTargets.Count;
@@ -193,12 +204,16 @@ public class SectorEnemySpawner : MonoBehaviour
         _spawnedEncounterEnemyCount = 0;
         _pendingEnemySpawnCount = 0;
         _spawnedEncounterObjectCount = 0;
+        _resolvedPlayerStageObjectSpawnCount = 0;
+        _resolvedEnemyStageObjectSpawnCount = 0;
+        _spawnedPlayerStageObjectCount = 0;
+        _spawnedEnemyStageObjectCount = 0;
         _encounterSpawnFinished = false;
         _encounterCleared = false;
         _selectedEncounterPreset = null;
-        _selectedObjectRoomPreset = null;
         _selectedEncounterPresetName = string.Empty;
-        _selectedObjectRoomPresetName = string.Empty;
+        _selectedPlayerObjectRoomPresetName = string.Empty;
+        _selectedEnemyObjectRoomPresetName = string.Empty;
         _resolvedEnemyWavePresets.Clear();
         _pendingEnemySpawnQueue.Clear();
         _nextEnemyWaveIndex = 0;
@@ -206,16 +221,13 @@ public class SectorEnemySpawner : MonoBehaviour
         _encounterStartTime = 0f;
         _sectorObjectsSpawned = false;
         _hasEncounterConfiguration = false;
+        _hasEnemyEncounterConfiguration = false;
+        _hasObjectConfiguration = false;
 
-        if (_stageBattleSettings == null)
-            return;
+        StageBattleSettingsSO.StageSpawnRule rule = null;
 
-        if (!_stageBattleSettings.TryGetRule(
-                _currentStageIndex,
-                out StageBattleSettingsSO.StageSpawnRule rule))
-        {
-            return;
-        }
+        if (_stageBattleSettings != null)
+            _stageBattleSettings.TryGetRule(_currentStageIndex, out rule);
 
         _currentRule = rule;
         SelectDeterministicPresets(rule);
@@ -224,42 +236,58 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private void SelectDeterministicPresets(StageBattleSettingsSO.StageSpawnRule rule)
     {
-        if (_stageBattleSettings == null || _sectorRuntime == null || rule == null)
+        if (_sectorRuntime == null)
             return;
 
         int stageSeed = ResolveStageSeed();
         Vector2Int coord = _sectorRuntime.Coord;
+        StageRoomType roomType = ResolveRoomType();
 
-        if (_stageBattleSettings.TryPickNormalBattleEncounterPreset(
+        if (IsBattleRoom(roomType) &&
+            TryPickEncounterPreset(
                 _currentStageIndex,
                 stageSeed,
                 coord,
-                out StageBattleSettingsSO.NormalBattleEncounterPreset encounterPreset))
+                roomType,
+                out StageBattleEncounterPresetSO encounterPreset))
         {
             _selectedEncounterPreset = encounterPreset;
-            _selectedEncounterPresetName = string.IsNullOrWhiteSpace(encounterPreset.displayName)
-                ? "EncounterPreset"
-                : encounterPreset.displayName;
+            _selectedEncounterPresetName = encounterPreset.DisplayName;
 
-            _resolvedMaxAlive = Mathf.Max(0, encounterPreset.sectorMaxAlive);
-            ResolveEnemyWavePresetPlan(rule, stageSeed, coord);
+            _resolvedMaxAlive = encounterPreset.SectorMaxAlive;
+            ResolveEnemyWavePresetPlan(stageSeed, coord);
         }
 
-        if (_stageBattleSettings.TryPickSectorObjectRoomPreset(
-                _currentStageIndex,
-                stageSeed,
-                coord,
-                out StageBattleSettingsSO.SectorObjectRoomPreset objectPreset))
+        if (IsBattleRoom(roomType) && _stageBattleSettings != null)
         {
-            _selectedObjectRoomPreset = objectPreset;
-            _selectedObjectRoomPresetName = string.IsNullOrWhiteSpace(objectPreset.displayName)
-                ? "ObjectRoomPreset"
-                : objectPreset.displayName;
+            _resolvedPlayerStageObjectSpawnCount =
+                _stageBattleSettings.GetPlayerStageObjectSpawnCount(_currentStageIndex);
+
+            _resolvedEnemyStageObjectSpawnCount =
+                _stageBattleSettings.GetEnemyStageObjectSpawnCount(_currentStageIndex);
         }
+
+        _selectedPlayerObjectRoomPresetName =
+            _resolvedPlayerStageObjectSpawnCount > 0
+                ? $"{_resolvedPlayerStageObjectSpawnCount} PlayerStageObjects"
+                : string.Empty;
+
+        _selectedEnemyObjectRoomPresetName =
+            _resolvedEnemyStageObjectSpawnCount > 0
+                ? $"{_resolvedEnemyStageObjectSpawnCount} EnemyStageObjects"
+                : string.Empty;
+
+        _hasEnemyEncounterConfiguration =
+            _selectedEncounterPreset != null &&
+            _resolvedEncounterTotalSpawnCount > 0;
+
+        _hasObjectConfiguration =
+            _resolvedPlayerStageObjectSpawnCount > 0 ||
+            _resolvedEnemyStageObjectSpawnCount > 0;
 
         _hasEncounterConfiguration =
-            _selectedEncounterPreset != null ||
-            _selectedObjectRoomPreset != null;
+            _hasEnemyEncounterConfiguration ||
+            _hasObjectConfiguration;
 
         _spawnRng = new System.Random(StageBattleSettingsSO.BuildSectorSeed(
             stageSeed,
@@ -269,13 +297,41 @@ public class SectorEnemySpawner : MonoBehaviour
         if (!_hasEncounterConfiguration)
         {
             Debug.LogWarning(
-                $"[SectorEnemySpawner] NormalBattle room has no encounter preset and no object room preset. stage={_currentStageIndex}, sector={coord}",
+                $"[SectorEnemySpawner] Battle room has no encounter preset and no object room preset. stage={_currentStageIndex}, sector={coord}, roomType={roomType}",
                 this);
         }
     }
 
+    private bool TryPickEncounterPreset(
+        int stageIndex,
+        int stageSeed,
+        Vector2Int coord,
+        StageRoomType roomType,
+        out StageBattleEncounterPresetSO encounterPreset)
+    {
+        encounterPreset = null;
+
+        if (roomType == StageRoomType.BigMonsterWave)
+        {
+            return _stageProgressionRules != null &&
+                   _stageProgressionRules.TryPickGoalEncounterPreset(
+                       stageIndex,
+                       stageSeed,
+                       coord,
+                       roomType,
+                       out encounterPreset);
+        }
+
+        return _stageBattleSettings != null &&
+               _stageBattleSettings.TryPickBattleEncounterPreset(
+                   stageIndex,
+                   stageSeed,
+                   coord,
+                   roomType,
+                   out encounterPreset);
+    }
+
     private void ResolveEnemyWavePresetPlan(
-        StageBattleSettingsSO.StageSpawnRule rule,
         int stageSeed,
         Vector2Int coord)
     {
@@ -283,26 +339,22 @@ public class SectorEnemySpawner : MonoBehaviour
         _resolvedEncounterTotalSpawnCount = 0;
 
         if (_selectedEncounterPreset == null ||
-            _selectedEncounterPreset.waves == null)
+            _selectedEncounterPreset.Waves == null)
         {
             return;
         }
 
-        for (int i = 0; i < _selectedEncounterPreset.waves.Count; i++)
+        for (int i = 0; i < _selectedEncounterPreset.WaveCount; i++)
         {
-            StageBattleSettingsSO.NormalBattleEnemyWave wave =
-                _selectedEncounterPreset.waves[i];
-
             int seed = StageBattleSettingsSO.BuildSectorSeed(
                 stageSeed,
                 coord,
                 1100 + i);
 
-            if (_stageBattleSettings.TryPickEnemyWavePreset(
-                    rule,
-                    wave,
+            if (_selectedEncounterPreset.TryPickEnemyWavePreset(
+                    i,
                     seed,
-                    out StageBattleSettingsSO.EnemyWavePreset enemyWavePreset))
+                    out StageEnemyWavePresetSO enemyWavePreset))
             {
                 _resolvedEnemyWavePresets.Add(enemyWavePreset);
                 _resolvedEncounterTotalSpawnCount += enemyWavePreset.TotalSpawnCount;
@@ -329,10 +381,10 @@ public class SectorEnemySpawner : MonoBehaviour
     }
 
     private static int GetEncounterWaveCount(
-        StageBattleSettingsSO.NormalBattleEncounterPreset preset)
+        StageBattleEncounterPresetSO preset)
     {
-        return preset != null && preset.waves != null
-            ? preset.waves.Count
+        return preset != null
+            ? preset.WaveCount
             : 0;
     }
 
@@ -341,6 +393,8 @@ public class SectorEnemySpawner : MonoBehaviour
         _spawnedEncounterEnemyCount = 0;
         _pendingEnemySpawnCount = 0;
         _spawnedEncounterObjectCount = 0;
+        _spawnedPlayerStageObjectCount = 0;
+        _spawnedEnemyStageObjectCount = 0;
         _pendingEnemySpawnQueue.Clear();
         RefreshEncounterSpawnFinished();
         RefreshEncounterCompletion();
@@ -354,7 +408,7 @@ public class SectorEnemySpawner : MonoBehaviour
         _encounterStarted = true;
         _encounterStartTime = Time.time;
 
-        SpawnSectorObjectRoomPreset();
+        SpawnStageObjectRoomPresets();
         RefreshEncounterSpawnFinished();
         RefreshEncounterCompletion();
     }
@@ -362,23 +416,23 @@ public class SectorEnemySpawner : MonoBehaviour
     private void TickEnemyEncounterWaves()
     {
         if (_selectedEncounterPreset == null ||
-            _selectedEncounterPreset.waves == null ||
-            _nextEnemyWaveIndex >= _selectedEncounterPreset.waves.Count)
+            _selectedEncounterPreset.Waves == null ||
+            _nextEnemyWaveIndex >= _selectedEncounterPreset.WaveCount)
         {
             return;
         }
 
-        while (_nextEnemyWaveIndex < _selectedEncounterPreset.waves.Count)
+        while (_nextEnemyWaveIndex < _selectedEncounterPreset.WaveCount)
         {
-            StageBattleSettingsSO.NormalBattleEnemyWave wave =
-                _selectedEncounterPreset.waves[_nextEnemyWaveIndex];
+            StageBattleEncounterPresetSO.EncounterWave wave =
+                _selectedEncounterPreset.Waves[_nextEnemyWaveIndex];
 
             float delay = wave != null ? Mathf.Max(0f, wave.delaySeconds) : 0f;
 
             if (Time.time < _encounterStartTime + delay)
                 return;
 
-            StageBattleSettingsSO.EnemyWavePreset enemyWavePreset =
+            StageEnemyWavePresetSO enemyWavePreset =
                 _nextEnemyWaveIndex < _resolvedEnemyWavePresets.Count
                     ? _resolvedEnemyWavePresets[_nextEnemyWaveIndex]
                     : null;
@@ -388,14 +442,14 @@ public class SectorEnemySpawner : MonoBehaviour
         }
     }
 
-    private void EnqueueEnemyWavePreset(StageBattleSettingsSO.EnemyWavePreset preset)
+    private void EnqueueEnemyWavePreset(StageEnemyWavePresetSO preset)
     {
-        if (preset == null || preset.enemies == null)
+        if (preset == null || preset.Enemies == null)
             return;
 
-        for (int i = 0; i < preset.enemies.Count; i++)
+        for (int i = 0; i < preset.Enemies.Count; i++)
         {
-            StageBattleSettingsSO.EnemyPresetSpawn spawn = preset.enemies[i];
+            StageEnemyWavePresetSO.EnemySpawn spawn = preset.Enemies[i];
 
             if (spawn == null || spawn.archetype == null || !spawn.archetype.IsValid)
                 continue;
@@ -427,47 +481,94 @@ public class SectorEnemySpawner : MonoBehaviour
         }
     }
 
-    private void SpawnSectorObjectRoomPreset()
+    private void SpawnStageObjectRoomPresets()
     {
         if (_sectorObjectsSpawned)
             return;
 
         _sectorObjectsSpawned = true;
+        SpawnPlayerStageObjects();
+        SpawnEnemyStageObjects();
+    }
 
-        if (_selectedObjectRoomPreset == null ||
-            _selectedObjectRoomPreset.objects == null)
-        {
+    private void SpawnPlayerStageObjects()
+    {
+        int spawnLimit = Mathf.Max(0, _resolvedPlayerStageObjectSpawnCount);
+
+        if (_stageBattleSettings == null || spawnLimit <= 0)
             return;
-        }
 
-        for (int i = 0; i < _selectedObjectRoomPreset.objects.Count; i++)
+        int stageSeed = ResolveStageSeed();
+        Vector2Int coord = _sectorRuntime != null ? _sectorRuntime.Coord : Vector2Int.zero;
+
+        while (_spawnedPlayerStageObjectCount < spawnLimit)
         {
-            StageBattleSettingsSO.SectorObjectPresetSpawn spawn =
-                _selectedObjectRoomPreset.objects[i];
+            int spawnIndex = _spawnedPlayerStageObjectCount;
 
-        if (spawn == null || spawn.objectConfig == null ||!spawn.objectConfig.IsValid)
-        {
-            continue;
-        }
-
-            int count = Mathf.Max(1, spawn.count);
-
-            for (int j = 0; j < count; j++)
+            if (!_stageBattleSettings.TryPickPlayerStageObjectConfig(
+                    _currentStageIndex,
+                    stageSeed,
+                    coord,
+                    spawnIndex,
+                    out PlayerStageObjectConfigSO objectConfig))
             {
-                if (TrySpawnSectorObject(spawn))
-                    _spawnedEncounterObjectCount++;
+                return;
             }
+
+            if (!TrySpawnStageObject(objectConfig))
+            {
+                Debug.LogWarning(
+                    $"[SectorEnemySpawner] Failed to spawn player stage object. stage={_currentStageIndex}, sector={coord}, spawnIndex={spawnIndex}",
+                    this);
+                return;
+            }
+
+            _spawnedPlayerStageObjectCount++;
+            _spawnedEncounterObjectCount++;
         }
     }
 
-    private bool TrySpawnSectorObject(StageBattleSettingsSO.SectorObjectPresetSpawn spawn)
+    private void SpawnEnemyStageObjects()
     {
-        if (spawn == null ||
-            spawn.objectConfig == null ||
-            !spawn.objectConfig.IsValid)
+        int spawnLimit = Mathf.Max(0, _resolvedEnemyStageObjectSpawnCount);
+
+        if (_stageBattleSettings == null || spawnLimit <= 0)
+            return;
+
+        int stageSeed = ResolveStageSeed();
+        Vector2Int coord = _sectorRuntime != null ? _sectorRuntime.Coord : Vector2Int.zero;
+
+        while (_spawnedEnemyStageObjectCount < spawnLimit)
         {
-            return false;
+            int spawnIndex = _spawnedEnemyStageObjectCount;
+
+            if (!_stageBattleSettings.TryPickEnemyStageObjectConfig(
+                    _currentStageIndex,
+                    stageSeed,
+                    coord,
+                    spawnIndex,
+                    out EnemyStageObjectConfigSO objectConfig))
+            {
+                return;
+            }
+
+            if (!TrySpawnStageObject(objectConfig))
+            {
+                Debug.LogWarning(
+                    $"[SectorEnemySpawner] Failed to spawn enemy stage object. stage={_currentStageIndex}, sector={coord}, spawnIndex={spawnIndex}",
+                    this);
+                return;
+            }
+
+            _spawnedEnemyStageObjectCount++;
+            _spawnedEncounterObjectCount++;
         }
+    }
+
+    private bool TrySpawnStageObject(StageObjectConfigSO objectConfig)
+    {
+        if (objectConfig == null || !objectConfig.IsValid)
+            return false;
 
         if (!TryGetSpawnPoint(
                 SectorObjectSpawnPointUsage.SectorObject,
@@ -483,10 +584,10 @@ public class SectorEnemySpawner : MonoBehaviour
                 ? _spawnedEnemiesRoot
                 : _sectorRuntime.transform;
 
-        Quaternion rotation = spawn.objectConfig.ResolveSpawnRotation(spawnPoint, _spawnRng);
+        Quaternion rotation = objectConfig.ResolveSpawnRotation(spawnPoint, _spawnRng);
 
         GameObject instance = Instantiate(
-            spawn.objectConfig.Prefab,
+            objectConfig.Prefab,
             spawnPoint.position,
             rotation,
             parent);
@@ -496,7 +597,7 @@ public class SectorEnemySpawner : MonoBehaviour
 
         _objectOccupiedSpawnPoints.Add(spawnPoint);
 
-        if (spawn.objectConfig.ClearWithRoom)
+        if (objectConfig.ClearWithRoom)
             _clearWithRoomObjects.Add(instance);
 
         return true;
@@ -516,9 +617,7 @@ public class SectorEnemySpawner : MonoBehaviour
 
         bool pendingEnemiesFinished = _pendingEnemySpawnQueue.Count <= 0;
 
-        bool objectsFinished =
-            _selectedObjectRoomPreset == null ||
-            _sectorObjectsSpawned;
+        bool objectsFinished = !_hasObjectConfiguration || _sectorObjectsSpawned;
 
         _encounterSpawnFinished =
             enemyWavesFinished &&
@@ -530,7 +629,7 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private void RefreshEncounterCompletion()
     {
-        if (!_hasEncounterConfiguration)
+        if (!_hasEnemyEncounterConfiguration)
         {
             _encounterCleared = false;
             return;
@@ -559,7 +658,7 @@ public class SectorEnemySpawner : MonoBehaviour
     private bool CanRunEncounter()
     {
 
-        if (_sectorRuntime == null || _stageBattleSettings == null)
+        if (_sectorRuntime == null)
             return false;
 
         if (!_hasEncounterConfiguration)
@@ -595,13 +694,35 @@ public class SectorEnemySpawner : MonoBehaviour
             if (!_sectorStateManager.TryGetStageRoomType(
                     _sectorRuntime,
                     out StageRoomType roomType) ||
-                roomType != StageRoomType.NormalBattle)
+                !IsBattleRoom(roomType))
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private StageRoomType ResolveRoomType()
+    {
+        if (_sectorRuntime != null && _sectorRuntime.IsStartSector)
+            return StageRoomType.Start;
+
+        if (_sectorStateManager != null &&
+            _sectorStateManager.TryGetStageRoomType(
+                _sectorRuntime,
+                out StageRoomType roomType))
+        {
+            return roomType;
+        }
+
+        return StageRoomType.NormalBattle;
+    }
+
+    private static bool IsBattleRoom(StageRoomType roomType)
+    {
+        return roomType == StageRoomType.NormalBattle ||
+               roomType == StageRoomType.BigMonsterWave;
     }
 
     private void RefreshSectorActivity()
@@ -663,23 +784,26 @@ public class SectorEnemySpawner : MonoBehaviour
         if (enemy == null || enemyConfig == null)
             return;
 
-        EnemyMovementStatsProvider[] movementProviders =
-            enemy.GetComponentsInChildren<EnemyMovementStatsProvider>(true);
+        if (enemyConfig is CreatureEnemyStatConfigSO creatureConfig)
+        {
+            EnemyMovementStatsProvider[] movementProviders =
+                enemy.GetComponentsInChildren<EnemyMovementStatsProvider>(true);
 
-        for (int i = 0; i < movementProviders.Length; i++)
-            movementProviders[i].SetEnemyStatConfig(enemyConfig);
+            for (int i = 0; i < movementProviders.Length; i++)
+                movementProviders[i].SetEnemyStatConfig(creatureConfig);
 
-        EnemyContactDamage[] contactDamages =
-            enemy.GetComponentsInChildren<EnemyContactDamage>(true);
+            EnemyContactDamage[] contactDamages =
+                enemy.GetComponentsInChildren<EnemyContactDamage>(true);
 
-        for (int i = 0; i < contactDamages.Length; i++)
-            contactDamages[i].SetEnemyStatConfig(enemyConfig);
+            for (int i = 0; i < contactDamages.Length; i++)
+                contactDamages[i].SetEnemyStatConfig(creatureConfig);
 
-        EnemyVirusTrail[] virusTrails =
-            enemy.GetComponentsInChildren<EnemyVirusTrail>(true);
+            EnemyVirusTrail[] virusTrails =
+                enemy.GetComponentsInChildren<EnemyVirusTrail>(true);
 
-        for (int i = 0; i < virusTrails.Length; i++)
-            virusTrails[i].SetEnemyStatConfig(enemyConfig);
+            for (int i = 0; i < virusTrails.Length; i++)
+                virusTrails[i].SetEnemyStatConfig(creatureConfig);
+        }
 
         EnemyKillRewardSource[] killRewardSources =
             enemy.GetComponentsInChildren<EnemyKillRewardSource>(true);
@@ -692,6 +816,11 @@ public class SectorEnemySpawner : MonoBehaviour
 
         for (int i = 0; i < uiAnchors.Length; i++)
             uiAnchors[i].SetEnemyStatConfig(enemyConfig);
+        if (enemy is EnemyShooter shooter &&
+            enemyConfig is EnemyShooterConfigSO shooterConfig)
+        {
+            shooter.SetEnemyShooterConfig(shooterConfig);
+        }
     }
 
     private void BindProjectileRoot(Enemy enemy)

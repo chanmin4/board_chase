@@ -172,6 +172,7 @@ public class UIPause : MonoBehaviour
 
     private void RequestSectorCenterRescue()
     {
+        Debug.Log("[UIPause] Sector center rescue button clicked.", this);
         SectorCenterRescueRequested.Invoke();
     }
 
