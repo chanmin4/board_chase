@@ -75,10 +75,16 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     public override float ShotsPerSecond => _current.weapon.shotsPerSecond;
     public override float ReloadDurationSeconds => _current.weapon.reloadDurationSeconds;
     public override int MagazineSize => _current.weapon.magazineSize;
+    public override float PaintMarkDamage => _current.weapon.paintMarkDamage;
+    public override float InfectionDamage => _current.weapon.infectionDamage;
+    public override int PenetrationClassBonus => _current.weapon.penetrationClass;
     public override float PaintRadius => _current.paint.paintRadius;
     public override int PaintPriority => _current.paint.paintPriority;
     public override float MoveSpeed => _current.movement.moveSpeed;
     public override float MaxHealth => _current.survival.maxHealth;
+    public override int ArmorClass => _current.survival.armorClass;
+    public override float ArmorHealthDurabilityLossMultiplier => _current.survival.armorHealthDurabilityLossMultiplier;
+    public override float ArmorInfectionDurabilityLossMultiplier => _current.survival.armorInfectionDurabilityLossMultiplier;
     public override float DodgeChance => _current.survival.dodgeChance;
     public override float VisionRange => _current.vision.visionRange;
     public override float AimSpeed => _current.aim.aimSpeed;
@@ -88,6 +94,12 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     public override float AimSpreadAngleDeg => _current.aim.aimSpreadAngleDeg;
     public override float RecoilAngleDeg => _current.aim.recoilAngleDeg;
     public override float RecoilRecoverySpeedDegPerSecond => _current.aim.recoilRecoverySpeedDegPerSecond;
+    public override float RecoilForwardDistancePerShot => _current.aim.recoilForwardDistancePerShot;
+    public override float RecoilSideDistancePerShot => _current.aim.recoilSideDistancePerShot;
+    public override float MaxRecoilDistance => _current.aim.maxRecoilDistance;
+    public override float RecoilDistanceRecoveryPerSecond => _current.aim.recoilDistanceRecoveryPerSecond;
+    public override float HipFireSpreadRadius => _current.aim.hipFireSpreadRadius;
+    public override float AimSpreadRadius => _current.aim.aimSpreadRadius;
 
     public override float GunshotSoundRadius =>
         CurrentWeapon != null
@@ -217,6 +229,8 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
         float baseShotsPerSecond = config != null ? config.ShotsPerSecond : 2f;
         float baseReloadDuration = config != null ? config.ReloadDurationSeconds : 1.2f;
         float basePaintRadius = config != null ? config.PaintRadius : 1.25f;
+        float basePaintMarkDamage = config != null ? config.PaintMarkDamage : 0f;
+        float baseInfectionDamage = config != null ? config.InfectionDamage : 0f;
         int baseMagazineSize = config != null ? config.MagazineSize : 6;
         int basePaintPriority = config != null ? config.PaintPriority : 0;
 
@@ -226,6 +240,14 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
         _current.weapon.maxRange = Resolve(PlayerStatId.MaxRange, baseRange, 0.1f);
         _current.weapon.shotsPerSecond = Resolve(PlayerStatId.ShotsPerSecond, baseShotsPerSecond, 0.01f);
         _current.weapon.reloadDurationSeconds = Resolve(PlayerStatId.ReloadDurationSeconds, baseReloadDuration, 0.01f);
+        _current.weapon.paintMarkDamage = Resolve(PlayerStatId.PaintMarkDamage, basePaintMarkDamage, 0f);
+        _current.weapon.infectionDamage = Resolve(PlayerStatId.InfectionDamage, baseInfectionDamage, 0f);
+        _current.weapon.penetrationClass = Mathf.Max(
+            0,
+            Mathf.RoundToInt(Resolve(
+                PlayerStatId.PenetrationClass,
+                config != null ? config.PenetrationClassBonus : 0,
+                0f)));
         _current.weapon.magazineSize = Mathf.Max(
             1,
             Mathf.RoundToInt(Resolve(PlayerStatId.MagazineSize, baseMagazineSize, 1f)));
@@ -280,6 +302,36 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
             config != null ? config.RecoilRecoverySpeedDegPerSecond : 20f,
             0f);
 
+        _current.aim.recoilForwardDistancePerShot = Resolve(
+            PlayerStatId.RecoilForwardDistancePerShot,
+            config != null ? config.RecoilForwardDistancePerShot : 0f,
+            0f);
+
+        _current.aim.recoilSideDistancePerShot = Resolve(
+            PlayerStatId.RecoilSideDistancePerShot,
+            config != null ? config.RecoilSideDistancePerShot : 0f,
+            0f);
+
+        _current.aim.maxRecoilDistance = Resolve(
+            PlayerStatId.MaxRecoilDistance,
+            config != null ? config.MaxRecoilDistance : 0f,
+            0f);
+
+        _current.aim.recoilDistanceRecoveryPerSecond = Resolve(
+            PlayerStatId.RecoilDistanceRecoveryPerSecond,
+            config != null ? config.RecoilDistanceRecoveryPerSecond : 0f,
+            0f);
+
+        _current.aim.hipFireSpreadRadius = Resolve(
+            PlayerStatId.HipFireSpreadRadius,
+            config != null ? config.HipFireSpreadRadius : 0f,
+            0f);
+
+        _current.aim.aimSpreadRadius = Resolve(
+            PlayerStatId.AimSpreadRadius,
+            config != null ? config.AimSpreadRadius : 0f,
+            0f);
+
         _current.sound.gunshotSoundRadius = Resolve(
             PlayerStatId.GunshotSoundRadius,
             config != null ? config.GunshotSoundRadius : 0f,
@@ -302,6 +354,22 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
 
         float baseMaxHealth = config != null ? config.MaxHealth : 100f;
         _current.survival.maxHealth = Resolve(PlayerStatId.MaxHealth, baseMaxHealth, 1f);
+        _current.survival.armorClass = Mathf.Max(
+            0,
+            Mathf.RoundToInt(Resolve(
+                PlayerStatId.ArmorClass,
+                config != null ? config.BaseArmorClass : 0,
+                0f)));
+
+        _current.survival.armorHealthDurabilityLossMultiplier = Resolve(
+            PlayerStatId.ArmorHealthDurabilityLossMultiplier,
+            config != null && config.Armor != null ? config.Armor.HealthDurabilityLossMultiplier : 1f,
+            0f);
+
+        _current.survival.armorInfectionDurabilityLossMultiplier = Resolve(
+            PlayerStatId.ArmorInfectionDurabilityLossMultiplier,
+            config != null && config.Armor != null ? config.Armor.InfectionDurabilityLossMultiplier : 0.5f,
+            0f);
 
         _current.survival.dodgeChance = Mathf.Clamp01(
             Resolve(
@@ -396,7 +464,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
 
     private void ApplyEquipmentEffects()
     {
-        if (_equipmentRuntime == null || _equipmentRuntime.CurrentArmor == null)
+        if (_equipmentRuntime == null || !_equipmentRuntime.HasUsableArmor || _equipmentRuntime.CurrentArmor == null)
             return;
 
         ApplyModifiers(_equipmentRuntime.CurrentArmor.StatModifiers);
@@ -473,6 +541,24 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
             bullet != null ? bullet.StatModifiers : null);
     }
 
+    public override float ResolvePaintMarkDamage(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.PaintMarkDamage,
+            _current.weapon.paintMarkDamage,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
+    }
+
+    public override float ResolveInfectionDamage(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.InfectionDamage,
+            _current.weapon.infectionDamage,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
+    }
+
     public override float ResolveShotsPerSecond(BulletSO bullet)
     {
         return ResolveWithExtraModifiers(
@@ -491,6 +577,24 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
             bullet != null ? bullet.StatModifiers : null);
 
         return Mathf.Max(1, Mathf.RoundToInt(resolved));
+    }
+
+    public override float ResolveArmorHealthDurabilityLossMultiplier(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.ArmorHealthDurabilityLossMultiplier,
+            _current.survival.armorHealthDurabilityLossMultiplier,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
+    }
+
+    public override float ResolveArmorInfectionDurabilityLossMultiplier(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.ArmorInfectionDurabilityLossMultiplier,
+            _current.survival.armorInfectionDurabilityLossMultiplier,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
     }
 
     private float ResolveWithExtraModifiers(
@@ -517,6 +621,8 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     {
         private float _flatAdd;
         private float _percentAdd;
+        private bool _hasPercentMultiply;
+        private float _percentMultiply;
         private bool _hasOverride;
         private float _overrideValue;
 
@@ -531,11 +637,20 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
                 case StatModifierType.PercentAdd:
                     _percentAdd += modifier.value;
                     break;
+                case StatModifierType.PercentMultiply:
+                    if (!_hasPercentMultiply)
+                    {
+                        _hasPercentMultiply = true;
+                        _percentMultiply = 1f;
+                    }
 
+                    _percentMultiply *= modifier.value;
+                    break;
                 case StatModifierType.Override:
                     _hasOverride = true;
                     _overrideValue = modifier.value;
                     break;
+
             }
         }
 
@@ -544,7 +659,12 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
             if (_hasOverride)
                 return _overrideValue;
 
-            return (baseValue + _flatAdd) * (1f + _percentAdd * 0.01f);
+            float value = (baseValue + _flatAdd) * (1f + _percentAdd * 0.01f);
+
+            if (_hasPercentMultiply)
+                value *= _percentMultiply;
+
+            return value;
         }
     }
 }

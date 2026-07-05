@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a6ab1369813334b961894a0f6ee9b3, type: 3}
+  m_Name: ShooterAnimatorParameter
+  m_EditorClassIdentifier: 
+  description: Updates MoveSpeed, MoveDirX, and MoveDirY for shooter blend trees.
+  _preferChildAnimator: 1
+  _preferredAnimatorNameContains: Visual
+  _moveSpeedParameter: MoveSpeed
+  _moveDirXParameter: MoveDirX
+  _moveDirYParameter: MoveDirY
+  _normalizeMoveSpeed: 1
+  _directionDeadZone: 0.001
+  _resetOnStateExit: 1
+  _logWarnings: 1

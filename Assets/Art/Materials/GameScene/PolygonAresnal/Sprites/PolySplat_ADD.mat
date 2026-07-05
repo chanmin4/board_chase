@@ -13,6 +13,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   version: 9
+--- !u!114 &-1040205524185247421
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 639247ca83abc874e893eb93af2b5e44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 0
 --- !u!21 &2100000
 Material:
   serializedVersion: 8
@@ -21,13 +34,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: PolySplat_ADD
-  m_Shader: {fileID: -6465566751694194690, guid: 93b2518f5741e5548a8f75574a29c2c3, type: 3}
+  m_Shader: {fileID: 4800000, guid: 6a6845d6b808aef4395b599c72da2c26, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _FADING_ON
-  - _SOFTPARTICLES_ON
+  m_InvalidKeywords: []
   m_LightmapFlags: 6
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -82,14 +93,18 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - Emission_: 0
     - Intensity_SpriteShaderSoft: 6
     - PA_SSS_Intensity_: 8
     - PA_SSS_SPF_: 1
     - PA_SSS_SP_: 1
+    - RimEmission_: 0
     - SPF_SpriteShaderSoft: 6
     - SP_SpriteShaderSoft: 1
     - Vector1_EA5B6980: 6
     - _AlphaClip: 0
+    - _BUILTIN_QueueControl: -1
+    - _BUILTIN_QueueOffset: 0
     - _Blend: 2
     - _BlendOp: 0
     - _BumpScale: 1

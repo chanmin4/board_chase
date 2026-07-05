@@ -164,6 +164,7 @@ public class PlayerShooterShoot : EntityShootCore
 
         if (fired)
         {
+            _weaponHolder?.PlayMuzzleParticle();
             _aimAction?.ApplyShotRecoil();
             PublishGunshotSound(visualFireOrigin.position);
         }
@@ -235,6 +236,7 @@ public class PlayerShooterShoot : EntityShootCore
 
         if (fired)
         {
+            _weaponHolder?.PlayMuzzleParticle();
             _aimAction?.ApplyShotRecoil();
             PublishGunshotSound(visualFireOrigin.position);
         }
@@ -252,7 +254,11 @@ public class PlayerShooterShoot : EntityShootCore
             _paintChannel,
             bullet != null ? bullet.ResolveDamageTargetMask(ShooterSide) : default,
             HitMarkSide,
-            bullet != null ? bullet.PaintMarkAmountOnHit : 0f);
+            _statsRuntime != null ? _statsRuntime.ResolvePaintMarkDamage(bullet) : 0f,
+            _statsRuntime != null ? _statsRuntime.ResolveInfectionDamage(bullet) : 0f,
+            _statsRuntime != null ? _statsRuntime.ResolvePenetrationClass(bullet) : bullet != null ? bullet.PenetrationClass : 0,
+            _statsRuntime != null ? _statsRuntime.ResolveArmorHealthDurabilityLossMultiplier(bullet) : 1f,
+            _statsRuntime != null ? _statsRuntime.ResolveArmorInfectionDurabilityLossMultiplier(bullet) : 0.5f);
     }
 
     private EntityShootStats BuildPaintStats(PaintBulletSO bullet)

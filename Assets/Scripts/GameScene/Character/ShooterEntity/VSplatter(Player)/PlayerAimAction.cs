@@ -35,6 +35,8 @@ public class PlayerAimAction : MonoBehaviour
     [ReadOnly][SerializeField] private bool _isAiming;
     [ReadOnly][SerializeField, Range(0f, 1f)] private float _aim01;
     [ReadOnly][SerializeField] private float _recoilAngle;
+    [ReadOnly][SerializeField] private float _recoilForwardOffset;
+    [ReadOnly][SerializeField] private float _recoilSideOffset;
 
     [Header("Debug")]
     [SerializeField] private bool _debugLogs = false;
@@ -57,6 +59,8 @@ public class PlayerAimAction : MonoBehaviour
     public event Action OnReloadStarted;
     public event Action OnReloadFinished;
     public event Action OnShotConsumed;
+    public event Action AimStarted;
+    public event Action AimEnded;
 
     public Vector3 AimWorldPoint => _aimWorldPoint;
     public bool HasAimPoint => _hasAimPoint;
@@ -262,6 +266,23 @@ public class PlayerAimAction : MonoBehaviour
             out worldPoint,  out _);
     }
 
+    public bool TryGetFlatAimDirection(Vector3 origin, out Vector3 direction)
+    {
+        direction = Vector3.zero;
+
+        if (!_hasAimPoint)
+            return false;
+
+        direction = _aimWorldPoint - origin;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= 0.0001f)
+            return false;
+
+        direction.Normalize();
+        return true;
+    }
+
     public Vector3 ApplyAccuracyAndRecoil(Vector3 origin, Vector3 target)
     {
         Vector3 direction = target - origin;
@@ -270,26 +291,57 @@ public class PlayerAimAction : MonoBehaviour
         if (direction.sqrMagnitude < 0.0001f)
             return target;
 
+        Vector3 flatDirection = direction.normalized;
+        Vector3 right = new Vector3(flatDirection.z, 0f, -flatDirection.x);
+
+        float hipSpreadRadius = _statsRuntime != null ? _statsRuntime.HipFireSpreadRadius : 0f;
+        float aimSpreadRadius = _statsRuntime != null ? _statsRuntime.AimSpreadRadius : 0f;
+        float spreadRadius = Mathf.Lerp(hipSpreadRadius, aimSpreadRadius, _aim01);
+
+        Vector2 spread = spreadRadius > 0f
+            ? UnityEngine.Random.insideUnitCircle * spreadRadius
+            : Vector2.zero;
+
+        Vector3 aimPointOffset =
+            flatDirection * (_recoilForwardOffset + spread.y) +
+            right * (_recoilSideOffset + spread.x);
+
         float hipSpread = _statsRuntime != null ? _statsRuntime.HipFireSpreadAngleDeg : 0f;
         float aimSpread = _statsRuntime != null ? _statsRuntime.AimSpreadAngleDeg : 0f;
+        float angularSpread = Mathf.Lerp(hipSpread, aimSpread, _aim01);
+        float randomAngularSpread = angularSpread > 0f ? UnityEngine.Random.Range(-angularSpread, angularSpread) : 0f;
 
-        float spread = Mathf.Lerp(hipSpread, aimSpread, _aim01);
-        float randomSpread = spread > 0f ? UnityEngine.Random.Range(-spread, spread) : 0f;
-
-        float recoil = _recoilAngle > 0f
+        float recoilAngle = _recoilAngle > 0f
             ? UnityEngine.Random.Range(-_recoilAngle, _recoilAngle)
             : 0f;
 
-        Quaternion rotation = Quaternion.AngleAxis(randomSpread + recoil, Vector3.up);
-        Vector3 adjustedDirection = rotation * direction.normalized;
+        Quaternion rotation = Quaternion.AngleAxis(randomAngularSpread + recoilAngle, Vector3.up);
+        Vector3 adjustedDirection = rotation * flatDirection;
 
-        return origin + adjustedDirection * direction.magnitude;
+        return origin + adjustedDirection * direction.magnitude + aimPointOffset;
     }
 
     public void ApplyShotRecoil()
     {
         float recoil = _statsRuntime != null ? _statsRuntime.RecoilAngleDeg : 0f;
         _recoilAngle = Mathf.Max(_recoilAngle, Mathf.Max(0f, recoil));
+
+        float maxDistance = _statsRuntime != null ? _statsRuntime.MaxRecoilDistance : 0f;
+
+        if (maxDistance <= 0f)
+            return;
+
+        float forward = _statsRuntime != null ? _statsRuntime.RecoilForwardDistancePerShot : 0f;
+        float side = _statsRuntime != null ? _statsRuntime.RecoilSideDistancePerShot : 0f;
+
+        _recoilForwardOffset = Mathf.Min(
+            maxDistance,
+            _recoilForwardOffset + Mathf.Max(0f, forward));
+
+        _recoilSideOffset = Mathf.Clamp(
+            _recoilSideOffset + UnityEngine.Random.Range(-side, side),
+            -maxDistance,
+            maxDistance);
     }
 
     private void ResolveRefs()
@@ -312,10 +364,20 @@ public class PlayerAimAction : MonoBehaviour
 
     private void UpdateAimState()
     {
-        _isAiming =
+        bool nextIsAiming =
             _pollRightMouseButton &&
             Mouse.current != null &&
             Mouse.current.rightButton.isPressed;
+
+        if (_isAiming != nextIsAiming)
+        {
+            _isAiming = nextIsAiming;
+
+            if (_isAiming)
+                AimStarted?.Invoke();
+            else
+                AimEnded?.Invoke();
+        }
 
         float speed = _statsRuntime != null ? _statsRuntime.AimSpeed : 8f;
         float target = _isAiming ? 1f : 0f;
@@ -333,6 +395,15 @@ public class PlayerAimAction : MonoBehaviour
             _recoilAngle,
             0f,
             Mathf.Max(0f, recovery) * Time.deltaTime);
+
+        float distanceRecovery = _statsRuntime != null
+            ? _statsRuntime.RecoilDistanceRecoveryPerSecond
+            : 0f;
+
+        float recoveryStep = Mathf.Max(0f, distanceRecovery) * Time.deltaTime;
+
+        _recoilForwardOffset = Mathf.MoveTowards(_recoilForwardOffset, 0f, recoveryStep);
+        _recoilSideOffset = Mathf.MoveTowards(_recoilSideOffset, 0f, recoveryStep);
     }
 
     private void OnShotExecuted(BulletAmmoType ammoType)

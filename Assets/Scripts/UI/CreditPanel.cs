@@ -4,10 +4,9 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class CreditPanel : MonoBehaviour
+public class CreditPanel : PanelUI
 {
     [Header("Refs")]
-    [SerializeField] private CanvasGroup _panelGroup;
     [SerializeField] private ScrollRect _scrollRect;
     [SerializeField] private TextMeshProUGUI _creditText;
     [SerializeField] private Button _backButton;
@@ -25,13 +24,15 @@ public class CreditPanel : MonoBehaviour
 
     public event UnityAction Closed = delegate { };
 
-    private void Reset()
+    protected override void Reset()
     {
+        base.Reset();
         ResolveRefs();
     }
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         ResolveRefs();
         ApplyCreditText();
     }
@@ -71,9 +72,6 @@ public class CreditPanel : MonoBehaviour
 
     private void ResolveRefs()
     {
-        if (_panelGroup == null)
-            _panelGroup = GetComponent<CanvasGroup>();
-
         if (_scrollRect == null)
             _scrollRect = GetComponentInChildren<ScrollRect>(true);
 

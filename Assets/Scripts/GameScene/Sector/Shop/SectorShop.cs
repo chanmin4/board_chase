@@ -1,3 +1,4 @@
+// SectorShop.cs
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,36 +6,30 @@ using UnityEngine;
 public class SectorShop : MonoBehaviour
 {
     [Header("Rules")]
-    [Tooltip("Stage-specific Shop room generation and inventory settings.")]
     [SerializeField] private StageShopSettingsSO _shopSettings;
 
     [Header("Refs")]
-    [Tooltip("SectorRuntime that owns this shop. Empty uses GetComponentInParent<SectorRuntime>().")]
     [SerializeField] private SectorRuntime _sector;
 
-    [Tooltip("Shop UI panel. Empty searches the scene, including inactive objects.")]
-    [SerializeField] private PlayerShopPanelUI _shopPanel;
-
     [Header("Overlay")]
-    [Tooltip("Optional. If assigned, opens UIOverlayId.Shop before binding offers to ShopPanel.")]
     [SerializeField] private UIOverlayRequestEventChannelSO _overlayRequestChannel;
+    [SerializeField] private SectorShopOpenRequestEventChannelSO _shopOpenRequestChannel;
 
     [Header("Listening")]
-    [Tooltip("Receives SectorStateManager when it is ready.")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
 
     [Header("Room Completion")]
-    [Tooltip("If true, Shop room becomes cleared when the player first opens the shop.")]
     [SerializeField] private bool _completeRoomOnFirstInteract = true;
 
     [Header("Seed")]
-    [Tooltip("Extra deterministic salt used when rolling this shop inventory.")]
     [SerializeField] private int _offerSeedSalt = 9419;
 
     [Header("Debug")]
     [SerializeField] private bool _logWarnings = true;
 
-    private readonly List<PlayerShopOffer> _offers = new();
+    private readonly List<PlayerShopOffer> _bulletOffers = new();
+    private readonly List<PlayerShopOffer> _itemOffers = new();
+
     private SectorStateManager _sectorStateManager;
     private ShopRoomDropTableSO _activeDropTable;
     private bool _offersRolled;
@@ -72,14 +67,20 @@ public class SectorShop : MonoBehaviour
         if (!TryEnsureOffers())
             return false;
 
-        if (_shopPanel == null)
+        if (_shopOpenRequestChannel == null)
         {
-            LogWarning("PlayerShopPanelUI is missing.");
+            LogWarning("SectorShopOpenRequestEventChannelSO is missing.");
             return false;
         }
 
-        _overlayRequestChannel?.Open(UIOverlayId.Shop);
-        _shopPanel.OpenWithOffers(_offers, _activeDropTable, _activeAllowReroll);
+        _overlayRequestChannel?.Open(UIOverlayId.PlayerPanelHub);
+        _shopOpenRequestChannel.RaiseEvent(
+            new SectorShopOpenRequest(
+                _bulletOffers,
+                _itemOffers,
+                _activeDropTable,
+                _activeAllowReroll));
+
         CompleteRoomIfConfigured();
         return true;
     }
@@ -93,13 +94,12 @@ public class SectorShop : MonoBehaviour
     private bool TryEnsureOffers()
     {
         if (_offersRolled)
-            return _offers.Count > 0;
+            return _bulletOffers.Count > 0 || _itemOffers.Count > 0;
 
         int stageIndex = _sectorStateManager != null
             ? _sectorStateManager.CurrentStage
             : 0;
 
-        int offerCountOverride = 0;
         _activeAllowReroll = true;
         _activeDropTable = null;
 
@@ -116,17 +116,20 @@ public class SectorShop : MonoBehaviour
             return false;
         }
 
-        _offers.Clear();
-        _offers.AddRange(_activeDropTable.CreateOffers(
-            ResolveOfferSeed(stageIndex, ResolveSectorCoord()),
-            offerCountOverride));
+        int seed = ResolveOfferSeed(stageIndex, ResolveSectorCoord());
+
+        _bulletOffers.Clear();
+        _itemOffers.Clear();
+
+        _bulletOffers.AddRange(_activeDropTable.CreateBulletOffers(seed));
+        _itemOffers.AddRange(_activeDropTable.CreateItemOffers(seed + 1009));
 
         _offersRolled = true;
 
-        if (_offers.Count <= 0)
+        if (_bulletOffers.Count <= 0 && _itemOffers.Count <= 0)
             LogWarning($"Failed to roll shop offers. stage={stageIndex}");
 
-        return _offers.Count > 0;
+        return _bulletOffers.Count > 0 || _itemOffers.Count > 0;
     }
 
     private bool IsShopRoom()
@@ -208,9 +211,6 @@ public class SectorShop : MonoBehaviour
 
         if (_sectorStateManager == null)
             _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
-
-        if (_shopPanel == null)
-            _shopPanel = FindAnyObjectByType<PlayerShopPanelUI>(FindObjectsInactive.Include);
     }
 
     private void LogWarning(string message)

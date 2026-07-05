@@ -61,6 +61,9 @@ public class StageSectorInstantiator : MonoBehaviour
     [Tooltip("Rebuilds portal links after generated sectors are registered.")]
     [SerializeField] private SectorPortalManager _sectorPortalManager;
 
+    [Tooltip("Optional player anchor. If the player is parented under a generated sector, it is detached before sectors are rebuilt.")]
+    [SerializeField] private TransformAnchor _playerTransformAnchor;
+
     private readonly List<SectorRuntime> _generatedSectors = new();
 
     public StageMapLayout CurrentLayout { get; private set; }
@@ -98,11 +101,17 @@ public class StageSectorInstantiator : MonoBehaviour
         SectorStateManager sectorStateManager,
         int consecutiveNoHitStageCount)
     {
-        if (rule == null || sectorStateManager == null)
+        if (rule == null)
+        {
+            Debug.LogError("[StageSectorInstantiator] Stage rule is missing.", this);
             return false;
+        }
 
-        if (rule.useStartSectorOnly || rule.roomGridSize <= 0)
+        if (sectorStateManager == null)
+        {
+            Debug.LogError("[StageSectorInstantiator] SectorStateManager is missing.", this);
             return false;
+        }
 
         if (_startSectorPrefab == null)
         {
@@ -110,7 +119,10 @@ public class StageSectorInstantiator : MonoBehaviour
             return false;
         }
 
-        if (_normalBattleSectorPrefab == null)
+        bool startOnly = rule.useStartSectorOnly || rule.roomGridSize <= 0;
+        int gridSize = startOnly ? 0 : Mathf.Max(1, rule.roomGridSize);
+
+        if (!startOnly && _normalBattleSectorPrefab == null)
         {
             Debug.LogError("[StageSectorInstantiator] NormalBattle sector prefab is missing.", this);
             return false;
@@ -123,7 +135,7 @@ public class StageSectorInstantiator : MonoBehaviour
         CurrentLayout = StageMapGenerator.GenerateFullGrid(
             _runSeed,
             rule.stageIndex,
-            rule.roomGridSize,
+            gridSize,
             _startSectorCoord,
             rule.GoalStageRoomType,
             _stageTreasureSettings != null
@@ -181,6 +193,8 @@ public class StageSectorInstantiator : MonoBehaviour
 
     public void ClearGeneratedSectors()
     {
+        DetachPlayerFromGeneratedSectors();
+
         for (int i = _generatedSectors.Count - 1; i >= 0; i--)
         {
             SectorRuntime sector = _generatedSectors[i];
@@ -195,6 +209,29 @@ public class StageSectorInstantiator : MonoBehaviour
         }
 
         _generatedSectors.Clear();
+    }
+
+    private void DetachPlayerFromGeneratedSectors()
+    {
+        if (_playerTransformAnchor == null ||
+            !_playerTransformAnchor.isSet ||
+            _playerTransformAnchor.Value == null)
+        {
+            return;
+        }
+
+        Transform player = _playerTransformAnchor.Value;
+
+        for (int i = 0; i < _generatedSectors.Count; i++)
+        {
+            SectorRuntime sector = _generatedSectors[i];
+
+            if (sector == null || !player.IsChildOf(sector.transform))
+                continue;
+
+            player.SetParent(null, worldPositionStays: true);
+            return;
+        }
     }
 
     private SectorRuntime ResolvePrefab(StageRoomType roomType)

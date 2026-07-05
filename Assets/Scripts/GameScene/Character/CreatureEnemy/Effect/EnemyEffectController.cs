@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class EnemyEffectController : MonoBehaviour
+public class EnemyEffectController : EntityEffectController
 {
     [Header("Common Enemy Particles")]
     [SerializeField] private ParticleSystem _spawnParticles = default;
@@ -22,33 +22,4 @@ public class EnemyEffectController : MonoBehaviour
     public virtual void PlayGetHitParticles() => PlayIfAssigned(_getHitParticles);
     public virtual void PlayDeathParticles() => PlayIfAssigned(_deathParticles);
 
-    protected void PlayIfAssigned(ParticleSystem particles)
-    {
-        if (!CanUseParticles(particles))
-            return;
-
-        particles.Play(true);
-    }
-
-    protected void StopIfAssigned(ParticleSystem particles)
-    {
-        if (!CanUseParticles(particles))
-            return;
-
-        particles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-    }
-
-    private bool CanUseParticles(ParticleSystem particles)
-    {
-        if (!isActiveAndEnabled)
-            return false;
-
-        if (particles == null)
-            return false;
-
-        if (!particles.gameObject.activeInHierarchy)
-            return false;
-
-        return true;
-    }
 }

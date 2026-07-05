@@ -13,6 +13,9 @@ public struct PlayerWeaponStats
 
     public float reloadDurationSeconds;
     public int magazineSize;
+    public float paintMarkDamage;
+    public float infectionDamage;
+    public int penetrationClass;
 }
 
 
@@ -37,6 +40,9 @@ public struct PlayerSurvivalStats
 {
     public float maxHealth;
     public float dodgeChance;
+    public int armorClass;
+    public float armorHealthDurabilityLossMultiplier;
+    public float armorInfectionDurabilityLossMultiplier;
 }
 
 [Serializable]
@@ -55,6 +61,12 @@ public struct PlayerAimStats
     public float aimSpreadAngleDeg;
     public float recoilAngleDeg;
     public float recoilRecoverySpeedDegPerSecond;
+    public float recoilForwardDistancePerShot;
+    public float recoilSideDistancePerShot;
+    public float maxRecoilDistance;
+    public float recoilDistanceRecoveryPerSecond;
+    public float hipFireSpreadRadius;
+    public float aimSpreadRadius;
 }
 
 [Serializable]

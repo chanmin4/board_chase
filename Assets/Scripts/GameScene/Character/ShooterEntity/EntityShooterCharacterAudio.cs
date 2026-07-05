@@ -115,6 +115,9 @@ public class EntityShooterCharacterAudio : CharacterAudio
 
     public virtual void PlayDie()
     {
+        if (Damageable != null && !Damageable.IsDead)
+            return;
+
         PlayAudio(_dieCue, _audioConfig, transform.position);
     }
 }

@@ -411,11 +411,12 @@ private bool _qteInputLocked;
         group.alpha = visible ? 1f : 0f;
         group.interactable = visible;
         group.blocksRaycasts = visible;
-
+/*
         Debug.Log(
             $"[MutarusQTEPatternController] SetQTEPanelVisible qte={qte.name}, visible={visible}, " +
             $"activeSelf={qte.gameObject.activeSelf}, activeInHierarchy={qte.gameObject.activeInHierarchy}, alpha={group.alpha}",
             this);
+            */
     }
 
     private void SetPatternRootVisible(bool visible)

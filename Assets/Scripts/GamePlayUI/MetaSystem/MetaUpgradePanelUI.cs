@@ -5,10 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class MetaUpgradePanelUI : MonoBehaviour
+public class MetaUpgradePanelUI : PanelUI
 {
     [Header("Panel")]
-    [SerializeField] private CanvasGroup _panelGroup;
     [SerializeField] private Button _backButton;
 
     [Header("Refs")]
@@ -55,7 +54,7 @@ public class MetaUpgradePanelUI : MonoBehaviour
 
     public void OpenPanel()
     {
-        SetVisible(_panelGroup, true);
+        ShowPanel();
 
         if (_runtime != null)
             _runtime.PublishSnapshot();
@@ -63,7 +62,7 @@ public class MetaUpgradePanelUI : MonoBehaviour
 
     public void ClosePanel()
     {
-        SetVisible(_panelGroup, false);
+        HidePanel();
     }
 
     private void HandleBackClicked()
@@ -107,13 +106,4 @@ public class MetaUpgradePanelUI : MonoBehaviour
         }
     }
 
-    private static void SetVisible(CanvasGroup group, bool visible)
-    {
-        if (group == null)
-            return;
-
-        group.alpha = visible ? 1f : 0f;
-        group.interactable = visible;
-        group.blocksRaycasts = visible;
-    }
 }

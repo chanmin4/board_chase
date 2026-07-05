@@ -96,9 +96,9 @@ public class EnemySelfDestructAttackExecutor : EnemyAttackExecutor
             if (_config.HealthDamage > 0f && damageable.CanReceiveDamage)
                 damageable.ReceiveAnAttack(_config.HealthDamage, Context.OwnerGameObject);
 
-            PlayerInfection infection =
-                damageable.GetComponent<PlayerInfection>() ??
-                damageable.GetComponentInParent<PlayerInfection>();
+            PlayerShooterInfection infection =
+                damageable.GetComponent<PlayerShooterInfection>() ??
+                damageable.GetComponentInParent<PlayerShooterInfection>();
 
             if (infection != null && _config.InfectionDamage > 0f)
                 infection.AddInfection(_config.InfectionDamage);

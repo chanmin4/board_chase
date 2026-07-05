@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public class VSplatterRange : MonoBehaviour
+public class VSplatterRange : EntityRange
 {
     [Header("Need Ref")]
     [SerializeField] private EntityWeaponHolder _weaponHolder;
@@ -36,24 +36,24 @@ public class VSplatterRange : MonoBehaviour
 
     private bool _shootHeld;
 
-    public Transform RangeOrigin => _rangeOrigin != null ? _rangeOrigin : transform;
+    public override Transform RangeOrigin => _rangeOrigin != null ? _rangeOrigin : transform;
 
-    public WeaponSO CurrentWeapon =>
+    public override WeaponSO CurrentWeapon =>
         _weaponHolder != null ? _weaponHolder.CurrentWeapon : null;
 
-    public float MaxRange =>
+    public override float MaxRange =>
         _statsRuntime != null
             ? Mathf.Max(
                 0.1f,
                 _statsRuntime.MaxRange * (_aimAction != null ? _aimAction.RangeMultiplier : 1f))
             : 0f;
 
-    private void Reset()
+    protected override void Reset()
     {
         ResolveRefs();
     }
 
-    private void Awake()
+    protected override void Awake()
     {
         ResolveRefs();
         EnsureLineRenderer();
@@ -124,12 +124,12 @@ public class VSplatterRange : MonoBehaviour
             _worldCamera = Camera.main;
     }
 
-    public bool HasValidWeapon()
+    public override bool HasValidWeapon()
     {
         return CurrentWeapon != null && MaxRange > 0f;
     }
 
-    public bool IsWithinRange(Vector3 worldPoint)
+    public override bool IsWithinRange(Vector3 worldPoint)
     {
         if (!HasValidWeapon())
             return false;
@@ -140,7 +140,7 @@ public class VSplatterRange : MonoBehaviour
             MaxRange);
     }
 
-    public Vector3 ClampToRange(Vector3 worldPoint)
+    public override Vector3 ClampToRange(Vector3 worldPoint)
     {
         if (!HasValidWeapon())
             return worldPoint;

@@ -39,7 +39,7 @@ public class EnemyArcBombProjectile : MonoBehaviour
 
     private readonly Collider[] _hits = new Collider[32];
     private readonly HashSet<Damageable> _damaged = new();
-    private readonly HashSet<PlayerInfection> _infected = new();
+    private readonly HashSet<PlayerShooterInfection> _infected = new();
 
     private void Awake()
     {
@@ -208,9 +208,9 @@ public class EnemyArcBombProjectile : MonoBehaviour
                 damageable.ReceiveAnAttack(_impactHealthDamage, _source);
             }
 
-            PlayerInfection infection =
-                hit.GetComponent<PlayerInfection>() ??
-                hit.GetComponentInParent<PlayerInfection>();
+            PlayerShooterInfection infection =
+                hit.GetComponent<PlayerShooterInfection>() ??
+                hit.GetComponentInParent<PlayerShooterInfection>();
 
             if (infection != null &&
                 _infected.Add(infection) &&

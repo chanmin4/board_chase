@@ -29,12 +29,6 @@ public class StageProgressionManager : MonoBehaviour
     [SerializeField] private SectorCleanupApplier _sectorCleanupApplier;
     [SerializeField] private StageSectorInstantiator _stageSectorInstantiator;
 
-    [Header("Listening To")]
-    [SerializeField] private IntEventChannelSO _stageAppliedChannel;
-
-    [Header("Broadcasting On")]
-    [SerializeField] private VoidEventChannelSO _requestProgressNextStageChannel;
-
     [Header("Manager Ready")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     [SerializeField] private NamedSectorControllerReadyEventChannelSO _namedSectorControllerReadyChannel;
@@ -175,9 +169,6 @@ public class StageProgressionManager : MonoBehaviour
                 HandleInfectionControlManagerReady(_infectionControlManagerReadyChannel.Current);
         }
 
-        if (_stageAppliedChannel != null)
-            _stageAppliedChannel.OnEventRaised += OnStageApplied;
-
         if (_playerHitReceivedChannel != null)
             _playerHitReceivedChannel.OnEventRaised += OnPlayerHitReceived;
 
@@ -194,9 +185,6 @@ public class StageProgressionManager : MonoBehaviour
 
         if (_infectionControlManagerReadyChannel != null)
             _infectionControlManagerReadyChannel.OnEventRaised -= HandleInfectionControlManagerReady;
-
-        if (_stageAppliedChannel != null)
-            _stageAppliedChannel.OnEventRaised -= OnStageApplied;
 
         if (_playerHitReceivedChannel != null)
             _playerHitReceivedChannel.OnEventRaised -= OnPlayerHitReceived;
@@ -398,14 +386,7 @@ public class StageProgressionManager : MonoBehaviour
         if (_cleanupBeforeNextStage)
             CleanupSectorsForStageTransition();
 
-        if (_requestProgressNextStageChannel != null)
-        {
-            _requestProgressNextStageChannel.RaiseEvent();
-            return;
-        }
-
-        if (_sectorStateManager != null)
-            _sectorStateManager.ProgressNextStage();
+        BeginStage(_currentStageIndex + 1);
     }
 
     private void RaiseStageCompleteRewards()
@@ -417,12 +398,6 @@ public class StageProgressionManager : MonoBehaviour
 
         if (recoverAmount > 0f)
             _stageInfectionControlRecoverChannel.RaiseEvent(recoverAmount);
-    }
-
-    private void OnStageApplied(int stageIndex)
-    {
-        _stageTransitionPending = false;
-        BeginStage(stageIndex);
     }
 
     private void OnNamedBattleCompleted(SectorRuntime _)
@@ -501,23 +476,51 @@ public class StageProgressionManager : MonoBehaviour
         _sectorJudgePhase = SectorJudgePhase.None;
         _currentStageTookPlayerHit = false;
         _currentStageResultRecorded = false;
+        _stageTransitionPending = false;
 
-        if (_hasRule && _sectorStateManager != null)
+        if (!_hasRule)
         {
-            bool generatedStageBuilt =
-                _stageSectorInstantiator != null &&
-                _stageSectorInstantiator.BuildStage(
-                    _currentRule,
-                    _sectorStateManager,
-                    _consecutiveNoHitStageCount);
+            Debug.LogError(
+                $"[StageProgressionManager] Stage rule not found. stageIndex={stageIndex}",
+                this);
+            _activeSector = null;
+            PublishSnapshot();
+            return;
+        }
 
-            if (!generatedStageBuilt)
-            {
-                _sectorStateManager.ConfigureStageMap(
-                    stageIndex,
-                    _currentRule.roomGridSize,
-                    _currentRule.useStartSectorOnly);
-            }
+        if (_sectorStateManager == null)
+        {
+            Debug.LogError(
+                $"[StageProgressionManager] SectorStateManager is missing. stageIndex={stageIndex}",
+                this);
+            _activeSector = null;
+            PublishSnapshot();
+            return;
+        }
+
+        if (_stageSectorInstantiator == null)
+        {
+            Debug.LogError(
+                $"[StageProgressionManager] StageSectorInstantiator is missing. stageIndex={stageIndex}",
+                this);
+            _activeSector = null;
+            PublishSnapshot();
+            return;
+        }
+
+        bool generatedStageBuilt = _stageSectorInstantiator.BuildStage(
+            _currentRule,
+            _sectorStateManager,
+            _consecutiveNoHitStageCount);
+
+        if (!generatedStageBuilt)
+        {
+            Debug.LogError(
+                $"[StageProgressionManager] Failed to build generated stage map. stageIndex={stageIndex}",
+                this);
+            _activeSector = null;
+            PublishSnapshot();
+            return;
         }
 
         int displayStage = _currentStageIndex + 1;

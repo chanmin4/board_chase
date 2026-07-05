@@ -39,7 +39,19 @@ public enum PlayerStatId
     GunshotSoundRadius = 21,
     SoundInvestigateDelaySeconds = 22,
     FootstepSoundRadius = 23,
-    FootstepSoundInterval = 24
+    FootstepSoundInterval = 24,
+    PaintMarkDamage = 25,
+    InfectionDamage = 26,
+    RecoilForwardDistancePerShot = 27,
+    RecoilSideDistancePerShot = 28,
+    MaxRecoilDistance = 29,
+    RecoilDistanceRecoveryPerSecond = 30,
+    HipFireSpreadRadius = 31,
+    AimSpreadRadius = 32,
+    ArmorClass = 33,
+    PenetrationClass = 34,
+    ArmorHealthDurabilityLossMultiplier = 35,
+    ArmorInfectionDurabilityLossMultiplier = 36
 }
 
 public enum PlayerFeatureFlagId
@@ -52,7 +64,9 @@ public enum StatModifierType
 {
     FlatAdd,
     PercentAdd,
+    PercentMultiply,
     Override
+
 }
 
 [Serializable]

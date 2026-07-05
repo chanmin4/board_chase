@@ -84,6 +84,9 @@ public class StageBattleSettingsSO : ScriptableObject
     [FormerlySerializedAs("_rules")]
     [SerializeField] private List<StageSpawnRule> _rules = new();
 
+    [Header("Debug")]
+    [SerializeField] private bool _debugEncounterPick = true;
+
     public bool TryGetRule(int stageIndex, out StageSpawnRule rule)
     {
         for (int i = 0; i < _rules.Count; i++)
@@ -108,17 +111,70 @@ public class StageBattleSettingsSO : ScriptableObject
     {
         preset = null;
 
-        if (roomType != StageRoomType.NormalBattle)
-            return false;
-
-        if (!TryGetRule(stageIndex, out StageSpawnRule rule) ||
-            rule.normalBattleEncounters == null)
+        if (_debugEncounterPick)
         {
+            Debug.Log(
+                $"[StageBattleSettingsSO] TryPickBattleEncounterPreset begin. " +
+                $"asset={name}, stage={stageIndex}, stageSeed={stageSeed}, coord={sectorCoord}, roomType={roomType}",
+                this);
+        }
+
+        if (roomType != StageRoomType.NormalBattle)
+        {
+            LogEncounterPickFail(
+                stageIndex,
+                sectorCoord,
+                roomType,
+                "room type is not NormalBattle");
+            return false;
+        }
+
+        bool ruleFound = TryGetRule(stageIndex, out StageSpawnRule rule);
+        if (!ruleFound)
+        {
+            LogEncounterPickFail(
+                stageIndex,
+                sectorCoord,
+                roomType,
+                "stage rule not found");
+            return false;
+        }
+
+        if (rule.normalBattleEncounters == null)
+        {
+            LogEncounterPickFail(
+                stageIndex,
+                sectorCoord,
+                roomType,
+                "normalBattleEncounters is null");
             return false;
         }
 
         int seed = BuildSectorSeed(stageSeed, sectorCoord, 101);
-        return TryPickWeightedEncounterPreset(rule.normalBattleEncounters, seed, out preset);
+
+        if (_debugEncounterPick)
+        {
+            Debug.Log(
+                $"[StageBattleSettingsSO] Rule found. " +
+                $"stage={stageIndex}, ruleName={rule.displayName}, encounterCount={rule.normalBattleEncounters.Count}, pickSeed={seed}",
+                this);
+        }
+
+        bool picked = TryPickWeightedEncounterPreset(
+            rule.normalBattleEncounters,
+            seed,
+            $"stage={stageIndex}, coord={sectorCoord}, roomType={roomType}",
+            out preset);
+
+        if (_debugEncounterPick)
+        {
+            Debug.Log(
+                $"[StageBattleSettingsSO] TryPickBattleEncounterPreset result. " +
+                $"stage={stageIndex}, coord={sectorCoord}, picked={picked}, preset={(preset != null ? preset.name : "null")}",
+                preset != null ? preset : this);
+        }
+
+        return picked;
     }
 
     public bool TryGetNormalBattleTimerSettings(
@@ -236,32 +292,63 @@ public class StageBattleSettingsSO : ScriptableObject
         }
     }
 
-    private static bool TryPickWeightedEncounterPreset(
+    private bool TryPickWeightedEncounterPreset(
         List<WeightedEncounterPreset> candidates,
         int seed,
+        string context,
         out StageBattleEncounterPresetSO pickedPreset)
     {
         pickedPreset = null;
 
         if (candidates == null)
+        {
+            Debug.LogWarning(
+                $"[StageBattleSettingsSO] Encounter pick failed. {context}, candidates=null",
+                this);
             return false;
+        }
 
         int totalWeight = 0;
 
         for (int i = 0; i < candidates.Count; i++)
         {
             WeightedEncounterPreset candidate = candidates[i];
+            bool valid = IsEncounterCandidateValid(candidate);
+            int weight = candidate != null ? Mathf.Max(0, candidate.weight) : 0;
 
-            if (!IsEncounterCandidateValid(candidate))
+            if (_debugEncounterPick)
+                LogEncounterCandidate(i, candidate, valid, context);
+
+            if (!valid)
                 continue;
 
-            totalWeight += Mathf.Max(0, candidate.weight);
+            totalWeight += weight;
+        }
+
+        if (_debugEncounterPick)
+        {
+            Debug.Log(
+                $"[StageBattleSettingsSO] Encounter candidate scan finished. " +
+                $"{context}, candidateCount={candidates.Count}, totalValidWeight={totalWeight}",
+                this);
         }
 
         if (totalWeight <= 0)
+        {
+            Debug.LogWarning(
+                $"[StageBattleSettingsSO] Encounter pick failed. {context}, totalValidWeight <= 0",
+                this);
             return false;
+        }
 
         int roll = new System.Random(seed).Next(0, totalWeight);
+
+        if (_debugEncounterPick)
+        {
+            Debug.Log(
+                $"[StageBattleSettingsSO] Encounter roll. {context}, seed={seed}, roll={roll}, totalWeight={totalWeight}",
+                this);
+        }
 
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -272,15 +359,34 @@ public class StageBattleSettingsSO : ScriptableObject
 
             int weight = Mathf.Max(0, candidate.weight);
 
+            if (_debugEncounterPick)
+            {
+                Debug.Log(
+                    $"[StageBattleSettingsSO] Encounter roll check. " +
+                    $"{context}, index={i}, preset={candidate.preset.name}, weight={weight}, rollBefore={roll}",
+                    candidate.preset);
+            }
+
             if (roll < weight)
             {
                 pickedPreset = candidate.preset;
+
+                if (_debugEncounterPick)
+                {
+                    Debug.Log(
+                        $"[StageBattleSettingsSO] Encounter picked. {context}, index={i}, preset={pickedPreset.name}",
+                        pickedPreset);
+                }
+
                 return true;
             }
 
             roll -= weight;
         }
 
+        Debug.LogWarning(
+            $"[StageBattleSettingsSO] Encounter pick failed unexpectedly after roll loop. {context}",
+            this);
         return false;
     }
 
@@ -392,6 +498,158 @@ public class StageBattleSettingsSO : ScriptableObject
 
         objectConfig = validObjects[new System.Random(seed).Next(0, validObjects.Count)];
         return true;
+    }
+
+    private void LogEncounterPickFail(
+        int stageIndex,
+        Vector2Int sectorCoord,
+        StageRoomType roomType,
+        string reason)
+    {
+        if (!_debugEncounterPick)
+            return;
+
+        Debug.LogWarning(
+            $"[StageBattleSettingsSO] TryPickBattleEncounterPreset failed. " +
+            $"asset={name}, stage={stageIndex}, coord={sectorCoord}, roomType={roomType}, reason={reason}",
+            this);
+    }
+
+    private void LogEncounterCandidate(
+        int index,
+        WeightedEncounterPreset candidate,
+        bool valid,
+        string context)
+    {
+        string invalidReason = GetEncounterCandidateInvalidReason(candidate);
+
+        Debug.Log(
+            $"[StageBattleSettingsSO] Encounter candidate. " +
+            $"{context}, index={index}, valid={valid}, reason={invalidReason}, " +
+            $"candidateNull={candidate == null}, " +
+            $"weight={(candidate != null ? candidate.weight : -1)}, " +
+            $"preset={(candidate != null && candidate.preset != null ? candidate.preset.name : "null")}, " +
+            $"presetValid={(candidate != null && candidate.preset != null && candidate.preset.IsValid)}",
+            candidate != null && candidate.preset != null ? candidate.preset : this);
+
+        if (candidate != null && candidate.preset != null)
+            LogEncounterPresetDetails(candidate.preset, context, index);
+    }
+
+    private static string GetEncounterCandidateInvalidReason(WeightedEncounterPreset candidate)
+    {
+        if (candidate == null)
+            return "candidate is null";
+
+        if (candidate.weight <= 0)
+            return "weight <= 0";
+
+        if (candidate.preset == null)
+            return "preset is null";
+
+        if (!candidate.preset.IsValid)
+            return "preset.IsValid == false";
+
+        return "valid";
+    }
+
+    private void LogEncounterPresetDetails(
+        StageBattleEncounterPresetSO preset,
+        string context,
+        int candidateIndex)
+    {
+        if (!_debugEncounterPick || preset == null)
+            return;
+
+        int waveCount = preset.Waves != null ? preset.WaveCount : -1;
+
+        Debug.Log(
+            $"[StageBattleSettingsSO] Encounter preset details. " +
+            $"{context}, candidateIndex={candidateIndex}, preset={preset.name}, waveCount={waveCount}, isValid={preset.IsValid}",
+            preset);
+
+        if (preset.Waves == null)
+            return;
+
+        for (int waveIndex = 0; waveIndex < preset.Waves.Count; waveIndex++)
+        {
+            StageBattleEncounterPresetSO.EncounterWave wave = preset.Waves[waveIndex];
+            int candidateCount =
+                wave != null && wave.enemyWavePresetCandidates != null
+                    ? wave.enemyWavePresetCandidates.Count
+                    : -1;
+
+            Debug.Log(
+                $"[StageBattleSettingsSO] Encounter wave details. " +
+                $"{context}, preset={preset.name}, waveIndex={waveIndex}, waveNull={wave == null}, candidateCount={candidateCount}",
+                preset);
+
+            if (wave == null || wave.enemyWavePresetCandidates == null)
+                continue;
+
+            for (int enemyWaveCandidateIndex = 0;
+                 enemyWaveCandidateIndex < wave.enemyWavePresetCandidates.Count;
+                 enemyWaveCandidateIndex++)
+            {
+                StageBattleEncounterPresetSO.EnemyWavePresetCandidate waveCandidate =
+                    wave.enemyWavePresetCandidates[enemyWaveCandidateIndex];
+
+                StageEnemyWavePresetSO wavePreset =
+                    waveCandidate != null ? waveCandidate.preset : null;
+
+                Debug.Log(
+                    $"[StageBattleSettingsSO] Enemy wave candidate details. " +
+                    $"{context}, preset={preset.name}, waveIndex={waveIndex}, candidateIndex={enemyWaveCandidateIndex}, " +
+                    $"candidateNull={waveCandidate == null}, " +
+                    $"weight={(waveCandidate != null ? waveCandidate.weight : -1)}, " +
+                    $"wavePreset={(wavePreset != null ? wavePreset.name : "null")}, " +
+                    $"wavePresetValid={(wavePreset != null && wavePreset.IsValid)}, " +
+                    $"totalSpawn={(wavePreset != null ? wavePreset.TotalSpawnCount : -1)}",
+                    wavePreset != null ? wavePreset : preset);
+
+                if (wavePreset != null)
+                    LogEnemyWavePresetDetails(wavePreset, context, preset.name, waveIndex, enemyWaveCandidateIndex);
+            }
+        }
+    }
+
+    private void LogEnemyWavePresetDetails(
+        StageEnemyWavePresetSO wavePreset,
+        string context,
+        string encounterPresetName,
+        int encounterWaveIndex,
+        int enemyWaveCandidateIndex)
+    {
+        if (!_debugEncounterPick || wavePreset == null)
+            return;
+
+        int enemyCount = wavePreset.Enemies != null ? wavePreset.Enemies.Count : -1;
+
+        Debug.Log(
+            $"[StageBattleSettingsSO] Enemy wave preset details. " +
+            $"{context}, encounter={encounterPresetName}, encounterWaveIndex={encounterWaveIndex}, " +
+            $"enemyWaveCandidateIndex={enemyWaveCandidateIndex}, wavePreset={wavePreset.name}, " +
+            $"enemyCount={enemyCount}, totalSpawn={wavePreset.TotalSpawnCount}, isValid={wavePreset.IsValid}",
+            wavePreset);
+
+        if (wavePreset.Enemies == null)
+            return;
+
+        for (int enemyIndex = 0; enemyIndex < wavePreset.Enemies.Count; enemyIndex++)
+        {
+            StageEnemyWavePresetSO.EnemySpawn spawn = wavePreset.Enemies[enemyIndex];
+            EnemyStatConfigSO archetype = spawn != null ? spawn.archetype : null;
+
+            Debug.Log(
+                $"[StageBattleSettingsSO] Enemy spawn details. " +
+                $"{context}, wavePreset={wavePreset.name}, enemyIndex={enemyIndex}, " +
+                $"spawnNull={spawn == null}, " +
+                $"count={(spawn != null ? spawn.count : -1)}, " +
+                $"archetype={(archetype != null ? archetype.name : "null")}, " +
+                $"archetypeValid={(archetype != null && archetype.IsValid)}, " +
+                $"enemyPrefab={(archetype != null && archetype.EnemyPrefab != null ? archetype.EnemyPrefab.name : "null")}",
+                archetype != null ? archetype : wavePreset);
+        }
     }
 
     private static bool IsEncounterCandidateValid(WeightedEncounterPreset candidate)

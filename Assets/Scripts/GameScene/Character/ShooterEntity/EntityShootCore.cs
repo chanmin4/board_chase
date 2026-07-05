@@ -13,6 +13,10 @@ public struct EntityShootStats
     public LayerMask damageTargetMask;
     public PaintMarkFaction hitMarkFaction;
     public float hitMarkAmount;
+    public float infectionDamageOnHit;
+    public int penetrationClass;
+    public float armorHealthDurabilityLossMultiplier;
+    public float armorInfectionDurabilityLossMultiplier;
 
     public EntityShootStats(
         float maxRange,
@@ -28,7 +32,9 @@ public struct EntityShootStats
             paintChannel,
             default,
             PaintMarkFaction.None,
-            0f)
+            0f,
+            0f,
+            0)
     {
     }
 
@@ -41,6 +47,61 @@ public struct EntityShootStats
         LayerMask damageTargetMask,
         PaintMarkFaction hitMarkFaction,
         float hitMarkAmount)
+        : this(
+            maxRange,
+            damage,
+            paintRadius,
+            paintPriority,
+            paintChannel,
+            damageTargetMask,
+            hitMarkFaction,
+            hitMarkAmount,
+            0f,
+            0,
+            1f,
+            0.5f)
+    {
+    }
+
+    public EntityShootStats(
+        float maxRange,
+        float damage,
+        float paintRadius,
+        int paintPriority,
+        PaintChannel paintChannel,
+        LayerMask damageTargetMask,
+        PaintMarkFaction hitMarkFaction,
+        float hitMarkAmount,
+        float infectionDamageOnHit)
+        : this(
+            maxRange,
+            damage,
+            paintRadius,
+            paintPriority,
+            paintChannel,
+            damageTargetMask,
+            hitMarkFaction,
+            hitMarkAmount,
+            infectionDamageOnHit,
+            0,
+            1f,
+            0.5f)
+    {
+    }
+
+    public EntityShootStats(
+        float maxRange,
+        float damage,
+        float paintRadius,
+        int paintPriority,
+        PaintChannel paintChannel,
+        LayerMask damageTargetMask,
+        PaintMarkFaction hitMarkFaction,
+        float hitMarkAmount,
+        float infectionDamageOnHit,
+        int penetrationClass,
+        float armorHealthDurabilityLossMultiplier = 1f,
+        float armorInfectionDurabilityLossMultiplier = 0.5f)
     {
         this.maxRange = Mathf.Max(0.1f, maxRange);
         this.damage = Mathf.Max(0f, damage);
@@ -50,6 +111,10 @@ public struct EntityShootStats
         this.damageTargetMask = damageTargetMask;
         this.hitMarkFaction = hitMarkFaction;
         this.hitMarkAmount = Mathf.Max(0f, hitMarkAmount);
+        this.infectionDamageOnHit = Mathf.Max(0f, infectionDamageOnHit);
+        this.penetrationClass = Mathf.Max(0, penetrationClass);
+        this.armorHealthDurabilityLossMultiplier = Mathf.Max(0f, armorHealthDurabilityLossMultiplier);
+        this.armorInfectionDurabilityLossMultiplier = Mathf.Max(0f, armorInfectionDurabilityLossMultiplier);
     }
 }
 
@@ -116,8 +181,12 @@ public abstract class EntityShootCore : MonoBehaviour
                 bulletConfig.CastRadius,
                 bulletConfig.MaxLifetime,
                 stats.damage,
+                stats.penetrationClass,
                 vaccineMarkAmountOnHit,
                 virusMarkAmountOnHit,
+                stats.infectionDamageOnHit,
+                stats.armorHealthDurabilityLossMultiplier,
+                stats.armorInfectionDurabilityLossMultiplier,
                 stats.damageTargetMask,
                 bulletConfig.ProjectileCollisionMask,
                 bulletConfig.ProjectileTriggerInteraction,
@@ -150,8 +219,12 @@ public abstract class EntityShootCore : MonoBehaviour
                 bulletConfig.CastRadius,
                 bulletConfig.MaxLifetime,
                 stats.damage,
+                stats.penetrationClass,
                 vaccineMarkAmountOnHit,
                 virusMarkAmountOnHit,
+                stats.infectionDamageOnHit,
+                stats.armorHealthDurabilityLossMultiplier,
+                stats.armorInfectionDurabilityLossMultiplier,
                 stats.damageTargetMask,
                 bulletConfig.ProjectileCollisionMask,
                 bulletConfig.ProjectileTriggerInteraction,

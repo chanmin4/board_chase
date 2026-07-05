@@ -93,6 +93,16 @@ public class EntityWeaponHolder : MonoBehaviour
         Equip(newWeapon, force: false);
     }
 
+    public void ClearWeapon()
+    {
+        if (_currentWeapon == null && _currentWeaponView == null)
+            return;
+
+        _currentWeapon = null;
+        ClearCurrentWeaponView();
+        OnWeaponChanged?.Invoke(null);
+    }
+
     private void Equip(WeaponSO newWeapon, bool force)
     {
         if (newWeapon == null)
@@ -127,9 +137,7 @@ public class EntityWeaponHolder : MonoBehaviour
         }
 
         _currentWeaponView = Instantiate(weapon.WeaponViewPrefab, _weaponRoot);
-        _currentWeaponView.transform.localPosition = Vector3.zero;
-        _currentWeaponView.transform.localRotation = Quaternion.identity;
-        _currentWeaponView.transform.localScale = Vector3.one;
+        weapon.ApplyWeaponViewTransform(_currentWeaponView.transform);
         _currentWeaponView.gameObject.SetActive(_visible);
 
         if (_logMissingRefs && !_currentWeaponView.HasFireOrigin)
@@ -138,6 +146,37 @@ public class EntityWeaponHolder : MonoBehaviour
                 $"[EntityWeaponHolder] WeaponView Fire Origin is missing. weapon={weapon.name}, view={_currentWeaponView.name}",
                 _currentWeaponView);
         }
+    }
+
+    public void PlayMuzzleParticle()
+    {
+        if (_currentWeapon == null ||
+            _currentWeapon.MuzzleParticlePrefab == null ||
+            _currentWeaponView == null ||
+            !_currentWeaponView.HasFireOrigin)
+        {
+            return;
+        }
+
+        ParticleSystem instance = Instantiate(
+            _currentWeapon.MuzzleParticlePrefab,
+            _currentWeaponView.FireOrigin.position,
+            _currentWeaponView.FireOrigin.rotation,
+            _currentWeaponView.FireOrigin);
+
+        instance.Play();
+        Destroy(instance.gameObject, ResolveParticleLifetime(instance));
+    }
+
+    private static float ResolveParticleLifetime(ParticleSystem particle)
+    {
+        if (particle == null)
+            return 1f;
+
+        ParticleSystem.MainModule main = particle.main;
+        float lifetime = main.startLifetime.constantMax;
+
+        return Mathf.Max(0.1f, main.duration + lifetime);
     }
 
     private void ClearCurrentWeaponView()

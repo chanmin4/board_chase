@@ -10,6 +10,9 @@ public abstract class EnemyStatConfigSO : EntityStatConfigSO
     [SerializeField, Min(0f)] private float _xpOnDeath = 25f;
     [SerializeField, Min(0)] private int _runCurrencyOnDeath = 0;
 
+    [Header("Drops")]
+    [SerializeField] private DroppableRewardConfigSO _droppableRewardConfig;
+
     [Header("Enemy Screen Space UI")]
     [SerializeField] private EnemyScreenSpaceWidgetLayout _healthBarUI =
         new EnemyScreenSpaceWidgetLayout(new Vector2(0f, 50f));
@@ -23,6 +26,7 @@ public abstract class EnemyStatConfigSO : EntityStatConfigSO
 
     public float XpOnDeath => Mathf.Max(0f, _xpOnDeath);
     public int RunCurrencyOnDeath => Mathf.Max(0, _runCurrencyOnDeath);
+    public DroppableRewardConfigSO DroppableRewardConfig => _droppableRewardConfig;
 
     public EnemyScreenSpaceWidgetLayout HealthBarUI => _healthBarUI;
     public EnemyScreenSpaceWidgetLayout InfectionCastBarUI => _infectionCastBarUI;

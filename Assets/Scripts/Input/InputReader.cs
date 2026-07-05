@@ -6,7 +6,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 {
     [Space]
 	[SerializeField] private GameStateSO _gameStateManager;
-	private bool _allowUpgradeStatsWhileGameplayDisabled;
+	private bool _allowPlayerMenuWhileGameplayDisabled;
 
 
     private GameInput _gameInput;
@@ -16,11 +16,8 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction DashCanceledEvent = delegate { };
 	public event UnityAction ShootEvent = delegate { };
 	public event UnityAction ShootCanceledEvent = delegate { };
-	public event UnityAction SpecialShootEvent = delegate { };
-	public event UnityAction SpecialShootCanceledEvent = delegate { };
 	public event UnityAction ReloadEvent=delegate{};
 	public event UnityAction InteractEvent = delegate { }; // Used to talk, pickup objects, interact with tools like the cooking cauldron
-	public event UnityAction UpgradeStatsEvent = delegate { };
 	
 	//public event UnityAction InventoryActionButtonEvent = delegate { };
 	//public event UnityAction SaveActionButtonEvent = delegate { };
@@ -37,17 +34,18 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction Slot3Event = delegate { };
 	public event UnityAction Slot4Event = delegate { };
 	public event UnityAction Slot5Event = delegate { };
-	public event UnityAction MiddleClickEvent = delegate { };
-	public event UnityAction MenuMouseMoveEvent = delegate { };
-	public event UnityAction MenuClickButtonEvent = delegate { };
-	public event UnityAction MenuUnpauseEvent = delegate { };
-	public event UnityAction MenuPauseEvent = delegate { };
-	public event UnityAction MenuCloseEvent = delegate { };
+	
+	//public event UnityAction MenuClickButtonEvent = delegate { };
+	//public event UnityAction MenuUnpauseEvent = delegate { };
+	//public event UnityAction MenuPauseEvent = delegate { };
+	
+	public event UnityAction PlayerMenuEvent = delegate { };
 	public event UnityAction OpenInventoryEvent = delegate { }; // Used to bring up the inventory
 	public event UnityAction CloseInventoryEvent = delegate { }; // Used to bring up the inventory
 	public event UnityAction<float> TabSwitched = delegate { };
 	public bool ReloadInputHeld { get; private set; }
-	public bool SpecialShootHeld { get; private set; }
+	public event UnityAction MenuMouseMoveEvent = delegate { };
+	public event UnityAction MenuCloseEvent = delegate { };
 
 	private void OnEnable()
 	{
@@ -73,7 +71,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 
 	public void EnableGameplayInput()
 	{
-		_allowUpgradeStatsWhileGameplayDisabled = false;
+		_allowPlayerMenuWhileGameplayDisabled = false;
 
 		_gameInput.UI.Disable();
 		_gameInput.Gameplay.Enable();
@@ -81,7 +79,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 
 	public void EnableMenuInput()
 	{
-		_allowUpgradeStatsWhileGameplayDisabled = false;
+		_allowPlayerMenuWhileGameplayDisabled = false;
 
 		ReleaseGameplayInputState();
 		_gameInput.Gameplay.Disable();
@@ -90,22 +88,22 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 
 	public void DisableAllInput()
 	{
-		_allowUpgradeStatsWhileGameplayDisabled = false;
+		_allowPlayerMenuWhileGameplayDisabled = false;
 
 		ReleaseGameplayInputState();
 		_gameInput.Gameplay.Disable();
 		_gameInput.UI.Disable();
 	}
 
-	public void EnableUpgradePanelInput()
+	public void EnablePlayerMenuInput()
 	{
 		ReleaseGameplayInputState();
 
 		_gameInput.Gameplay.Disable();
 		_gameInput.UI.Enable();
 
-		_allowUpgradeStatsWhileGameplayDisabled = true;
-		_gameInput.Gameplay.UpgradeStats.Enable();
+		_allowPlayerMenuWhileGameplayDisabled = true;
+		_gameInput.Gameplay.PlayerMenu.Enable();
 	}
 
 	private void ReleaseGameplayInputState()
@@ -114,8 +112,6 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		ShootCanceledEvent.Invoke();
 		DashCanceledEvent.Invoke();
 		ReloadInputHeld = false;
-		SpecialShootHeld = false;
-		SpecialShootCanceledEvent.Invoke();
 	}
 
 
@@ -143,28 +139,6 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 				break;
 		}
 	}
-	public void OnSpecialShoot(InputAction.CallbackContext context)
-	{
-		switch (context.phase)
-		{
-			case InputActionPhase.Performed:
-				if (GameplayAttackInputBlocker.IsBlocked)
-				{
-					SpecialShootHeld = false;
-					SpecialShootCanceledEvent.Invoke();
-					return;
-				}
-
-				SpecialShootHeld = true;
-				SpecialShootEvent.Invoke();
-				break;
-
-			case InputActionPhase.Canceled:
-				SpecialShootHeld = false;
-				SpecialShootCanceledEvent.Invoke();
-				break;
-		}
-	}
 
    	public void OnInteract(InputAction.CallbackContext context)
 	{
@@ -180,20 +154,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 			InteractEvent.Invoke();
 		}
 	}
-	public void OnUpgradeStats(InputAction.CallbackContext context)
-	{
-		if (context.phase != InputActionPhase.Performed)
-			return;
 
-		bool canOpenOrClose =
-			_gameStateManager.CurrentGameState == GameState.Gameplay ||
-			_allowUpgradeStatsWhileGameplayDisabled;
-
-		if (!canOpenOrClose)
-			return;
-
-		UpgradeStatsEvent.Invoke();
-	}
     public void OnDash(InputAction.CallbackContext context)
 	{
 				switch (context.phase)
@@ -275,17 +236,30 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 				break;
 		}
 	}
-    // ---------------- Menu (UI) ----------------
 
-	public void OnMiddleClick(InputAction.CallbackContext context){}
-    public void OnNavigate(InputAction.CallbackContext context) { }
-    public void OnSubmit(InputAction.CallbackContext context) { } 
-    public void OnCancel(InputAction.CallbackContext context) { }
-    public void OnPoint(InputAction.CallbackContext context) { }
-    public void OnClick(InputAction.CallbackContext context) { }
-    public void OnRightClick(InputAction.CallbackContext context) { }
+    // ---------------- Menu (UI) ---------------
+	public void OnInventory(InputAction.CallbackContext context)
+	{
+		switch (context.phase)
+		{
+			case InputActionPhase.Performed:
+				MapEvent.Invoke();
+				break;
+		}
+	}
+	public void OnPlayerMenu(InputAction.CallbackContext context)
+	{
+		if (context.phase != InputActionPhase.Performed)
+			return;
 
-    public void OnScrollWheel(InputAction.CallbackContext context) { }
-    public void OnTrackedDevicePosition(InputAction.CallbackContext context) { }
-    public void OnTrackedDeviceOrientation(InputAction.CallbackContext context) { }
+		bool canOpenOrClose =
+			_gameStateManager.CurrentGameState == GameState.Gameplay ||
+			_allowPlayerMenuWhileGameplayDisabled;
+
+		if (!canOpenOrClose)
+			return;
+
+		PlayerMenuEvent.Invoke();
+	}
+	
 }

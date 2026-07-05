@@ -10,8 +10,14 @@ public class EntityVisionController : MonoBehaviour
     [Tooltip("Optional shooter stats runtime. Player and enemy shooter variants can both provide final VisionRange through this.")]
     [SerializeField] private ShooterStatsRuntime _statsRuntime;
 
+    [Tooltip("Optional gameplay range provider. Close circular vision uses this MaxRange, so aiming can widen nearby visibility through existing range modifiers.")]
+    [SerializeField] private EntityRange _range;
+
     [Tooltip("Vision settings source. If empty, Damageable.StatConfig is used.")]
     [SerializeField] private EntityStatConfigSO _statConfig;
+
+    [Tooltip("Optional player aim state. When assigned, aiming narrows the forward vision cone over Aim01.")]
+    [SerializeField] private PlayerAimAction _playerAimAction;
 
     [Header("Line Of Sight")]
     [Tooltip("Raycast trigger handling for line-of-sight checks.")]
@@ -23,10 +29,14 @@ public class EntityVisionController : MonoBehaviour
     public Vector3 EyePosition => Origin.position + Vector3.up * EyeHeight;
 
     public float VisionRange => ResolveVisionRange();
+    public float CloseVisionRadius => ResolveCloseVisionRadius();
     public bool UsesLineOfSight => ResolveSettings() != null && ResolveSettings().UseLineOfSight;
+    public bool UsesForwardArc => ResolveSettings() != null && ResolveSettings().UseForwardArc;
     public float EyeHeight => ResolveSettings() != null ? ResolveSettings().EyeHeight : 0f;
     public float TargetHeight => ResolveSettings() != null ? ResolveSettings().TargetHeight : 0f;
     public LayerMask LineOfSightBlockerMask => ResolveSettings() != null ? ResolveSettings().LineOfSightBlockerMask : 0;
+    public float ForwardArcAngle => ResolveForwardArcAngle();
+    public Vector3 ForwardDirection => ResolveForwardDirection();
 
     private void Reset()
     {
@@ -71,13 +81,21 @@ public class EntityVisionController : MonoBehaviour
 
     public bool CanSeeWorldPoint(Vector3 worldPoint, float targetHeight)
     {
-        if (VisionRange <= 0f)
+        if (VisionRange <= 0f && ResolveCloseVisionRadius() <= 0f)
             return false;
 
         Vector3 targetPoint = worldPoint + Vector3.up * Mathf.Max(0f, targetHeight);
 
-        if (!IsInsideVisionRange(targetPoint))
-            return false;
+        bool insideCloseCircle = IsInsideCloseVisionCircle(targetPoint);
+
+        if (!insideCloseCircle)
+        {
+            if (!IsInsideVisionRange(targetPoint))
+                return false;
+
+            if (!IsInsideForwardArc(targetPoint))
+                return false;
+        }
 
         if (!UsesLineOfSight)
             return true;
@@ -118,6 +136,12 @@ public class EntityVisionController : MonoBehaviour
         if (_statsRuntime == null)
             _statsRuntime = GetComponent<ShooterStatsRuntime>() ?? GetComponentInParent<ShooterStatsRuntime>();
 
+        if (_range == null)
+            _range = GetComponent<EntityRange>() ?? GetComponentInParent<EntityRange>();
+
+        if (_playerAimAction == null)
+            _playerAimAction = GetComponent<PlayerAimAction>() ?? GetComponentInParent<PlayerAimAction>();
+
         if (_damageable == null)
             _damageable = GetComponent<Damageable>() ?? GetComponentInParent<Damageable>();
 
@@ -154,5 +178,95 @@ public class EntityVisionController : MonoBehaviour
 
         EntityVisionSettings settings = ResolveSettings();
         return settings != null ? settings.VisionRange : 0f;
+    }
+
+    private float ResolveCloseVisionRadius()
+    {
+        if (_range != null && _range.MaxRange > 0f)
+            return _range.MaxRange;
+
+        if (_statsRuntime != null && _statsRuntime.MaxRange > 0f)
+            return _statsRuntime.MaxRange;
+
+        return 0f;
+    }
+
+    private bool IsInsideCloseVisionCircle(Vector3 worldPoint)
+    {
+        float range = ResolveCloseVisionRadius();
+
+        if (range <= 0f)
+            return false;
+
+        Vector3 delta = worldPoint - Origin.position;
+        delta.y = 0f;
+
+        return delta.sqrMagnitude <= range * range;
+    }
+
+    private bool IsInsideForwardArc(Vector3 worldPoint)
+    {
+        EntityVisionSettings settings = ResolveSettings();
+
+        if (settings == null || !settings.UseForwardArc)
+            return true;
+
+        Vector3 toTarget = worldPoint - Origin.position;
+        toTarget.y = 0f;
+
+        if (toTarget.sqrMagnitude <= 0.0001f)
+            return true;
+
+        Vector3 forward = ResolveForwardDirection();
+
+        if (forward.sqrMagnitude <= 0.0001f)
+            return true;
+
+        float arcAngle = ResolveForwardArcAngle();
+        float angle = Vector3.Angle(forward.normalized, toTarget.normalized);
+
+        return angle <= arcAngle * 0.5f;
+    }
+
+    private float ResolveForwardArcAngle()
+    {
+        EntityVisionSettings settings = ResolveSettings();
+
+        if (settings == null)
+            return 360f;
+
+        float arcAngle = settings.ResolveArcAngle(VisionRange);
+
+        if (_playerAimAction == null)
+            return arcAngle;
+
+        float multiplier = Mathf.Lerp(
+            1f,
+            settings.AimArcAngleMultiplier,
+            Mathf.Clamp01(_playerAimAction.Aim01));
+
+        return Mathf.Clamp(arcAngle * multiplier, 1f, 360f);
+    }
+
+    private Vector3 ResolveForwardDirection()
+    {
+        if (_playerAimAction != null &&
+            _playerAimAction.TryGetFlatAimDirection(Origin.position, out Vector3 aimDirection))
+        {
+            return aimDirection;
+        }
+
+        Vector3 forward = Origin.forward;
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude <= 0.0001f)
+            forward = transform.forward;
+
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude <= 0.0001f)
+            return Vector3.forward;
+
+        return forward.normalized;
     }
 }

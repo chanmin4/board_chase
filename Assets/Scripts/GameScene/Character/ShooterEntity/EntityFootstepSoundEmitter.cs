@@ -8,6 +8,7 @@ public class EntityFootstepSoundEmitter : MonoBehaviour
     [SerializeField] private ShooterStatsRuntime _statsRuntime;
     [SerializeField] private SoundStimulusEventChannelSO _soundStimulusEvent;
     [SerializeField] private Transform _soundOrigin;
+    [SerializeField] private VSplatterDashController _dashController;
 
     [Header("Movement Sources")]
     [SerializeField] private CharacterController _characterController;
@@ -36,6 +37,9 @@ public class EntityFootstepSoundEmitter : MonoBehaviour
     private void Update()
     {
         if (_soundStimulusEvent == null)
+            return;
+
+        if (_dashController != null && _dashController.IsDashing)
             return;
 
         float radius = ResolveRadius();
@@ -72,6 +76,9 @@ public class EntityFootstepSoundEmitter : MonoBehaviour
 
         if (_soundOrigin == null)
             _soundOrigin = transform;
+
+        if (_dashController == null)
+            _dashController = GetComponent<VSplatterDashController>() ?? GetComponentInParent<VSplatterDashController>();
 
         if (_characterController == null)
             _characterController = GetComponent<CharacterController>() ?? GetComponentInParent<CharacterController>();

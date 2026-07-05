@@ -6,19 +6,19 @@ using UnityEngine;
     menuName = "Events/Player/Player Infection Event Channel")]
 public class PlayerInfectionEventChannelSO : ScriptableObject
 {
-    public event Action<PlayerInfection> OnEventRaised;
+    public event Action<PlayerShooterInfection> OnEventRaised;
 
-    [NonSerialized] private PlayerInfection _current;
+    [NonSerialized] private PlayerShooterInfection _current;
 
-    public PlayerInfection Current => _current;
+    public PlayerShooterInfection Current => _current;
 
-    public void RaiseEvent(PlayerInfection playerInfection)
+    public void RaiseEvent(PlayerShooterInfection playerInfection)
     {
         _current = playerInfection;
         OnEventRaised?.Invoke(playerInfection);
     }
 
-    public void Clear(PlayerInfection playerInfection)
+    public void Clear(PlayerShooterInfection playerInfection)
     {
         if (_current != playerInfection)
             return;

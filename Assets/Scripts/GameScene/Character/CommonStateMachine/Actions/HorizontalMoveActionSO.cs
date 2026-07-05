@@ -19,9 +19,17 @@ public class HorizontalMoveAction : StateAction
 
     public override void Awake(StateMachine stateMachine)
     {
-        _vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
-        stateMachine.TryGetComponent(out _statsRuntime);
-        stateMachine.TryGetComponent(out _aimAction);
+        if (stateMachine == null)
+            return;
+
+        if (!stateMachine.TryGetComponent(out _vsplatterScript))
+            _vsplatterScript = stateMachine.GetComponentInChildren<VSplatter_Character>(true);
+
+        if (!stateMachine.TryGetComponent(out _statsRuntime))
+            _statsRuntime = stateMachine.GetComponentInChildren<PlayerStatsRuntime>(true);
+
+        if (!stateMachine.TryGetComponent(out _aimAction))
+            _aimAction = stateMachine.GetComponentInChildren<PlayerAimAction>(true);
     }
 
     public override void OnUpdate()

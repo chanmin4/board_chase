@@ -1,72 +1,48 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class SectorStateManager : MonoBehaviour
 {
     [Serializable]
-    public struct SectorEntry
+    public struct RuntimeSectorStateEntry
     {
-        [Tooltip("씬에 배치된 SectorRuntime입니다. 생성형 stage에서도 StartSector는 이 테이블에 등록된 sector를 사용합니다.")]
         public SectorRuntime sector;
-
-        [Tooltip("sector의 논리 좌표입니다. Vector2Int.x는 월드 X축, Vector2Int.y는 월드 Z축 방향으로 사용합니다.")]
         public Vector2Int coord;
+        public StageRoomType roomType;
+        public bool isStartSector;
+        public bool isCurrentSector;
+        public bool isActiveStageSector;
+        public bool isOpened;
+        public bool isCleared;
+        public bool isRevealed;
+        public bool isFailed;
     }
-
-    [Header("Sector Table")]
-    [Tooltip("씬에 미리 배치된 sector와 논리 좌표를 연결하는 테이블입니다. 생성형 stage에서도 StartSector는 이 테이블에서 가져옵니다.")]
-    [SerializeField] private SectorEntry[] _sectors;
-
-    //[Header("Stage Unlock")]
-    //[Tooltip("구형 stage별 sector 해금 규칙입니다. 생성형 StageMap 흐름에서는 보통 사용하지 않습니다.")]
-    //[SerializeField] private StageSectorUnlockSO _stageSectorUnlock;
-
-    [Tooltip("구형 StageSectorUnlockSO 기반 해금 흐름을 사용할 때만 켭니다. 생성형 StageMap을 쓰는 동안은 보통 꺼둡니다.")]
-    [SerializeField] private bool _useStageSectorUnlocks = false;
-
     [Header("Room Exploration")]
-    [Tooltip("방 클리어 시 논리맵 연결 정보에 따라 인접 방을 opened 상태로 열지 여부입니다.")]
+    [Tooltip("諛??대━?????쇰━留??곌껐 ?뺣낫???곕씪 ?몄젒 諛⑹쓣 opened ?곹깭濡??댁? ?щ??낅땲??")]
     [SerializeField] private bool _openAdjacentSectorsOnClear = true;
-
-    [Header("Start Sector")]
-    [Tooltip("고정 StartSector 좌표입니다. 현재 설계에서는 (-1, 0)을 시작 섹터로 사용하고, 생성 방은 0,0부터 시작합니다.")]
-    [SerializeField] private Vector2Int _startSectorCoord = new Vector2Int(-1, 0);
-
-    [Header("Start")]
-    [Tooltip("게임 시작 시 적용할 stage index입니다. 보통 0으로 두고 StageProgressionRulesSO의 stage 0 규칙을 사용합니다.")]
-    [SerializeField] private int _initialStage = 0;
-
-    [Tooltip("부팅 직후 StartSector만 열어둘지 여부입니다. 생성형 stage가 먼저 등록되면 해당 설정은 덮어쓰지 않습니다.")]
-    [SerializeField] private bool _openOnlyStartSectorOnBoot = true;
-
-    [Header("Requests")]
-    [Tooltip("외부에서 특정 stage index를 바로 적용하라고 요청하는 이벤트입니다.")]
-    [SerializeField] private IntEventChannelSO _requestUnlockStageEvent;
-
-    [Tooltip("외부에서 현재 stage 다음 stage로 진행하라고 요청하는 이벤트입니다.")]
-    [SerializeField] private VoidEventChannelSO _requestProgressNextStageEvent;
-
     [Header("Broadcasts")]
-    [Tooltip("현재 플레이어가 속한 sector가 바뀔 때 발생/수신하는 이벤트입니다.")]
+    [Tooltip("?꾩옱 ?뚮젅?댁뼱媛 ?랁븳 sector媛 諛붾???諛쒖깮/?섏떊?섎뒗 ?대깽?몄엯?덈떎.")]
     [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedEvent;
 
-    [Tooltip("StartSector가 준비되었음을 알리는 이벤트입니다. 초기 카메라/플레이어 위치 세팅에서 사용할 수 있습니다.")]
+    [Tooltip("StartSector媛 以鍮꾨릺?덉쓬???뚮━???대깽?몄엯?덈떎. 珥덇린 移대찓???뚮젅?댁뼱 ?꾩튂 ?명똿?먯꽌 ?ъ슜?????덉뒿?덈떎.")]
     [SerializeField] private SectorRuntimeEventChannelSO _startSectorReadyEvent;
 
-    [Tooltip("sector가 opened 상태가 되었을 때 발생시키는 이벤트입니다. portal refresh나 UI 갱신에서 구독합니다.")]
+    [Tooltip("sector媛 opened ?곹깭媛 ?섏뿀????諛쒖깮?쒗궎???대깽?몄엯?덈떎. portal refresh??UI 媛깆떊?먯꽌 援щ룆?⑸땲??")]
     [SerializeField] private SectorRuntimeEventChannelSO _sectorOpenedEvent;
 
-    [Tooltip("현재 stage index가 적용되었음을 알리는 이벤트입니다.")]
-    [SerializeField] private IntEventChannelSO _stageAppliedEvent;
-
-    [Tooltip("SectorStateManager가 초기화되어 다른 시스템에서 참조 가능해졌음을 알리는 이벤트입니다.")]
+    [Tooltip("SectorStateManager媛 珥덇린?붾릺???ㅻⅨ ?쒖뒪?쒖뿉??李몄“ 媛?ν빐議뚯쓬???뚮━???대깽?몄엯?덈떎.")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
+
+    [Header("Runtime Debug")]
+    [SerializeField, ReadOnly] private List<RuntimeSectorStateEntry> _runtimeSectorStates = new();
+
     public int CurrentStage { get; private set; }
     public SectorRuntime StartSector { get; private set; }
     public SectorRuntime CurrentSector { get; private set; }
 
     public IReadOnlyList<SectorRuntime> Sectors => _runtimeSectors;
+    public IReadOnlyList<RuntimeSectorStateEntry> RuntimeSectorStates => _runtimeSectorStates;
     public StageMapLayout CurrentStageMapLayout { get; private set; }
     public bool HasCurrentStageMap => CurrentStageMapLayout != null;
 
@@ -86,12 +62,6 @@ public class SectorStateManager : MonoBehaviour
         if (_currentSectorChangedEvent != null)
             _currentSectorChangedEvent.OnEventRaised += HandleCurrentSectorChanged;
 
-        if (_requestUnlockStageEvent != null)
-            _requestUnlockStageEvent.OnEventRaised += ApplyStage;
-
-        if (_requestProgressNextStageEvent != null)
-            _requestProgressNextStageEvent.OnEventRaised += ProgressNextStage;
-
         EnsureInitialized();
 
     }
@@ -101,18 +71,15 @@ public class SectorStateManager : MonoBehaviour
         if (_currentSectorChangedEvent != null)
             _currentSectorChangedEvent.OnEventRaised -= HandleCurrentSectorChanged;
 
-        if (_requestUnlockStageEvent != null)
-            _requestUnlockStageEvent.OnEventRaised -= ApplyStage;
-
-        if (_requestProgressNextStageEvent != null)
-            _requestProgressNextStageEvent.OnEventRaised -= ProgressNextStage;
-
         if (_sectorStateManagerReadyChannel != null)
             _sectorStateManagerReadyChannel.Clear(this);
+        if (_startSectorReadyEvent != null && StartSector != null)
+            _startSectorReadyEvent.Clear(StartSector);
         if (_currentSectorChangedEvent != null && CurrentSector != null)
             _currentSectorChangedEvent.Clear(CurrentSector);
 
         CurrentSector = null;
+        RefreshRuntimeSectorStates();
     }
     private void Awake()
     {
@@ -121,24 +88,17 @@ public class SectorStateManager : MonoBehaviour
 
     private void Start()
     {
-        if (!_stageMapConfigured)
-        {
-            CurrentStage = Mathf.Max(0, _initialStage);
-            ApplyInitialOpenState();
-        }
-        else if (CurrentSector == null)
-        {
-            CurrentSector = StartSector;
-        }
-
         if (_sectorStateManagerReadyChannel != null)
             _sectorStateManagerReadyChannel.RaiseEvent(this);
 
-        if (_startSectorReadyEvent != null && StartSector != null)
-            _startSectorReadyEvent.RaiseEvent(StartSector);
+        if (!_stageMapConfigured)
+            return;
 
         if (CurrentSector == null)
             CurrentSector = StartSector;
+
+        if (_startSectorReadyEvent != null && StartSector != null)
+            _startSectorReadyEvent.RaiseEvent(StartSector);
 
         if (_currentSectorChangedEvent != null && CurrentSector != null)
             _currentSectorChangedEvent.RaiseEvent(CurrentSector);
@@ -149,11 +109,11 @@ public class SectorStateManager : MonoBehaviour
         if (_isInitialized)
             return;
 
-        BuildSectorTable();
+        InitializeGeneratedMapState();
         _isInitialized = true;
     }
 
-    private void BuildSectorTable()
+    private void InitializeGeneratedMapState()
     {
         _failedSectors.Clear();
         _sectorByCoord.Clear();
@@ -162,72 +122,19 @@ public class SectorStateManager : MonoBehaviour
         _activeStageSectors.Clear();
         _roomByCoord.Clear();
         _roomBySector.Clear();
+        _runtimeSectorStates.Clear();
         StartSector = null;
         CurrentSector = null;
         CurrentStageMapLayout = null;
         _stageMapConfigured = false;
         _allowStartSectorAccess = false;
-
-        for (int i = 0; i < _sectors.Length; i++)
-        {
-            SectorEntry entry = _sectors[i];
-
-            if (entry.sector == null)
-            {
-                Debug.LogWarning($"[SectorStateManager] Sector entry {i} has no SectorRuntime.");
-                continue;
-            }
-
-            if (_sectorByCoord.ContainsKey(entry.coord))
-            {
-                Debug.LogWarning($"[SectorStateManager] Duplicate coord detected: {entry.coord}. Sector: {entry.sector.name}");
-                continue;
-            }
-
-            if (_coordBySector.ContainsKey(entry.sector))
-            {
-                Debug.LogWarning($"[SectorStateManager] Duplicate sector detected: {entry.sector.name}");
-                continue;
-            }
-
-            _sectorByCoord.Add(entry.coord, entry.sector);
-            _coordBySector.Add(entry.sector, entry.coord);
-            _runtimeSectors.Add(entry.sector);
-
-            bool isStartSector = entry.coord == _startSectorCoord;
-
-            entry.sector.SetRuntimeInfo(
-                entry.coord,
-                opened: false,
-                isStartSector: isStartSector
-            );
-
-            if (isStartSector)
-            {
-                if (StartSector != null)
-                    Debug.LogWarning("[SectorStateManager] Multiple start sectors found.");
-
-                StartSector = entry.sector;
-            }
-        }
-
-        if (StartSector == null)
-            Debug.LogWarning($"[SectorStateManager] Start sector not found. Coord: {_startSectorCoord}");
     }
 
     private void ApplyInitialOpenState()
     {
-        CloseAllSectors();
-
-        if (_openOnlyStartSectorOnBoot)
-        {
-            if (StartSector != null)
-                OpenSector(StartSector);
-
-            return;
-        }
-
-        ApplyStage(CurrentStage);
+        Debug.LogError(
+            "[SectorStateManager] ApplyInitialOpenState is disabled. StageSectorInstantiator must register generated sectors before play.",
+            this);
     }
 
     private void CloseAllSectors()
@@ -237,31 +144,22 @@ public class SectorStateManager : MonoBehaviour
             if (_runtimeSectors[i] != null)
                 _runtimeSectors[i].SetOpened(false);
         }
+
+        RefreshRuntimeSectorStates();
     }
 
     public void ProgressNextStage()
     {
-        ApplyStage(CurrentStage + 1);
+        Debug.LogError(
+            "[SectorStateManager] ProgressNextStage is disabled. StageProgressionManager must build the next generated stage.",
+            this);
     }
 
     public void ApplyStage(int stage)
     {
-        EnsureInitialized();
-
-        CurrentStage = Mathf.Max(0, stage);
-
-        if (_useStageSectorUnlocks)
-        {
-            _stageMapConfigured = false;
-
-            if (StartSector != null)
-                OpenSector(StartSector);
-
-           // ApplyStageUnlocksUpTo(CurrentStage);
-        }
-
-        if (_stageAppliedEvent != null)
-            _stageAppliedEvent.RaiseEvent(CurrentStage);
+        Debug.LogError(
+            $"[SectorStateManager] ApplyStage({stage}) is disabled. Register a generated stage map instead.",
+            this);
     }
 
     public void ConfigureStageMap(
@@ -269,98 +167,19 @@ public class SectorStateManager : MonoBehaviour
         int roomGridSize,
         bool useStartSectorOnly)
     {
-        EnsureInitialized();
-
-        CurrentStage = Mathf.Max(0, stage);
-        CurrentStageMapLayout = null;
-        _stageMapConfigured = true;
-        _activeStageSectors.Clear();
-        _roomByCoord.Clear();
-        _roomBySector.Clear();
-
-        SectorRuntime preferredEntry = CurrentSector;
-        _allowStartSectorAccess =
-            useStartSectorOnly ||
-            preferredEntry == StartSector;
-
-        CloseAllSectors();
-
-        if (useStartSectorOnly)
-        {
-            if (StartSector != null)
-            {
-                StartSector.SetCleared(false);
-                _activeStageSectors.Add(StartSector);
-                SetSectorOpened(StartSector);
-            }
-
-            return;
-        }
-
-        int gridSize = Mathf.Max(0, roomGridSize);
-        int foundRoomCount = 0;
-
-        for (int i = 0; i < _runtimeSectors.Count; i++)
-        {
-            SectorRuntime sector = _runtimeSectors[i];
-
-            if (sector == null || sector == StartSector)
-                continue;
-
-            sector.SetCleared(false);
-
-            if (!TryGetSectorCoord(sector, out Vector2Int coord))
-                continue;
-
-            bool isInsideStageGrid =
-                coord.x >= 0 &&
-                coord.y >= 0 &&
-                coord.x < gridSize &&
-                coord.y < gridSize;
-
-            if (!isInsideStageGrid)
-                continue;
-
-            _activeStageSectors.Add(sector);
-            foundRoomCount++;
-        }
-
-        if (_allowStartSectorAccess && StartSector != null)
-            SetSectorOpened(StartSector);
-
-        SectorRuntime entrySector =
-            preferredEntry != null && _activeStageSectors.Contains(preferredEntry)
-                ? preferredEntry
-                : null;
-
-        if (entrySector == null &&
-            _sectorByCoord.TryGetValue(Vector2Int.zero, out SectorRuntime firstSector) &&
-            _activeStageSectors.Contains(firstSector))
-        {
-            entrySector = firstSector;
-        }
-
-        if (entrySector != null)
-            SetSectorOpened(entrySector);
-
-        int expectedRoomCount = gridSize * gridSize;
-
-        if (foundRoomCount < expectedRoomCount)
-        {
-            Debug.LogWarning(
-                $"[SectorStateManager] Stage {CurrentStage} requests a {gridSize} x {gridSize} map, " +
-                $"but only {foundRoomCount}/{expectedRoomCount} matching sectors exist in the scene.",
-                this);
-        }
+        Debug.LogError(
+            $"[SectorStateManager] ConfigureStageMap(stage={stage}, roomGridSize={roomGridSize}, useStartSectorOnly={useStartSectorOnly}) is disabled. StageSectorInstantiator must generate and register sectors.",
+            this);
     }
 
     public void RegisterGeneratedStageMap(StageMapLayout layout,
-    IReadOnlyList<SectorRuntime> generatedSectors)
+        IReadOnlyList<SectorRuntime> generatedSectors)
     {
         EnsureInitialized();
 
         if (layout == null)
             return;
+
         _failedSectors.Clear();
         _sectorByCoord.Clear();
         _coordBySector.Clear();
@@ -466,46 +285,26 @@ public class SectorStateManager : MonoBehaviour
                 SetSectorOpened(sector);
         }
 
+        BroadcastGeneratedStartSectorReady();
+        RefreshRuntimeSectorStates();
+    }
+
+    private void BroadcastGeneratedStartSectorReady()
+    {
+        if (StartSector == null)
+            return;
+
         CurrentSector = StartSector;
 
-        if (_startSectorReadyEvent != null && StartSector != null)
+        if (_startSectorReadyEvent != null)
             _startSectorReadyEvent.RaiseEvent(StartSector);
 
-        if (_currentSectorChangedEvent != null && CurrentSector != null)
+        if (_currentSectorChangedEvent != null)
             _currentSectorChangedEvent.RaiseEvent(CurrentSector);
+
+        RefreshRuntimeSectorStates();
     }
-/*
-    private void ApplyStageUnlocksUpTo(int stage)
-    {
-        //if (_stageSectorUnlock == null)
-        //{
-        //    Debug.LogWarning("[SectorStateManager] StageSectorUnlockSO is missing.");
-        //    return;
-        //}
 
-        for (int stageIndex = 0; stageIndex <= stage; stageIndex++)
-        {
-            if (!_stageSectorUnlock.TryGetStep(stageIndex, out StageSectorUnlockSO.StageUnlockStep step))
-                continue;
-
-            if (step == null || step.sectorCoordsToOpen == null)
-                continue;
-
-            for (int i = 0; i < step.sectorCoordsToOpen.Length; i++)
-            {
-                Vector2Int coord = step.sectorCoordsToOpen[i];
-
-                if (coord == _startSectorCoord)
-                    continue;
-
-                if (_sectorByCoord.TryGetValue(coord, out SectorRuntime sector))
-                    OpenSector(sector);
-                else
-                    Debug.LogWarning($"[SectorStateManager] Unlock coord has no sector: {coord}");
-            }
-        }
-    }
-*/
     public void OpenSector(SectorRuntime sector)
     {
         if (sector == null)
@@ -536,6 +335,8 @@ public class SectorStateManager : MonoBehaviour
 
         if (!wasOpened && _sectorOpenedEvent != null)
             _sectorOpenedEvent.RaiseEvent(sector);
+
+        RefreshRuntimeSectorStates();
     }
 
     public bool CompleteSector(SectorRuntime sector)
@@ -565,6 +366,7 @@ public class SectorStateManager : MonoBehaviour
         if (_sectorOpenedEvent != null)
             _sectorOpenedEvent.RaiseEvent(sector);
 
+        RefreshRuntimeSectorStates();
         return true;
     }
 
@@ -613,6 +415,7 @@ public class SectorStateManager : MonoBehaviour
 
         CurrentSector = sector;
         RevealSector(sector);
+        RefreshRuntimeSectorStates();
     }
 
     public bool RevealSector(SectorRuntime sector)
@@ -653,6 +456,9 @@ public class SectorStateManager : MonoBehaviour
 
         if (changed && _sectorOpenedEvent != null)
             _sectorOpenedEvent.RaiseEvent(sector);
+
+        if (changed)
+            RefreshRuntimeSectorStates();
 
         return changed;
     }
@@ -737,13 +543,13 @@ public class SectorStateManager : MonoBehaviour
 
     public bool IsStartSector(SectorRuntime sector)
     {
-        return TryGetSectorCoord(sector, out Vector2Int coord) &&
-               coord == _startSectorCoord;
+        return sector != null && sector == StartSector;
     }
 
     public bool IsStartSectorCoord(Vector2Int coord)
     {
-        return coord == _startSectorCoord;
+        return CurrentStageMapLayout != null &&
+               coord == CurrentStageMapLayout.startSectorCoord;
     }
 
     public bool IsOpened(SectorRuntime sector)
@@ -814,6 +620,7 @@ public class SectorStateManager : MonoBehaviour
         if (_sectorOpenedEvent != null)
             _sectorOpenedEvent.RaiseEvent(sector);
 
+        RefreshRuntimeSectorStates();
         return true;
     }
 
@@ -831,25 +638,51 @@ public class SectorStateManager : MonoBehaviour
             return;
 
         _failedSectors.Remove(sector);
+        RefreshRuntimeSectorStates();
+    }
+
+    private void RefreshRuntimeSectorStates()
+    {
+        _runtimeSectorStates.Clear();
+
+        for (int i = 0; i < _runtimeSectors.Count; i++)
+        {
+            SectorRuntime sector = _runtimeSectors[i];
+
+            if (sector == null)
+                continue;
+
+            StageRoomType roomType = StageRoomType.Empty;
+            bool isRevealed = sector == StartSector || sector.IsOpened;
+
+            if (_roomBySector.TryGetValue(sector, out StageRoomNode room) &&
+                room != null)
+            {
+                roomType = room.roomType;
+                isRevealed = room.isRevealed;
+            }
+
+            _runtimeSectorStates.Add(new RuntimeSectorStateEntry
+            {
+                sector = sector,
+                coord = sector.Coord,
+                roomType = roomType,
+                isStartSector = sector == StartSector,
+                isCurrentSector = sector == CurrentSector,
+                isActiveStageSector = _activeStageSectors.Contains(sector) ||
+                                      (_allowStartSectorAccess && sector == StartSector),
+                isOpened = sector.IsOpened,
+                isCleared = sector.IsCleared,
+                isRevealed = isRevealed,
+                isFailed = _failedSectors.Contains(sector)
+            });
+        }
     }
 
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if (_sectors == null)
-            return;
-
-        for (int i = 0; i < _sectors.Length; i++)
-        {
-            if (_sectors[i].sector == null)
-                continue;
-
-            _sectors[i].sector.SetRuntimeInfo(
-                _sectors[i].coord,
-                opened: _sectors[i].sector.isOpened,
-                isStartSector: _sectors[i].coord == _startSectorCoord
-            );
-        }
     }
 #endif
 }
+

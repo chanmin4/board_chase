@@ -290,7 +290,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7127183956105130771}
-  - component: {fileID: 302774566667849399}
+  - component: {fileID: -5557807304328745468}
   m_Layer: 0
   m_Name: Painter4
   m_TagString: Untagged
@@ -314,7 +314,7 @@ Transform:
   - {fileID: 2431488147881566020}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &302774566667849399
+--- !u!114 &-5557807304328745468
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -323,6 +323,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 7611937310320503209}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d99b25ec8664410a399a6c95acaa2b2, type: 3}
+  m_Script: {fileID: 11500000, guid: f9b7ed7bc840a0e428f54458efe43754, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _debugHit: 0

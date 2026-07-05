@@ -12,32 +12,44 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85167ab920714184c90133883c35fbf9, type: 3}
   m_Name: PlayerBaseStatsConfig
   m_EditorClassIdentifier: 
-  _initialHealth: 100
+  _initialHealth: 200
   _moveSpeed: 25
   _paintMark:
     _usePaintMark: 1
     _markAmountPerStack: 100
-    _maxVaccineMarkStacks: 3
-    _maxVirusMarkStacks: 3
+    _maxVaccineMarkStacks: 5
+    _maxVirusMarkStacks: 5
     _startWithVirusMark: 0
     _startingVirusMarkAmount: 0
     _paintMarkTickInterval: 0.1
     _vaccinePaintMarkAmountPerTick: 5
     _virusPaintMarkAmountPerTick: 5
-    _virusMarkAmountOnDamagingPlayer: 20
-    _inactiveSlowDecayAmountPerTick: 0
+    _virusMarkAmountOnDamagingPlayer: 0
+    _inactiveSlowDecayAmountPerTick: 0.5
     _activeSlowDecayAmountPerTick: 0.5
     _oppositePaintFastDecayAmountPerTick: 1
-    _vaccineDamageTakenAddPerStack: 0.15
-    _virusDamageTakenAddPerStack: -0.15
+    _vaccineDamageTakenAddPerStack: 0
+    _virusDamageTakenAddPerStack: 0
+    _vaccineArmorClassDeltaPerStack: -1
+    _virusArmorClassDeltaPerStack: 1
   _vision:
-    _visionRange: 30
+    _visionRange: 25
     _useLineOfSight: 0
     _lineOfSightBlockerMask:
       serializedVersion: 2
       m_Bits: 2176
     _eyeHeight: 1
     _targetHeight: 1
+    _useForwardArc: 1
+    _baseArcAngle: 45
+    _arcAnglePerVisionRange: 0
+    _aimArcAngleMultiplier: 0.65
+  _infection:
+    _zoneTickInterval: 0.1
+    _naturalDecayInterval: 0.1
+    _virusZoneInfectionGainPerTick: 0
+    _vaccineZoneRecoverPerTick: 0
+    _naturalDecayAmountPerTick: 0.1
   _shooter:
     _attackDamage: 25
     _maxRange: 25
@@ -46,6 +58,8 @@ MonoBehaviour:
     _magazineSize: 6
     _paintRadius: 1.5
     _paintPriority: 0
+    _paintMarkDamage: 0
+    _infectionDamage: 0
     _aimSpeed: 3
     _aimRangeMultiplier: 1.25
     _aimMoveSpeedMultiplier: 0.6
@@ -53,12 +67,17 @@ MonoBehaviour:
     _aimSpreadAngleDeg: 0.5
     _recoilAngleDeg: 1
     _recoilRecoverySpeedDegPerSecond: 18
+    _recoilForwardDistancePerShot: 0.35
+    _recoilSideDistancePerShot: 0.2
+    _maxRecoilDistance: 2
+    _recoilDistanceRecoveryPerSecond: 4
+    _hipFireSpreadRadius: 0.8
+    _aimSpreadRadius: 0.08
     _gunshotSoundRadius: 16
     _soundInvestigateDelaySeconds: 0.25
     _footstepSoundRadius: 5
     _footstepSoundInterval: 0.35
   startingRunCurrency: 0
   startingRoguelikeCurrencyForNewSave: 0
-  occupationWinThreshold: 0
   dashCooldownSeconds: 5
   dodgeChance: 0

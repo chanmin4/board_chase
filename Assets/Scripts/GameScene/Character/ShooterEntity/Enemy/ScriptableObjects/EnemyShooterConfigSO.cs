@@ -22,7 +22,7 @@ public class EnemyShooterConfigSO : EnemyStatConfigSO
     [SerializeField] private bool _chaseLastKnownPosition = true;
 
     [Header("Combat Distance")]
-    [SerializeField, Min(0f)] private float _attackStartRange = 0f;
+    [SerializeField] private bool _useMaxRangeAsAttackKeepRange = true;
     [SerializeField, Min(0f)] private float _attackKeepRange = 0f;
     [SerializeField, Min(0f)] private float _chaseStoppingDistance = 0f;
 
@@ -54,6 +54,17 @@ public class EnemyShooterConfigSO : EnemyStatConfigSO
     [SerializeField, Min(1)] private int _paintAvoidanceSampleCount = 8;
     [SerializeField, Min(0.1f)] private float _paintAvoidanceNavMeshSampleDistance = 2f;
 
+    [Header("Defensive Dash")]
+    [SerializeField] private bool _useDash = false;
+    [SerializeField] private bool _dashOnDamaged = true;
+    [SerializeField, Range(0f, 1f)] private float _dashChanceOnDamaged = 1f;
+    [SerializeField] private bool _dashWhenHealthBelowThreshold = true;
+    [SerializeField, Range(0f, 1f)] private float _dashHealthNormalizedThreshold = 0.35f;
+    [SerializeField, Min(0f)] private float _dashCooldownSeconds = 4f;
+    [SerializeField, Min(0.01f)] private float _dashDurationSeconds = 0.18f;
+    [SerializeField, Min(0f)] private float _dashSpeed = 14f;
+    [SerializeField] private bool _dashAwayFromTarget = true;
+
     public EnemyShooter EnemyShooterPrefab => _enemyShooterPrefab;
     public override Enemy EnemyPrefab => _enemyShooterPrefab;
 
@@ -65,8 +76,8 @@ public class EnemyShooterConfigSO : EnemyStatConfigSO
     public float TargetMemorySeconds => Mathf.Max(0f, _targetMemorySeconds);
     public bool ChaseLastKnownPosition => _chaseLastKnownPosition;
 
-    public float AttackStartRange => _attackStartRange > 0f ? _attackStartRange : MaxRange;
-    public float AttackKeepRange => _attackKeepRange > 0f ? _attackKeepRange : MaxRange;
+    public float AttackStartRange => MaxRange;
+    public float AttackKeepRange => _useMaxRangeAsAttackKeepRange ? MaxRange : Mathf.Max(0f, _attackKeepRange);
     public float ChaseStoppingDistance => _chaseStoppingDistance > 0f ? _chaseStoppingDistance : Mathf.Min(AttackStartRange, 8f);
 
     public float ReactionTime => Mathf.Max(0f, _reactionTime);
@@ -92,6 +103,16 @@ public class EnemyShooterConfigSO : EnemyStatConfigSO
     public int PaintAvoidanceSampleCount => Mathf.Max(1, _paintAvoidanceSampleCount);
     public float PaintAvoidanceNavMeshSampleDistance => Mathf.Max(0.1f, _paintAvoidanceNavMeshSampleDistance);
 
+    public bool UseDash => _useDash;
+    public bool DashOnDamaged => _dashOnDamaged;
+    public float DashChanceOnDamaged => Mathf.Clamp01(_dashChanceOnDamaged);
+    public bool DashWhenHealthBelowThreshold => _dashWhenHealthBelowThreshold;
+    public float DashHealthNormalizedThreshold => Mathf.Clamp01(_dashHealthNormalizedThreshold);
+    public float DashCooldownSeconds => Mathf.Max(0f, _dashCooldownSeconds);
+    public float DashDurationSeconds => Mathf.Max(0.01f, _dashDurationSeconds);
+    public float DashSpeed => Mathf.Max(0f, _dashSpeed);
+    public bool DashAwayFromTarget => _dashAwayFromTarget;
+
     public float AttackDamage => _shooter.AttackDamage;
     public float Damage => _shooter.Damage;
     public float MaxRange => _shooter.MaxRange;
@@ -100,6 +121,9 @@ public class EnemyShooterConfigSO : EnemyStatConfigSO
     public int MagazineSize => _shooter.MagazineSize;
     public float PaintRadius => _shooter.PaintRadius;
     public int PaintPriority => _shooter.PaintPriority;
+    public float PaintMarkDamage => _shooter.PaintMarkDamage;
+    public float InfectionDamage => _shooter.InfectionDamage;
+    public int PenetrationClassBonus => _shooter.PenetrationClassBonus;
     public float AimSpeed => _shooter.AimSpeed;
     public float AimRangeMultiplier => _shooter.AimRangeMultiplier;
     public float AimMoveSpeedMultiplier => _shooter.AimMoveSpeedMultiplier;
@@ -107,6 +131,12 @@ public class EnemyShooterConfigSO : EnemyStatConfigSO
     public float AimSpreadAngleDeg => _shooter.AimSpreadAngleDeg;
     public float RecoilAngleDeg => _shooter.RecoilAngleDeg;
     public float RecoilRecoverySpeedDegPerSecond => _shooter.RecoilRecoverySpeedDegPerSecond;
+    public float RecoilForwardDistancePerShot => _shooter.RecoilForwardDistancePerShot;
+    public float RecoilSideDistancePerShot => _shooter.RecoilSideDistancePerShot;
+    public float MaxRecoilDistance => _shooter.MaxRecoilDistance;
+    public float RecoilDistanceRecoveryPerSecond => _shooter.RecoilDistanceRecoveryPerSecond;
+    public float HipFireSpreadRadius => _shooter.HipFireSpreadRadius;
+    public float AimSpreadRadius => _shooter.AimSpreadRadius;
     public float GunshotSoundRadius => _shooter.GunshotSoundRadius;
     public float SoundInvestigateDelaySeconds => _shooter.SoundInvestigateDelaySeconds;
     public float FootstepSoundRadius => _shooter.FootstepSoundRadius;

@@ -12,7 +12,7 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class PlayerBulletLoadoutRuntime : MonoBehaviour
 {
-    private const int SlotCount = 5;
+    private const int SlotCount = 3;
     private const int DefaultPrimarySlot = 0;
     private const int MissingStatsEmergencyMagazineSize = 1;
 
@@ -320,6 +320,66 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         return true;
     }
 
+    public bool TryGetSlotSnapshot(int slotIndex, out WeaponAmmoSlotSnapshot snapshot)
+    {
+        snapshot = default;
+
+        if (!IsRuntimeReady() || !IsValidSlot(slotIndex))
+            return false;
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        snapshot = new WeaponAmmoSlotSnapshot(
+            slotIndex,
+            slot.bullet,
+            slot.currentAmmo,
+            slot.reserveAmmo,
+            slot.infiniteReserve,
+            IsSlotActive(slotIndex),
+            slot.requiredDefault,
+            slot.sellPricePerAmmo);
+
+        return true;
+    }
+
+    public bool TryClearRemovableSlot(int slotIndex, out string message)
+    {
+        message = string.Empty;
+
+        if (!IsRuntimeReady())
+        {
+            message = "Ammo runtime is not ready.";
+            return false;
+        }
+
+        if (!IsValidSlot(slotIndex))
+        {
+            message = "Invalid ammo slot.";
+            return false;
+        }
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        if (slot.bullet == null)
+        {
+            message = "Ammo slot is empty.";
+            return false;
+        }
+
+        if (slot.requiredDefault || slot.infiniteReserve)
+        {
+            message = "Default ammo slot cannot be removed.";
+            return false;
+        }
+
+        slot.Clear();
+        EnsureActiveSlotsValid();
+        PublishSnapshot();
+
+        message = "Ammo slot cleared.";
+        return true;
+    }
+
     public bool TryGrantBullet(
         BulletSO bullet,
         int bundleAmount,
@@ -422,6 +482,194 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         PublishSnapshot();
 
         message = $"{bullet.DisplayName} acquired to slot {slotIndex + 1}.";
+        return true;
+    }
+
+    public bool TryAcquireBulletToAvailableSlot(
+        BulletSO bullet,
+        int bundleAmount,
+        float sellPriceRate,
+        out int slotIndex,
+        out string message)
+    {
+        slotIndex = -1;
+        message = string.Empty;
+
+        if (!IsRuntimeReady())
+        {
+            message = "Ammo runtime is not ready.";
+            return false;
+        }
+
+        if (bullet == null)
+        {
+            message = "Bullet is missing.";
+            return false;
+        }
+
+        int resolvedBundleAmount = Mathf.Max(1, bundleAmount);
+
+        if (TryFindNonInfiniteSameBulletSlot(bullet, out slotIndex))
+        {
+            AddAmmoToSlot(slotIndex, resolvedBundleAmount);
+            PublishSnapshot();
+
+            message = $"{bullet.DisplayName} ammo added to slot {slotIndex + 1}.";
+            return true;
+        }
+
+        if (!TryFindEmptyTreasureCompatibleSlot(bullet, out slotIndex))
+        {
+            message = "No empty compatible ammo slot.";
+            return false;
+        }
+
+        EquipBulletToSlot(
+            slotIndex,
+            bullet,
+            resolvedBundleAmount,
+            sellPriceRate,
+            0,
+            false,
+            false);
+
+        SetActiveSlot(bullet.AmmoType, slotIndex);
+        _lastSelectedSlotIndex = slotIndex;
+        PublishSnapshot();
+
+        message = $"{bullet.DisplayName} equipped to slot {slotIndex + 1}.";
+        return true;
+    }
+
+    public bool TryEquipBulletToSlot(
+        BulletSO bullet,
+        int bundleAmount,
+        float sellPriceRate,
+        int slotIndex,
+        out string message)
+    {
+        message = string.Empty;
+
+        if (!IsRuntimeReady())
+        {
+            message = "Ammo runtime is not ready.";
+            return false;
+        }
+
+        if (bullet == null)
+        {
+            message = "Bullet is missing.";
+            return false;
+        }
+
+        if (!IsValidSlot(slotIndex))
+        {
+            message = "Invalid ammo slot.";
+            return false;
+        }
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        if (slot.requiredDefault || slot.infiniteReserve)
+        {
+            message = "Default ammo slot cannot be replaced.";
+            return false;
+        }
+
+        if (!CanEquipBulletInSlot(slotIndex, bullet))
+        {
+            message = "This bullet cannot be equipped to that slot.";
+            return false;
+        }
+
+        EquipBulletToSlot(
+            slotIndex,
+            bullet,
+            Mathf.Max(1, bundleAmount),
+            sellPriceRate,
+            0,
+            false,
+            false);
+
+        SetActiveSlot(bullet.AmmoType, slotIndex);
+        _lastSelectedSlotIndex = slotIndex;
+        PublishSnapshot();
+
+        message = $"{bullet.DisplayName} equipped to slot {slotIndex + 1}.";
+        return true;
+    }
+
+    public bool TryEquipBulletToSlotAndReturnPrevious(
+        BulletSO bullet,
+        int bundleAmount,
+        float sellPriceRate,
+        int slotIndex,
+        out BulletSO previousBullet,
+        out int previousAmount,
+        out string message,
+        bool allowRequiredDefaultReplacement = false)
+    {
+        previousBullet = null;
+        previousAmount = 0;
+        message = string.Empty;
+
+        if (!IsRuntimeReady())
+        {
+            message = "Ammo runtime is not ready.";
+            return false;
+        }
+
+        if (bullet == null)
+        {
+            message = "Bullet is missing.";
+            return false;
+        }
+
+        if (!IsValidSlot(slotIndex))
+        {
+            message = "Invalid ammo slot.";
+            return false;
+        }
+
+        AmmoSlotState slot = _slots[slotIndex];
+
+        if ((slot.requiredDefault || slot.infiniteReserve) &&
+            !allowRequiredDefaultReplacement)
+        {
+            message = "Default ammo slot cannot be replaced.";
+            return false;
+        }
+
+        if (!CanEquipBulletInSlot(slotIndex, bullet))
+        {
+            message = "This bullet cannot be equipped to that slot.";
+            return false;
+        }
+
+        bool returnPrevious =
+            slot.bullet != null &&
+            !slot.requiredDefault &&
+            !slot.infiniteReserve;
+
+        previousBullet = returnPrevious ? slot.bullet : null;
+        previousAmount = returnPrevious
+            ? Mathf.Max(0, slot.currentAmmo) + Mathf.Max(0, slot.reserveAmmo)
+            : 0;
+
+        EquipBulletToSlot(
+            slotIndex,
+            bullet,
+            Mathf.Max(1, bundleAmount),
+            sellPriceRate,
+            0,
+            false,
+            false);
+
+        SetActiveSlot(bullet.AmmoType, slotIndex);
+        _lastSelectedSlotIndex = slotIndex;
+        PublishSnapshot();
+
+        message = $"{bullet.DisplayName} equipped to slot {slotIndex + 1}.";
         return true;
     }
 
@@ -801,13 +1049,10 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         if (!IsValidSlot(slotIndex) || bullet == null)
             return false;
 
-        return slotIndex switch
-        {
-            0 or 1 => bullet.IsPrimary,
-            2 or 3 => bullet.AmmoType == BulletAmmoType.Paint,
-            4 => bullet.AmmoType == BulletAmmoType.Special,
-            _ => false
-        };
+        if (slotIndex == DefaultPrimarySlot)
+            return bullet.IsPrimary;
+
+        return true;
     }
 
     private int GetActiveSlotIndex(BulletAmmoType ammoType)

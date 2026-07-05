@@ -13,21 +13,13 @@ MonoBehaviour:
   m_Name: Stage1BattleEncounterPreset
   m_EditorClassIdentifier: 
   _displayName: Stage1BattleEncounter
-  _sectorMaxAlive: 0
+  _sectorMaxAlive: 999
   _waves:
   - delaySeconds: 0
     enemyWavePresetCandidates:
-    - preset: {fileID: 11400000, guid: a08ec91f89051474bbb8e5ece36ada27, type: 2}
-      weight: 0
-    - preset: {fileID: 11400000, guid: ccfe5c81c94d79f4f883ebbcfbdbef48, type: 2}
-      weight: 0
-    - preset: {fileID: 11400000, guid: 4f40c729991253f4f97626e81928477f, type: 2}
+    - preset: {fileID: 11400000, guid: ba150d263369dc54991f5f6ef4ea99e2, type: 2}
       weight: 1
   - delaySeconds: 10
     enemyWavePresetCandidates:
-    - preset: {fileID: 11400000, guid: a08ec91f89051474bbb8e5ece36ada27, type: 2}
-      weight: 0
-    - preset: {fileID: 11400000, guid: ccfe5c81c94d79f4f883ebbcfbdbef48, type: 2}
-      weight: 0
     - preset: {fileID: 11400000, guid: 4f40c729991253f4f97626e81928477f, type: 2}
       weight: 1

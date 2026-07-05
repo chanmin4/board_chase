@@ -4,6 +4,7 @@ using UnityEngine;
 public class PlayerLevelManager : MonoBehaviour
 {
     [Header("Rules")]
+    [SerializeField] private bool _enableLeveling = false;
     [SerializeField] private PlayerLevelRulesSO _rules;
     [SerializeField] private PlayerLevelUpgradePointRulesSO _upgradePointRules;
     [SerializeField] private int _startingLevel = 0;
@@ -90,6 +91,9 @@ public class PlayerLevelManager : MonoBehaviour
 
     private void OnXpGainRequested(PlayerExperienceGain gain)
     {
+        if (!_enableLeveling)
+            return;
+
         if (_rules == null || gain.amount <= 0f)
             return;
 

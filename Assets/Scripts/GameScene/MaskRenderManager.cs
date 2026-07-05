@@ -64,6 +64,25 @@ public class MaskRenderManager : MonoBehaviour
     [SerializeField] private Material _paintStampMaterial;
     [SerializeField, Range(0.001f, 0.5f)] private float _paintStampEdgeSoftness = 0.08f;
 
+    [Header("Paint VFX")]
+    [Tooltip("Particle spawned when a Vaccine paint request is accepted.")]
+    [SerializeField] private GameObject _vaccinePaintBubbleParticlePrefab;
+
+    [Tooltip("Particle spawned when a Virus paint request is accepted.")]
+    [SerializeField] private GameObject _virusPaintBubbleParticlePrefab;
+
+    [Tooltip("Particle spawned when a PoisonPuddle paint request is accepted.")]
+    [SerializeField] private GameObject _poisonPuddlePaintBubbleParticlePrefab;
+
+    [Tooltip("Particle spawned when a Special paint request is accepted.")]
+    [SerializeField] private GameObject _specialPaintBubbleParticlePrefab;
+
+    [Tooltip("Optional parent for runtime paint VFX instances.")]
+    [SerializeField] private Transform _paintVfxRoot;
+
+    [SerializeField] private Vector3 _paintBubbleWorldOffset = Vector3.zero;
+    [SerializeField, Min(0.1f)] private float _paintBubbleFallbackLifetime = 1f;
+
     [Header("Performance")]
     [FormerlySerializedAs("_maxFastTrailCirclesPerFrame")]
     [SerializeField, Min(0)] private int _maxTrailCirclesPerFrame = 128;
@@ -265,6 +284,7 @@ public class MaskRenderManager : MonoBehaviour
         {
             OnCircleRequestAccepted?.Invoke(request);
             OnCirclePaintImpactAccepted?.Invoke(totalImpact);
+            SpawnPaintBubbleParticle(request);
         }
         else
         {
@@ -393,6 +413,60 @@ public class MaskRenderManager : MonoBehaviour
         }
 
         sector.ApplyGameplayCircle(request.channel, request.worldPos, request.radiusWorld, true);
+    }
+
+    private void SpawnPaintBubbleParticle(CirclePaintRequest request)
+    {
+        GameObject prefab = ResolvePaintBubbleParticlePrefab(request.channel);
+
+        if (prefab == null)
+            return;
+
+        GameObject instance = Instantiate(
+            prefab,
+            request.worldPos + _paintBubbleWorldOffset,
+            Quaternion.identity,
+            _paintVfxRoot);
+
+        Destroy(instance, ResolveParticleLifetime(instance));
+    }
+
+    private GameObject ResolvePaintBubbleParticlePrefab(PaintChannel channel)
+    {
+        switch (channel)
+        {
+            case PaintChannel.Vaccine:
+                return _vaccinePaintBubbleParticlePrefab;
+
+            case PaintChannel.Virus:
+                return _virusPaintBubbleParticlePrefab;
+
+            case PaintChannel.PoisonPuddle:
+                return _poisonPuddlePaintBubbleParticlePrefab;
+
+            case PaintChannel.Special:
+                return _specialPaintBubbleParticlePrefab;
+
+            default:
+                return null;
+        }
+    }
+
+    private float ResolveParticleLifetime(GameObject instance)
+    {
+        if (instance == null)
+            return _paintBubbleFallbackLifetime;
+
+        ParticleSystem[] particles = instance.GetComponentsInChildren<ParticleSystem>(true);
+        float lifetime = 0f;
+
+        for (int i = 0; i < particles.Length; i++)
+        {
+            ParticleSystem.MainModule main = particles[i].main;
+            lifetime = Mathf.Max(lifetime, main.duration + main.startLifetime.constantMax);
+        }
+
+        return Mathf.Max(_paintBubbleFallbackLifetime, lifetime);
     }
 
     public bool TryGetPoisonPuddleAtWorld(Vector3 worldPos, bool requireOpened = true)

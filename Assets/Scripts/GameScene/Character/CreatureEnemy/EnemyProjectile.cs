@@ -219,7 +219,7 @@ public class EnemyProjectile : MonoBehaviour
         ResolveDamageTargets(
             hit.collider,
             out Damageable damageable,
-            out PlayerInfection playerInfection);
+            out PlayerShooterInfection playerInfection);
 
         if (damageable != null && damageable.CanReceiveDamage && _healthDamage > 0f)
             damageable.ReceiveAnAttack(_healthDamage, _source);
@@ -231,7 +231,7 @@ public class EnemyProjectile : MonoBehaviour
     private void ResolveDamageTargets(
         Collider collider,
         out Damageable damageable,
-        out PlayerInfection playerInfection)
+        out PlayerShooterInfection playerInfection)
     {
         damageable = null;
         playerInfection = null;
@@ -252,7 +252,7 @@ public class EnemyProjectile : MonoBehaviour
             if (damageable == null)
                 damageable = player.GetComponent<Damageable>() ?? player.GetComponentInParent<Damageable>();
 
-            playerInfection = player.GetComponent<PlayerInfection>() ?? player.GetComponentInParent<PlayerInfection>();
+            playerInfection = player.GetComponent<PlayerShooterInfection>() ?? player.GetComponentInParent<PlayerShooterInfection>();
             return;
         }
 
@@ -260,8 +260,8 @@ public class EnemyProjectile : MonoBehaviour
             damageable = collider.GetComponent<Damageable>() ?? collider.GetComponentInParent<Damageable>();
 
         playerInfection =
-            collider.GetComponent<PlayerInfection>() ??
-            collider.GetComponentInParent<PlayerInfection>();
+            collider.GetComponent<PlayerShooterInfection>() ??
+            collider.GetComponentInParent<PlayerShooterInfection>();
     }
 
     private void StampVirus(Vector3 worldPoint)

@@ -209,11 +209,11 @@ public class SectorPortalManager : MonoBehaviour
             _startSectorConsumed &&
             (_sectorStateManager.IsStartSector(source) || _sectorStateManager.IsStartSector(target)))
         {
-            Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: start sector consumed. source={source.name}, target={target.name}");
+           // Debug.LogWarning($"[SectorPortalManager] CanUsePortal false: start sector consumed. source={source.name}, target={target.name}");
             return false;
         }
 
-        Debug.Log($"[SectorPortalManager] CanUsePortal true. portal={portal.name}, source={source.name}, target={target.name}");
+        //Debug.Log($"[SectorPortalManager] CanUsePortal true. portal={portal.name}, source={source.name}, target={target.name}");
         return true;
     }
     public bool TryMoveThroughPortal(SectorPortal sourcePortal, Transform player)

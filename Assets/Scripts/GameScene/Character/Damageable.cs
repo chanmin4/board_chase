@@ -44,6 +44,13 @@ public class Damageable : MonoBehaviour
     [Header("Stats Runtime")]
     [SerializeField] private ShooterStatsRuntime _statsRuntime;
     [SerializeField] private EntityEquipmentRuntime _equipmentRuntime;
+    [SerializeField] private EntityPaintMarkController _paintMarkController;
+
+    [Header("Base Armor Fallback")]
+    [SerializeField, Min(0f)] private float _baseArmorHealthDamageMultiplier = 1f;
+    [SerializeField, Range(0f, 1f)] private float _baseArmorHealthDamageMultiplierPerClassGap = 0.5f;
+    [SerializeField, Min(0f)] private float _baseArmorMarkDamageMultiplier = 1f;
+    [SerializeField, Range(0f, 1f)] private float _baseArmorMarkDamageMultiplierPerClassGap = 0.75f;
 
     [Header("Invulnerability")]
     [SerializeField] private InvulnerabilityController _invulnerabilityController;
@@ -58,7 +65,19 @@ public class Damageable : MonoBehaviour
     [SerializeField] private FloatEventChannelSO _restoreHealth = default;
     
     [SerializeField] private float _paintMarkDamageTakenAdditive = 0f;
-    public DroppableRewardConfigSO DroppableRewardConfig => _droppableRewardSO;
+    public DroppableRewardConfigSO DroppableRewardConfig
+    {
+        get
+        {
+            if (_statConfig is EnemyStatConfigSO enemyConfig &&
+                enemyConfig.DroppableRewardConfig != null)
+            {
+                return enemyConfig.DroppableRewardConfig;
+            }
+
+            return _droppableRewardSO;
+        }
+    }
 
     public bool GetHit { get; set; }
     public bool IsDead { get; set; }
@@ -69,11 +88,9 @@ public class Damageable : MonoBehaviour
     public float DamageTakenMultiplier => _damageTakenMultiplier;
     public EntityStatConfigSO StatConfig => _statConfig;
     public float PaintMarkDamageTakenAdditive => _paintMarkDamageTakenAdditive;
-    public float ArmorDamageTakenAdditive =>
-        _equipmentRuntime != null ? _equipmentRuntime.ArmorDamageTakenAdditive : 0f;
     public float FinalDamageTakenMultiplier => Mathf.Max(
         0f,
-        _damageTakenMultiplier + _paintMarkDamageTakenAdditive + ArmorDamageTakenAdditive);
+        _damageTakenMultiplier + _paintMarkDamageTakenAdditive);
     public event UnityAction<Damageable> OnDamageMultiplierChanged;
     public event UnityAction<Damageable> OnHealthChanged;
     public event UnityAction OnDie;
@@ -96,6 +113,11 @@ public class Damageable : MonoBehaviour
 
         if (_equipmentRuntime == null)
             _equipmentRuntime = GetComponent<EntityEquipmentRuntime>() ?? GetComponentInParent<EntityEquipmentRuntime>();
+
+        if (_paintMarkController == null)
+            _paintMarkController = GetComponent<EntityPaintMarkController>() ??
+                                   GetComponentInParent<EntityPaintMarkController>() ??
+                                   GetComponentInChildren<EntityPaintMarkController>(true);
 
         if (_invulnerabilityController == null)
             TryGetComponent(out _invulnerabilityController);
@@ -124,23 +146,40 @@ public class Damageable : MonoBehaviour
 
     public void ReceiveAnAttack(float damage, GameObject attacker = null)
     {
+        ReceiveAnAttack(damage, attacker, 0);
+    }
+
+    public void ReceiveAnAttack(float damage, GameObject attacker, int penetrationClass)
+    {
+        ReceiveAnAttack(damage, attacker, penetrationClass, 1f);
+    }
+
+    public void ReceiveAnAttack(
+        float damage,
+        GameObject attacker,
+        int penetrationClass,
+        float armorHealthDurabilityLossMultiplier)
+    {
         if (!CanReceiveDamage)
             return;
 
         if (TryDodgeIncomingAttack())
             return;
 
-        float finalDamage = Mathf.Max(0f, damage * FinalDamageTakenMultiplier);
+        float rawDamage = Mathf.Max(0f, damage);
+        float finalDamage = ResolveFinalHealthDamage(rawDamage, penetrationClass);
+        ApplyArmorHealthDurabilityDamage(
+            rawDamage,
+            finalDamage,
+            armorHealthDurabilityLossMultiplier);
+
         if (finalDamage <= 0f)
             return;
 
-        float minAliveHealth = Mathf.Min(Mathf.Max(0f, _minimumAliveHealth), _maxHealth);
-        bool useHealthFloor = _keepAliveAtMinimumHealth && _maxHealth > 0f;
+        bool useHealthFloor = false;
         float nextHealth = _currentHealth - finalDamage;
 
-        _currentHealth = useHealthFloor && nextHealth <= minAliveHealth
-            ? minAliveHealth
-            : Mathf.Clamp(nextHealth, 0f, _maxHealth);
+        _currentHealth = Mathf.Clamp(nextHealth, 0f, _maxHealth);
 
         SyncRuntimeHealthDebug();
         GetHit = true;
@@ -167,7 +206,7 @@ public class Damageable : MonoBehaviour
 
         if (!diedThisHit)
             return;
-
+        Debug.Log($"[Damageable] Die by damage owner={name}, hp={_currentHealth}\n{System.Environment.StackTrace}", this);
         OnDie?.Invoke();
         _deathEvent?.RaiseEvent();
 
@@ -185,8 +224,8 @@ public class Damageable : MonoBehaviour
 
         SyncRuntimeHealthDebug();
         NotifyHealthChanged();
-
         OnDie?.Invoke();
+         Debug.Log($"[Damageable] Kill owner={name}\n{System.Environment.StackTrace}", this);
         _deathEvent?.RaiseEvent();
 
         if (_destroyOnDeath)
@@ -308,6 +347,128 @@ public class Damageable : MonoBehaviour
             : 0f;
 
         return dodgeChance > 0f && Random.value < dodgeChance;
+    }
+
+    public float ResolveHealthDamageMultiplierForPenetration(int penetrationClass)
+    {
+        float equipmentMultiplier = _equipmentRuntime != null
+            ? _equipmentRuntime.ResolveHealthDamageMultiplier(
+                penetrationClass,
+                ResolveBaseArmorClass(),
+                ResolveArmorClassDeltaFromPaintMark())
+            : ResolveBaseArmorMultiplier(
+                penetrationClass,
+                ResolveBaseArmorClass(),
+                ResolveArmorClassDeltaFromPaintMark(),
+                _baseArmorHealthDamageMultiplier,
+                _baseArmorHealthDamageMultiplierPerClassGap);
+
+        return Mathf.Max(0f, FinalDamageTakenMultiplier * equipmentMultiplier);
+    }
+
+    public float ResolvePaintMarkDamageMultiplierForPenetration(int penetrationClass)
+    {
+        return _equipmentRuntime != null
+            ? _equipmentRuntime.ResolveMarkDamageMultiplier(
+                penetrationClass,
+                ResolveBaseArmorClass(),
+                ResolveArmorClassDeltaFromPaintMark())
+            : ResolveBaseArmorMultiplier(
+                penetrationClass,
+                ResolveBaseArmorClass(),
+                ResolveArmorClassDeltaFromPaintMark(),
+                _baseArmorMarkDamageMultiplier,
+                _baseArmorMarkDamageMultiplierPerClassGap);
+    }
+
+    public float ResolveInfectionDamageMultiplierForPenetration(int penetrationClass)
+    {
+        return ResolvePaintMarkDamageMultiplierForPenetration(penetrationClass);
+    }
+
+    private float ResolveFinalHealthDamage(float damage, int penetrationClass)
+    {
+        return Mathf.Max(
+            0f,
+            damage * ResolveHealthDamageMultiplierForPenetration(penetrationClass));
+    }
+
+    public void ApplyArmorInfectionDurabilityDamage(
+        float rawInfectionDamage,
+        float finalInfectionDamage,
+        float armorInfectionDurabilityLossMultiplier)
+    {
+        if (_equipmentRuntime == null)
+            return;
+
+        float absorbedDamage = Mathf.Max(0f, rawInfectionDamage - finalInfectionDamage);
+
+        if (absorbedDamage <= 0f)
+            return;
+
+        _equipmentRuntime.ApplyArmorAbsorbedDamage(
+            0f,
+            absorbedDamage,
+            0f,
+            armorInfectionDurabilityLossMultiplier);
+    }
+
+    private void ApplyArmorHealthDurabilityDamage(
+        float rawDamage,
+        float finalHealthDamage,
+        float armorHealthDurabilityLossMultiplier)
+    {
+        if (_equipmentRuntime == null)
+            return;
+
+        float absorbedDamage = Mathf.Max(0f, rawDamage - finalHealthDamage);
+
+        if (absorbedDamage <= 0f)
+            return;
+
+        _equipmentRuntime.ApplyArmorAbsorbedDamage(
+            absorbedDamage,
+            0f,
+            armorHealthDurabilityLossMultiplier,
+            0f);
+    }
+
+    private int ResolveArmorClassDeltaFromPaintMark()
+    {
+        if (_paintMarkController == null)
+        {
+            _paintMarkController = GetComponent<EntityPaintMarkController>() ??
+                                   GetComponentInParent<EntityPaintMarkController>() ??
+                                   GetComponentInChildren<EntityPaintMarkController>(true);
+        }
+
+        return _paintMarkController != null
+            ? _paintMarkController.ArmorClassDelta
+            : 0;
+    }
+
+    private int ResolveBaseArmorClass()
+    {
+        if (_statsRuntime != null)
+            return Mathf.Max(0, _statsRuntime.ArmorClass);
+
+        return _statConfig != null ? _statConfig.BaseArmorClass : 0;
+    }
+
+    private static float ResolveBaseArmorMultiplier(
+        int penetrationClass,
+        int baseArmorClass,
+        int armorClassDelta,
+        float sameOrHigherMultiplier,
+        float perClassGapMultiplier)
+    {
+        int effectiveArmorClass = Mathf.Max(0, Mathf.Max(0, baseArmorClass) + armorClassDelta);
+        int classGap = Mathf.Max(0, effectiveArmorClass - Mathf.Max(0, penetrationClass));
+
+        return Mathf.Max(
+            0f,
+            Mathf.Max(0f, sameOrHigherMultiplier) *
+            Mathf.Pow(Mathf.Clamp01(perClassGapMultiplier), classGap));
     }
 
     private void SyncRuntimeHealthDebug()

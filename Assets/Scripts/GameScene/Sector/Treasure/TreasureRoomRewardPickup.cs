@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -16,10 +17,12 @@ public class TreasureRoomRewardPickup : MonoBehaviour
     [SerializeField] private bool _logPickupFailures = true;
 
     [Header("Broadcasting")]
-    [Tooltip("Optional passive item pickup event. Passive rewards raise this after they are added to PlayerPassiveInventoryRuntime.")]
+    [Tooltip("Optional passive item pickup event. Passive rewards raise this after they are added to PlayerInventoryRuntime.")]
     [SerializeField] private ItemEventChannelSO _passiveItemPickedUpChannel;
 
     private bool _pickedUp;
+
+    public event Action<TreasureRoomRewardPickup> PickedUp;
 
     public TreasureRewardKind RewardKind => _rewardKind;
     public PassiveItemSO PassiveItem => _passiveItem;
@@ -65,114 +68,40 @@ public class TreasureRoomRewardPickup : MonoBehaviour
         if (player == null)
             return false;
 
-        bool picked;
+        PlayerInventoryRuntime inventory =
+            player.GetComponentInParent<PlayerInventoryRuntime>();
 
-        switch (_rewardKind)
+        if (inventory == null)
         {
-            case TreasureRewardKind.Passive:
-                picked = TryPickupPassive(player);
-                break;
-
-            case TreasureRewardKind.Bullet:
-                picked = TryPickupBullet(player);
-                break;
-
-            case TreasureRewardKind.Armor:
-                picked = TryPickupArmor(player);
-                break;
-
-            default:
-                picked = false;
-                break;
+            LogPickupFailure("PlayerInventoryRuntime is missing on player hierarchy.");
+            return false;
         }
+
+        bool picked = inventory.TryPickupTreasureReward(
+            _rewardKind,
+            _passiveItem,
+            _bullet,
+            _armorItem,
+            _bulletBundleAmount,
+            _bulletSellPriceRate,
+            out string message);
+
+        if (!picked)
+            LogPickupFailure(message);
 
         if (picked)
         {
             _pickedUp = true;
+            PickedUp?.Invoke(this);
+
+            if (_rewardKind == TreasureRewardKind.Passive && _passiveItem != null)
+                _passiveItemPickedUpChannel?.RaiseEvent(_passiveItem);
 
             if (_destroyOnPickup)
                 Destroy(gameObject);
         }
 
         return picked;
-    }
-
-    private bool TryPickupPassive(VSplatter_Character player)
-    {
-        if (_passiveItem == null)
-        {
-            LogPickupFailure("Passive item is missing.");
-            return false;
-        }
-
-        PlayerPassiveInventoryRuntime inventory =
-            player.GetComponentInParent<PlayerPassiveInventoryRuntime>();
-
-        if (inventory == null)
-        {
-            LogPickupFailure("PlayerPassiveInventoryRuntime is missing on player hierarchy.");
-            return false;
-        }
-
-        if (!inventory.TryAdd(_passiveItem))
-        {
-            LogPickupFailure($"Passive item already owned or rejected. item={_passiveItem.name}");
-            return false;
-        }
-
-        _passiveItemPickedUpChannel?.RaiseEvent(_passiveItem);
-        return true;
-    }
-
-    private bool TryPickupBullet(VSplatter_Character player)
-    {
-        if (_bullet == null)
-        {
-            LogPickupFailure("Bullet is missing.");
-            return false;
-        }
-
-        PlayerBulletLoadoutRuntime loadout =
-            player.GetComponentInParent<PlayerBulletLoadoutRuntime>();
-
-        if (loadout == null)
-        {
-            LogPickupFailure("PlayerBulletLoadoutRuntime is missing on player hierarchy.");
-            return false;
-        }
-
-        bool granted = loadout.TryAcquireTreasureBullet(
-            _bullet,
-            _bulletBundleAmount,
-            _bulletSellPriceRate,
-            out _,
-            out string message);
-
-        if (!granted)
-            LogPickupFailure(message);
-
-        return granted;
-    }
-
-    private bool TryPickupArmor(VSplatter_Character player)
-    {
-        if (_armorItem == null)
-        {
-            LogPickupFailure("Armor item is missing.");
-            return false;
-        }
-
-        EntityEquipmentRuntime equipment =
-            player.GetComponentInParent<EntityEquipmentRuntime>();
-
-        if (equipment == null)
-        {
-            LogPickupFailure("EntityEquipmentRuntime is missing on player hierarchy.");
-            return false;
-        }
-
-        equipment.EquipArmor(_armorItem);
-        return true;
     }
 
     private void LogPickupFailure(string message)

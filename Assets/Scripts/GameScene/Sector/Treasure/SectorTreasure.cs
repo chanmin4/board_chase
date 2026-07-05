@@ -9,21 +9,24 @@ public class SectorTreasure : MonoBehaviour
 
     [Header("Refs")]
     [SerializeField] private SectorRuntime _sector;
-    [SerializeField] private PlayerPassiveInventoryRuntime _passiveInventory;
+    
 
     [Header("Listening")]
     [SerializeField] private SectorStateManagerReadyEventChannelSO _sectorStateManagerReadyChannel;
     [SerializeField] private SectorRuntimeEventChannelSO _currentSectorChangedChannel;
+    [SerializeField] private PlayerInventoryRuntimeReadyEventChannelSO _playerInventoryRuntimeReadyChannel;
 
     [Header("Reward Spawn")]
     [SerializeField] private Transform _rewardSpawnPoint;
     [SerializeField] private Transform _rewardRoot;
     [SerializeField] private Vector3 _rewardWorldOffset = Vector3.zero;
-    [SerializeField] private bool _useRewardSpawnRotation = true;
+    [SerializeField] private Collider _interactionCollider;
 
-    [Header("Room Completion")]
-    [SerializeField] private bool _completeRoomAfterRewardSpawn = true;
-    [SerializeField] private bool _completeRoomWhenRewardUnavailable = true;
+    [Header("Reward Rarity VFX")]
+    [SerializeField] private GameObject _normalRewardParticlePrefab;
+    [SerializeField] private GameObject _rareRewardParticlePrefab;
+    [SerializeField] private GameObject _uniqueRewardParticlePrefab;
+    [SerializeField] private GameObject _legendaryRewardParticlePrefab;
 
     [Header("Seed")]
     [SerializeField] private int _rewardSeedSalt = 7319;
@@ -36,12 +39,14 @@ public class SectorTreasure : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool _logWarnings = true;
-
+    private PlayerInventoryRuntime _playerInventory;
     private SectorStateManager _sectorStateManager;
     private GameObject _spawnedReward;
+    private GameObject _spawnedRewardParticle;
     private TreasureRoomReward _reward;
     private bool _hasSpawnedReward;
     private float _pollTimer;
+    private readonly List<PassiveItemSO> _ownedPassiveScratch = new();
 
     public GameObject SpawnedReward => _spawnedReward;
     public TreasureRoomReward Reward => _reward;
@@ -66,6 +71,14 @@ public class SectorTreasure : MonoBehaviour
             if (_currentSectorChangedChannel.HasCurrent)
                 HandleCurrentSectorChanged(_currentSectorChangedChannel.Current);
         }
+
+        if (_playerInventoryRuntimeReadyChannel != null)
+        {
+            _playerInventoryRuntimeReadyChannel.OnEventRaised += HandlePlayerInventoryRuntimeReady;
+
+            if (_playerInventoryRuntimeReadyChannel.HasCurrent)
+                HandlePlayerInventoryRuntimeReady(_playerInventoryRuntimeReadyChannel.Current);
+        }
     }
 
     private void Start()
@@ -83,6 +96,9 @@ public class SectorTreasure : MonoBehaviour
 
         if (_currentSectorChangedChannel != null)
             _currentSectorChangedChannel.OnEventRaised -= HandleCurrentSectorChanged;
+
+        if (_playerInventoryRuntimeReadyChannel != null)
+            _playerInventoryRuntimeReadyChannel.OnEventRaised -= HandlePlayerInventoryRuntimeReady;
     }
 
     private void Update()
@@ -134,6 +150,12 @@ public class SectorTreasure : MonoBehaviour
         TrySpawnForCurrentSector(currentSector);
     }
 
+    private void HandlePlayerInventoryRuntimeReady(PlayerInventoryRuntime inventoryRuntime)
+    {
+        if (inventoryRuntime != null)
+            _playerInventory = inventoryRuntime;
+    }
+
     private void TrySpawnForCurrentSector(SectorRuntime currentSector)
     {
         ResolveRefs();
@@ -161,7 +183,7 @@ public class SectorTreasure : MonoBehaviour
         if (_treasureSettings == null)
         {
             LogWarning("StageTreasureSettingsSO is missing.");
-            CompleteRoomIfConfigured(_completeRoomWhenRewardUnavailable);
+            SetInteractionEnabled(false);
             return false;
         }
 
@@ -171,8 +193,7 @@ public class SectorTreasure : MonoBehaviour
 
         Vector2Int coord = ResolveSectorCoord();
         int seed = ResolveRewardSeed(stageIndex, coord);
-        IReadOnlyList<PassiveItemSO> ownedPassiveItems =
-            _passiveInventory != null ? _passiveInventory.Items : null;
+        IReadOnlyList<PassiveItemSO> ownedPassiveItems = ResolveOwnedPassiveItems();
 
         if (!_treasureSettings.TryRollReward(
                 stageIndex,
@@ -181,21 +202,21 @@ public class SectorTreasure : MonoBehaviour
                 out TreasureRoomReward reward))
         {
             LogWarning($"Failed to roll Treasure reward. stage={stageIndex}, coord={coord}");
-            CompleteRoomIfConfigured(_completeRoomWhenRewardUnavailable);
+            SetInteractionEnabled(false);
             return false;
         }
 
         if (!SpawnRewardPickup(reward))
         {
             LogWarning($"Failed to spawn Treasure reward pickup. stage={stageIndex}, coord={coord}");
-            CompleteRoomIfConfigured(_completeRoomWhenRewardUnavailable);
+            SetInteractionEnabled(false);
             return false;
         }
 
         _reward = reward;
         _hasSpawnedReward = true;
 
-        CompleteRoomIfConfigured(_completeRoomAfterRewardSpawn);
+        SetInteractionEnabled(true);
         return true;
     }
 
@@ -205,7 +226,13 @@ public class SectorTreasure : MonoBehaviour
             return false;
 
         if (_destroyPreviousRewardOnRespawn && _spawnedReward != null)
+        {
+            UnbindSpawnedRewardPickup();
             Destroy(_spawnedReward);
+            _spawnedReward = null;
+        }
+
+        ClearRewardParticle();
 
         Transform spawnPoint = _rewardSpawnPoint != null
             ? _rewardSpawnPoint
@@ -215,14 +242,10 @@ public class SectorTreasure : MonoBehaviour
             ? _rewardRoot
             : spawnPoint;
 
-        Quaternion rotation = _useRewardSpawnRotation
-            ? spawnPoint.rotation
-            : Quaternion.identity;
-
         _spawnedReward = Instantiate(
             reward.PickupPrefab,
             spawnPoint.position + _rewardWorldOffset,
-            rotation,
+            Quaternion.identity,
             parent);
 
         if (_spawnedReward == null)
@@ -235,6 +258,9 @@ public class SectorTreasure : MonoBehaviour
             pickup = _spawnedReward.AddComponent<TreasureRoomRewardPickup>();
 
         pickup.Initialize(reward);
+        pickup.PickedUp += HandleRewardPickedUp;
+
+        SpawnRewardParticle(reward, _spawnedReward.transform);
         return true;
     }
 
@@ -285,24 +311,13 @@ public class SectorTreasure : MonoBehaviour
         }
     }
 
-    private void CompleteRoomIfConfigured(bool shouldComplete)
-    {
-        if (!shouldComplete || _sector == null)
-            return;
-
-        if (_sectorStateManager != null)
-        {
-            _sectorStateManager.CompleteSector(_sector);
-            return;
-        }
-
-        _sector.SetCleared(true);
-    }
-
     private void ResolveRefs()
     {
         if (_sector == null)
             _sector = GetComponentInParent<SectorRuntime>();
+
+        if (_interactionCollider == null)
+            _interactionCollider = GetComponent<Collider>() ?? GetComponentInChildren<Collider>(true);
 
         if (_sectorStateManager == null &&
             _sectorStateManagerReadyChannel != null &&
@@ -314,8 +329,94 @@ public class SectorTreasure : MonoBehaviour
         if (_sectorStateManager == null)
             _sectorStateManager = FindAnyObjectByType<SectorStateManager>();
 
-        if (_passiveInventory == null)
-            _passiveInventory = FindAnyObjectByType<PlayerPassiveInventoryRuntime>();
+        if (_playerInventory == null &&
+            _playerInventoryRuntimeReadyChannel != null &&
+            _playerInventoryRuntimeReadyChannel.HasCurrent)
+        {
+            _playerInventory = _playerInventoryRuntimeReadyChannel.Current;
+        }
+
+        if (_playerInventory == null && _playerInventoryRuntimeReadyChannel == null)
+            _playerInventory = FindAnyObjectByType<PlayerInventoryRuntime>();
+    }
+
+    private IReadOnlyList<PassiveItemSO> ResolveOwnedPassiveItems()
+    {
+        _ownedPassiveScratch.Clear();
+
+        if (_playerInventory != null)
+            _playerInventory.GetPassiveItems(_ownedPassiveScratch);
+
+        return _ownedPassiveScratch;
+    }
+
+    private void SetInteractionEnabled(bool enabled)
+    {
+        if (_interactionCollider != null)
+            _interactionCollider.enabled = enabled && _spawnedReward != null;
+    }
+
+    private void HandleRewardPickedUp(TreasureRoomRewardPickup pickup)
+    {
+        if (pickup != null)
+            pickup.PickedUp -= HandleRewardPickedUp;
+
+        _spawnedReward = null;
+        SetInteractionEnabled(false);
+        ClearRewardParticle();
+    }
+
+    private void UnbindSpawnedRewardPickup()
+    {
+        if (_spawnedReward == null)
+            return;
+
+        TreasureRoomRewardPickup pickup =
+            _spawnedReward.GetComponent<TreasureRoomRewardPickup>();
+
+        if (pickup != null)
+            pickup.PickedUp -= HandleRewardPickedUp;
+    }
+
+    private void SpawnRewardParticle(TreasureRoomReward reward, Transform parent)
+    {
+        GameObject prefab = ResolveRewardParticlePrefab(reward.Rarity);
+
+        if (prefab == null || parent == null)
+            return;
+
+        _spawnedRewardParticle = Instantiate(prefab, parent);
+
+        _spawnedRewardParticle.transform.localPosition = Vector3.zero;
+        _spawnedRewardParticle.transform.localRotation = Quaternion.identity;
+
+        ParticleSystem[] particleSystems =
+            _spawnedRewardParticle.GetComponentsInChildren<ParticleSystem>(true);
+
+        foreach (ParticleSystem particleSystem in particleSystems)
+        {
+            particleSystem.Play(false);
+        }
+    }
+
+    private GameObject ResolveRewardParticlePrefab(PlayerShopItemRarity rarity)
+    {
+        return rarity switch
+        {
+            PlayerShopItemRarity.Rare => _rareRewardParticlePrefab,
+            PlayerShopItemRarity.Unique => _uniqueRewardParticlePrefab,
+            PlayerShopItemRarity.Legendary => _legendaryRewardParticlePrefab,
+            _ => _normalRewardParticlePrefab
+        };
+    }
+
+    private void ClearRewardParticle()
+    {
+        if (_spawnedRewardParticle == null)
+            return;
+
+        Destroy(_spawnedRewardParticle);
+        _spawnedRewardParticle = null;
     }
 
     private void LogWarning(string message)

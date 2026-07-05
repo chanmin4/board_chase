@@ -32,10 +32,16 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _healthResorationValue: 0
+  _rarity: 1
   _worldItemPrefab: {fileID: 2609554901862940922, guid: 63f0caa017456c941aedf9a6b554e128, type: 3}
   _allowDuplicatePickup: 0
-  _statModifiers: []
+  _statModifiers:
+  - stat: 13
+    type: 0
+    value: 10
+  - stat: 6
+    type: 0
+    value: -1
   _featureFlags: []
   references:
     version: 2

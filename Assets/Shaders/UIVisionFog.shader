@@ -6,6 +6,10 @@ Shader "UI/VisionFog"
         _FogColor ("Fog Color", Color) = (0, 0, 0, 0.55)
         _CenterUV ("Center UV", Vector) = (0.5, 0.5, 0, 0)
         _RadiusPixels ("Radius Pixels", Vector) = (250, 250, 0, 0)
+        _CloseRadiusPixels ("Close Radius Pixels", Vector) = (120, 120, 0, 0)
+        _ForwardDirPixels ("Forward Dir Pixels", Vector) = (0, 1, 0, 0)
+        _ArcCos ("Arc Cos", Float) = 0
+        _UseForwardArc ("Use Forward Arc", Float) = 1
         _SoftnessPixels ("Softness Pixels", Float) = 80
     }
 
@@ -52,6 +56,10 @@ Shader "UI/VisionFog"
             fixed4 _FogColor;
             float2 _CenterUV;
             float2 _RadiusPixels;
+            float2 _CloseRadiusPixels;
+            float2 _ForwardDirPixels;
+            float _ArcCos;
+            float _UseForwardArc;
             float _SoftnessPixels;
 
             v2f vert(appdata_t v)
@@ -71,10 +79,22 @@ Shader "UI/VisionFog"
                 float2 pixel = screenUV * screenSize;
                 float2 center = _CenterUV * screenSize;
                 float2 radius = max(_RadiusPixels, float2(1.0, 1.0));
+                float2 closeRadius = max(_CloseRadiusPixels, float2(1.0, 1.0));
+                float2 toPixel = pixel - center;
 
-                float normalizedDistance = length((pixel - center) / radius);
+                float normalizedDistance = length(toPixel / radius);
+                float closeDistance = length(toPixel / closeRadius);
                 float softness = max(_SoftnessPixels / max(min(radius.x, radius.y), 1.0), 0.0001);
-                float alpha = smoothstep(1.0 - softness, 1.0, normalizedDistance) * _FogColor.a;
+                float closeSoftness = max(_SoftnessPixels / max(min(closeRadius.x, closeRadius.y), 1.0), 0.0001);
+                float circleAlpha = smoothstep(1.0 - closeSoftness, 1.0, closeDistance) * _FogColor.a;
+                float coneRangeAlpha = smoothstep(1.0 - softness, 1.0, normalizedDistance) * _FogColor.a;
+
+                float2 dir = normalize(toPixel + float2(0.0001, 0.0001));
+                float2 forward = normalize(_ForwardDirPixels + float2(0.0001, 0.0001));
+                float inArc = step(_ArcCos, dot(dir, forward));
+                float arcAlpha = lerp(_FogColor.a, coneRangeAlpha, inArc);
+                float coneAlpha = lerp(coneRangeAlpha, arcAlpha, saturate(_UseForwardArc));
+                float alpha = min(circleAlpha, coneAlpha);
 
                 return fixed4(_FogColor.rgb, alpha) * i.color;
             }

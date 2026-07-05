@@ -1,210 +1,218 @@
 using UnityEngine;
-using UnityEngine.UI;
+
+public enum PlayerPanelHubMode
+{
+    Inventory = 0,
+    Shop = 1,
+    EnemyLoot = 2
+}
 
 [DisallowMultipleComponent]
-public class PlayerPanelHub : MonoBehaviour
+public class PlayerPanelHub : PanelUI
 {
-    [Header("Root")]
-    [Tooltip("CanvasGroup on PlayerPanelHub. This hides/shows upgrade, shop, stats, and toggle buttons together.")]
-    [SerializeField] private CanvasGroup _hubGroup;
-
-    [Header("Panels")]
-    [SerializeField] private PlayerUpgradePanelUI _upgradePanel;
-
-    [Tooltip("CanvasGroup on ShopPanel.")]
-    [SerializeField] private CanvasGroup _shopPanelGroup;
-
-    [SerializeField] private PlayerShopPanelUI _shopPanel;
-
-    [Tooltip("CanvasGroup on StatsPanel.")]
+    [Header("Always Visible While Hub Open")]
+    [SerializeField] private PlayerInventoryUI _playerInventoryPanel;
+    [SerializeField] private CanvasGroup _playerInventoryPanelGroup;
+    [SerializeField] private PlayerStatsSummaryPanelUI _statsPanel;
     [SerializeField] private CanvasGroup _statsPanelGroup;
 
-    [SerializeField] private PlayerStatsSummaryPanelUI _statsPanel;
+    [Header("Right Context Panels")]
+    [SerializeField] private PlayerShopPanelUI _shopPanel;
+    [SerializeField] private CanvasGroup _shopPanelGroup;
+    [SerializeField] private EnemyInventoryUI _enemyInventoryPanel;
+    [SerializeField] private CanvasGroup _enemyInventoryPanelGroup;
 
-    [Header("Shop Toggle")]
-    [SerializeField] private Button _shopToggleButton;
-    [SerializeField] private Image _shopToggleImage;
-    [SerializeField] private Sprite _shopCollapsedSprite;
-    [SerializeField] private Sprite _shopExpandedSprite;
+    [Header("Events")]
+    [SerializeField] private InputReader _inputReader;
+    [SerializeField] private UIOverlayRequestEventChannelSO _overlayRequestChannel;
+    [SerializeField] private SectorShopOpenRequestEventChannelSO _shopOpenRequestChannel;
+    [SerializeField] private EnemyLootOpenRequestEventChannelSO _enemyLootOpenRequestChannel;
 
-    [Header("Stats Toggle")]
-    [SerializeField] private Button _statsToggleButton;
-    [SerializeField] private Image _statsToggleImage;
-    [SerializeField] private Sprite _statsCollapsedSprite;
-    [SerializeField] private Sprite _statsExpandedSprite;
+    public PlayerPanelHubMode CurrentMode { get; private set; } = PlayerPanelHubMode.Inventory;
+    public PlayerInventoryUI PlayerInventoryPanel => _playerInventoryPanel;
 
-    [Header("Default")]
-    [SerializeField] private bool _hideOnAwake = true;
-    [SerializeField] private bool _resetFoldStateOnAwake = true;
-    [SerializeField] private bool _defaultShopExpanded;
-    [SerializeField] private bool _defaultStatsExpanded;
-
-    [Header("Raycast Safety")]
-    [Tooltip("Keeps toggle buttons above PlayerUpgradePanel so panel images cannot block toggle clicks.")]
-    [SerializeField] private bool _forceToggleButtonsToFront = true;
-
-    [Header("Debug")]
-    [SerializeField] private bool _debugLogs;
-
-    public bool IsShopExpanded { get; private set; }
-    public bool IsStatsExpanded { get; private set; }
-
-    private void Reset()
+    protected override void Reset()
     {
-        _hubGroup = GetComponent<CanvasGroup>();
-        _upgradePanel = GetComponentInChildren<PlayerUpgradePanelUI>(true);
-        _shopPanel = GetComponentInChildren<PlayerShopPanelUI>(true);
-        _statsPanel = GetComponentInChildren<PlayerStatsSummaryPanelUI>(true);
-
-        if (_shopPanel != null)
-            _shopPanelGroup = _shopPanel.GetComponent<CanvasGroup>();
-
-        if (_statsPanel != null)
-            _statsPanelGroup = _statsPanel.GetComponent<CanvasGroup>();
+        base.Reset();
+        ResolveRefs();
     }
 
-    private void Awake()
+    protected override void Awake()
     {
-        EnsureRefs();
-        BringToggleButtonsToFront();
+        base.Awake();
+        ResolveRefs();
 
-        if (_resetFoldStateOnAwake)
-            ResetFoldState();
-        else
-            ApplyFoldState();
-
-        if (_hideOnAwake)
-            SetVisible(false);
+        SetMode(PlayerPanelHubMode.Inventory);
     }
 
     private void OnEnable()
     {
-        EnsureRefs();
-        BringToggleButtonsToFront();
+        ResolveRefs();
 
-        if (_shopToggleButton != null)
-            _shopToggleButton.onClick.AddListener(ToggleShop);
+        if (_shopOpenRequestChannel != null)
+            _shopOpenRequestChannel.OnEventRaised += HandleShopOpenRequested;
 
-        if (_statsToggleButton != null)
-            _statsToggleButton.onClick.AddListener(ToggleStats);
+        if (_enemyLootOpenRequestChannel != null)
+            _enemyLootOpenRequestChannel.OnEventRaised += HandleEnemyLootOpenRequested;
 
-        ApplyFoldState();
+        if (_inputReader != null)
+            _inputReader.PlayerMenuEvent += HandlePlayerMenuInput;
     }
 
     private void OnDisable()
     {
-        if (_shopToggleButton != null)
-            _shopToggleButton.onClick.RemoveListener(ToggleShop);
+        if (_inputReader != null)
+            _inputReader.PlayerMenuEvent -= HandlePlayerMenuInput;
 
-        if (_statsToggleButton != null)
-            _statsToggleButton.onClick.RemoveListener(ToggleStats);
+        if (_shopOpenRequestChannel != null)
+            _shopOpenRequestChannel.OnEventRaised -= HandleShopOpenRequested;
+
+        if (_enemyLootOpenRequestChannel != null)
+            _enemyLootOpenRequestChannel.OnEventRaised -= HandleEnemyLootOpenRequested;
     }
 
-    public void SetVisible(bool visible)
+    public override void OnOverlayShown()
     {
-        EnsureRefs();
-        BringToggleButtonsToFront();
+        SetHubVisible(true);
+        ApplyMode();
+    }
 
-        SetCanvasGroup(_hubGroup, visible, visible);
+    public override void OnOverlayHidden()
+    {
+        SetHubVisible(false);
+        SetMode(PlayerPanelHubMode.Inventory);
 
-        if (visible)
-            ApplyFoldState();
+        if (_playerInventoryPanel != null)
+            _playerInventoryPanel.SetInteractionMode(PlayerInventoryInteractionMode.Normal);
+    }
+
+    public void OpenInventory()
+    {
+        SetHubVisible(true);
+        SetMode(PlayerPanelHubMode.Inventory);
+    }
+
+    public void OpenShop()
+    {
+        SetHubVisible(true);
+        SetMode(PlayerPanelHubMode.Shop);
+    }
+
+    public void OpenEnemyLoot()
+    {
+        SetHubVisible(true);
+        SetMode(PlayerPanelHubMode.EnemyLoot);
     }
 
     public void Bind(PlayerUpgradeUISnapshot snapshot)
     {
-        _statsPanel?.Bind(snapshot);
-        _shopPanel?.BindPlaceholder();
+        if (_statsPanel != null)
+            _statsPanel.Bind(snapshot);
     }
 
-    public void ResetFoldState()
+    private void HandleShopOpenRequested(SectorShopOpenRequest request)
     {
-        IsShopExpanded = _defaultShopExpanded;
-        IsStatsExpanded = _defaultStatsExpanded;
-        ApplyFoldState();
+        OpenShop();
     }
 
-    public void ToggleShop()
+    private void HandleEnemyLootOpenRequested(EnemyLootOpenRequest request)
     {
-        SetShopExpanded(!IsShopExpanded);
-
-        if (_debugLogs)
-            Debug.Log($"[PlayerPanelHub] Toggle Shop. expanded={IsShopExpanded}", this);
+        OpenEnemyLoot();
     }
 
-    public void ToggleStats()
+    private void HandlePlayerMenuInput()
     {
-        SetStatsExpanded(!IsStatsExpanded);
-
-        if (_debugLogs)
-            Debug.Log($"[PlayerPanelHub] Toggle Stats. expanded={IsStatsExpanded}", this);
+        if (_overlayRequestChannel != null)
+            _overlayRequestChannel.Toggle(UIOverlayId.PlayerPanelHub);
     }
 
-    public void SetShopExpanded(bool expanded)
+    private void SetMode(PlayerPanelHubMode mode)
     {
-        IsShopExpanded = expanded;
-        ApplyShopFoldState();
+        CurrentMode = mode;
+        ApplyMode();
     }
 
-    public void SetStatsExpanded(bool expanded)
+    private void ApplyMode()
     {
-        IsStatsExpanded = expanded;
-        ApplyStatsFoldState();
+        bool shopVisible = CurrentMode == PlayerPanelHubMode.Shop;
+        bool enemyLootVisible = CurrentMode == PlayerPanelHubMode.EnemyLoot;
+
+        SetCanvasGroup(_playerInventoryPanelGroup, true, true);
+        SetCanvasGroup(_statsPanelGroup, true, true);
+        SetCanvasGroup(_shopPanelGroup, shopVisible, shopVisible);
+        SetCanvasGroup(_enemyInventoryPanelGroup, enemyLootVisible, enemyLootVisible);
+
+        if (_playerInventoryPanel != null)
+        {
+            _playerInventoryPanel.SetInteractionMode(
+                shopVisible
+                    ? PlayerInventoryInteractionMode.SellSelect
+                    : PlayerInventoryInteractionMode.Normal);
+        }
+
+        if (_shopPanel != null)
+            _shopPanel.SetSellSelectionSource(shopVisible ? _playerInventoryPanel : null);
     }
 
-    private void ApplyFoldState()
+    private void SetHubVisible(bool visible)
     {
-        ApplyShopFoldState();
-        ApplyStatsFoldState();
-        BringToggleButtonsToFront();
-    }
+        ResolveRefs();
 
-    private void ApplyShopFoldState()
-    {
-        SetCanvasGroup(_shopPanelGroup, IsShopExpanded, IsShopExpanded);
-        SetToggleSprite(_shopToggleImage, IsShopExpanded, _shopCollapsedSprite, _shopExpandedSprite);
-    }
+        SetPanelVisible(visible);
 
-    private void ApplyStatsFoldState()
-    {
-        SetCanvasGroup(_statsPanelGroup, IsStatsExpanded, IsStatsExpanded);
-        SetToggleSprite(_statsToggleImage, IsStatsExpanded, _statsCollapsedSprite, _statsExpandedSprite);
-    }
-
-    private void BringToggleButtonsToFront()
-    {
-        if (!_forceToggleButtonsToFront)
+        if (!visible)
+        {
+            SetCanvasGroup(_shopPanelGroup, false, false);
+            SetCanvasGroup(_enemyInventoryPanelGroup, false, false);
             return;
+        }
 
-        if (_shopToggleButton != null)
-            _shopToggleButton.transform.SetAsLastSibling();
-
-        if (_statsToggleButton != null)
-            _statsToggleButton.transform.SetAsLastSibling();
+        SetCanvasGroup(_playerInventoryPanelGroup, true, true);
+        SetCanvasGroup(_statsPanelGroup, true, true);
     }
 
-    private void EnsureRefs()
+    private void ResolveRefs()
     {
-        if (_hubGroup == null)
-            _hubGroup = GetComponent<CanvasGroup>();
+        if (_playerInventoryPanel == null)
+            _playerInventoryPanel = GetComponentInChildren<PlayerInventoryUI>(true);
 
-        if (_hubGroup == null)
-            _hubGroup = gameObject.AddComponent<CanvasGroup>();
-
-        if (_upgradePanel == null)
-            _upgradePanel = GetComponentInChildren<PlayerUpgradePanelUI>(true);
-
-        if (_shopPanel == null)
-            _shopPanel = GetComponentInChildren<PlayerShopPanelUI>(true);
+        if (_playerInventoryPanelGroup == null && _playerInventoryPanel != null)
+            _playerInventoryPanelGroup = GetOrAddCanvasGroup(_playerInventoryPanel.gameObject);
 
         if (_statsPanel == null)
             _statsPanel = GetComponentInChildren<PlayerStatsSummaryPanelUI>(true);
 
+        if (_statsPanelGroup == null && _statsPanel != null)
+            _statsPanelGroup = GetOrAddCanvasGroup(_statsPanel.gameObject);
+
+        if (_shopPanel == null)
+            _shopPanel = GetComponentInChildren<PlayerShopPanelUI>(true);
+
         if (_shopPanelGroup == null && _shopPanel != null)
             _shopPanelGroup = GetOrAddCanvasGroup(_shopPanel.gameObject);
 
-        if (_statsPanelGroup == null && _statsPanel != null)
-            _statsPanelGroup = GetOrAddCanvasGroup(_statsPanel.gameObject);
+        if (_enemyInventoryPanel == null)
+            _enemyInventoryPanel = GetComponentInChildren<EnemyInventoryUI>(true);
+
+        if (_enemyInventoryPanelGroup == null && _enemyInventoryPanel != null)
+            _enemyInventoryPanelGroup = GetOrAddCanvasGroup(_enemyInventoryPanel.gameObject);
+
+        if (_inputReader == null || _overlayRequestChannel == null)
+        {
+            UIOverlayManager overlayManager = GetComponentInParent<UIOverlayManager>();
+
+            if (overlayManager == null)
+                overlayManager = FindFirstObjectByType<UIOverlayManager>(FindObjectsInactive.Include);
+
+            if (_inputReader == null && overlayManager != null)
+                _inputReader = overlayManager.InputReader;
+
+            if (_overlayRequestChannel == null && overlayManager != null)
+                _overlayRequestChannel = overlayManager.RequestChannel;
+        }
+
+        if (_inputReader == null)
+            _inputReader = FindFirstObjectByType<InputReader>(FindObjectsInactive.Include);
     }
 
     private static CanvasGroup GetOrAddCanvasGroup(GameObject target)
@@ -228,20 +236,5 @@ public class PlayerPanelHub : MonoBehaviour
         group.alpha = visible ? 1f : 0f;
         group.interactable = visible && interactive;
         group.blocksRaycasts = visible && interactive;
-    }
-
-    private static void SetToggleSprite(
-        Image image,
-        bool expanded,
-        Sprite collapsedSprite,
-        Sprite expandedSprite)
-    {
-        if (image == null)
-            return;
-
-        Sprite sprite = expanded ? expandedSprite : collapsedSprite;
-
-        if (sprite != null)
-            image.sprite = sprite;
     }
 }

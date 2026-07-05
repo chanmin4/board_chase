@@ -53,7 +53,7 @@ public class PlayerInfoHUD : MonoBehaviour
     [SerializeField] private InputBinding.DisplayStringOptions _bindingDisplayOptions =
         InputBinding.DisplayStringOptions.DontIncludeInteractions;
 
-    [NonSerialized] private PlayerInfection _playerInfection;
+    [NonSerialized] private PlayerShooterInfection _playerInfection;
 
     private PlayerHealthSnapshot _lastSnapshot;
 
@@ -99,7 +99,7 @@ public class PlayerInfoHUD : MonoBehaviour
         Apply(snapshot.maxHealth, snapshot.currentHealth, snapshot.currentInfection);
     }
 
-    private void OnPlayerInfectionChanged(PlayerInfection playerInfection)
+    private void OnPlayerInfectionChanged(PlayerShooterInfection playerInfection)
     {
         _playerInfection = playerInfection;
         RequestSnapshotRefresh();

@@ -119,62 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &53319588
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 53319589}
-  - component: {fileID: 53319590}
-  m_Layer: 0
-  m_Name: PlayerLevelManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &53319589
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 53319588}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 209541699}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &53319590
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 53319588}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 19839a9ef7d90fa43af6576d3490bf28, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _rules: {fileID: 11400000, guid: 0821e15d7f15fae4fbd0eb182bf6f11d, type: 2}
-  _upgradePointRules: {fileID: 11400000, guid: fbf6e2b729bf1f14f8b0cdb5dad407cc, type: 2}
-  _startingLevel: 1
-  _xpGainChannel: {fileID: 11400000, guid: ebfba834e3329e04f86812146cb2fad1, type: 2}
-  _stageProgressChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
-  _requestLevelSnapshotChannel: {fileID: 11400000, guid: b557594de7cdbcb41b8a50bb5c6a4f12, type: 2}
-  _upgradeStateReadyChannel: {fileID: 11400000, guid: ca501f6727f40e1409fcde06e77a8d24, type: 2}
-  _levelSnapshotChannel: {fileID: 11400000, guid: 42df1a0bbfb57504ba696cdb2357908c, type: 2}
-  _level: 0
-  _currentXp: 0
-  _currentStageIndex: 0
-  _stageEarnedXp: 0
 --- !u!1 &85564728
 GameObject:
   m_ObjectHideFlags: 0
@@ -235,7 +179,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 53319589}
   - {fileID: 998436592}
   - {fileID: 1095890179}
   - {fileID: 1636498291}
@@ -456,13 +399,13 @@ MonoBehaviour:
   _randomizeRunSeedOnAwake: 1
   _runSeed: 1
   _startSectorCoord: {x: -1, y: 0}
-  _startSectorPrefab: {fileID: 4825967042133263012, guid: d0fd2a52a0454af429616b2f155a855b, type: 3}
-  _normalBattleSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
-  _treasureSectorPrefab: {fileID: 4825967042133263012, guid: 0a33a9535caeadd4a9330665a33f58c2, type: 3}
-  _shopSectorPrefab: {fileID: 4825967042133263012, guid: c2c7754e7427d7e42be714c61166833c, type: 3}
-  _namedSectorPrefab: {fileID: 1399724844744912947, guid: 78d71b9d1e7ebb6418acacce9f9d0099, type: 3}
-  _bossSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
-  _bigMonsterWaveSectorPrefab: {fileID: 4825967042133263012, guid: 4324f19a689e1654592b397e2ef965a3, type: 3}
+  _startSectorPrefab: {fileID: 4807135168558380736, guid: 30d4c4ef2577e1047a106ec91ef875fd, type: 3}
+  _normalBattleSectorPrefab: {fileID: 8896736907508675970, guid: f902bb2343fade5459ca3535cf98e563, type: 3}
+  _treasureSectorPrefab: {fileID: 5013172687032103306, guid: 86ccce9d3cad7a840b80adc42afba041, type: 3}
+  _shopSectorPrefab: {fileID: 4542539653697451676, guid: 6785d62e9c1729a4b9ed16a723e56c5d, type: 3}
+  _namedSectorPrefab: {fileID: 1408278088565284570, guid: 56520bac0b9a2414d8ad7cbcc68dbca0, type: 3}
+  _bossSectorPrefab: {fileID: 4137466736269989551, guid: 21da2250039d1cb4da5a2fe9ab1a4c0d, type: 3}
+  _bigMonsterWaveSectorPrefab: {fileID: 8701807625999836917, guid: 388c5af01f34d134a988aefc6e3f3795, type: 3}
   _generatedRoot: {fileID: 85564729}
   _gridOrigin: {fileID: 906134983}
   _roomSpacingXZ: {x: 3000, y: 3000}
@@ -470,6 +413,7 @@ MonoBehaviour:
   _stageShopSettings: {fileID: 11400000, guid: 137167026e0b4394090347526a713e0e, type: 2}
   _sectorStateManager: {fileID: 998436593}
   _sectorPortalManager: {fileID: 1095890178}
+  _playerTransformAnchor: {fileID: 0}
 --- !u!1 &575892661
 GameObject:
   m_ObjectHideFlags: 0
@@ -808,19 +752,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3eef10a8e418e434fa4f7571d4343eaf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _sectors: []
-  _useStageSectorUnlocks: 0
   _openAdjacentSectorsOnClear: 1
-  _startSectorCoord: {x: -1, y: 0}
-  _initialStage: 1
-  _openOnlyStartSectorOnBoot: 1
-  _requestUnlockStageEvent: {fileID: 11400000, guid: 5bdd9abfafb6a1348ad71870dcd4133b, type: 2}
-  _requestProgressNextStageEvent: {fileID: 11400000, guid: 100a7f585768ad947aaf1ec572ade37a, type: 2}
   _currentSectorChangedEvent: {fileID: 11400000, guid: cb39fc0f8d034346a9164254d2f477d7, type: 2}
   _startSectorReadyEvent: {fileID: 11400000, guid: d67983433baabf2489d0f5dec4b948ec, type: 2}
   _sectorOpenedEvent: {fileID: 11400000, guid: d3dbed10cd5614049bcc8288e7d2dcdf, type: 2}
-  _stageAppliedEvent: {fileID: 11400000, guid: 94f3608815ef6464d9c3bf167a67f34f, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
+  _runtimeSectorStates: []
 --- !u!1 &1085352140
 GameObject:
   m_ObjectHideFlags: 0
@@ -1023,6 +960,13 @@ MonoBehaviour:
   virusAboveVaccine: 1
   _paintStampMaterial: {fileID: 0}
   _paintStampEdgeSoftness: 0.08
+  _vaccinePaintBubbleParticlePrefab: {fileID: 0}
+  _virusPaintBubbleParticlePrefab: {fileID: 0}
+  _poisonPuddlePaintBubbleParticlePrefab: {fileID: 0}
+  _specialPaintBubbleParticlePrefab: {fileID: 0}
+  _paintVfxRoot: {fileID: 0}
+  _paintBubbleWorldOffset: {x: 0, y: 0, z: 0}
+  _paintBubbleFallbackLifetime: 1
   _maxTrailCirclesPerFrame: 128
 --- !u!4 &1225504681
 Transform:
@@ -1185,8 +1129,6 @@ MonoBehaviour:
   _sectorStateManager: {fileID: 998436593}
   _sectorCleanupApplier: {fileID: 1085352142}
   _stageSectorInstantiator: {fileID: 265115451}
-  _stageAppliedChannel: {fileID: 11400000, guid: 94f3608815ef6464d9c3bf167a67f34f, type: 2}
-  _requestProgressNextStageChannel: {fileID: 11400000, guid: 100a7f585768ad947aaf1ec572ade37a, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
   _namedSectorControllerReadyChannel: {fileID: 11400000, guid: 8c62595ebdcaadf4b8c64c1af8378e2c, type: 2}
   _infectionControlManagerReadyChannel: {fileID: 11400000, guid: 53066018a5f6f1c47a4217f83ff95b83, type: 2}
@@ -1261,6 +1203,9 @@ MonoBehaviour:
   _onSceneReady: {fileID: 11400000, guid: 6ffdab77583331c4ca20a575a1ebcdee, type: 2}
   _startSectorReadyEvent: {fileID: 11400000, guid: d67983433baabf2489d0f5dec4b948ec, type: 2}
   _projectilesRoot: {fileID: 1775271296}
+  _parentPlayerToCurrentSector: 1
+  _spawnYOffset: 0.2
+  _useCharacterControllerSpawnHeight: 1
 --- !u!1 &1775271295
 GameObject:
   m_ObjectHideFlags: 0

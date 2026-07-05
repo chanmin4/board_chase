@@ -7,12 +7,19 @@ public class UIOverlayManager : MonoBehaviour
     [Header("Events")]
     [SerializeField] private UIOverlayRequestEventChannelSO _requestChannel;
 
+    [Header("Input")]
+    [SerializeField] private InputReader _inputReader;
+
     [Header("Panels")]
     [SerializeField] private UIOverlayPanel[] _panels;
     [SerializeField] private bool _autoFindPanelsInChildren = true;
 
     private readonly Dictionary<UIOverlayId, UIOverlayPanel> _panelById = new();
     private UIOverlayId _currentOverlayId = UIOverlayId.None;
+    private bool _gameplayInputDisabledByOverlay;
+
+    public UIOverlayRequestEventChannelSO RequestChannel => _requestChannel;
+    public InputReader InputReader => _inputReader;
 
     private void Awake()
     {
@@ -32,6 +39,7 @@ public class UIOverlayManager : MonoBehaviour
             _requestChannel.OnEventRaised -= HandleOverlayRequest;
 
         GameplayAttackInputBlocker.Clear(this);
+        RestoreGameplayInputIfNeeded();
     }
 
     public void Open(UIOverlayId id)
@@ -50,6 +58,7 @@ public class UIOverlayManager : MonoBehaviour
         _currentOverlayId = id;
         nextPanel.Show();
         GameplayAttackInputBlocker.SetBlocked(ShouldBlockAttackInput(nextPanel), this);
+        ApplyGameplayInputMode(nextPanel);
     }
 
     public void Close(UIOverlayId id)
@@ -132,6 +141,7 @@ public class UIOverlayManager : MonoBehaviour
 
         _currentOverlayId = UIOverlayId.None;
         GameplayAttackInputBlocker.Clear(this);
+        RestoreGameplayInputIfNeeded();
     }
 
     private void CloseAllInternal()
@@ -144,11 +154,37 @@ public class UIOverlayManager : MonoBehaviour
 
         _currentOverlayId = UIOverlayId.None;
         GameplayAttackInputBlocker.Clear(this);
+        RestoreGameplayInputIfNeeded();
     }
 
     private static bool ShouldBlockAttackInput(UIOverlayPanel panel)
     {
         return panel != null &&
-               (panel.BlockAttackInputWhileOpen || panel.Id == UIOverlayId.FullMap);
+               (panel.BlockAttackInputWhileOpen ||
+                panel.Id == UIOverlayId.FullMap ||
+                panel.Id == UIOverlayId.PlayerPanelHub);
+    }
+
+    private void ApplyGameplayInputMode(UIOverlayPanel panel)
+    {
+        if (_inputReader == null || panel == null)
+            return;
+
+        if (panel.Id != UIOverlayId.PlayerPanelHub)
+            return;
+
+        _inputReader.EnablePlayerMenuInput();
+        _gameplayInputDisabledByOverlay = true;
+    }
+
+    private void RestoreGameplayInputIfNeeded()
+    {
+        if (!_gameplayInputDisabledByOverlay)
+            return;
+
+        _gameplayInputDisabledByOverlay = false;
+
+        if (_inputReader != null)
+            _inputReader.EnableGameplayInput();
     }
 }

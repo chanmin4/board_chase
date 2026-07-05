@@ -176,7 +176,7 @@ public class MetaStatsPanelUI : MonoBehaviour
         private float _percentAdd;
         private bool _hasOverride;
         private float _overrideValue;
-
+        private float _percentMultiply;
         public void Apply(PlayerStatModifier modifier)
         {
             switch (modifier.type)
@@ -188,7 +188,9 @@ public class MetaStatsPanelUI : MonoBehaviour
                 case StatModifierType.PercentAdd:
                     _percentAdd += modifier.value;
                     break;
-
+                case StatModifierType.PercentMultiply:
+                    _percentMultiply *= modifier.value;
+                    break;
                 case StatModifierType.Override:
                     _hasOverride = true;
                     _overrideValue = modifier.value;

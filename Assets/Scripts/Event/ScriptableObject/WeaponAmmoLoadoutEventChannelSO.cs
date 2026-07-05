@@ -22,6 +22,9 @@ public struct WeaponAmmoSlotSnapshot
     public bool canSell;
     public int totalAmmo;
     public int sellPricePerAmmo;
+    public int penetrationClass;
+    public BulletCombatRole combatRole;
+
     public WeaponAmmoSlotSnapshot(
         int slotIndex,
         BulletSO bullet,
@@ -46,6 +49,8 @@ public struct WeaponAmmoSlotSnapshot
         totalAmmo = Mathf.Max(0, currentAmmo) + Mathf.Max(0, reserveAmmo);
         this.sellPricePerAmmo = Mathf.Max(0, sellPricePerAmmo);
         canSell = !isEmpty && !isRequiredDefault && !infiniteReserve && totalAmmo > 0 && this.sellPricePerAmmo > 0;
+        penetrationClass = bullet != null ? bullet.PenetrationClass : 0;
+        combatRole = bullet != null ? bullet.CombatRole : BulletCombatRole.Balance;
     }
 }
 

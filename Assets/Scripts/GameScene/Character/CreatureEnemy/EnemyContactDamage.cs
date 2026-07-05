@@ -57,7 +57,7 @@ public class EnemyContactDamage : MonoBehaviour
         if (damageable == null || damageable.gameObject == gameObject || !damageable.CanReceiveDamage)
             return;
 
-        PlayerInfection playerInfection = playerCharacter.GetComponent<PlayerInfection>();
+        PlayerShooterInfection playerInfection = playerCharacter.GetComponent<PlayerShooterInfection>();
         bool appliedAny = false;
 
         if (config.ContactHealthDamage > 0f)

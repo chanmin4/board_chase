@@ -9,7 +9,8 @@ public enum InteractionType
     Talk = 2,
     Portal = 3,
     QTE = 4,
-    Shop = 5
+    Shop = 5,
+    Loot = 6
 }
 
 public class InteractionManager : MonoBehaviour
@@ -123,6 +124,10 @@ public class InteractionManager : MonoBehaviour
                 TryUseShop(interaction);
                 break;
 
+            case InteractionType.Loot:
+                TryUseLoot(interaction);
+                break;
+
             case InteractionType.QTE:
                 TryUseQTEStation(interaction);
                 break;
@@ -167,10 +172,23 @@ public class InteractionManager : MonoBehaviour
             pickupObject.GetComponent<TreasureRoomRewardPickup>() ??
             pickupObject.GetComponentInParent<TreasureRoomRewardPickup>();
 
-        if (pickup == null || !pickup.CanInteract)
-            return;
+        bool picked = false;
 
-        bool picked = pickup.TryPickup(InteractionActor);
+        if (pickup != null && pickup.CanInteract)
+        {
+            picked = pickup.TryPickup(InteractionActor);
+        }
+        else
+        {
+            ItemWorldPickup itemPickup =
+                pickupObject.GetComponent<ItemWorldPickup>() ??
+                pickupObject.GetComponentInParent<ItemWorldPickup>();
+
+            if (itemPickup == null || !itemPickup.CanInteract)
+                return;
+
+            picked = itemPickup.TryPickup(InteractionActor);
+        }
 
         if (!picked)
             return;
@@ -192,6 +210,25 @@ public class InteractionManager : MonoBehaviour
             return;
 
         if (shop.TryInteract(InteractionActor))
+        {
+            currentInteractionType = InteractionType.None;
+            RequestUpdateUI(false);
+        }
+    }
+
+    private void TryUseLoot(Interaction interaction)
+    {
+        if (interaction.interactableObject == null)
+            return;
+
+        EnemyLootInventoryRuntime loot =
+            interaction.interactableObject.GetComponent<EnemyLootInventoryRuntime>() ??
+            interaction.interactableObject.GetComponentInParent<EnemyLootInventoryRuntime>();
+
+        if (loot == null || !loot.CanInteract)
+            return;
+
+        if (loot.TryInteract(InteractionActor))
         {
             currentInteractionType = InteractionType.None;
             RequestUpdateUI(false);
@@ -297,6 +334,22 @@ public class InteractionManager : MonoBehaviour
             return true;
         }
 
+        ItemWorldPickup itemPickup = obj.GetComponentInParent<ItemWorldPickup>();
+
+        if (itemPickup != null && itemPickup.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.PickUp, itemPickup.gameObject);
+            return true;
+        }
+
+        EnemyLootInventoryRuntime loot = obj.GetComponentInParent<EnemyLootInventoryRuntime>();
+
+        if (loot != null && loot.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.Loot, loot.gameObject);
+            return true;
+        }
+
         SectorShop shop = obj.GetComponentInParent<SectorShop>();
 
         if (shop != null && shop.CanInteract)
@@ -325,6 +378,14 @@ public class InteractionManager : MonoBehaviour
             obj.GetComponentInParent<TreasureRoomRewardPickup>();
         if (pickup != null)
             return pickup.gameObject;
+
+        ItemWorldPickup itemPickup = obj.GetComponentInParent<ItemWorldPickup>();
+        if (itemPickup != null)
+            return itemPickup.gameObject;
+
+        EnemyLootInventoryRuntime loot = obj.GetComponentInParent<EnemyLootInventoryRuntime>();
+        if (loot != null)
+            return loot.gameObject;
 
         SectorShop shop = obj.GetComponentInParent<SectorShop>();
         if (shop != null)
@@ -408,7 +469,7 @@ public class InteractionManager : MonoBehaviour
             interaction.type,
             anchor,
             ResolveInteractionKeyLabel(),
-            ResolveActionLabel(interaction.type)));
+            ResolveActionLabel(interaction)));
     }
 
     private Transform ResolvePromptAnchor(GameObject obj)
@@ -433,17 +494,30 @@ public class InteractionManager : MonoBehaviour
             : _interactionKeyLabel;
     }
 
-    private string ResolveActionLabel(InteractionType type)
+    private string ResolveActionLabel(Interaction interaction)
     {
-        return type switch
+        if (interaction != null &&
+            interaction.type == InteractionType.PickUp &&
+            interaction.interactableObject != null)
+        {
+            ItemWorldPickup itemPickup =
+                interaction.interactableObject.GetComponent<ItemWorldPickup>() ??
+                interaction.interactableObject.GetComponentInParent<ItemWorldPickup>();
+
+            if (itemPickup != null)
+                return itemPickup.DisplayLabel;
+        }
+
+        return interaction != null ? interaction.type switch
         {
             InteractionType.Portal => "",
             InteractionType.QTE => "",
             InteractionType.PickUp => "",
             InteractionType.Shop => "",
+            InteractionType.Loot => "",
             InteractionType.Talk => "",
             _ => ""
-        };
+        } : "";
     }
 
     private void RefreshPotentialInteractions()

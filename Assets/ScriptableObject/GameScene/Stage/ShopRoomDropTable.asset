@@ -12,15 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1da07c84c620e174a903d1b3a910fb09, type: 3}
   m_Name: ShopRoomDropTable
   m_EditorClassIdentifier: 
-  _offerCount: 3
-  _allowDuplicateOffers: 1
+  _bulletOfferCount: 2
+  _itemOfferCount: 3
   _rerollCost: 5
   _sellPriceRate: 0.5
-  _rewardKindWeights:
+  _armorRepairPriceRate: 0.5
+  _allowDuplicateBulletOffers: 0
+  _allowDuplicateItemOffers: 0
+  _itemKindWeights:
   - kind: 0
-    weight: 0
+    weight: 40
+  - kind: 2
+    weight: 35
   - kind: 1
-    weight: 100
+    weight: 25
   _rarityWeights:
   - rarity: 0
     weight: 65
@@ -30,14 +35,11 @@ MonoBehaviour:
     weight: 8
   - rarity: 2
     weight: 2
-  _normalPool:
-  - item: {fileID: 11400000, guid: 57dc2c60507b0064d961077f4f5aeb9b, type: 2}
-    rarity: 0
-    weight: 1
-    price: 5
-    stock: 1
-    bulletBundleAmount: 30
-    descriptionOverride: 
-  _rarePool: []
-  _uniquePool: []
-  _legendaryPool: []
+  _normalBulletPool: []
+  _rareBulletPool: []
+  _uniqueBulletPool: []
+  _legendaryBulletPool: []
+  _normalItemPool: []
+  _rareItemPool: []
+  _uniqueItemPool: []
+  _legendaryItemPool: []

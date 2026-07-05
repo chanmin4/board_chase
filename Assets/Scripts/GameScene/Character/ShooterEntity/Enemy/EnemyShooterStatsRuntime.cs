@@ -26,8 +26,32 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     public override int MagazineSize => Mathf.Max(1, Mathf.RoundToInt(ResolveWithRuntimeModifiers(PlayerStatId.MagazineSize, Config != null ? Config.MagazineSize : 1f, 1f)));
     public override float PaintRadius => ResolveWithRuntimeModifiers(PlayerStatId.PaintRadius, Config != null ? Config.PaintRadius : 0f, 0f);
     public override int PaintPriority => Config != null ? Config.PaintPriority : 0;
+    public override float PaintMarkDamage => ResolveWithRuntimeModifiers(PlayerStatId.PaintMarkDamage, Config != null ? Config.PaintMarkDamage : 0f, 0f);
+    public override float InfectionDamage => ResolveWithRuntimeModifiers(PlayerStatId.InfectionDamage, Config != null ? Config.InfectionDamage : 0f, 0f);
+    public override int PenetrationClassBonus => Mathf.Max(
+        0,
+        Mathf.RoundToInt(ResolveWithRuntimeModifiers(
+            PlayerStatId.PenetrationClass,
+            Config != null ? Config.PenetrationClassBonus : 0,
+            0f)));
     public override float MoveSpeed => ResolveWithRuntimeModifiers(PlayerStatId.MoveSpeed, Config != null ? Config.MoveSpeed : 0f, 0f);
     public override float MaxHealth => ResolveWithRuntimeModifiers(PlayerStatId.MaxHealth, Config != null ? Config.MaxHealth : 0f, 1f);
+    public override int ArmorClass => Mathf.Max(
+        0,
+        Mathf.RoundToInt(ResolveWithRuntimeModifiers(
+            PlayerStatId.ArmorClass,
+            Config != null ? Config.BaseArmorClass : 0,
+            0f)));
+    public override float ArmorHealthDurabilityLossMultiplier => ResolveWithRuntimeModifiers(
+        PlayerStatId.ArmorHealthDurabilityLossMultiplier,
+        Config != null && Config.Armor != null ? Config.Armor.HealthDurabilityLossMultiplier : 1f,
+        0f);
+
+    public override float ArmorInfectionDurabilityLossMultiplier => ResolveWithRuntimeModifiers(
+        PlayerStatId.ArmorInfectionDurabilityLossMultiplier,
+        Config != null && Config.Armor != null ? Config.Armor.InfectionDurabilityLossMultiplier : 0.5f,
+        0f);
+
     public override float VisionRange => ResolveWithRuntimeModifiers(PlayerStatId.VisionRange, Config != null ? Config.Vision.VisionRange : 0f, 0f);
     public override float GunshotSoundRadius =>
         CurrentWeapon != null
@@ -39,6 +63,18 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         Config != null ? Config.FootstepSoundRadius : 0f;
     public override float FootstepSoundInterval =>
         Config != null ? Config.FootstepSoundInterval : 0.35f;
+    public override float RecoilForwardDistancePerShot =>
+        Config != null ? Config.RecoilForwardDistancePerShot : 0f;
+    public override float RecoilSideDistancePerShot =>
+        Config != null ? Config.RecoilSideDistancePerShot : 0f;
+    public override float MaxRecoilDistance =>
+        Config != null ? Config.MaxRecoilDistance : 0f;
+    public override float RecoilDistanceRecoveryPerSecond =>
+        Config != null ? Config.RecoilDistanceRecoveryPerSecond : 0f;
+    public override float HipFireSpreadRadius =>
+        Config != null ? Config.HipFireSpreadRadius : 0f;
+    public override float AimSpreadRadius =>
+        Config != null ? Config.AimSpreadRadius : 0f;
 
     private void Reset()
     {
@@ -70,6 +106,16 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         return ResolveWithExtraModifiers(PlayerStatId.PaintRadius, PaintRadius, 0f, bullet != null ? bullet.StatModifiers : null);
     }
 
+    public override float ResolvePaintMarkDamage(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(PlayerStatId.PaintMarkDamage, PaintMarkDamage, 0f, bullet != null ? bullet.StatModifiers : null);
+    }
+
+    public override float ResolveInfectionDamage(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(PlayerStatId.InfectionDamage, InfectionDamage, 0f, bullet != null ? bullet.StatModifiers : null);
+    }
+
     public override float ResolveShotsPerSecond(BulletSO bullet)
     {
         return ResolveWithExtraModifiers(PlayerStatId.ShotsPerSecond, ShotsPerSecond, 0.01f, bullet != null ? bullet.StatModifiers : null);
@@ -79,6 +125,24 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     {
         float resolved = ResolveWithExtraModifiers(PlayerStatId.MagazineSize, MagazineSize, 1f, bullet != null ? bullet.StatModifiers : null);
         return Mathf.Max(1, Mathf.RoundToInt(resolved));
+    }
+
+    public override float ResolveArmorHealthDurabilityLossMultiplier(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.ArmorHealthDurabilityLossMultiplier,
+            ArmorHealthDurabilityLossMultiplier,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
+    }
+
+    public override float ResolveArmorInfectionDurabilityLossMultiplier(BulletSO bullet)
+    {
+        return ResolveWithExtraModifiers(
+            PlayerStatId.ArmorInfectionDurabilityLossMultiplier,
+            ArmorInfectionDurabilityLossMultiplier,
+            0f,
+            bullet != null ? bullet.StatModifiers : null);
     }
 
     private EnemyShooterConfigSO ResolveConfig()
@@ -115,7 +179,7 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     {
         StatAccumulator accumulator = default;
         ApplyMatchingModifiers(ref accumulator, stat, CurrentWeapon != null ? CurrentWeapon.StatModifiers : null);
-        ApplyMatchingModifiers(ref accumulator, stat, _equipmentRuntime != null && _equipmentRuntime.CurrentArmor != null
+        ApplyMatchingModifiers(ref accumulator, stat, _equipmentRuntime != null && _equipmentRuntime.HasUsableArmor && _equipmentRuntime.CurrentArmor != null
             ? _equipmentRuntime.CurrentArmor.StatModifiers
             : null);
 
@@ -163,7 +227,8 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         private float _percentAdd;
         private bool _hasOverride;
         private float _overrideValue;
-
+        private bool _hasPercentMultiply;
+        private float _percentMultiply;
         public void Apply(PlayerStatModifier modifier)
         {
             switch (modifier.type)
@@ -175,7 +240,15 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
                 case StatModifierType.PercentAdd:
                     _percentAdd += modifier.value;
                     break;
+                case StatModifierType.PercentMultiply:
+                    if (!_hasPercentMultiply)
+                    {
+                        _hasPercentMultiply = true;
+                        _percentMultiply = 1f;
+                    }
 
+                    _percentMultiply *= modifier.value;
+                    break;
                 case StatModifierType.Override:
                     _hasOverride = true;
                     _overrideValue = modifier.value;
@@ -188,7 +261,12 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
             if (_hasOverride)
                 return _overrideValue;
 
-            return (baseValue + _flatAdd) * (1f + _percentAdd * 0.01f);
+            float value = (baseValue + _flatAdd) * (1f + _percentAdd * 0.01f);
+
+            if (_hasPercentMultiply)
+                value *= _percentMultiply;
+
+            return value;
         }
     }
 }

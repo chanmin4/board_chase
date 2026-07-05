@@ -13,8 +13,14 @@ public class ApplyMovementVectorAction : StateAction
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
-		_characterController = stateMachine.GetComponent<CharacterController>();
+		if (stateMachine == null)
+			return;
+
+		if (!stateMachine.TryGetComponent(out _vsplatterScript))
+			_vsplatterScript = stateMachine.GetComponentInChildren<VSplatter_Character>(true);
+
+		if (!stateMachine.TryGetComponent(out _characterController))
+			_characterController = stateMachine.GetComponentInChildren<CharacterController>(true);
 	}
 
 	public override void OnUpdate()
@@ -28,9 +34,8 @@ public class ApplyMovementVectorAction : StateAction
 		{
 			return;
 		}
-
+//		Debug.Log($"[MoveApply] vec={_vsplatterScript.movementVector}, cc={_characterController.enabled}, pos={_characterController.transform.position}", _characterController);
 		//Debug.Log($"grounded={_characterController.isGrounded}, pos={_characterController.transform.position}, moveVec={_vsplatterScript.movementVector}");
 		_characterController.Move(_vsplatterScript.movementVector * Time.deltaTime);
-		_vsplatterScript.movementVector = _characterController.velocity;
 	}
 }

@@ -19,7 +19,11 @@ public class GroundGravityAction : StateAction
 
 	public override void Awake(StateMachine stateMachine)
 	{
-		_vsplatterScript = stateMachine.GetComponent<VSplatter_Character>();
+		if (stateMachine == null)
+			return;
+
+		if (!stateMachine.TryGetComponent(out _vsplatterScript))
+			_vsplatterScript = stateMachine.GetComponentInChildren<VSplatter_Character>(true);
 	}
 
 	public override void OnUpdate()

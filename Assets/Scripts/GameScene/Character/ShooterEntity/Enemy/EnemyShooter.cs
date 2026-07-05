@@ -8,6 +8,9 @@ public class EnemyShooter : Enemy
     [SerializeField] private EnemyShooterShoot _shoot;
     [SerializeField] private EnemyShooterCombatController _combat;
     [SerializeField] private EntityWeaponHolder _weaponHolder;
+    [SerializeField] private EntityEquipmentRuntime _equipmentRuntime;
+    [SerializeField] private EnemyLootInventoryRuntime _lootInventory;
+    [SerializeField] private EnemyShooterEffectController _effects;
 
     public EnemyShooterConfigSO Config =>
         _statsRuntime != null ? _statsRuntime.Config :
@@ -36,9 +39,16 @@ public class EnemyShooter : Enemy
         BulletSO bullet = loadout.Bullet != null
             ? loadout.Bullet
             : config != null ? config.Bullet : null;
+        ArmorItemSO armor = loadout.Armor;
 
         if (_weaponHolder != null && weapon != null)
             _weaponHolder.Equip(weapon);
+
+        if (_equipmentRuntime != null)
+            _equipmentRuntime.EquipArmor(armor);
+
+        if (_lootInventory != null)
+            _lootInventory.Initialize(loadout);
 
         if (_statsRuntime != null)
             _statsRuntime.SetRuntimeBullet(bullet);
@@ -48,6 +58,8 @@ public class EnemyShooter : Enemy
             _shoot.SetConfig(config);
             _shoot.SetRuntimeBullet(bullet);
         }
+
+        _effects?.PlaySpawnParticles();
     }
 
     public override void OnAlertTriggerChange(bool entered, GameObject who)
@@ -103,6 +115,21 @@ public class EnemyShooter : Enemy
             _weaponHolder = GetComponent<EntityWeaponHolder>() ??
                             GetComponentInChildren<EntityWeaponHolder>(true) ??
                             GetComponentInParent<EntityWeaponHolder>();
+
+        if (_equipmentRuntime == null)
+            _equipmentRuntime = GetComponent<EntityEquipmentRuntime>() ??
+                                GetComponentInChildren<EntityEquipmentRuntime>(true) ??
+                                GetComponentInParent<EntityEquipmentRuntime>();
+
+        if (_lootInventory == null)
+            _lootInventory = GetComponent<EnemyLootInventoryRuntime>() ??
+                             GetComponentInChildren<EnemyLootInventoryRuntime>(true) ??
+                             GetComponentInParent<EnemyLootInventoryRuntime>();
+
+        if (_effects == null)
+            _effects = GetComponent<EnemyShooterEffectController>() ??
+                       GetComponentInChildren<EnemyShooterEffectController>(true) ??
+                       GetComponentInParent<EnemyShooterEffectController>();
     }
 
     private static EnemyShooterLoadout ResolveSpawnLoadout(EnemyShooterConfigSO config)

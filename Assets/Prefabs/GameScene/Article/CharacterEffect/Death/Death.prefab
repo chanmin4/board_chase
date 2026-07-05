@@ -50,7 +50,7 @@ ParticleSystem:
   emitterVelocityMode: 0
   looping: 0
   prewarm: 0
-  playOnAwake: 1
+  playOnAwake: 0
   useUnscaledTime: 0
   autoRandomSeed: 1
   startDelay:
@@ -4923,7 +4923,6 @@ GameObject:
   - component: {fileID: 4068347281300922}
   - component: {fileID: 198222352082139578}
   - component: {fileID: 199105391370905002}
-  - component: {fileID: 114191119106155850}
   m_Layer: 0
   m_Name: Death
   m_TagString: Untagged
@@ -4965,7 +4964,7 @@ ParticleSystem:
   emitterVelocityMode: 0
   looping: 0
   prewarm: 0
-  playOnAwake: 1
+  playOnAwake: 0
   useUnscaledTime: 0
   autoRandomSeed: 1
   startDelay:
@@ -9836,22 +9835,6 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
---- !u!114 &114191119106155850
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1146961906002798}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5aa5c1e37409a9344a344c0468db383d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  prefabSound: {fileID: 1297775994297274, guid: 109cfbfb0ce20ad4c807f83942c03287, type: 3}
-  destroyWhenDone: 1
-  soundPrefabIsChild: 0
-  pitchRandomMultiplier: 1.2
 --- !u!1 &1654696303748888
 GameObject:
   m_ObjectHideFlags: 0
@@ -9902,7 +9885,7 @@ ParticleSystem:
   emitterVelocityMode: 0
   looping: 0
   prewarm: 0
-  playOnAwake: 1
+  playOnAwake: 0
   useUnscaledTime: 0
   autoRandomSeed: 1
   startDelay:

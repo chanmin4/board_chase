@@ -11,7 +11,22 @@ public class ArmorItemSO : ItemSO
 
     [Header("Defense")]
     [SerializeField, Min(0)] private int _armorClass = 1;
-    [SerializeField] private float _damageTakenMultiplierAdditive = -0.1f;
+
+    [Header("Durability")]
+    [Tooltip("Runtime armor durability when equipped. Absorbed damage reduces this value.")]
+    [SerializeField, Min(0f)] private float _maxDurability = 100f;
+
+    [Tooltip("Health damage multiplier when bullet penetration class is equal to or higher than armor class.")]
+    [SerializeField, Min(0f)] private float _sameOrHigherPenetrationHealthDamageMultiplier = 1f;
+
+    [Tooltip("Health damage multiplier applied for each armor class above bullet penetration. 0.5 means one class gap halves damage.")]
+    [SerializeField, Range(0f, 1f)] private float _healthDamageMultiplierPerClassGap = 0.5f;
+
+    [Tooltip("Paint mark/infection multiplier when bullet penetration class is equal to or higher than armor class.")]
+    [SerializeField, Min(0f)] private float _sameOrHigherPenetrationMarkDamageMultiplier = 1f;
+
+    [Tooltip("Paint mark/infection multiplier applied for each armor class above bullet penetration. 0.75 gives 42.1875% at 3 class gap.")]
+    [SerializeField, Range(0f, 1f)] private float _markDamageMultiplierPerClassGap = 0.75f;
 
     [Header("Visual Placement")]
      [Tooltip("equipped view prefab need to ref with world item prefab")]
@@ -27,10 +42,32 @@ public class ArmorItemSO : ItemSO
     public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? _armorId : _displayName;
 
     public int ArmorClass => Mathf.Max(0, _armorClass);
-    public float DamageTakenMultiplierAdditive => _damageTakenMultiplierAdditive;
+    public float MaxDurability => Mathf.Max(0f, _maxDurability);
     public PlayerStatModifier[] StatModifiers => _statModifiers;
 
     public GameObject EquippedVisualPrefab => _equippedVisualPrefab;
+
+    public float ResolveHealthDamageMultiplier(int penetrationClass, int baseArmorClass, int armorClassDelta)
+    {
+        int effectiveArmorClass = Mathf.Max(0, baseArmorClass + ArmorClass + armorClassDelta);
+        int classGap = Mathf.Max(0, effectiveArmorClass - Mathf.Max(0, penetrationClass));
+
+        return Mathf.Max(
+            0f,
+            _sameOrHigherPenetrationHealthDamageMultiplier *
+            Mathf.Pow(_healthDamageMultiplierPerClassGap, classGap));
+    }
+
+    public float ResolveMarkDamageMultiplier(int penetrationClass, int baseArmorClass, int armorClassDelta)
+    {
+        int effectiveArmorClass = Mathf.Max(0, baseArmorClass + ArmorClass + armorClassDelta);
+        int classGap = Mathf.Max(0, effectiveArmorClass - Mathf.Max(0, penetrationClass));
+
+        return Mathf.Max(
+            0f,
+            _sameOrHigherPenetrationMarkDamageMultiplier *
+            Mathf.Pow(_markDamageMultiplierPerClassGap, classGap));
+    }
 
     public void ApplyEquippedVisualTransform(Transform visualTransform)
     {

@@ -11,10 +11,6 @@ public class PlayerStatsConfigSO : EntityStatConfigSO
     [Header("Currency Base")]
     [Min(0)] [SerializeField] private int startingRunCurrency = 0;
     [Min(0)] [SerializeField] private int startingRoguelikeCurrencyForNewSave = 0;
-
-    [Header("Occupation")]
-    [SerializeField, Range(0f, 1f)] private float occupationWinThreshold = 0.5f;
-
     [Header("Dash")]
     [Min(0f)] [SerializeField] private float dashCooldownSeconds = 3f;
 
@@ -23,7 +19,6 @@ public class PlayerStatsConfigSO : EntityStatConfigSO
 
     public int StartingRunCurrency => startingRunCurrency;
     public int StartingRoguelikeCurrencyForNewSave => startingRoguelikeCurrencyForNewSave;
-    public float OccupationWinThreshold => occupationWinThreshold;
     public float DashCooldownSeconds => Mathf.Max(0f, dashCooldownSeconds);
     public float DodgeChance => Mathf.Clamp01(dodgeChance);
 
@@ -35,6 +30,9 @@ public class PlayerStatsConfigSO : EntityStatConfigSO
     public int MagazineSize => _shooter.MagazineSize;
     public float PaintRadius => _shooter.PaintRadius;
     public int PaintPriority => _shooter.PaintPriority;
+    public float PaintMarkDamage => _shooter.PaintMarkDamage;
+    public float InfectionDamage => _shooter.InfectionDamage;
+    public int PenetrationClassBonus => _shooter.PenetrationClassBonus;
     public float AimSpeed => _shooter.AimSpeed;
     public float AimRangeMultiplier => _shooter.AimRangeMultiplier;
     public float AimMoveSpeedMultiplier => _shooter.AimMoveSpeedMultiplier;
@@ -42,6 +40,12 @@ public class PlayerStatsConfigSO : EntityStatConfigSO
     public float AimSpreadAngleDeg => _shooter.AimSpreadAngleDeg;
     public float RecoilAngleDeg => _shooter.RecoilAngleDeg;
     public float RecoilRecoverySpeedDegPerSecond => _shooter.RecoilRecoverySpeedDegPerSecond;
+    public float RecoilForwardDistancePerShot => _shooter.RecoilForwardDistancePerShot;
+    public float RecoilSideDistancePerShot => _shooter.RecoilSideDistancePerShot;
+    public float MaxRecoilDistance => _shooter.MaxRecoilDistance;
+    public float RecoilDistanceRecoveryPerSecond => _shooter.RecoilDistanceRecoveryPerSecond;
+    public float HipFireSpreadRadius => _shooter.HipFireSpreadRadius;
+    public float AimSpreadRadius => _shooter.AimSpreadRadius;
     public float GunshotSoundRadius => _shooter.GunshotSoundRadius;
     public float SoundInvestigateDelaySeconds => _shooter.SoundInvestigateDelaySeconds;
     public float FootstepSoundRadius => _shooter.FootstepSoundRadius;

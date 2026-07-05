@@ -7,6 +7,10 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
     private static readonly int FogColorId = Shader.PropertyToID("_FogColor");
     private static readonly int CenterUVId = Shader.PropertyToID("_CenterUV");
     private static readonly int RadiusPixelsId = Shader.PropertyToID("_RadiusPixels");
+    private static readonly int CloseRadiusPixelsId = Shader.PropertyToID("_CloseRadiusPixels");
+    private static readonly int ForwardDirPixelsId = Shader.PropertyToID("_ForwardDirPixels");
+    private static readonly int ArcCosId = Shader.PropertyToID("_ArcCos");
+    private static readonly int UseForwardArcId = Shader.PropertyToID("_UseForwardArc");
     private static readonly int SoftnessPixelsId = Shader.PropertyToID("_SoftnessPixels");
 
     [Header("Refs")]
@@ -126,6 +130,17 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
 
         Vector3 rightScreen = _worldCamera.WorldToScreenPoint(centerWorld + worldRight * range);
         Vector3 forwardScreen = _worldCamera.WorldToScreenPoint(centerWorld + worldForward * range);
+        Vector3 closeRightScreen = _worldCamera.WorldToScreenPoint(centerWorld + worldRight * _viewer.CloseVisionRadius);
+        Vector3 closeForwardScreen = _worldCamera.WorldToScreenPoint(centerWorld + worldForward * _viewer.CloseVisionRadius);
+        Vector3 viewerForward = _viewer.ForwardDirection;
+        viewerForward.y = 0f;
+
+        if (viewerForward.sqrMagnitude <= 0.001f)
+            viewerForward = Vector3.forward;
+        else
+            viewerForward.Normalize();
+
+        Vector3 viewerForwardScreen = _worldCamera.WorldToScreenPoint(centerWorld + viewerForward * Mathf.Max(1f, range));
 
         float radiusX = Mathf.Max(1f, Vector2.Distance(
             new Vector2(centerScreen.x, centerScreen.y),
@@ -135,6 +150,23 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
             new Vector2(centerScreen.x, centerScreen.y),
             new Vector2(forwardScreen.x, forwardScreen.y)));
 
+        float closeRadiusX = Mathf.Max(1f, Vector2.Distance(
+            new Vector2(centerScreen.x, centerScreen.y),
+            new Vector2(closeRightScreen.x, closeRightScreen.y)));
+
+        float closeRadiusY = Mathf.Max(1f, Vector2.Distance(
+            new Vector2(centerScreen.x, centerScreen.y),
+            new Vector2(closeForwardScreen.x, closeForwardScreen.y)));
+
+        Vector2 forwardDirPixels = new Vector2(
+            viewerForwardScreen.x - centerScreen.x,
+            viewerForwardScreen.y - centerScreen.y);
+
+        if (forwardDirPixels.sqrMagnitude <= 0.001f)
+            forwardDirPixels = Vector2.up;
+        else
+            forwardDirPixels.Normalize();
+
         Vector2 centerUV = new Vector2(
             Mathf.Clamp01(centerScreen.x / Mathf.Max(1f, Screen.width)),
             Mathf.Clamp01(centerScreen.y / Mathf.Max(1f, Screen.height)));
@@ -142,6 +174,10 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
         _runtimeMaterial.SetColor(FogColorId, _fogColor);
         _runtimeMaterial.SetVector(CenterUVId, centerUV);
         _runtimeMaterial.SetVector(RadiusPixelsId, new Vector4(radiusX, radiusY, 0f, 0f));
+        _runtimeMaterial.SetVector(CloseRadiusPixelsId, new Vector4(closeRadiusX, closeRadiusY, 0f, 0f));
+        _runtimeMaterial.SetVector(ForwardDirPixelsId, new Vector4(forwardDirPixels.x, forwardDirPixels.y, 0f, 0f));
+        _runtimeMaterial.SetFloat(ArcCosId, Mathf.Cos(_viewer.ForwardArcAngle * 0.5f * Mathf.Deg2Rad));
+        _runtimeMaterial.SetFloat(UseForwardArcId, _viewer.UsesForwardArc ? 1f : 0f);
         _runtimeMaterial.SetFloat(SoftnessPixelsId, _edgeSoftnessPixels);
     }
 

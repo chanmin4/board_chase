@@ -46,6 +46,23 @@ public class EntityPaintMarkController : MonoBehaviour
     public bool IsMarkEnabled => Settings != null && Settings.UsePaintMark;
     public bool IsActive => _activeFaction != PaintMarkFaction.None;
     public int DisplayStacks => CalculateStacks(DisplayFaction, DisplayMarkAmount);
+    public int ArmorClassDelta
+    {
+        get
+        {
+            EntityPaintMarkSettings settings = Settings;
+
+            if (settings == null || !settings.UsePaintMark)
+                return 0;
+
+            return _activeFaction switch
+            {
+                PaintMarkFaction.Vaccine => ActiveStacks * settings.VaccineArmorClassDeltaPerStack,
+                PaintMarkFaction.Virus => ActiveStacks * settings.VirusArmorClassDeltaPerStack,
+                _ => 0
+            };
+        }
+    }
 
     public float DisplayNormalized =>
         DisplayMaxMarkAmount > 0f

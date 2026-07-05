@@ -10,6 +10,7 @@ public class EnemyShooterCombatController : MonoBehaviour
     [SerializeField] private EntityVisionController _vision;
     [SerializeField] private NavMeshAgent _agent;
     [SerializeField] private Damageable _damageable;
+    [SerializeField] private ShooterEffectController _effects;
 
     [Header("Optional Events")]
     [Tooltip("Optional global hit event. If assigned, this shooter alerts when this object receives a hit event.")]
@@ -28,6 +29,9 @@ public class EnemyShooterCombatController : MonoBehaviour
     [ReadOnly] [SerializeField] private bool _hasSoundInvestigation;
     [ReadOnly] [SerializeField] private Vector3 _soundInvestigationPosition;
     [ReadOnly] [SerializeField] private float _soundInvestigationMoveTime;
+    [ReadOnly] [SerializeField] private bool _isDashing;
+    [ReadOnly] [SerializeField] private Vector3 _dashDirection;
+    [ReadOnly] [SerializeField] private float _dashEndTime;
 
     private Damageable _targetDamageable;
     private Rigidbody _targetRigidbody;
@@ -45,6 +49,8 @@ public class EnemyShooterCombatController : MonoBehaviour
     private float _lastHealth;
     private MaskRenderManager _maskRenderManager;
     private float _nextPaintAvoidanceCheckTime;
+    private float _nextDashReadyTime;
+    private int _lastDashTickFrame = -1;
 
     public EnemyShooterConfigSO Config => _shoot != null ? _shoot.Config : null;
     public Transform Target => _target;
@@ -65,7 +71,7 @@ public class EnemyShooterCombatController : MonoBehaviour
             if (config == null)
                 return false;
 
-            float range = _attackActive ? config.AttackKeepRange : config.AttackStartRange;
+            float range = _attackActive ? ResolveAttackKeepRange() : ResolveAttackStartRange();
             return GetPlanarDistanceToTarget() <= range;
         }
     }
@@ -141,14 +147,41 @@ public class EnemyShooterCombatController : MonoBehaviour
 
         if (_maskRenderManagerReadyChannel != null)
             _maskRenderManagerReadyChannel.OnEventRaised -= OnMaskRenderManagerReady;
+
+        _effects?.SetFootTrailActive(false);
+        _effects?.StopDashParticles();
+    }
+
+    private void LateUpdate()
+    {
+        if (_effects == null)
+            return;
+
+        if (_isDashing)
+        {
+            _effects.SetFootTrailActive(false);
+            return;
+        }
+
+        bool moving =
+            CanUseAgent() &&
+            !_agent.isStopped &&
+            _agent.velocity.sqrMagnitude > 0.01f;
+
+        _effects.SetFootTrailActive(moving);
     }
 
     public void TickAwareness()
     {
+        if (TickDashMovement())
+            return;
+
         EnemyShooterConfigSO config = Config;
 
         if (config == null)
             return;
+
+        TryDashWhenHealthLow();
 
         if (!HasTarget)
         {
@@ -250,6 +283,9 @@ public class EnemyShooterCombatController : MonoBehaviour
 
     public void TickPatrol()
     {
+        if (TickDashMovement())
+            return;
+
         if (!CanUseAgent())
             return;
 
@@ -305,6 +341,9 @@ public class EnemyShooterCombatController : MonoBehaviour
 
     public void TickChase()
     {
+        if (TickDashMovement())
+            return;
+
         if (!CanUseAgent())
             return;
 
@@ -382,6 +421,9 @@ public class EnemyShooterCombatController : MonoBehaviour
 
     public void TickAttack()
     {
+        if (TickDashMovement())
+            return;
+
         if (!ShouldAttack)
             return;
 
@@ -602,8 +644,114 @@ public class EnemyShooterCombatController : MonoBehaviour
             direction = Quaternion.AngleAxis(error, Vector3.up) * direction;
         }
 
-        Vector3 aimPoint = transform.position + direction.normalized * config.MaxRange;
+        Vector3 aimPoint = transform.position + direction.normalized * ResolveAttackStartRange();
         return _shoot.TryFireAt(aimPoint);
+    }
+
+    private bool TryStartDefensiveDash()
+    {
+        EnemyShooterConfigSO config = Config;
+
+        if (config == null || !config.UseDash || _isDashing)
+            return false;
+
+        if (Time.time < _nextDashReadyTime)
+            return false;
+
+        Vector3 direction = ResolveDashDirection(config);
+        if (direction.sqrMagnitude < 0.0001f)
+            return false;
+
+        _dashDirection = direction.normalized;
+        _isDashing = true;
+        _dashEndTime = Time.time + config.DashDurationSeconds;
+        _nextDashReadyTime = Time.time + config.DashCooldownSeconds;
+        _effects?.SetFootTrailActive(false);
+        _effects?.PlayDashParticles();
+
+        if (CanUseAgent())
+        {
+            _agent.ResetPath();
+            _agent.isStopped = false;
+        }
+
+        FaceDirection(_dashDirection);
+        return true;
+    }
+
+    private bool TickDashMovement()
+    {
+        if (!_isDashing)
+            return false;
+
+        if (_lastDashTickFrame == Time.frameCount)
+            return true;
+
+        _lastDashTickFrame = Time.frameCount;
+
+        EnemyShooterConfigSO config = Config;
+
+        if (config == null || Time.time >= _dashEndTime)
+        {
+            _isDashing = false;
+            _dashDirection = Vector3.zero;
+            _effects?.StopDashParticles();
+            return false;
+        }
+
+        Vector3 movement = _dashDirection * config.DashSpeed * Time.deltaTime;
+
+        if (CanUseAgent())
+        {
+            _agent.Move(movement);
+        }
+        else
+        {
+            transform.position += movement;
+        }
+
+        return true;
+    }
+
+    private Vector3 ResolveDashDirection(EnemyShooterConfigSO config)
+    {
+        Vector3 direction = Vector3.zero;
+
+        if (config.DashAwayFromTarget && _target != null)
+            direction = transform.position - _target.position;
+        else if (_hasLastKnownPosition)
+            direction = transform.position - _lastKnownPosition;
+
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude > 0.0001f)
+            return direction.normalized;
+
+        Vector2 random = Random.insideUnitCircle;
+        if (random.sqrMagnitude <= 0.0001f)
+            random = Vector2.right;
+
+        return new Vector3(random.x, 0f, random.y).normalized;
+    }
+
+    private void TryDashWhenHealthLow()
+    {
+        EnemyShooterConfigSO config = Config;
+
+        if (config == null ||
+            !config.UseDash ||
+            !config.DashWhenHealthBelowThreshold ||
+            _damageable == null ||
+            _damageable.MaxHealth <= 0f)
+        {
+            return;
+        }
+
+        float normalizedHealth = Mathf.Clamp01(_damageable.CurrentHealth / _damageable.MaxHealth);
+        if (normalizedHealth > config.DashHealthNormalizedThreshold)
+            return;
+
+        TryStartDefensiveDash();
     }
 
     private float ResolveShotsPerSecond()
@@ -768,6 +916,32 @@ public class EnemyShooterCombatController : MonoBehaviour
         return config != null ? config.ChaseStoppingDistance : 0f;
     }
 
+    private float ResolveAttackStartRange()
+    {
+        if (_statsRuntime != null && _statsRuntime.MaxRange > 0f)
+            return _statsRuntime.MaxRange;
+
+        EnemyShooterConfigSO config = Config;
+        return config != null ? config.AttackStartRange : 0f;
+    }
+
+    private float ResolveAttackKeepRange()
+    {
+        EnemyShooterConfigSO config = Config;
+
+        if (config == null)
+            return ResolveAttackStartRange();
+
+        if (Mathf.Approximately(config.AttackKeepRange, config.MaxRange) &&
+            _statsRuntime != null &&
+            _statsRuntime.MaxRange > 0f)
+        {
+            return _statsRuntime.MaxRange;
+        }
+
+        return config.AttackKeepRange;
+    }
+
     private bool CanUseAgent()
     {
         return _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
@@ -788,9 +962,17 @@ public class EnemyShooterCombatController : MonoBehaviour
         if (damageable == null || damageable != _damageable)
             return;
 
+        bool tookDamage = damageable.CurrentHealth < _lastHealth;
         _lastHealth = damageable.CurrentHealth;
 
-        // Damage alert needs attacker context, so it is handled by EnemyShooter.NotifyDamagedBy.
+        EnemyShooterConfigSO config = Config;
+        if (tookDamage &&
+            config != null &&
+            config.DashOnDamaged &&
+            Random.value <= config.DashChanceOnDamaged)
+        {
+            TryStartDefensiveDash();
+        }
     }
 
     private void OnHitReceived(GameObject hitTarget)
@@ -932,6 +1114,9 @@ public class EnemyShooterCombatController : MonoBehaviour
 
         if (_damageable == null)
             _damageable = ResolveComponentInOwnerHierarchy<Damageable>();
+
+        if (_effects == null)
+            _effects = ResolveComponentInOwnerHierarchy<ShooterEffectController>();
     }
 
     private T ResolveComponentInOwnerHierarchy<T>() where T : Component

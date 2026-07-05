@@ -126,6 +126,7 @@ public class EnemyShooterShoot : EntityShootCore
         if (!fired)
             return false;
 
+        _weaponHolder?.PlayMuzzleParticle();
         _magazineAmmo = Mathf.Max(0, _magazineAmmo - 1);
         PublishGunshotSound();
 
@@ -251,7 +252,11 @@ public class EnemyShooterShoot : EntityShootCore
             _statsRuntime != null ? _statsRuntime.PaintChannel : config.PaintChannel,
             bullet != null ? bullet.ResolveDamageTargetMask(ShooterSide) : default,
             HitMarkSide,
-            bullet != null ? bullet.PaintMarkAmountOnHit : 0f);
+            _statsRuntime != null ? _statsRuntime.ResolvePaintMarkDamage(bullet) : config.PaintMarkDamage,
+            _statsRuntime != null ? _statsRuntime.ResolveInfectionDamage(bullet) : config.InfectionDamage,
+            _statsRuntime != null ? _statsRuntime.ResolvePenetrationClass(bullet) : bullet != null ? bullet.PenetrationClass : 0,
+            _statsRuntime != null ? _statsRuntime.ResolveArmorHealthDurabilityLossMultiplier(bullet) : 1f,
+            _statsRuntime != null ? _statsRuntime.ResolveArmorInfectionDurabilityLossMultiplier(bullet) : 0.5f);
     }
 
     private EnemyShooterConfigSO ResolveConfig()

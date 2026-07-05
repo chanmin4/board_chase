@@ -81,6 +81,8 @@ public class SectorEnemySpawner : MonoBehaviour
     private int _spawnedEnemyStageObjectCount;
     private int _nextEnemyWaveIndex;
     private System.Random _spawnRng;
+    private readonly HashSet<string> _loggedResolveSummaryKeys = new();
+    private readonly HashSet<string> _loggedPendingResolveKeys = new();
 
     public bool HasCompletedNormalBattleEncounter =>
         _hasEnemyEncounterConfiguration && _encounterCleared;
@@ -121,7 +123,7 @@ public class SectorEnemySpawner : MonoBehaviour
             _stageProgressChangedChannel.OnEventRaised += OnStageProgressChanged;
 
             if (_stageProgressChangedChannel.HasCurrent)
-                OnStageProgressChanged(_stageProgressChangedChannel.Current);
+                ApplyStageSnapshot(_stageProgressChangedChannel.Current);
         }
 
         if (_sectorStateManagerReadyChannel != null)
@@ -132,7 +134,7 @@ public class SectorEnemySpawner : MonoBehaviour
                 HandleSectorStateManagerReady(_sectorStateManagerReadyChannel.Current);
         }
 
-        RefreshResolvedSettings();
+        TryRefreshResolvedSettings("OnEnable");
         RefreshSectorActivity();
     }
 
@@ -176,6 +178,19 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private void OnStageProgressChanged(StageProgressSnapshot snapshot)
     {
+        int previousStageIndex = _currentStageIndex;
+
+        ApplyStageSnapshot(snapshot);
+
+        bool stageChanged = previousStageIndex != snapshot.stageIndex;
+
+        if (stageChanged)
+            TryRefreshResolvedSettings("StageProgressChanged");
+
+        RefreshSectorActivity();
+    }
+    private void ApplyStageSnapshot(StageProgressSnapshot snapshot)
+    {
         bool isThisCurrentSector =
             _sectorRuntime != null &&
             _sectorStateManager != null &&
@@ -185,16 +200,35 @@ public class SectorEnemySpawner : MonoBehaviour
             snapshot.isResolveCountdown &&
             isThisCurrentSector;
 
-        if (_currentStageIndex != snapshot.stageIndex)
+        _currentStageIndex = snapshot.stageIndex;
+    }
+private void TryRefreshResolvedSettings(string reason)
+    {
+        if (_sectorRuntime == null)
+            return;
+
+        if (_currentStageIndex < 0)
         {
-            _currentStageIndex = snapshot.stageIndex;
-            RefreshResolvedSettings();
+            //LogPendingResolveOnce(reason, "stage index is not ready");
+            return;
         }
 
-        RefreshSectorActivity();
+        if (_sectorStateManager == null || !_sectorStateManager.HasCurrentStageMap)
+        {
+            //LogPendingResolveOnce(reason, "sector state manager or stage map is not ready");
+            return;
+        }
+
+        if (!_sectorStateManager.TryGetStageRoomType(_sectorRuntime, out StageRoomType roomType))
+        {
+            //LogPendingResolveOnce(reason, "sector is not registered in current stage map");
+            return;
+        }
+
+        RefreshResolvedSettings(roomType, reason);
     }
 
-    private void RefreshResolvedSettings()
+    private void RefreshResolvedSettings(StageRoomType roomType, string reason)
     {
         _objectOccupiedSpawnPoints.Clear();
         _clearWithRoomObjects.Clear();
@@ -230,26 +264,29 @@ public class SectorEnemySpawner : MonoBehaviour
             _stageBattleSettings.TryGetRule(_currentStageIndex, out rule);
 
         _currentRule = rule;
-        SelectDeterministicPresets(rule);
+        SelectDeterministicPresets(rule, roomType, reason);
         ResetEncounterState();
     }
-
-    private void SelectDeterministicPresets(StageBattleSettingsSO.StageSpawnRule rule)
+    private void SelectDeterministicPresets(
+        StageBattleSettingsSO.StageSpawnRule rule,
+        StageRoomType roomType,
+        string reason)
     {
         if (_sectorRuntime == null)
             return;
 
         int stageSeed = ResolveStageSeed();
         Vector2Int coord = _sectorRuntime.Coord;
-        StageRoomType roomType = ResolveRoomType();
+        bool isBattle = IsBattleRoom(roomType);
 
-        if (IsBattleRoom(roomType) &&
-            TryPickEncounterPreset(
-                _currentStageIndex,
-                stageSeed,
-                coord,
-                roomType,
-                out StageBattleEncounterPresetSO encounterPreset))
+        bool pickedEncounterPreset = TryPickEncounterPreset(
+            _currentStageIndex,
+            stageSeed,
+            coord,
+            roomType,
+            out StageBattleEncounterPresetSO encounterPreset);
+
+        if (isBattle && pickedEncounterPreset)
         {
             _selectedEncounterPreset = encounterPreset;
             _selectedEncounterPresetName = encounterPreset.DisplayName;
@@ -258,7 +295,7 @@ public class SectorEnemySpawner : MonoBehaviour
             ResolveEnemyWavePresetPlan(stageSeed, coord);
         }
 
-        if (IsBattleRoom(roomType) && _stageBattleSettings != null)
+        if (isBattle && _stageBattleSettings != null)
         {
             _resolvedPlayerStageObjectSpawnCount =
                 _stageBattleSettings.GetPlayerStageObjectSpawnCount(_currentStageIndex);
@@ -294,12 +331,13 @@ public class SectorEnemySpawner : MonoBehaviour
             coord,
             997));
 
-        if (!_hasEncounterConfiguration)
-        {
-            Debug.LogWarning(
-                $"[SectorEnemySpawner] Battle room has no encounter preset and no object room preset. stage={_currentStageIndex}, sector={coord}, roomType={roomType}",
-                this);
-        }
+        LogResolveSummaryOnce(
+            reason,
+            coord,
+            roomType,
+            isBattle,
+            pickedEncounterPreset,
+            encounterPreset);
     }
 
     private bool TryPickEncounterPreset(
@@ -705,9 +743,6 @@ public class SectorEnemySpawner : MonoBehaviour
 
     private StageRoomType ResolveRoomType()
     {
-        if (_sectorRuntime != null && _sectorRuntime.IsStartSector)
-            return StageRoomType.Start;
-
         if (_sectorStateManager != null &&
             _sectorStateManager.TryGetStageRoomType(
                 _sectorRuntime,
@@ -716,7 +751,7 @@ public class SectorEnemySpawner : MonoBehaviour
             return roomType;
         }
 
-        return StageRoomType.NormalBattle;
+        return StageRoomType.Empty;
     }
 
     private static bool IsBattleRoom(StageRoomType roomType)
@@ -1099,7 +1134,55 @@ public class SectorEnemySpawner : MonoBehaviour
         _sectorStateManager = manager;
         _sectorStateManager.EnsureInitialized();
 
-        RefreshResolvedSettings();
+        if (_stageProgressChangedChannel != null &&
+            _stageProgressChangedChannel.HasCurrent)
+        {
+            ApplyStageSnapshot(_stageProgressChangedChannel.Current);
+        }
+
+        TryRefreshResolvedSettings("SectorStateManagerReady");
         RefreshSectorActivity();
+    }
+
+    private void LogPendingResolveOnce(string reason, string cause)
+    {
+        if (_sectorRuntime == null)
+            return;
+
+        string key = $"{_currentStageIndex}:{_sectorRuntime.GetInstanceID()}:{reason}:{cause}";
+
+        if (!_loggedPendingResolveKeys.Add(key))
+            return;
+
+        Debug.Log(
+            $"[SectorEnemySpawner] Resolve pending. reason={reason}, cause={cause}, " +
+            $"name={name}, coord={_sectorRuntime.Coord}, isStart={_sectorRuntime.IsStartSector}, " +
+            $"stageIndex={_currentStageIndex}, managerNull={_sectorStateManager == null}, " +
+            $"hasStageMap={(_sectorStateManager != null && _sectorStateManager.HasCurrentStageMap)}",
+            this);
+    }
+
+    private void LogResolveSummaryOnce(
+        string reason,
+        Vector2Int coord,
+        StageRoomType roomType,
+        bool isBattle,
+        bool pickedEncounterPreset,
+        StageBattleEncounterPresetSO encounterPreset)
+    {
+        string key = $"{_currentStageIndex}:{coord.x}:{coord.y}:{roomType}";
+
+        if (!_loggedResolveSummaryKeys.Add(key))
+            return;
+
+        Debug.Log(
+            $"[SectorEnemySpawner] Resolve summary. reason={reason}, name={name}, " +
+            $"coord={coord}, roomType={roomType}, isStart={_sectorRuntime.IsStartSector}, " +
+            $"isBattle={isBattle}, pickedEncounter={pickedEncounterPreset}, " +
+            $"encounter={(encounterPreset != null ? encounterPreset.DisplayName : "null")}, " +
+            $"totalEnemy={_resolvedEncounterTotalSpawnCount}, maxAlive={_resolvedMaxAlive}, " +
+            $"hasEnemyConfig={_hasEnemyEncounterConfiguration}, hasObjectConfig={_hasObjectConfiguration}, " +
+            $"hasEncounterConfig={_hasEncounterConfiguration}, opened={_sectorRuntime.IsOpened}, cleared={_sectorRuntime.IsCleared}",
+            this);
     }
 }

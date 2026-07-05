@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI_Inventory Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: UI_Inventory
+  m_TableCollectionNameGuidString: 5e897d5eb190e9b4f800bc789a5a84c9
+  m_Entries:
+  - m_Id: 8280563712
+    m_Key: Inventory_Equip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 63574073344
+    m_Key: Inventory_UnEquip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 121791012864
+    m_Key: Inventory_Discard
+    m_Metadata:
+      m_Items: []
+  - m_Id: 360990022524928
+    m_Key: Inventory_Split
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 4505162064272031854
+  references:
+    version: 2
+    RefIds:
+    - rid: 4505162064272031854
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1782903872916

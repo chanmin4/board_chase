@@ -21,7 +21,7 @@ public class NamedRewardApplier : MonoBehaviour
 
     private SectorStateManager _sectorStateManager;
     private MaskRenderManager _maskRenderManager;
-    private PlayerInfection _playerInfection;
+    private PlayerShooterInfection _playerInfection;
     private InfectionControlManager _infectionControlManager;
     private NamedSectorController _namedSectorController;
     private static readonly Vector2Int[] CrossOffsets =
@@ -137,7 +137,7 @@ public class NamedRewardApplier : MonoBehaviour
         _maskRenderManager = manager;
     }
 
-    private void HandlePlayerInfectionReady(PlayerInfection playerInfection)
+    private void HandlePlayerInfectionReady(PlayerShooterInfection playerInfection)
     {
         _playerInfection = playerInfection;
     }
