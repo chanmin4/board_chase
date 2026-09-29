@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d41985e436a49f2a8af85bd205f26b3, type: 3}
+  m_Name: SniperBulletLV2
+  m_EditorClassIdentifier: 
+  _guid: 6aa6098451ece2ebe2120bf09aba3deb
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: 84b9f7ad359d684d638305372dd35c1c, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _purchasePrice: 10
+  _worldVisualPrefab: {fileID: 7611937310320503209, guid: a6816258f99f918ba319ff60f906bd19, type: 3}
+  _maxStack: 120
+  bulletId: sniperbullet_lv2
+  displayName: SniperBulletLV2
+  projectilePrefab: {fileID: 7611937310320503209, guid: a6816258f99f918ba319ff60f906bd19, type: 3}
+  projectileTrailPrefab: {fileID: 0}
+  speed: 300
+  castRadius: 0.08
+  maxLifetime: 3
+  spawnOffset: 0.12
+  _projectileFlybySoundRadius: 4
+  _projectileFlybyEmitDistance: 3
+  _projectileFlybySoundIntensity: 0.65
+  _projectileImpactSoundRadius: 8
+  _projectileImpactSoundIntensity: 1
+  _projectileSoundInvestigateDelaySeconds: 0.05
+  projectileCollisionMask:
+    serializedVersion: 2
+    m_Bits: 2248
+  projectileTriggerInteraction: 2
+  statModifiers: []
+  playerDamageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 64
+  enemyDamageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 8
+  penetrationClass: 2
+  _tier: 2
+  _healthDamage: 30
+  _infectionDamage: 10
+  _markAmount: 25
+  references:
+    version: 2
+    RefIds: []

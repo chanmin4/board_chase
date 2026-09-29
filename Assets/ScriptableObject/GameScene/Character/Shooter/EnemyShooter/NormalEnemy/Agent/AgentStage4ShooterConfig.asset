@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e27a454e74f73745b473c6fafffc143, type: 3}
+  m_Name: AgentStage4ShooterConfig
+  m_EditorClassIdentifier:
+  _initialHealth: 360
+  _moveSpeed: 22
+  _baseArmorClass: 2
+  _shooter:
+    _healthDamageCoefficient: 1
+    _infectionDamageCoefficient: 1
+    _markAmountCoefficient: 1
+    _maxRange: 100
+    _shotsPerSecond: 9
+    _reloadDurationSeconds: 1
+    _magazineSize: 10
+    _penetrationClassBonus: 1
+    _aimSpeed: 10
+    _hipFireSpreadAngleDeg: 18
+    _aimSpreadAngleDeg: 4
+    _aimRangeMultiplier: 1.3
+    _aimMoveSpeedMultiplier: 0.7
+    _recoilAngleDeg: 0.8
+    _recoilRecoverySpeedDegPerSecond: 22
+    _recoilForwardDistancePerShot: 0.3
+    _recoilSideDistancePerShot: 0.16
+    _maxRecoilDistance: 1.8
+    _recoilDistanceRecoveryPerSecond: 5
+    _hipFireSpreadRadius: 0.6
+    _aimSpreadRadius: 0.05
+    _gunshotSoundRadius: 275
+    _soundInvestigateDelaySeconds: 0.2
+    _footstepSoundRadius: 150
+    _footstepSoundInterval: 0.3
+    _inventoryCapacity: 12
+  _loadoutTable: {fileID: 11400000, guid: d4a4b6c8e0f14931a2b3c4d5e6f70062, type: 2}
+  _enemy:
+    _id: agent_stage4
+    _displayName: Agent
+    _runCurrencyOnDeath: 0
+    _droppableRewardConfig: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
+  _enemyRole: 0
+  _fsmArchetype: 1
+  _enemyShooterPrefab: {fileID: 3586708470977516792, guid: de4d3cabff57d2a4f8c90e54d9bea671, type: 3}
+  _alertOnDamaged: 1
+  _targetSearchInterval: 0.35
+  _targetMemorySeconds: 20
+  _targetLockMinSeconds: 5
+  _chaseLastKnownPosition: 1
+  _useMaxRangeAsAttackKeepRange: 1
+  _usePreferredRangeBeforeStationaryAttack: 1
+  _stationaryAttackKeepRangePadding: 18
+  _playerDiscoveryReactionTime: 0.4
+  _pursuitReacquireReactionTime: 0.2
+  _burstCount: 3
+  _burstInterval: 0.12
+  _finishStartedBurstAfterSightLost: 1
+  _attackMovementMode: 1
+  _combatMoveRefreshInterval: 0.1
+  _burstCooldownSeconds: 0.75
+  _attackPreferredDistance: 80
+  _attackStrafeDistance: 5
+  _useTacticalIntent: 1
+  _useCoverTactics: 1
+  _useDuelToken: 1
+  _useFlankingTactics: 1
+  _coverSearchRadius: 20
+  _coverHideSeconds: 0.45
+  _coverPeekSeconds: 0.75
+  _tacticalFlankDistance: 8
+  _tacticalFlankAngleDegrees: 52
+  _patrolRadius: 28
+  _useMeleeAttack: 0
+  _useThrowableAttack: 0
+  _useDash: 1
+  _dashOnIncomingProjectile: 1
+  _dashChanceOnIncomingProjectile: 0.35
+  _dashWhenHealthBelowThreshold: 1
+  _dashHealthNormalizedThreshold: 0.3
+  _dashCooldownSeconds: 5
+  _dashDurationSeconds: 0.2
+  _dashSpeed: 18
+  _dashAwayFromTarget: 1

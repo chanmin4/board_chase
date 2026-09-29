@@ -126,7 +126,6 @@ GameObject:
   - component: {fileID: 584566363825635130}
   - component: {fileID: 9210402593392869793}
   - component: {fileID: 3913932458603108608}
-  - component: {fileID: 1616455284053347520}
   - component: {fileID: 809796936466158428}
   m_Layer: 5
   m_Name: FullMapRoot
@@ -179,7 +178,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 568295a41204eca4faa38270277d627a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
   _mapSnapshotChangedChannel: {fileID: 11400000, guid: e31f5b6e4b154bb495c727d7aee3a991, type: 2}
   _requestMapSnapshotChannel: {fileID: 11400000, guid: bb92d0f6df954f13a3352283d6e5e301, type: 2}
   _settings: {fileID: 11400000, guid: 47ed7ab743634e24ab9b1073091a61d7, type: 2}
@@ -194,9 +192,6 @@ MonoBehaviour:
   _cellPrefab: {fileID: 4725306581682804239, guid: 414c5107dc9c54f489206618755b16a8, type: 3}
   _startHidden: 1
   _requestSnapshotWhenOpened: 1
-  _overlayRequestChannel: {fileID: 11400000, guid: 04fa04120420a7b4caadc06b33088982, type: 2}
-  _overlayId: 1
-  _useOverlayManager: 1
 --- !u!114 &3913932458603108608
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -213,28 +208,6 @@ MonoBehaviour:
   _settings: {fileID: 11400000, guid: 6d228417652d4d54795d42c728e4304e, type: 2}
   _targetAlpha: 0
   _isVisible: 1
---- !u!114 &1616455284053347520
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3006792792564760648}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 992b6d980dccac04fade785161772730, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _id: 1
-  _canvasGroup: {fileID: 584566363825635130}
-  _hideOnAwake: 1
-  _blockAttackInputWhileOpen: 0
-  _onShown:
-    m_PersistentCalls:
-      m_Calls: []
-  _onHidden:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &809796936466158428
 MonoBehaviour:
   m_ObjectHideFlags: 0

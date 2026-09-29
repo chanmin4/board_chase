@@ -1,4 +1,10 @@
-﻿using VSplatter.StateMachine.ScriptableObjects;
+/*
+ * Role hierarchy: StateMachine > Core
+ * Primary responsibility: Implements the focused Condition responsibility and collaborates with its role group.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using VSplatter.StateMachine.ScriptableObjects;
 
 namespace VSplatter.StateMachine
 {
@@ -36,6 +42,7 @@ namespace VSplatter.StateMachine
 			return _cachedStatement;
 		}
 
+		// Purpose: Clears the current statement cache state.
 		internal void ClearStatementCache()
 		{
 			_isCached = false;
@@ -66,6 +73,7 @@ namespace VSplatter.StateMachine
 			_expectedResult = expectedResult;
 		}
 
+		// Purpose: Checks whether met is currently true.
 		public bool IsMet()
 		{
 			bool statement = _condition.GetStatement();

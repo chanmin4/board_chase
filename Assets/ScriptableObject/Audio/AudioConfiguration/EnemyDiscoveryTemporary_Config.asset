@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd927857a8df0844891988d5a0a78acc, type: 3}
+  m_Name: EnemyDiscoveryTemporary_Config
+  m_EditorClassIdentifier: 
+  _guid: 
+  description: Temporary 3D enemy discovery playback. High pitch distinguishes it from suspicion.
+  outputMixerGroup: {fileID: 24300020, guid: 4ec18c545f8f1864cbc96259630c5eec, type: 2}
+  volume: 0.9
+  pitch: 1.32
+  randomPitch: 0
+  pitchMin: 0.95
+  pitchMax: 1.05
+  spatialBlend: 1
+  minDistance: 1
+  maxDistance: 50
+  spread: 0
+  useDistanceAttenuationFloor: 1
+  minimumVolumeAtMaxDistance: 0.25
+  useScreenDirectionAssist: 1
+  horizontalPanAssist: 0.18
+  rearLowPassCutoffHz: 10000
+  stopFadeTime: 0.25

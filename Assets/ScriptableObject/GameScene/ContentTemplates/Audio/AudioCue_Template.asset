@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: AudioCue_Template
+  m_EditorClassIdentifier: 
+  _guid: template_audio_cue
+  description: Replace the sample clip, category, and playback configuration before assigning this cue to gameplay.
+  _cueId: template_audio_cue
+  _category: 0
+  _authoringNotes: Duplicate this asset, assign a final clip and routing configuration, then register the duplicate in Audio Cue Library.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  looping: 0
+  _gainDb: 0
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: bb892c53497c3e54eaf321db3c687977, type: 3}

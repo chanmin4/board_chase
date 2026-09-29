@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5489553570909944864}
   - component: {fileID: 297109829037984478}
   - component: {fileID: 4765465859954578542}
+  - component: {fileID: 8899012345678901234}
   m_Layer: 0
   m_Name: SoundEmitter
   m_TagString: Untagged
@@ -142,3 +143,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8487c1dfcbe7a0e4c9f8f2b63e690a4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &8899012345678901234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3551583501287267746}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6c4e89172a34f05a8d6c1b9e30f2475, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _gainDb: 0

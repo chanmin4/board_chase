@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: NPC_Farewell_Temp
+  m_EditorClassIdentifier: 
+  _guid: b807819b412d438b8c9e9ed6530a3209
+  description: Audio groundwork temporary feedback.
+  _cueId: b807819b412d438b8c9e9ed6530a3209
+  _category: 10
+  _authoringNotes: "Temporary non-verbal notification, NOT recorded NPC dialogue. Replace with the resident voice clip."
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: b807819b412d438b8c9e9ed6530a3104, type: 2}
+  looping: 0
+  _gainDb: -12
+  _audioClipGroups:
+  - sequenceMode: 1
+    audioClips:
+    - {fileID: 8300000, guid: 02807f977d2a36744a2106908f7dc8c7, type: 3}

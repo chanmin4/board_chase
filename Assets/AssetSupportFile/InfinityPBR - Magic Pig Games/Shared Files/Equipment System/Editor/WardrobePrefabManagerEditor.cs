@@ -30,8 +30,6 @@ namespace InfinityPBR
         private WardrobePrefabManager Manager => GetManager();
         private WardrobePrefabManager _wardrobePrefabManager;
 
-        private bool _initialCheck = false;
-        
         private WardrobePrefabManager GetManager()
         {
             if (_wardrobePrefabManager != null) return _wardrobePrefabManager;

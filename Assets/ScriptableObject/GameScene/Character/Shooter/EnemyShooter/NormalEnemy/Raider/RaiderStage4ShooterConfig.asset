@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e27a454e74f73745b473c6fafffc143, type: 3}
+  m_Name: RaiderStage4ShooterConfig
+  m_EditorClassIdentifier:
+  _initialHealth: 300
+  _moveSpeed: 22
+  _baseArmorClass: 1
+  _loadoutTable: {fileID: 11400000, guid: d4a4b6c8e0f14931a2b3c4d5e6f70065, type: 2}
+  _enemy:
+    _id: raider_stage4
+    _displayName: Raider
+    _runCurrencyOnDeath: 0
+    _droppableRewardConfig: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
+  _enemyRole: 0
+  _fsmArchetype: 0
+  _enemyShooterPrefab: {fileID: 3586708470977516792, guid: de4d3cabff57d2a4f8c90e54d9bea671, type: 3}
+  _alertOnDamaged: 1
+  _playerDiscoveryReactionTime: 0.6
+  _pursuitReacquireReactionTime: 0.3
+  _useCoverTactics: 0
+  _useDash: 0
+  _useThrowableAttack: 0

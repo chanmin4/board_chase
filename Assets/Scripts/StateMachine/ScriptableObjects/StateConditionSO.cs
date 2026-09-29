@@ -1,4 +1,10 @@
-﻿using System.Collections.Generic;
+/*
+ * Role hierarchy: StateMachine > ScriptableObjects
+ * Primary responsibility: Defines StateConditionSO state behavior or transitions that drive the runtime flow.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VSplatter.StateMachine.ScriptableObjects
@@ -22,12 +28,14 @@ namespace VSplatter.StateMachine.ScriptableObjects
 
 			return new StateCondition(stateMachine, (Condition)obj, expectedResult);
 		}
+		// Purpose: Creates the condition owned by this workflow.
 		protected abstract Condition CreateCondition();
 	}
 
 
 	public abstract class StateConditionSO<T> : StateConditionSO where T : Condition, new()
 	{
+		// Purpose: Creates the condition owned by this workflow.
 		protected override Condition CreateCondition() => new T();
 	}
 }

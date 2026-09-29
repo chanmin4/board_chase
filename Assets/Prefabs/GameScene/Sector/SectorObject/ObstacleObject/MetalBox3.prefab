@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1797523950473291377}
   - component: {fileID: 4546069138910958267}
   - component: {fileID: 8403878843759827077}
+  - component: {fileID: -5761335877315960599}
   m_Layer: 7
   m_Name: MetalBox3
   m_TagString: Untagged
@@ -29,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 10, y: 10, z: 10}
+  m_LocalScale: {x: 12, y: 12, z: 12}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -106,5 +107,18 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.7897952, y: 0.78979534, z: 0.7897953}
-  m_Center: {x: 0, y: 0.3948976, z: -0.000000014901161}
+  m_Size: {x: 0.7897952, y: 0.789795265, z: 0.7897953}
+  m_Center: {x: 0, y: 0, z: -0.000000014901161}
+--- !u!114 &-5761335877315960599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2600298526055920494}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83778558872543ad9524b90228dc6a7e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _surface: 1

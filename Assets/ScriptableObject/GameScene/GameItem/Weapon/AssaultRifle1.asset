@@ -33,17 +33,23 @@ MonoBehaviour:
     m_WaitForCompletion: 0
     m_LocalVariables: []
   _rarity: 0
+  _purchasePrice: 10
   _worldItemPrefab: {fileID: 6875246725044659727, guid: bac621c5b5905274e8421076ffe0f7b6, type: 3}
+  _maxStack: 1
   _weaponId: weapon
-  _displayName: AR1
+  _displayName: AssaultRifle1
   _weaponViewPrefab: {fileID: 2874331260001655343, guid: bac621c5b5905274e8421076ffe0f7b6, type: 3}
   _weaponViewLocalPosition: {x: 0, y: 0, z: 0}
   _weaponViewLocalEulerAngles: {x: -0, y: 90, z: 0}
   _weaponViewLocalScale: {x: 1, y: 1, z: 1}
+  _weaponType: 3
+  _damageMultiplier: 0.95
+  _shotsPerSecondMultiplier: 1.5
   _fireAudioCue: {fileID: 11400000, guid: 50f0f400331d1134f89955057a98567a, type: 2}
   _hitConfirmAudioCue: {fileID: 11400000, guid: 1370460f65ab9ca47baa2bec9cf50eb3, type: 2}
   _playerReloadAudioCue: {fileID: 11400000, guid: 65fa96f1cec58a144b81264ae215841d, type: 2}
   _enemyReloadAudioCue: {fileID: 0}
+  _muzzleParticlePrefab: {fileID: 0}
   _statModifiers: []
   _gunshotSoundRadiusMultiplier: 1
   _gunshotSoundRadiusAdd: 0

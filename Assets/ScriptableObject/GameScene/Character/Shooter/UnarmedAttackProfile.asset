@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3753a8cd2cf4779977b47fc6c03676f, type: 3}
+  m_Name: UnarmedAttackProfile
+  m_EditorClassIdentifier: 
+  _damage: 5
+  _penetrationClass: 0
+  _armorHealthDurabilityLossMultiplier: 1
+  _range: 5
+  _arcAngle: 80
+  _hitRadius: 1.5
+  _cooldownSeconds: 0.8
+  _hitDelaySeconds: 0.1
+  _activeHitSeconds: 0.1
+  _playerDamageTargetMask:
+    serializedVersion: 2
+    m_Bits: 64
+  _enemyDamageTargetMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _triggerInteraction: 2
+  _swingAudioCue: {fileID: 11400000, guid: 1e8963b2363407446bc6640dc31e280b, type: 2}
+  _swingParticlePrefab: {fileID: 6875086815343949020, guid: 8d1ad857e1e34d9f95f1856a0d1c7934, type: 3}
+  _swingTrailParticlePrefab: {fileID: 7364936370289906279, guid: 53d5227f649d45bbaf43e4a0d79b61ce, type: 3}

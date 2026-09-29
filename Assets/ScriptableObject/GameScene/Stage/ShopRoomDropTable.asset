@@ -35,11 +35,95 @@ MonoBehaviour:
     weight: 8
   - rarity: 2
     weight: 2
-  _normalBulletPool: []
-  _rareBulletPool: []
-  _uniqueBulletPool: []
-  _legendaryBulletPool: []
-  _normalItemPool: []
-  _rareItemPool: []
-  _uniqueItemPool: []
-  _legendaryItemPool: []
+  _normalBulletPool:
+  - bullet: {fileID: 11400000, guid: 0db82986ea22f2f4fa1edb67ae143978, type: 2}
+    weight: 1
+    stock: 5
+    bulletBundleAmount: 30
+  - bullet: {fileID: 11400000, guid: 525c2f6ced1fe5c44a14cf4eee6562f8, type: 2}
+    weight: 1
+    stock: 5
+    bulletBundleAmount: 30
+  - bullet: {fileID: 11400000, guid: 11704fc8a3ba6ad4b8e91397f68fd4a2, type: 2}
+    weight: 1
+    stock: 5
+    bulletBundleAmount: 30
+  _rareBulletPool:
+  - bullet: {fileID: 11400000, guid: 8c0a445469cbc374c9db8e6c79835089, type: 2}
+    weight: 1
+    stock: 4
+    bulletBundleAmount: 30
+  - bullet: {fileID: 11400000, guid: ef0a7249119704c458b9ce7b4943bcdb, type: 2}
+    weight: 1
+    stock: 4
+    bulletBundleAmount: 30
+  _uniqueBulletPool:
+  - bullet: {fileID: 11400000, guid: b4c246f2fdedc0143912e4cf82fb0213, type: 2}
+    weight: 1
+    stock: 3
+    bulletBundleAmount: 30
+  - bullet: {fileID: 11400000, guid: 58de4d745b804654699a43d5a74c9a71, type: 2}
+    weight: 1
+    stock: 3
+    bulletBundleAmount: 30
+  _legendaryBulletPool:
+  - bullet: {fileID: 11400000, guid: bb4e523a5aed4c74783a70316a6f7a8f, type: 2}
+    weight: 1
+    stock: 2
+    bulletBundleAmount: 30
+  - bullet: {fileID: 11400000, guid: fa03e489db7158c4aa02e3b5ef312bd7, type: 2}
+    weight: 1
+    stock: 2
+    bulletBundleAmount: 30
+  _normalItemPool:
+  - item: {fileID: 11400000, guid: 9fdf29b08a95b724c968000d0c5eaba8, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 159ce08102ed3294a962512401526ee2, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 082fcc57332c7b040aebd117a97f6a4a, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 230c8be8617d92c43a117bb58307dba0, type: 2}
+    weight: 1
+    stock: 1
+  _rareItemPool:
+  - item: {fileID: 11400000, guid: c1d9900155203f9489b09c1358be0488, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 8a4406c8430a5c246b221662973cbb96, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: a0d6f256834e65743803b8f79c868670, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 953b3e96e1249f04ba6ae9889204a5b9, type: 2}
+    weight: 1
+    stock: 1
+  _uniqueItemPool:
+  - item: {fileID: 11400000, guid: d93a905ffabdc5843b630c27dfe3a658, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: eac25173a085c7f4e9a904e16bb8f477, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 88b4646e4c72a74469234aa182af2abb, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 5d0ba4acbf3961243bb78c0c3667626d, type: 2}
+    weight: 1
+    stock: 1
+  _legendaryItemPool:
+  - item: {fileID: 11400000, guid: 560dcc3dd9514124cb3b8cc451f0b4c0, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: a8c7bc4bfdd34874cb8cea35a09a004a, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 24bdeb6c7f93b5b468fbe283bed27924, type: 2}
+    weight: 1
+    stock: 1
+  - item: {fileID: 11400000, guid: 75e18ec3889747049b9209e8710ab651, type: 2}
+    weight: 1
+    stock: 1

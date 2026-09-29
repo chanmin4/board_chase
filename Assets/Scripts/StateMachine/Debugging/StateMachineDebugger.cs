@@ -1,4 +1,10 @@
-﻿#if UNITY_EDITOR
+/*
+ * Role hierarchy: StateMachine > Debugging
+ * Primary responsibility: Implements the focused StateMachineDebugger responsibility and collaborates with its role group.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+#if UNITY_EDITOR
 
 using System;
 using System.Text;
@@ -48,6 +54,7 @@ namespace VSplatter.StateMachine.Debugging
 			currentState = stateMachine._currentState._originSO.name;
 		}
 
+		// Purpose: Performs the transition evaluation begin workflow for this component.
 		internal void TransitionEvaluationBegin(string targetState)
 		{
 			_targetState = targetState;
@@ -66,6 +73,7 @@ namespace VSplatter.StateMachine.Debugging
 			}
 		}
 
+		// Purpose: Performs the transition condition result workflow for this component.
 		internal void TransitionConditionResult(string conditionName, bool result, bool isMet)
 		{
 			if (!debugTransitions || _logBuilder.Length == 0 || !appendConditionsInfo)
@@ -79,6 +87,7 @@ namespace VSplatter.StateMachine.Debugging
 				_logBuilder.AppendLine($" [{UNCHECK_MARK}]");
 		}
 
+		// Purpose: Performs the transition evaluation end workflow for this component.
 		internal void TransitionEvaluationEnd(bool passed, StateAction[] actions)
 		{
 			if (passed)
@@ -96,6 +105,7 @@ namespace VSplatter.StateMachine.Debugging
 			_logBuilder.Clear();
 		}
 
+		// Purpose: Performs the log actions workflow for this component.
 		private void LogActions(StateAction[] actions)
 		{
 			if (!appendActionsInfo)
@@ -110,6 +120,7 @@ namespace VSplatter.StateMachine.Debugging
 			}
 		}
 
+		// Purpose: Performs the print debug log workflow for this component.
 		private void PrintDebugLog()
 		{
 			_logBuilder.AppendLine();

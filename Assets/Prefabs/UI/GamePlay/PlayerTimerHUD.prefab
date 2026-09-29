@@ -344,6 +344,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6965972831271086492}
   - component: {fileID: 3545672510777412809}
+  - component: {fileID: 661172395000000001}
   m_Layer: 5
   m_Name: PlayerTimerHUD
   m_TagString: Untagged
@@ -393,7 +394,6 @@ MonoBehaviour:
   _stageStringTable:
     m_TableCollectionName: UI_PlayerTimer
   _stageEntryKey: PlayerTimer_Stage
-  _stageBreakEntryKey: PlayerTimer_StageBreakTime
   _vaccineCountdownEntryKey: PlayerTimer_VaccineCountdown
   _virusCountdownEntryKey: PlayerTimer_VirusCountdown
   _neutralCountdownEntryKey: PlayerTimer_NeutralCountdown
@@ -407,7 +407,30 @@ MonoBehaviour:
   _readyColor: {r: 1, g: 1, b: 1, a: 1}
   _filledColor: {r: 1, g: 1, b: 1, a: 1}
   _completedColor: {r: 1, g: 1, b: 1, a: 1}
-  _breakTimeColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &661172395000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3935669234577330278}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d26fcb55b3e46b9ba2e61d6e7d95a31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _traitListOffset: {x: 0, y: -6}
+  _traitListWidth: 350
+  _traitRowHeight: 26
+  _traitListBackgroundColor: {r: 0.018, g: 0.047, b: 0.071, a: 0.9}
+  _traitTextColor: {r: 0.8, g: 0.94, b: 1, a: 1}
+  _warningViewportAnchor: {x: 0.5, y: 0.72}
+  _warningSize: {x: 520, y: 96}
+  _warningDuration: 2.2
+  _warningFadeOutSeconds: 0.35
+  _warningBackgroundColor: {r: 0.08, g: 0.015, b: 0.015, a: 0.9}
+  _warningTitleColor: {r: 1, g: 0.73, b: 0.28, a: 1}
+  _warningDescriptionColor: {r: 0.94, g: 0.94, b: 0.94, a: 1}
 --- !u!1 &5335634561267445865
 GameObject:
   m_ObjectHideFlags: 0

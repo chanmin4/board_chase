@@ -1,0 +1,359 @@
+# 프로젝트 외부 패키지·지원·생성 소스 인덱스
+
+2026-09-22: 파일 존재·행수·해시 검사. 공급사 코드의 모든 동작을 검증했다는 뜻은 아닙니다. 자사 스크립트 866개 인덱스와 합쳐 Assets 안의 C# 1221개를 다룹니다.
+
+- Assets/AssetsPack/FullScreenFX/Scripts/MaterialPropertyController.cs | 56행 | SHA256 45dfdc153f42c7086dafb2626a7ef58654a7487261d06f9792c07d543cb161ce
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonBeamScript.cs | 155행 | SHA256 bad22cff37b5467de121125fed5e06d2f4b8658f59922b18a5dce72edcdc6111
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonEffectCycler.cs | 46행 | SHA256 89e4fead9854438cfdc7f8e7e3b1a1232aa8da9ab381ef284ea240469d19ea3c
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonFireProjectile.cs | 202행 | SHA256 544dc1ceb350f09b3115c0cc799e68b098f47928e43ce1d0ef4f7c93f4d90e87
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonLoopScript.cs | 40행 | SHA256 fd1adce218628d338a9e06003382ac341d8a3bb41f929f57bda912b2262bf65e
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonOrbit.cs | 76행 | SHA256 12357205e8c9e9792e747139fc9e3ee2d7b319894088f3d04610d57954adc85c
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonProjectileScript.cs | 135행 | SHA256 39b58aac355a293a7ffa92eaefb640ee52e6b9f4029760f5d0be952eb0a34ae6
+- Assets/AssetsPack/Polygon Arsenal/Demo/Scripts/PolygonSceneSelect.cs | 157행 | SHA256 d31ec5d2bb36b90babf9648a4c4a8568c742fbab0efb8d727d83e07e106ac04a
+- Assets/AssetsPack/Polygon Arsenal/Scripts/PolygonBeamStatic.cs | 128행 | SHA256 7755a1136adf8bec347740bb6fd26022226283c21c69f61deda3e3650b1e5deb
+- Assets/AssetsPack/Polygon Arsenal/Scripts/PolygonLightFade.cs | 38행 | SHA256 0a33f69fadc9f845d346e47f141d5f20123090509e9ad679ba8656033b2a158c
+- Assets/AssetsPack/Polygon Arsenal/Scripts/PolygonLightFlicker.cs | 75행 | SHA256 a6444438bb795ea4398626c131cfff8b9ce925cfae1f214192e4b8b5acc62059
+- Assets/AssetsPack/Polygon Arsenal/Scripts/PolygonRotation.cs | 30행 | SHA256 093dc5f5948fb038c5ebd60b0e97312c254aae78e8080ca95995aa7120361231
+- Assets/AssetsPack/Polygon Arsenal/Scripts/PolygonSoundSpawn.cs | 46행 | SHA256 5cf2b624d58603b6973719a547fd56a3c9040dffe3af8d1f9019a0b984339f71
+- Assets/AssetsPack/Prototype Collection/Assets/Editor/Preferences.cs | 17행 | SHA256 085a2128a3844337ddb84a3647d9cddd207e1d221c7e1e563593a9b8c61954a8
+- Assets/AssetsPack/Prototype Collection/Assets/Editor/StartScreen.cs | 277행 | SHA256 e0330aa1f64305bbeb05c97ff624f565ff4ca83dcac58e49c596bc5842533380
+- Assets/AssetsPack/Sci-Fi UI/Demo_Assets/scripts/GUI_Demo.cs | 67행 | SHA256 cff920610a130e228fe6682da1dc69905c8aff09b5b40a2b8fed9ae3671beb41
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/CircleSlider.cs | 43행 | SHA256 1e7b8a420e8ca2f40c4294d5219f6004068b16cd7d1efcb0063b87e6ffddb53f
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/ImageColorControl.cs | 30행 | SHA256 2dd48d8376ce2274117e1b8ea1611b4b271271838851e1c96f32654de273d747
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/JustRotate.cs | 16행 | SHA256 d602ca9ddbf562c4249bb0fb9b5b6738ab938d8ab9a5e1371bb6c5810f284add
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/ObjectCycler.cs | 118행 | SHA256 c35b2ce1c4435b1a8581fa321f35ad4039f8ae15e951d23835957fbb7c864347
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/PressedBtn.cs | 54행 | SHA256 ad54adadd22f9d96216bc99314971603c4c1d20d24f1fe9db48c4bf02ac9a320
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/SimpleProgress1.cs | 38행 | SHA256 1f9f0f15a7877f67b9e7e4196f6baa9c42cd5e33f345fb82e1e5607fbff2b445
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/SliderRunTo1.cs | 37행 | SHA256 fab62118a260ea96d384f99263a04bae0938718efcd5a6ccd6a7370a2fffdc57
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/SliderValuePass.cs | 22행 | SHA256 e67720cc1affecd9fbcf5e0246294a268a95203cdffc74546e6b39df2c593882
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/TextColorControl.cs | 28행 | SHA256 027435342bb66e6a42fe9f55d0f73e1893e51257cc0711844f0abe7093e5bf69
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/TMSliderValuePass.cs | 24행 | SHA256 ebae791e425a93d34f57406396732a2bf9778a4000d676c385b3102faf0b6144
+- Assets/AssetsPack/SCI-FI UI Pack Pro/Common/Scripts/TMTextColorControl.cs | 29행 | SHA256 6e8b211796419b93931b4670e2e483093f2f9d12ba6456313e05cb4bb943c21d
+- Assets/AssetsPack/Slash Effects FREE/Scripts/CameraRotation.cs | 39행 | SHA256 7671dc9cc679a4d1553607f3a098e631c478af5040da5ab2c10d97a221d18683
+- Assets/AssetsPack/Slash Effects FREE/Scripts/Prefab Manager.cs | 83행 | SHA256 a08acec6c8e632b0fa42150000e69cd7b191e671a2d4c3df11625281afc280db
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Audio Snapshot Exporter/SFB_AudioSnapshotExporter.cs | 467행 | SHA256 6c240aa8bed4e85740601742c6a10e84ebaaa22efe660f00abf3aa8e7502e6e3
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/AdjustObjectName.cs | 126행 | SHA256 fd2be48b8c33a033f0e49c527786b9386bf20702ae137a4c39492bc3a9cf97c2
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/AnimationClipReverser.cs | 83행 | SHA256 0d1bb18570656c40b1efe418e8b9d93a130b51ce79496534ab539e7a1d481032
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/AnimationEventCopier.cs | 181행 | SHA256 c23e738f406cf90a6b378b0aeadec32822a5b22906b6ab4c31375239012301f0
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/AnimationEventCopierWindow.cs | 127행 | SHA256 c315758aa4d4c7a78847f1a28a6fd609472ba02ea03ca147f7eeb6bd077a72e8
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/InfinityEditor.cs | 2156행 | SHA256 9c9815c56f1f185c66c04338e0bf814f69296b8c558a43f4775aca1c07154709
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/InfinityEditorScriptableObject.cs | 60행 | SHA256 d85de15204ae8c538ba8b606a1b517fb135ef7a9510b2f3932c2d41f945bea2d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/InfinityPBRManager.cs | 367행 | SHA256 74d158e88a39dfbf437ad0906ea3bb1321d5f775d04e6cefd96c1d295725bc1e
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/InfinitySoEditor.cs | 16행 | SHA256 c29080043976fc8f13733b2f4ab80ebcff75dbbfbf77a7da8c57149cf78e091d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/InfinityStatic.cs | 207행 | SHA256 12c6e4e5f3c4a90e4b6ac20201d13df203e288176188bd4bddf3c7cc0a1d636b
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/LayerFieldPropertyDrawer.cs | 16행 | SHA256 3fba60154474717ab827e8fb8afc7b2f55df34cbaad61b4e9b14a8aac36ba239
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/MoveComponentToNewObject.cs | 71행 | SHA256 a17b99f26770b9d85589857eb1e214eb695c605c02d28a13f98ad99be35d0651
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/ObjExporterScript.cs | 162행 | SHA256 27b907e7aa29a0654ea14a3516a509482c0a82aa607ea7088f212f2b8e35330b
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/Property Drawers/LayerAttributeDrawer.cs | 22행 | SHA256 4c93664d8eb9cf2fd1350295f1810c5c615455073e9ba318df50ad9e772924ef
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/SetParticleValues.cs | 83행 | SHA256 01bd7e3c607854276d0ee321e9e4ed243b303c95be6f2960f391036b0842aa21
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/SFB_AudioSnapshotExporterEditor.cs | 107행 | SHA256 f2516afb6cfc12c0095c135db43ce6574c3f53c90601459a07594e63f60557f3
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/SFB_BlendShapesManagerEditor.cs | 427행 | SHA256 9f91a3501f4ae153149bab199753cc3fd1fad89a9e305118b71db7cb4c93fc7e
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/SFB_DisplayPolycount.cs | 39행 | SHA256 68c8ec028bc8e4c456fd4f43b37aa0459387f83573151585a40b4f21d1e10cb2
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/SFB_LoadWelcome.cs | 41행 | SHA256 9a4cf254f5454d1c89446d3418c4756faa029afa274f64524dd203d9ba1ff38f
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/SFB_SaveObjectAsMesh.cs | 169행 | SHA256 53a3fde1d63048e9b03b7a87aab8523286bf1149f2704406055ddb441bd54031
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Editor/TextInputDialog.cs | 64행 | SHA256 368c76eab1db02231a0927815bd27c9b403aa743d824ae302a55ab24c012bcdc
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/BlendShapesManagerEditor.cs | 733행 | SHA256 e01f467df607335981fe0b5e345a9967dc731c78cf6ce46007161d323098bab8
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/BlendShapesPresetManagerEditor.cs | 445행 | SHA256 0e12973ac92bc043c12af3cb769cbee534af27159be0a6179c57244c4daa5e3a
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/EquipmentObjectEditor.cs | 353행 | SHA256 f5824b236b86015bb24e0a965579f1c1110c786c812303051b13db97e8b2cb05
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/EquipmentSystemStatic.cs | 124행 | SHA256 267d1cac63dcef5b976cf3d5c99f8a61ae7b80d4ceb73e88e4743b434fcf21ab
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/EquipObjectMenu.cs | 23행 | SHA256 449a491e3cc1ef965d0f4d2e5497331db2ea41ca3cb4058b3d9a18bb6267b920
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/PrefabAndObjectManagerEditor.cs | 1924행 | SHA256 f338b30f0de22b63e60caad454fa340de96835ddc65cf6a265dc8e230e7c747a
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Editor/WardrobePrefabManagerEditor.cs | 467행 | SHA256 f26cfa0e174194031c7a457ebb8d791e519580c2218d59ee58447011160b031d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapeGameObject.cs | 16행 | SHA256 62d17234be29058db39c1ef58d23d8ac9e165c77d5d75740576ae75f99bb2a07
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapePreset.cs | 23행 | SHA256 e3ae3b1894b4ba2753d2a002aae821254402a48c322366db944989289e42560b
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapePresetFile.cs | 11행 | SHA256 1b2c634c114361fa11f83276d4854bdef01189a4f5650f7fe7ae3d70249121bf
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapePresetValue.cs | 19행 | SHA256 1614af0254fcda8d9d0719cf60c5be741fb8f33e1ba85db677101562b990dffb
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapesManager.cs | 622행 | SHA256 0524a594cca50b4c3ea2cb11f01684c75ad8b01982097dc1688d7841bfdcbf13
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapesPresetManager.cs | 133행 | SHA256 14ff04b9d0daac30138617edb420d6a6daa4979c98bb2c3727b993ac3b89ba5d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/BlendShapeValue.cs | 39행 | SHA256 dd968912dd1bc42efa0ddcf67b274b655db7a2143a8e73c16568089686f26757
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/EquipmentGroup.cs | 14행 | SHA256 8c3eea1433ba61d055f3c87998fe04f991dd7e768922c10160ce746382e72597
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/EquipmentObject.cs | 93행 | SHA256 dc7c5b0f0d2b4c3d19b425c3e7b37c9a7a1ccd252cdc3eb19b35a04eb23fde8d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/EquipObject.cs | 335행 | SHA256 bb0dcfddfa8a60a891988470b6a7d96151f55d2f278f3595aaf32c6d4b795a1d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/MatchList.cs | 10행 | SHA256 ea63342198c7a793f6e8fc94c3cf4e9fc73209d78efb9ec2710ef241213e6f67
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/MatchValue.cs | 9행 | SHA256 8468d1f9987ebbd24033aa116bba60f46ba2c14eae76c051990b56c85da3be2e
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/PrefabAndObjectManager.cs | 818행 | SHA256 c58e46ac506e336a725e6b491442d66b19cf7f205d1cc4dbef139be4357e0d14
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/Shape.cs | 9행 | SHA256 11a522d5e5d65519971aca336b664bb2043aaadc5a6d1536c9829b43153bc179
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Equipment System/Scripts/WardrobePrefabManager.cs | 404행 | SHA256 82b161b1fc349869eaf201ace950542e0fd1e80ce0208a6ee0f3bd0e014b5cff
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_LightAutoOff.cs | 26행 | SHA256 3049701896e999db74974ddaf17aeff564658f0ce2af64012edc9c9baa5db3ed
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_LightAutoOn.cs | 38행 | SHA256 61d6243eebeb78936b3a717375bcb86aaa73f7a63034640a65519914e69596f4
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_LightColorChange.cs | 25행 | SHA256 70b4da2ea81d06448b0865398c7bb3e6514c46f9746de903a7be77d0bc81838a
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_LightFlicker.cs | 25행 | SHA256 c3ef11a619304f8dd8920d18fec598aa82c6cc2c300e8824c74e353b2610b168
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_MoveOverTime.cs | 36행 | SHA256 a0589c9323d6a2690471d8281ab6b8dfc4c0bd7b5961933bbbb3d1ea1ebaa32a
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_ParticleGrowOverTime.cs | 14행 | SHA256 371d72bd277a9330e62813be32e7fec2bf675066a0530ee11351931a7cc52432
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Magic Spells & Particles/Scripts/SFB_ParticleTrailRotation.cs | 19행 | SHA256 90b4518b1976b6255105926a2bc1b67297ce890afba9f51d06f1848506db2d68
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/EnumerableExtensions.cs | 25행 | SHA256 621b813b89f638ffb78f5d9ffef541930459b506efc454a54a1fb83e8710aeaf
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/GridCellAutoHeight.cs | 97행 | SHA256 329eefb68e26a9c19eed86ccc3b740d4d1a61b7ecce46a1b233ffcf6a19a1b74
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/InfinityExtensions.cs | 335행 | SHA256 4ee6abfcea85b5612124b2a2d459e4b47493b971c50ae1f110d4fa3e9059fc0d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/LayerAttribute.cs | 6행 | SHA256 40c405f46275f18c7d90a5ff00745a87f1d93054a17c0fbb5dce829c775d027e
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/LayerField.cs | 9행 | SHA256 f998c0c6b79740a4d368bab5e9a3bd1033655abafb5ae612e10991335698bbf8
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/LazyScriptableObject.cs | 39행 | SHA256 71d1280251519682ec37e1891ab97424db6bf88a5a510e732a431e890f613ef4
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/LazySingleton.cs | 32행 | SHA256 dc969e19d3fe4843a77e2b45a1fa7993115d21ab9c8295a0a729849b5a8184e2
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Scripts/MoveBetweenPoints.cs | 139행 | SHA256 20c94358f12985f4b0bb48c2f40973edbe6416a22f38b41acf80b8b9a9728e56
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/DemoControl.cs | 72행 | SHA256 5b83fe2d4a2976452564a4087114c8914afe6864f5c2154a4c6e512ead4cd21d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/DemoKeyCommands.cs | 25행 | SHA256 27855ccf0fbdb5a2196af8926ce9f43512f038f65427ec4d76d427420386c8f5
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/DemoWardrobe.cs | 18행 | SHA256 61962f1af6021651b6563394fdd771215e672c3b23702bf0df3c122807c34446
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/ExtendedFlycam.cs | 50행 | SHA256 8d5e301528104ec42eb5064f65834c4d041aafa27cb42cc6ec1a03c119cfcdde
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/FollowTarget.cs | 27행 | SHA256 280bd47f9a6f63fb8da29aaca5f84d7f5c0c50b9e1fd57561c28797e83d97fbe
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/GotHitDirection.cs | 94행 | SHA256 531f7f2f1364a5847d5dca5a378ace623e8fbd8568507b99e51ce8f582405973
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/InfinityDemoAnimationButton.cs | 31행 | SHA256 907dbe96b5ac7036544cac5f560416603e6e34b67b31f36cf28555b9917dbbbe
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/InfinityDemoAutomateStyles.cs | 17행 | SHA256 6af9a8129cfc785f04e8f84a20f4febbbacbb0f7ced6736c437cb5fc98d06e4f
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/InfinityDemoCharacter.cs | 234행 | SHA256 bc01fd9c71be7a3d97edcea43e4cd78599f7772783746633222d8ec57e92229b
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/InfinityDemoFloatSlider.cs | 28행 | SHA256 23fba7ba4facbf89f3bd079d19ffbba08c6a6f2611b6eaa90b0cd755193524c4
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/IPBR_EnvironmentWarning.cs | 32행 | SHA256 8cef60ee2c6e1bf612dfa94bf2536e4fa58c188ee7f4910bfd9703a21115ae92
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/IPBR_EnvironmentWarningLP.cs | 30행 | SHA256 8db81701c359d168920cc781381e4ebb36354547d8d75c6ded225357f94dff75
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/IPBR_SupportAndReview.cs | 33행 | SHA256 57f8bd0a7212cbecb6258a5ee6aa58d8889b086644cfe8894fb6ded3307de2e4
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/LPDemoHumanoid.cs | 74행 | SHA256 81c98357b4955338c3c618fd6e85713252f358e11011ba9e434731b806da0532
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/photoController.cs | 70행 | SHA256 644106e089f08010a9ef6b920f305fe6c437b797b547a1cb9b8c386f604a13c5
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFBPingPong.cs | 20행 | SHA256 f271677239682a4998407d325ca086dc274bc26feec6bc48ed4e3d6965e5e140
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_AnubisDemo.cs | 27행 | SHA256 d13e7cabd19181469258eadb09e46271534aebdb11822bb7488f94ec6f1cf7f9
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_AudioManager.cs | 162행 | SHA256 5e8d15b2d7dd415db3c3b8a46c88a627aced4caca74dd94407dc8cb1484c5c19
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_BlendShapesManager.cs | 710행 | SHA256 ef6710f6a028cb4dbc373867d098a882065ec6579301e5732eb8860a175d3c9d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_CameraFocus.cs | 17행 | SHA256 29482523079e5fdbfe002bf504d1c66e2cca20678355349ce7e18e1bc2925ba7
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_CameraRotate_v2.cs | 48행 | SHA256 8438dccb05195b04af30c30f0aa9227eb376cab10833f7b7be2663dbc8ec06dd
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_DemoControlKeys.cs | 23행 | SHA256 f97b0785e40de6adda1a5d73d2339724fc673f40e25ceddd20af019e54f97398
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_DemoControl_v2.cs | 64행 | SHA256 0acc61a1cb29862b9eb19934fa0794a825f414370d5b0460d64e13bdc2d480e2
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_HumanDemoControl.cs | 173행 | SHA256 bb067dc44f44708669a94030564831adc7a6896f416237bed0d7f0b7de20a0e3
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_HumanDemoModel.cs | 115행 | SHA256 2ec5a557952192f8dfca75b6b16e3a2b941822ddbaa1b5e17a2d320b4410f7e4
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_ShotFollowTarget.cs | 30행 | SHA256 dcd5045350a75b740c21665930153de140d83c4647b3feaa3d660560d4872622
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_StayWithTarget.cs | 12행 | SHA256 79970703f85644f69375d37678e611486ce5995e83d73b71a0bb352dfc49816c
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_ToggleOpposite.cs | 19행 | SHA256 d8749ec0f85a82b161cd811c39500eae0d7aca8a9e17cec1820891fee4813254
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/SFB_TurnOffIfOn.cs | 21행 | SHA256 81eff7312912b7c1fb7acc46d9f2daf40c218b67d56aeb1ad58a6f5361763d4d
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/TakeScreenshot.cs | 33행 | SHA256 9239b8417bfa46982a2b7ce70e737e7b67d013d289826c1a3c8c19f13ff95922
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Demo Scripts/TextSameAsParentName.cs | 11행 | SHA256 58565cb197a5053c3bf33be869ce915ff3e3541b655779766fd4704e290c29f6
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Low Poly Support Files/Editor/ColorShifter.cs | 864행 | SHA256 e4106d49138cfe90b2219e3ad33eaf1dc8df637e8034ed971ddd5aa1f914984a
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Low Poly Support Files/Editor/ColorShifterObjectEditor.cs | 42행 | SHA256 83b5e9945f316176bf90742f7c200614a214626ba9ef216266627b6962c0ba44
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Low Poly Support Files/Editor/ColorShiftRuntimeEditor.cs | 67행 | SHA256 72e3a752203b4a364ccd80884b77261dee1c0cebe68cb1f50d2e0143d35bd05f
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Low Poly Support Files/_Scripts/ColorShifterObject.cs | 296행 | SHA256 666a590ffa556a5cb9f69bdd410a78eb0cd177749dbcfa142641356fe503e7a2
+- Assets/AssetSupportFile/InfinityPBR - Magic Pig Games/Shared Files/Shared Files - Characters/Low Poly Support Files/_Scripts/ColorShiftRuntime.cs | 17행 | SHA256 901a6737a4ce8e315172d53f3adde2429725df085d4e638b8d06405ff7070fd6
+- Assets/EditorTool/vInspector/VInspector.cs | 1571행 | SHA256 ec4919fff5fcbc32d1536847ba0b4eda1c117627b7d186773682a7f57b7ea69a
+- Assets/EditorTool/vInspector/VInspectorAttributes.cs | 143행 | SHA256 b93bf6dbe65b87f8767eab0c46955c67d2ef4816084f26a50a44bf888153eebb
+- Assets/EditorTool/vInspector/VInspectorClipboard.cs | 233행 | SHA256 7fa5cdd326e377b6e0b22a91d838d44b351509c59e5fa8b485a4f4498e3de8f7
+- Assets/EditorTool/vInspector/VInspectorComponentHeader.cs | 463행 | SHA256 9ee079eb4049f45b90cbac43fb81220d8c7ef9a10f6b5744b242eb54d8d0d557
+- Assets/EditorTool/vInspector/VInspectorComponentWindow.cs | 498행 | SHA256 ba7ff7dfb9cb33ac24b55889c47a5b62f69c8a36b07bae705549e76807be4dde
+- Assets/EditorTool/vInspector/VInspectorData.cs | 156행 | SHA256 50a68e3bd92ebb440661d1072c3d109be97a53922ab337e92d8b202672592c32
+- Assets/EditorTool/vInspector/VInspectorDrawers.cs | 500행 | SHA256 fcd2caaf48ddc7b2b263ea512b7188abcce4fbebeaa9ce59487d6ae860ab7eb4
+- Assets/EditorTool/vInspector/VInspectorEditor.cs | 2106행 | SHA256 314a3b2ad2ba4dc8e4b03d4e419ae4a53f9cb24a3d71d351cddb7f716ce8ae12
+- Assets/EditorTool/vInspector/VInspectorLibs.cs | 2612행 | SHA256 5a71530a9d60443f39f5a86659ab33b6a0beb584206aad0c99cbe2382dfb7d0e
+- Assets/EditorTool/vInspector/VInspectorMenu.cs | 162행 | SHA256 53a310525424231a58ca755c642297771f1a4eecba883a03224176038fa4a1bd
+- Assets/EditorTool/vInspector/VInspectorNavbar.cs | 990행 | SHA256 1ba48f29757374911ff2cc8969411237a9916e39585fd8b2d72c1bb2510b4754
+- Assets/EditorTool/vInspector/VInspectorResettableVariables.cs | 147행 | SHA256 6175cbc353c0ecb0baba7845641b38c4da7a6978ba335173991a9d5bcc74b047
+- Assets/EditorTool/vInspector/VInspectorSelectionHistory.cs | 129행 | SHA256 2a350a343fad4202e01cdf103e6caa440001fb802a0ba794f17369f3155c6673
+- Assets/EditorTool/vInspector/VInspectorSerializedDictionary.cs | 73행 | SHA256 64fdcd2b6bbd0333f2eebd59fef74fa881cd4d8a91afec4452ec757fdd6a1bfe
+- Assets/EditorTool/vInspector/VInspectorState.cs | 66행 | SHA256 b47a9326f041d18be60b367e008588ba80257d9636f01ae90abf4dbd4d1074cd
+- Assets/GameInput.cs | 1587행 | SHA256 6c229351b8e3977ecf3f3ba38ac40ae50b8a2255b89464190329342e744ba04b
+- Assets/IconMaker/Editor/BulletTierIconBatchRenderer.cs | 543행 | SHA256 8754faa29f8a27032df1ee7275bb6b86d62df36bdaae8ccd1f8486e0a8909488
+- Assets/IconMaker/Editor/ImageManagerEditor.cs | 316행 | SHA256 171799d8a9d830655fadc8f04259005839af3df4c9ad8ca393c7bd61a73a3d1c
+- Assets/IconMaker/Editor/LightingManagerEditor.cs | 62행 | SHA256 e5756f2944b19435a68049568ba14af7822d4820040b7f4da548bae1b4b4921d
+- Assets/IconMaker/Editor/PathPopup.cs | 64행 | SHA256 0486ea227ab5239ca05093da7103f7868b7c51a865960bfdbea5f3d130433a67
+- Assets/IconMaker/Editor/ResolutionManager.cs | 62행 | SHA256 4ca44db3e0ba54f7ada1bd1f504944a9d05e6483d2a3ceafe19044e644971a30
+- Assets/IconMaker/Scripts/ImageManager.cs | 211행 | SHA256 4ea0cc08c1f80f5fbf3c536586e9f518cd577c6890719e20dfb7f525c7d99b8a
+- Assets/IconMaker/Scripts/LightingManager.cs | 50행 | SHA256 0d81a43952c41f7c07c33dd983ddfa7e6c3171fb73b40418ae2e997b5202d2a2
+- Assets/IntuitiveCreative/IntuitiveAudioAdjust/Editor/IntuitiveAudioAdjust.cs | 1076행 | SHA256 c0cc3352630b11fd5ffe363c1e0e6d6f614f20a526138c7f937a9af06f7d608d
+- Assets/IntuitiveCreative/Shared/Editor/AudioHelpers/IntuitiveAudioWavUtility.cs | 47행 | SHA256 75fdd01e7ae77fefa40d947fbd6a18aeb6cab87ebda52780f34b8b197531b792
+- Assets/IntuitiveCreative/Shared/Editor/Base/IntuitiveCreativeEditorWindow.cs | 72행 | SHA256 4e438bc1b408dc2d28bbbb3c1199ed1baafb4fb8f47272a0c304666c2bc10a27
+- Assets/IntuitiveCreative/Shared/Editor/Base/IntuitiveCreativeStyles.cs | 100행 | SHA256 5d96bdc246d2c45a8cbc6a2820fa7849bf62eef8a381a96812609b8cc3c974bd
+- Assets/Plugins/Easy Save 3/Editor/AddES3Prefab.cs | 89행 | SHA256 90a27c1db2930383b1f3212944640911c3ed2e7dcc6595ab8274fe3abf9c270e
+- Assets/Plugins/Easy Save 3/Editor/AutoSaveWindow.cs | 376행 | SHA256 8873c16115db778715874b5a6a599e81b86eb2e889ec511ed9a7b48662672268
+- Assets/Plugins/Easy Save 3/Editor/ChangeReferenceID.cs | 94행 | SHA256 46248155e71b98b3cd8c882f026865edd390f90dc537322c38bfa35cd074f4d4
+- Assets/Plugins/Easy Save 3/Editor/EnableES3AssemblyDefinitions.cs | 24행 | SHA256 eed0fc86ee6fdac83b375b9bd12ef1072a199d59b700fe3052f9f0f5f2c952cc
+- Assets/Plugins/Easy Save 3/Editor/ES3AutoSaveEditor.cs | 71행 | SHA256 5d4b100b04b0b4f0c33224bf35e5cae4b7490cf75cd8121496006fe5e430f914
+- Assets/Plugins/Easy Save 3/Editor/ES3AutoSaveMgrEditor.cs | 20행 | SHA256 b3b8de71d79973c03869f82514242df2fe612c4916c0480f2eb6401b5de98845
+- Assets/Plugins/Easy Save 3/Editor/ES3EditorStyle.cs | 84행 | SHA256 0bd69a3e974ff3a1189e20a213c5a862a2d6fa2db42e6c1c7042b83c5de11c2e
+- Assets/Plugins/Easy Save 3/Editor/ES3EditorUtility.cs | 61행 | SHA256 9b941991027fe3fdfe36fa24c821dafb2b88a1e3c48077c1148531a63d3facdf
+- Assets/Plugins/Easy Save 3/Editor/ES3GameObjectEditor.cs | 51행 | SHA256 2a245261d2252db944809db60887754a0983c3e91a646a3b42d137a1f6fe709c
+- Assets/Plugins/Easy Save 3/Editor/ES3GlobalReferencesEditor.cs | 92행 | SHA256 41b8d28bbea5135f320562cad23e33b2f87ea9641b5d685396cf5d2f13f7c7dd
+- Assets/Plugins/Easy Save 3/Editor/ES3InspectorInfoEditor.cs | 15행 | SHA256 7bb483204c70d1af1a9bac8aee6da75c56d0e832bac20c293e477079745636a5
+- Assets/Plugins/Easy Save 3/Editor/ES3PlayMakerEditor.cs | 804행 | SHA256 784c4f3b624efa66cb831037f8607aad6c473ecdb97e0d1259f27f148f1268ef
+- Assets/Plugins/Easy Save 3/Editor/ES3Postprocessor.cs | 313행 | SHA256 967e22e0e1553f2ab7c0cfe0d18514cb6184d64cf68144986d0e734849758e89
+- Assets/Plugins/Easy Save 3/Editor/ES3PrefabEditor.cs | 50행 | SHA256 c655c00a61313fd758308c6b9b7d7f209580245a1b8496d83503b0956372bf14
+- Assets/Plugins/Easy Save 3/Editor/ES3ReferenceableEditor.cs | 17행 | SHA256 98fa493a476e64b0dd45530c5a68ef17aa6b4c0ef6e78cce4b5e39c540867ded
+- Assets/Plugins/Easy Save 3/Editor/ES3ReferenceMgrEditor.cs | 306행 | SHA256 d127f3ea438887c04af560f8615a98e277d2e4c8b13ee6720638ee0dc61c243c
+- Assets/Plugins/Easy Save 3/Editor/ES3ScriptingDefineSymbols.cs | 127행 | SHA256 2830bff3d2ceb20af5cd2dd0cc7ae5df84f3d2f0a6651123fcc54f4ebf7a2d94
+- Assets/Plugins/Easy Save 3/Editor/ES3SettingsEditor.cs | 74행 | SHA256 e638c4b1cbfbfce4879cf3f38753dab9c93461d7f66e4fffcfffce4cdf2275e0
+- Assets/Plugins/Easy Save 3/Editor/ES3Window.cs | 238행 | SHA256 1227bd59f3cd3906c91f55cef6e36058b6fb5ca9a14f3001d615443724133b94
+- Assets/Plugins/Easy Save 3/Editor/HomeWindow.cs | 71행 | SHA256 d445793c30378b4a66eed5cab863b0a9fbecd36fc77ce8eb1abfbd306f5e686f
+- Assets/Plugins/Easy Save 3/Editor/ReferencesWindow.cs | 22행 | SHA256 d461051ffbc3c1fde829c4a8fa286cf827416d906e42c8b2ab5225cead5696fe
+- Assets/Plugins/Easy Save 3/Editor/SettingsWindow.cs | 206행 | SHA256 4841b654e7d33df276d53ec62e285fac976f62b24801d8d20c064baa7de08042
+- Assets/Plugins/Easy Save 3/Editor/ToolsWindow.cs | 156행 | SHA256 cea0a3b733d2e48c058db093e40a2365d152da9d7a575c7942b37bedd9526596
+- Assets/Plugins/Easy Save 3/Editor/TypesWindow.cs | 729행 | SHA256 44fd5c31cc5a1cebcab76f7cf302742afee5b93f462bd30b7acbd96ffdaedd4a
+- Assets/Plugins/Easy Save 3/PlayMaker/ES3PlayMaker.cs | 1909행 | SHA256 93f99bbca3c4e41371dbcafccbc482f8c4fed5ea54b17e188ff3bac349e94378
+- Assets/Plugins/Easy Save 3/Scripts/Attributes/ES3Attributes.cs | 8행 | SHA256 206c3bcd467d9b696ab965007764710b3efe4511fc8dbaeb193d31568a3a949d
+- Assets/Plugins/Easy Save 3/Scripts/Auto Save/ES3AutoSave.cs | 57행 | SHA256 8abdf3df059a06361591f3e0cbbedaef87fdaf5f9125f790958660430f32ee67
+- Assets/Plugins/Easy Save 3/Scripts/Auto Save/ES3AutoSaveMgr.cs | 223행 | SHA256 e9ecf4775fead146fd8d27cebea957f6bd0c6cd912491500dc989de9e51bba0f
+- Assets/Plugins/Easy Save 3/Scripts/Debugging/ES3Debug.cs | 53행 | SHA256 7e62fb9c10a5d2f5e2156f2069ddf9187dcbd4de30b580ab8c75397530c32234
+- Assets/Plugins/Easy Save 3/Scripts/ES3.cs | 1730행 | SHA256 4fcf2233611c9ed8c495d37dba037c757aca68451956d4fc75ab16a28d45082b
+- Assets/Plugins/Easy Save 3/Scripts/ES3Crypto.cs | 208행 | SHA256 bcb63af27f0b24e45e3e5a2a2fc84d8146f712704d7d632a566d70b0e47347db
+- Assets/Plugins/Easy Save 3/Scripts/ES3File.cs | 562행 | SHA256 808fa79a6d2d448b289973636e01648099fb876afb14f6daf6c2fa8c76d58201
+- Assets/Plugins/Easy Save 3/Scripts/ES3GameObject.cs | 21행 | SHA256 98b96e452ce330074c8e16a6c834631ca150257f449bfde6a31c2f6e29b6199f
+- Assets/Plugins/Easy Save 3/Scripts/ES3GlobalManager.cs | 51행 | SHA256 8280db0c3de2ef07200c4675aad8f08ac7f9a4aaafab3d5e8638d8bb71fac279
+- Assets/Plugins/Easy Save 3/Scripts/ES3InspectorInfo.cs | 19행 | SHA256 ddd22a08e2a4f1e16c9ef93aeb726178ab036edae306066b8c756329f8e0394b
+- Assets/Plugins/Easy Save 3/Scripts/ES3IO.cs | 181행 | SHA256 f2c708a732e2a37f42c7a2dab0eb224ad5e8fc3f69637312b7559bb412f52414
+- Assets/Plugins/Easy Save 3/Scripts/ES3Prefab.cs | 218행 | SHA256 e596ea9518ec1922f435e39955d74abcf3cd7f8e50e137271343e470892f13b9
+- Assets/Plugins/Easy Save 3/Scripts/ES3ReferenceMgr.cs | 274행 | SHA256 9da3c8c1129584f2562d8cb183ef1f7c5539f75881978eef4276fc4d9d4c16da
+- Assets/Plugins/Easy Save 3/Scripts/ES3ReferenceMgrBase.cs | 778행 | SHA256 7d1a69db177fdf55507cfc3d7d7d94f2fad2ac3fb4dc294f37be226aadd8b3c6
+- Assets/Plugins/Easy Save 3/Scripts/ES3Reflection.cs | 797행 | SHA256 8e2959c1363c8fcbda3bed6807ee1a7f29e8da5dac1224c46bbbc1a1aa45ca96
+- Assets/Plugins/Easy Save 3/Scripts/ES3SerializableDictionary.cs | 88행 | SHA256 e492ef8c09486b4733ca6139ebaf03310ee0daa71e6b5c76cc33d3c6d7db5068
+- Assets/Plugins/Easy Save 3/Scripts/ES3Spreadsheet.cs | 343행 | SHA256 43bc2b77a099659fc48ff4dbc15bceb102c51eb746047c8c0fcc7190d9ad5fa4
+- Assets/Plugins/Easy Save 3/Scripts/Readers/ES3JSONReader.cs | 571행 | SHA256 7a765b7022cd414b14205712816b3cb34545ce0e5d06e599b5ca48df34152db2
+- Assets/Plugins/Easy Save 3/Scripts/Readers/ES3Reader.cs | 470행 | SHA256 4968a3a439101f035d0df608751811a7ce97ff99603eff307f8f7f0f19c45aed
+- Assets/Plugins/Easy Save 3/Scripts/Readers/ES3XMLReader.cs | 6행 | SHA256 4acaf7d7295983b87afc9bb660f2c663f68b54a5a8e7932beae1a0f500d80791
+- Assets/Plugins/Easy Save 3/Scripts/Referencing/ES3GlobalReferences.cs | 132행 | SHA256 db10d9e3e87ab815701ed272146a328d5102a637830196961d216abc19364bf8
+- Assets/Plugins/Easy Save 3/Scripts/Referencing/ES3Referenceable.cs | 8행 | SHA256 9f35d7ed8886a4ec69b79634dcef14221466e5ebed1ad2e4af337a831ebe6010
+- Assets/Plugins/Easy Save 3/Scripts/Save Slots/ES3CreateSlot.cs | 96행 | SHA256 0d403913c871696b044fbd6e999a6de3c32e87ba18094ecabb340797c92cb67b
+- Assets/Plugins/Easy Save 3/Scripts/Save Slots/ES3Slot.cs | 167행 | SHA256 477bf646b6e78e2add8195e74d75b2369003b1579eefc9605582e62afe35bce7
+- Assets/Plugins/Easy Save 3/Scripts/Save Slots/ES3SlotDialog.cs | 30행 | SHA256 10a6cccaa8b6aabb4fe19d4f7a153892a63558e40208895351739993faacda38
+- Assets/Plugins/Easy Save 3/Scripts/Save Slots/ES3SlotManager.cs | 263행 | SHA256 ce698c92605546cd140e75f174da2d751d5b9fa816a3ebf4b0b43a21ab593efe
+- Assets/Plugins/Easy Save 3/Scripts/Settings/ES3Defaults.cs | 25행 | SHA256 9bb891f50eda47562c013ee4c5d7c2672d917144ac15bfd0746f082199f5f2f0
+- Assets/Plugins/Easy Save 3/Scripts/Settings/ES3DefaultSettings.cs | 13행 | SHA256 2ae47de477705042aa5795f2c0764b6b2dcfe2d39b03c4eab599d5728d7ee33e
+- Assets/Plugins/Easy Save 3/Scripts/Settings/ES3Settings.cs | 402행 | SHA256 97895e79c37ca5520812b83724868c5b4ffe2a3204fb926f24790d08095ab90e
+- Assets/Plugins/Easy Save 3/Scripts/Streams/ES3FileStream.cs | 68행 | SHA256 7ca2890cf77121fcad21bfe4b0df94c938af0efd13e603dc672b7f59983516e7
+- Assets/Plugins/Easy Save 3/Scripts/Streams/ES3PlayerPrefsStream.cs | 64행 | SHA256 c2dfadecbf675e1c4bdccc2d3c11a4aa9188b651d7d22dc8cc28a271cce6cf58
+- Assets/Plugins/Easy Save 3/Scripts/Streams/ES3ResourcesStream.cs | 33행 | SHA256 06acad7b617173f88e983584aaef1ad8d01f7ec6fe3b4ed2fce2d9cee5f83755
+- Assets/Plugins/Easy Save 3/Scripts/Streams/ES3Stream.cs | 124행 | SHA256 6b408cff416171d43c1d8a803305418e69c9a8d9d48d6972e1b6ac3f33515a5a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES32DArrayType.cs | 150행 | SHA256 4a61b85eb2a235b63e7f29bf67892dc7e1ecc23999684f60e2f7d88fb7bf1821
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES33DArrayType.cs | 164행 | SHA256 51898fd94dd25f9dfc0698d085f6c196a2239408c7062decad0357011fb41f90
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3ArrayType.cs | 98행 | SHA256 4d6f9d428839e6dfdf7a4401b2d77a04dd84d46f1350abce7b829b9aaf5cae0f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3CollectionType.cs | 119행 | SHA256 cbb0288393cbbfb647b0b700567309ec163796a75756642c34faf83ff2b8c9bc
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3ConcurrentDictionaryType.cs | 142행 | SHA256 6c66af7137afa3e549ba13a6abc17c07505869a366c870a8950a13ca5d8bd10f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3DictionaryType.cs | 142행 | SHA256 1fbe4c0dab1dc381414a53b7ab63d9f5b3cd2d10fea6a21c5ff2796740194d36
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3HashSetType.cs | 90행 | SHA256 6a690978cb7aa9504ef6907cb7bd0569372b0067abe505a45590b7f84ea1b46a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3ListType.cs | 110행 | SHA256 54c1dffc9d4acb10851b53d8390db0028ce5bd1d2ca92ce521cee2859897b1af
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3NativeArrayType.cs | 74행 | SHA256 4919b8889b6bc9e1442ee2a01ea54c858bb433d8d41f04e75b23e7ccf867a8ee
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3ObservableListType.cs | 32행 | SHA256 31bbd577f038bb31eaba791a7fec97d0b466183359399634b337f52cf6ea0590
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3QueueType.cs | 147행 | SHA256 429bf7d2f1944aec86ee51eb54f94d8bf2f6cb0f14a8fb1d1b8dfa35d2e5eedd
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3StackType.cs | 151행 | SHA256 b241bfd595debbd734ef4fa524c6f49eb5c9a8f13b1ba6119fddd9d256e7c072
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3TupleType.cs | 75행 | SHA256 f988e4d6425e13f3c6279dc3a87f863ecbfc14b7fc71d9043e67cabe2e60689f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Collection Types/ES3Type_ArrayList.cs | 66행 | SHA256 decafb19d891ad5ece29b2c63f37688d39dff1adc9427022337a50b13bc5469b
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3ComponentType.cs | 145행 | SHA256 33804c7c9fea8d7d53971ed017ccbb9b4faa5251d8ed694890366ae14feb89a7
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3GenericType.cs | 55행 | SHA256 ecb77d19533ff6cca3d9cc6e6396d337570a2cdef0436d4092224584165731dd
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3IListGenericType.cs | 128행 | SHA256 6bdef2b360f4140ce70a04326f85d721548a4354465ee3cfbe4c66ae58ddd643
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3ObjectType.cs | 80행 | SHA256 3a5b18a818b3cb31c8216703d834ec0872b3f1941e3f7e81c99a903d6d265d98
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3Property.cs | 31행 | SHA256 1359dd66945f0cec2068a1d4b2cdb465249398f1b36b970f5a0f2ca446f4194d
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3ScriptableObjectType.cs | 75행 | SHA256 ddff6830cb8df897ab34511bd2ea8d73edafb44406e557d3b4a953e278f6a397
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3Type.cs | 195행 | SHA256 2dd2f414b658b633b4fb89eae5b2228ed13d0dd275488ead91224fcc3a234be3
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3TypeMgr.cs | 196행 | SHA256 daf78c49a1e5fcac7afd1fde27d8157d373bbf0d09ecb16a2e597132d189d134
+- Assets/Plugins/Easy Save 3/Scripts/Types/ES3UnityObjectType.cs | 123행 | SHA256 8232430fe9b3509bc72975c84acf7b30a5df4ac2212614fc926cf116c60af8c8
+- Assets/Plugins/Easy Save 3/Scripts/Types/NET Types/ES3Type_BigInteger.cs | 38행 | SHA256 2757bf47fa59b91d68b35ab3644bf5ddeb314949e4cbb5b8ef1fa85c78019e37
+- Assets/Plugins/Easy Save 3/Scripts/Types/NET Types/ES3Type_Nullable.cs | 59행 | SHA256 4126d6eb11a8abbec5c4f5fdb8079bfb617ab2df5c245716836fea68e6612d3a
+- Assets/Plugins/Easy Save 3/Scripts/Types/NET Types/ES3Type_Random.cs | 71행 | SHA256 9a35b311956e82b6173d13dd5a46513b49f6a60627accf1ce5dd4594361354d3
+- Assets/Plugins/Easy Save 3/Scripts/Types/NET Types/ES3Type_Type.cs | 27행 | SHA256 e682f137035453cd48da62c36d73f40f7a25e912a9d475b0f4f9847e5a55f352
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_bool.cs | 37행 | SHA256 912056aae88e7b63bcf051700ee17c23d0b08845a9fac39bb4551b7bbb57bfc1
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_byte.cs | 27행 | SHA256 3b896882f45bbcad44b80f8935e3d7b9ba5ddc3ba9f301ebaf0fa5013aa41e5b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_byteArray.cs | 27행 | SHA256 b12ae53928d87080fc5d3d6e19c05de677bcadb357c4219dfab31c8a89b34d58
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_char.cs | 33행 | SHA256 94e891f5b34d743169e3b5c78bf039abc2393909d114c2c9744f28bb45734a13
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_DateTime.cs | 37행 | SHA256 9086ac6946d7e30f7e9f144ce2dda0be530c6c29f1ab660725bbbb461da373f1
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_decimal.cs | 37행 | SHA256 cffdd8bbafce75d5f56cfa169569e0cd811c2d307ee34aad23ac55649ae73d3e
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_double.cs | 37행 | SHA256 b979b6f2103fc17e18104de5513afbae8b4bfb16cdc1d1af24cbae530cdbe306
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_enum.cs | 59행 | SHA256 89d84eb1cfb9853db2f8cb89e85691424bf91176f79e35a33db5ccba0ca299a4
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_ES3Ref.cs | 57행 | SHA256 2755ca5157b9793522b9f03aa157699dfb3e81e88bd2f9217a6ef2d30180f882
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_float.cs | 37행 | SHA256 001c48e6c2c6681728728b0465dce05727b8a0b02058a95a597961ea38c57ea5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_int.cs | 37행 | SHA256 223e9b9ac384ad4f023c3edef36f015df214f2c9979e7086795916e98600ee9a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_intptr.cs | 37행 | SHA256 cbd3dbdeabe0ddd97cfecc20ee9d4a1d7077dc56e078a151d5280362d3e2d317
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_long.cs | 37행 | SHA256 83c3e44685d68a587fc98da85131f2057b2cf11c6695c94722501dfdb5a4526d
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_sbyte.cs | 37행 | SHA256 d2a84a9410c211d8f11756b375aa551f30819a5def422b6ecec67f9d9e862f37
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_short.cs | 37행 | SHA256 76df8a5526f65f9e56c4a044ae8c5a5e455145dbc21bb33f1fb126fc628d5bb5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_string.cs | 37행 | SHA256 af44bae490956d0c72301c814d16b6c6e862451b162e844587f95413611f4043
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_uint.cs | 37행 | SHA256 85dd168b1cdd7bfec76f78ff5b8be665bb4a09784ea66f2d5a400abf5558e9e6
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_UIntPtr.cs | 37행 | SHA256 057b5e5a8c1143c062ad5690004a0b7f9b9e5409ac522ab04d2043374766b0a9
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_ulong.cs | 37행 | SHA256 5cce9c92b8f3a84adb33d67bfef7cb1570d2b6b447e63e29c34fdefd96ab7835
+- Assets/Plugins/Easy Save 3/Scripts/Types/Primitive Types/ES3Type_ushort.cs | 37행 | SHA256 c3aaf5db63a6fc5e3219d993dc50f49fd0ce8a8e0f1a0e58cbcf6e4709c46c7e
+- Assets/Plugins/Easy Save 3/Scripts/Types/Reflected Types/ES3ReflectedComponentType.cs | 24행 | SHA256 dc9d0638adb285124ce806146d43389b47ac38b6020ae151bd4a2ee96930ce8f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Reflected Types/ES3ReflectedObjectType.cs | 35행 | SHA256 aa53c12a7f5fbec0d3b0d27687e033967909a8418b13f107083ca7856ecd8ba2
+- Assets/Plugins/Easy Save 3/Scripts/Types/Reflected Types/ES3ReflectedScriptableObjectType.cs | 27행 | SHA256 c904fc64c62efa0f753a1d0755ab735637cff0d98aaa1c8341265957954e37fe
+- Assets/Plugins/Easy Save 3/Scripts/Types/Reflected Types/ES3ReflectedType.cs | 119행 | SHA256 97a8f222eb4065a58f8193eb88a9b5a2e3253afa15f2567f376b1eb059cf8c4c
+- Assets/Plugins/Easy Save 3/Scripts/Types/Reflected Types/ES3ReflectedUnityObjectType.cs | 36행 | SHA256 ecef44be9f1877da9ea255d7fba58a03da424bae6186c0c7d830e83f5c380464
+- Assets/Plugins/Easy Save 3/Scripts/Types/Reflected Types/ES3ReflectedValueType.cs | 38행 | SHA256 51b3970a3dcd1ee29e7a7e071a0d60f0f7328b3fef9001490f2b8520edc4eff5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_BoxCollider.cs | 66행 | SHA256 2d5133806d24408da364db3bff8df2cca82ea012d3f0382096b69944a818ed53
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_BoxCollider2D.cs | 66행 | SHA256 226d140b9afa76b364a2fea58814d86e81b19bb31ea1a914fc0b39b79395c19a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_Camera.cs | 165행 | SHA256 e5ffbb841d8c893797306040daa02bb955079edfd16a1ec20f18f6e9143fb6cf
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_CapsuleCollider.cs | 73행 | SHA256 cc55682b1264f0546b4d31db6251b776ae8955ca981d45c3e3d85cbe4d8c0440
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_EventSystem.cs | 31행 | SHA256 4f0fd9ef27abd7aec34d7e5076195021ca8b276a7b2338fb1e333cc7ca7e501b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_Image.cs | 137행 | SHA256 b85d1c2f6cd3367e7de059f5f3348a08cd0d09e050ff7f4c5946c0d533dd1c4f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_MeshCollider.cs | 84행 | SHA256 e8a0b2abb82b6d32f52e796868cb4c35f79d0abce3fbdf0adc764c89ccd57c0a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_MeshFilter.cs | 51행 | SHA256 21105b05a7328faac52a130b65152278fe8863c168868658862cb6c0cfdf8d2f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_MeshRenderer.cs | 116행 | SHA256 49c0bdd64ae3f826155b31a159b91c95b20368daf8a79388f4ed13eecaea8450
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_ParticleSystem.cs | 149행 | SHA256 80b32cea5d6ddade3f7ac367cc441fceab06a02f254b6dcfe9969040c706a24f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_PolygonCollider2D.cs | 87행 | SHA256 1fdc450b9fc387489bcb31cd89b7ecf60641157fdc084a1b017980259f1cda68
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_RawImage.cs | 100행 | SHA256 951c3a4543d14d178c80766d16e4f04a5257ffc37eab28bc7a32605572a3f4be
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_Rigidbody.cs | 153행 | SHA256 35c220dc7c509b3cb36acb43dee5a601cfaae6a4d3d3d184062dfacf5decc49b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_SphereCollider.cs | 64행 | SHA256 40f8a2491bc8b40fe506bfebd60caf89c77e70a5e025cdd26abab4df8edf5f79
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_Text.cs | 148행 | SHA256 0e85f0e605e7cbccaa658c7d0161eb7a80341258389955c5d19852e72de9e423
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/Component Types/ES3Type_Transform.cs | 70행 | SHA256 7d0eff4a47e20f71edb91c25113f15684ea6830166d6ff0a0bbce80b8b696432
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_AnimationCurve.cs | 59행 | SHA256 b458b7b51986c38771054de7a8068b2bfac801177c32177495c4552123cf50b7
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_AudioClip.cs | 90행 | SHA256 51ee3fbe444d173f3fc0c34df496c77f96b1ecd8da1e0414613e1c015495f9de
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_BoneWeight.cs | 61행 | SHA256 faeaec708d727f87975b3145071186a75cfbcae1a065fec94b9f305ed0c37df0
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Bounds.cs | 42행 | SHA256 cc2ee9be7a37607d08ae66e5c94b6899cbe49b34f7aae41f56cc924da81fe3f8
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Burst.cs | 77행 | SHA256 cbb4919668fadc5b45e25fb8e1f54e75e270a75f26374f282bf5944f08b79180
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_CollisionModule.cs | 117행 | SHA256 4f5dedf1e4566cd3e57839a911dd1aa3457a1a9f570f4e1ad0447ca15b85f2f2
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Color.cs | 44행 | SHA256 6295e6ddf79faabf649cc77e481361bd30b5e6982ed0892cdd066ae8a3617272
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Color32.cs | 51행 | SHA256 2fe80f2dfc556d8ff68ebe067affef485151dfa4f15102f31d78c99e64304e18
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_ColorBySpeedModule.cs | 59행 | SHA256 6177d583f0dfe7104ebaee63397dbb22893031439e8a0fbd81117e571743e709
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_ColorOverLifetimeModule.cs | 55행 | SHA256 663ca45b0693451791b41caf7ed99ec98b7bd8fd21468982a51b7d972e942cd7
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_EmissionModule.cs | 75행 | SHA256 978cd7d79f8e33b09691c7a877946abfcd2edf1a3626a5244e31235d356433d4
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_ExternalForcesModule.cs | 55행 | SHA256 90ad4d27171683b975a0cc395c54079d24a40b58543136ac48bb2f884c1dd475
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Flare.cs | 60행 | SHA256 5bbfb199d8d8a3d6e69fbf113b85c53223cfd26fd64baa80016db1ac63e3d8a9
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Font.cs | 57행 | SHA256 6ffde93b7182bff32f35570fdb42c909bb220b40333b9fe3e159e3334c91bba5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_ForceOverLifetimeModule.cs | 83행 | SHA256 b9bf034c6ac5d733bda4ffef8f4359d3706c300a57245b1527995e3b60bd4ff8
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_GameObject.cs | 320행 | SHA256 21d8816123e28ad83b4b9e0dba77d5156b7f5222751a333c3f9def5b50e46857
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Gradient.cs | 56행 | SHA256 ea98a6b59126aa9881ee2315b7e1c4bca952478e4aa2a1264fb14915cde23a1b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_GradientAlphaKey.cs | 41행 | SHA256 c7dc1a316fabbea9bf985620ed781eb48a3163c225435ca3f93d9e3974ba669d
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_GradientColorKey.cs | 41행 | SHA256 311ffdb794683068c745abe4e7e878494cdba3cff868c5f40a2be7d8004bcc27
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Guid.cs | 37행 | SHA256 dcd3cb9fa1b5280a1fbbe64f1cfacaa05bf37eff80b0ed056d6604a84b11a104
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_InheritVelocityModule.cs | 63행 | SHA256 e01d6d6432a43212247f9d9b8c15e1793e0abc773d73ee5b5e61a6d7fb7fce95
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Keyframe.cs | 46행 | SHA256 eddc653188b5cec8077988f8e313106d0c27fe51ee7b4e54348571c5a230e81b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_LayerMask.cs | 44행 | SHA256 f1a376d18a4759caad7074a2a5b96931bb52fa0542c5cfd294d72310aef648a5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Light.cs | 127행 | SHA256 64ce8ea1b14d6dd9d2c66cf04bcf94cb281aed2e30612310f50aaa29a16cf24e
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_LightsModule.cs | 95행 | SHA256 0c1a4726fe3a2fe684a04b68b2b8df75cde2afb6335dc83112beef293f8c25b9
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_LimitVelocityOverLifetimeModule.cs | 95행 | SHA256 9871e13cf38b33df4de09a97f344f3d4792ae966af098448679a0971295f1cd0
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_MainModule.cs | 207행 | SHA256 c096d91f6d18214e7480792f9e23138c72232f9995cc64a644f5feb4a46f5a5a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Material.cs | 1304행 | SHA256 557a18573e15b739249553d182f33a14bb3675d4cf0a872639e05c8d5d29b4f5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Matrix4x4.cs | 47행 | SHA256 be0efd71b2c5a5c042cf65db838404efdc4826d9da19da7f706cfa5a8235aaac
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Mesh.cs | 170행 | SHA256 9144eecf02ec4b72d6f957bec2eac5e22eb14e1125612d2e7da58b41abc8b03c
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_MinMaxCurve.cs | 115행 | SHA256 f938667119bba2bd75f811a1aef0368221ca2b34f9b05c62f80ebfcb94f56fc4
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_MinMaxGradient.cs | 69행 | SHA256 ee6c8bec13156f1d31bd68902872211e4d0617d4444772c0338c4601f4d1d0d5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_NoiseModule.cs | 155행 | SHA256 7462c883b090d238a944959f6c083342877f7c49cc9c1b3b99bc1ce2ea42d921
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_PhysicMaterial.cs | 140행 | SHA256 92d46d16108cff54db3f2ec0d600e1e7fc230bcef63e6261a8d24d5bc1b25219
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_PhysicsMaterial2D.cs | 59행 | SHA256 5c22e099073518c233a3e27039a21cd51288dff092fd58d1444e4e35384f80b6
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Quaternion.cs | 45행 | SHA256 0aaee06fd2bc90b8d002a3507ca292172b53e85942005521631fcf1da500b3a5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Rect.cs | 36행 | SHA256 c88f7798205874cb5c3f1a6347bd347188dde91af3d5c32895286a047fab2acd
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_RectTransform.cs | 96행 | SHA256 ebc63f4e15c97e044c0069a6a9c91c6bfa3acef69f8afd5f094543a7abcaf751
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_RenderTexture.cs | 165행 | SHA256 6cbe88948cd71d2682827ca59b32e4c8ff654f6d222ab7af47557a4e2cd52847
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_RotationBySpeedModule.cs | 83행 | SHA256 2057954d2b5491ba12018e6ecf7bf6c41f120c9c30d52e53b45373232eddd0e0
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_RotationOverLifetimeModule.cs | 79행 | SHA256 b79fb7ae493c3db4948697339f5dcdd7d0c80d2f8aad52e9160e8859308937f5
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Shader.cs | 61행 | SHA256 7f0cadc18338dd5caa3f124c5e74e311703638c5c25ebefe193ada3d0558497c
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_ShapeModule.cs | 133행 | SHA256 42608e3c15da53bf216c4d399cd1d3f1cb4918e020ad3061ea0b89a3fc6065ee
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_SizeBySpeedModule.cs | 91행 | SHA256 43e1f877cf51c532eb32c665b0546aa36f6e2aea8f87b579355f821673c9025b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_SizeOverLifetimeModule.cs | 87행 | SHA256 5be277691b54988041aa2b4103b3f88ef659e18122b0dd214cb243b7a5a1ebd9
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_SkinnedMeshRenderer.cs | 157행 | SHA256 8d24d795a563d4b57f0ce60cc738ba4f8e8325a0a2130c4c19e6bcb18e7246ed
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Sprite.cs | 69행 | SHA256 054a887439a64fde07db6c98fbbd29a597aad9843269d7d38b1dff36022cc396
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_SpriteRenderer.cs | 126행 | SHA256 6adc4313aebe5add9e065130b9b905151cba2499c98fc209a1246f780fb2ffb8
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_SubEmittersModule.cs | 87행 | SHA256 e2cf2c60d89955093e0cfb1c4c5cf6b732e1d7b70f30db9d7bb3f7322e36c003
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Texture.cs | 45행 | SHA256 34bab93381be56ba78f4f7faffaea3a6338059602cad8deb638933eb0657273c
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Texture2D.cs | 132행 | SHA256 c8737815fc9ca51e6008c5d8c1fe8940d58d07250817f1d28eb5850af355c6e4
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_TextureSheetAnimationModule.cs | 113행 | SHA256 9e28532eee815c569993c5e825adadbc6db32abdad5d0cf301ca38701031ee2f
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_TrailModule.cs | 107행 | SHA256 ee5d17a9abb8670261871130195d2aa6e9c439118bfea5c0c38e499190cf1270
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_TriggerModule.cs | 71행 | SHA256 bf1e1e71796180299c2ad687fbb04ae7f2922bd449c7130d9faf92df17c68d3a
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Vector2.cs | 40행 | SHA256 1de5c63d7ecea0a81b4f7d2ee010de4adcdfaa69df2417b5c27b6be8b895961b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Vector2Int.cs | 42행 | SHA256 28f896e29903436d8b6369191ae8e837c06c0aaf76e219fdfdada99748da32ef
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Vector3.cs | 42행 | SHA256 d604a0909e8d5d49226672c56614a654afc19094582158725c1ba0759b99e953
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Vector3Int.cs | 44행 | SHA256 311cecbf22c00ac5d20e6146c560dd77184deaf2bd12444fabca7413632d1f94
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_Vector4.cs | 50행 | SHA256 a3fa973bbd90d67ada94e296d88835d1cf43ee08223633f38e51adc9a0889e9b
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/ES3Type_VelocityOverLifetimeModule.cs | 78행 | SHA256 9fa34aad68f07ba7a2a0f6134de9b5331cd6c74699d89fb2db8fe5d46aa07c78
+- Assets/Plugins/Easy Save 3/Scripts/Types/Unity Types/UnityObjectType.cs | 19행 | SHA256 c20cade66dcbadeb3e3ccf31436b7bf4efc87c0cb2a8049a9cefb98899c4cd2a
+- Assets/Plugins/Easy Save 3/Scripts/Web/ES3Cloud.cs | 757행 | SHA256 fd5233e9b3fa152bc8a7043ba8754ce1c36a15ba4e0e47e44b540e5da52670c4
+- Assets/Plugins/Easy Save 3/Scripts/Web/ES3WebClass.cs | 149행 | SHA256 914000f5a0167c1c5cfa527a4cedbbb36d2d07b42e5cbfd609a3ad40a5599184
+- Assets/Plugins/Easy Save 3/Scripts/Writers/ES3Binary.cs | 122행 | SHA256 fc40e0fca1321432ca7cf9c2ee57a25485fe04a1616688f86eed4b2327b96212
+- Assets/Plugins/Easy Save 3/Scripts/Writers/ES3BinaryWriter.cs | 5행 | SHA256 3cd00de4abd6d45f29487150a14738ec352953c22188bfb5fbbbb5a6460a15c7
+- Assets/Plugins/Easy Save 3/Scripts/Writers/ES3CacheWriter.cs | 158행 | SHA256 86e151ca3860ceef91fd795ba53c5766be0fc7b33bd7112f819abeff59517483
+- Assets/Plugins/Easy Save 3/Scripts/Writers/ES3JSONWriter.cs | 234행 | SHA256 4f56c837caaf499a761633e0566c1701239d7b1b320d8d125395ed2d1abcb72b
+- Assets/Plugins/Easy Save 3/Scripts/Writers/ES3Writer.cs | 523행 | SHA256 5e91dd3b1e82e1f9a29cdac12df43af76a2e21835782b4896c10ec4513075b6d
+- Assets/Plugins/Easy Save 3/Scripts/Writers/ES3XMLWriter.cs | 5행 | SHA256 b643bd14adbf94ec253aab983f5797d1cf2a07dd46e4d02b571fd3cc56ef8e93
+- Assets/TutorialInfo/Scripts/Editor/ReadmeEditor.cs | 243행 | SHA256 b1b509be41113e31b8ee3c30ca0a00aaf006fdcae69aac749899eed2c4cc4a7d
+- Assets/TutorialInfo/Scripts/Readme.cs | 17행 | SHA256 baa133f5baae44c1217e10c64061f8fb7d56878477339d746470502165d35019
+- Assets/UMotionEditor/Scripts/Application/AssetResourcesFile.cs | 125행 | SHA256 03025ade896e54cd8a5fe4aef93df8abe06f9fc8076bf3f8897f1633645d218f
+- Assets/UMotionEditor/Scripts/Application/VersionCompatibilityUtility.cs | 156행 | SHA256 e1f7744b65471d3d30a17b436064414cf2dab068c138ce16ce3e1a3bdd2c4631
+- Assets/UMotionEditor/Scripts/Editor/AnimationCurveUtilityRecent.cs | 106행 | SHA256 a2fe195fa994c6e54d022bc3da3591d63060b6a00d21fd3c34447a8bbe9ba832
+- Assets/UMotionEditor/Scripts/Editor/EditorVersionCompatibilityUtility.cs | 93행 | SHA256 2cfec6d3176f683016e425b2ffd0703ca5b9c923cdd07c441f860005137b1da4
+- Assets/UMotionEditor/Scripts/Editor/GUICompatibilityUtility.cs | 102행 | SHA256 97dc1a7e364b10c0730b8b181ae6d532e8fb4529782e6a74d1f4b0b143a2f007
+- Assets/UMotionExamples/Miscellaneous/Scripts/ResetPosition.cs | 26행 | SHA256 33be6117b07c9c8fe2a3383fcfb92cec4e2d655b8b41b81cd57473326b903ed0
+- Assets/WIP/OldVersion/SectorCameraManagerWIP.cs | 245행 | SHA256 524e90f9dfd9a13571bf491c8278cf9f1a90277abcc8fbe5c03f52fe5369e585

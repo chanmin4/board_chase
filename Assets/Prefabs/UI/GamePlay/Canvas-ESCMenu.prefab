@@ -484,6 +484,11 @@ MonoBehaviour:
   _settingsGroup: {fileID: 1000279}
   _pauseView: {fileID: 1000276}
   _settingsController: {fileID: 1000280}
+  _pauseBlurShader: {fileID: 4800000, guid: c381b9672ab44cda8bcb053fda2fbf30, type: 3}
+  _pauseBackdropDownsample: 4
+  _pauseBlurPasses: 3
+  _pauseBlurOffset: 1.5
+  _pauseBackdropBrightness: 0.5
   _loadMenuChannel: {fileID: 11400000, guid: a55063cbe05e0b04f866cff6b728ff55, type: 2}
   _mainMenuScene: {fileID: 11400000, guid: d1ca7130071889f47b75a2226a7b4a07, type: 2}
   _sectorCenterRescue: {fileID: 1000273}

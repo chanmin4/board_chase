@@ -1,4 +1,10 @@
-﻿using System.Collections.Generic;
+/*
+ * Role hierarchy: StateMachine > ScriptableObjects
+ * Primary responsibility: Defines the StateSO data asset used to configure runtime rules in the Inspector.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VSplatter.StateMachine.ScriptableObjects
@@ -27,6 +33,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 			return state;
 		}
 
+	// Purpose: Returns the current actions.
 	private static StateAction[] GetActions(StateActionSO[] scriptableActions,
     StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances)
 	{

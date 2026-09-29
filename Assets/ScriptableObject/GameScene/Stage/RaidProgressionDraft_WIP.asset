@@ -1,0 +1,99 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 762fc8569e264388963b80e7fc3d82d8, type: 3}
+  m_Name: RaidProgressionDraft_WIP
+  m_EditorClassIdentifier:
+  draftOnly: 1
+  maximumShopUnlockLevel: 6
+  specialFarmingOnlyLevels: 0700000008000000
+  mainLine:
+  - stableId: raid_draft_stage_1
+    currentStage: 1
+    valuableRarity: 0
+    valuableCount: 10
+    requiresCurrentStageBossKill: 1
+    moneyCost: 0
+    stageToUnlock: {fileID: 11400000, guid: d16f7a0e1f3b4b93a92f3c6e9a110002, type: 2}
+    qualificationQuest: {fileID: 0}
+    stageUnlockQuest: {fileID: 0}
+  - stableId: raid_draft_stage_2
+    currentStage: 2
+    valuableRarity: 1
+    valuableCount: 0
+    requiresCurrentStageBossKill: 1
+    moneyCost: 0
+    stageToUnlock: {fileID: 11400000, guid: d16f7a0e1f3b4b93a92f3c6e9a110003, type: 2}
+    qualificationQuest: {fileID: 0}
+    stageUnlockQuest: {fileID: 0}
+  - stableId: raid_draft_stage_3
+    currentStage: 3
+    valuableRarity: 3
+    valuableCount: 0
+    requiresCurrentStageBossKill: 1
+    moneyCost: 0
+    stageToUnlock: {fileID: 11400000, guid: d16f7a0e1f3b4b93a92f3c6e9a110004, type: 2}
+    qualificationQuest: {fileID: 0}
+    stageUnlockQuest: {fileID: 0}
+  - stableId: raid_draft_stage_4
+    currentStage: 4
+    valuableRarity: 2
+    valuableCount: 0
+    requiresCurrentStageBossKill: 1
+    moneyCost: 0
+    stageToUnlock: {fileID: 11400000, guid: d16f7a0e1f3b4b93a92f3c6e9a110005, type: 2}
+    qualificationQuest: {fileID: 0}
+    stageUnlockQuest: {fileID: 0}
+  sideLines:
+  - stableId: raid_draft_armor_lv2
+    minimumUnlockedStage: 1
+    branch: 1
+    rewardType: 2
+    equipmentLevel: 2
+    authoringNote: No stage prerequisite. Objectives and shop node TBD.
+    quest: {fileID: 0}
+  - stableId: raid_draft_armor_lv3
+    minimumUnlockedStage: 2
+    branch: 1
+    rewardType: 2
+    equipmentLevel: 3
+    authoringNote: Stage 2 unlocked prerequisite.
+    quest: {fileID: 0}
+  - stableId: raid_draft_armor_lv4
+    minimumUnlockedStage: 3
+    branch: 1
+    rewardType: 2
+    equipmentLevel: 4
+    authoringNote: Stage 3 unlocked prerequisite.
+    quest: {fileID: 0}
+  - stableId: raid_draft_syringes
+    minimumUnlockedStage: 3
+    branch: 1
+    rewardType: 2
+    equipmentLevel: 0
+    authoringNote: Stage 3 unlocked prerequisite; specific products TBD.
+    quest: {fileID: 0}
+  - stableId: raid_draft_ammo
+    minimumUnlockedStage: 1
+    branch: 1
+    rewardType: 2
+    equipmentLevel: 0
+    authoringNote: Level 1-6 shop unlocks only; level 7-8 special farming.
+    quest: {fileID: 0}
+  - stableId: raid_draft_stats
+    minimumUnlockedStage: 1
+    branch: 2
+    rewardType: 1
+    equipmentLevel: 0
+    authoringNote: Permanent stat rewards via existing quest runtime; values TBD.
+    quest: {fileID: 0}
+  - stableId: raid_draft_warehouse
+    minimumUnlockedStage: 1
+    branch: 0
+    rewardType: 4
+    equipmentLevel: 0
+    authoringNote: Main or dedicated difficult quest; slot increase TBD.
+    quest: {fileID: 0}
+  endingNote: Stage 5 special map and ending TBD. Draft is not registered as a playable quest.

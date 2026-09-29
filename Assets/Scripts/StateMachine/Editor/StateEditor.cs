@@ -1,4 +1,10 @@
-﻿
+/*
+ * Role hierarchy: StateMachine > Editor
+ * Primary responsibility: Provides the StateEditor authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -12,6 +18,7 @@ namespace VSplatter.StateMachine.Editor
 		private ReorderableList _list;
 		private SerializedProperty _actions;
 
+		// Purpose: Activates runtime subscriptions and refreshes the enabled state.
 		private void OnEnable()
 		{
 			Undo.undoRedoPerformed += DoUndo;
@@ -28,11 +35,13 @@ namespace VSplatter.StateMachine.Editor
 			SetupActionsList(_list);
 		}
 
+		// Purpose: Releases active subscriptions and transient state while disabled.
 		private void OnDisable()
 		{
 			Undo.undoRedoPerformed -= DoUndo;
 		}
 
+		// Purpose: Responds to the inspector gui callback.
 		public override void OnInspectorGUI()
 		{
 			if (target == null || _list == null)
@@ -43,6 +52,7 @@ namespace VSplatter.StateMachine.Editor
 			serializedObject.ApplyModifiedProperties();
 		}
 
+		// Purpose: Performs the do undo workflow for this component.
 		private void DoUndo()
 		{
 			if (target == null)
@@ -51,6 +61,7 @@ namespace VSplatter.StateMachine.Editor
 			serializedObject.UpdateIfRequiredOrScript();
 		}
 
+		// Purpose: Updates the setup actions list state.
 		private static void SetupActionsList(ReorderableList reorderableList)
 		{
 			reorderableList.elementHeight *= 1.5f;

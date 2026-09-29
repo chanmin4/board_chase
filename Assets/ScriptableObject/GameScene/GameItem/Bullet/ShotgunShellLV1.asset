@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc0ee8da29db48bfb234442298466091, type: 3}
+  m_Name: ShotgunShellLV1
+  m_EditorClassIdentifier: 
+  _guid: 6d8a2ca370925c6be7c57b5658e44d6c
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: c78070c9580c0a8188fa5f1e79659e89, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _purchasePrice: 10
+  _worldVisualPrefab: {fileID: 7611937310320503209, guid: 2824a87b067e59f1b93d28090546cac3, type: 3}
+  _maxStack: 120
+  bulletId: shotgunshell_lv1
+  displayName: ShotgunShellLV1
+  projectilePrefab: {fileID: 7611937310320503209, guid: 2824a87b067e59f1b93d28090546cac3, type: 3}
+  projectileTrailPrefab: {fileID: 0}
+  speed: 300
+  castRadius: 0.08
+  maxLifetime: 3
+  spawnOffset: 0.12
+  _projectileFlybySoundRadius: 4
+  _projectileFlybyEmitDistance: 3
+  _projectileFlybySoundIntensity: 0.65
+  _projectileImpactSoundRadius: 8
+  _projectileImpactSoundIntensity: 1
+  _projectileSoundInvestigateDelaySeconds: 0.05
+  projectileCollisionMask:
+    serializedVersion: 2
+    m_Bits: 2248
+  projectileTriggerInteraction: 2
+  statModifiers: []
+  playerDamageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 64
+  enemyDamageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 8
+  penetrationClass: 1
+  _tier: 1
+  _healthDamage: 30
+  _infectionDamage: 10
+  _markAmount: 25
+  _pelletCount: 8
+  references:
+    version: 2
+    RefIds: []

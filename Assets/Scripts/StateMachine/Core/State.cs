@@ -1,4 +1,10 @@
-﻿using VSplatter.StateMachine.ScriptableObjects;
+/*
+ * Role hierarchy: StateMachine > Core
+ * Primary responsibility: Defines State state behavior or transitions that drive the runtime flow.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using VSplatter.StateMachine.ScriptableObjects;
 
 namespace VSplatter.StateMachine
 {
@@ -23,6 +29,7 @@ namespace VSplatter.StateMachine
 			_actions = actions;
 		}
 
+		// Purpose: Responds to the state enter callback.
 		public void OnStateEnter()
 		{
 			void OnStateEnter(IStateComponent[] comps)
@@ -34,6 +41,7 @@ namespace VSplatter.StateMachine
 			OnStateEnter(_actions);
 		}
 
+		// Purpose: Responds to the update callback.
 		public void OnUpdate()
 		{
 			if (_actions == null)
@@ -43,6 +51,7 @@ namespace VSplatter.StateMachine
 				_actions[i]?.OnUpdate();
 		}
 
+		// Purpose: Responds to the state exit callback.
 		public void OnStateExit()
 		{
 			void OnStateExit(IStateComponent[] comps)
@@ -54,6 +63,7 @@ namespace VSplatter.StateMachine
 			OnStateExit(_actions);
 		}
 
+		// Purpose: Attempts to get transition and reports whether the request succeeded.
 		public bool TryGetTransition(out State state)
 		{
 			state = null;

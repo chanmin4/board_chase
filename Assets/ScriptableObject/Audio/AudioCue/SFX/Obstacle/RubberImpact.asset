@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: RubberImpact
+  m_EditorClassIdentifier: 
+  _guid: 4299e3165e5f4e498515615f6effeeb7
+  description: Shared obstacle bullet impact cue.
+  _cueId: 4299e3165e5f4e498515615f6effeeb7
+  _category: 8
+  _authoringNotes: Temporary rubber response using an existing soft muffled impact. Replace this cue with dedicated tire bullet impacts when available.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  looping: 0
+  _gainDb: -3
+  _audioClipGroups:
+  - sequenceMode: 1
+    audioClips:
+    - {fileID: 8300000, guid: 3054ada6e2d73834786ea39b2eddbb15, type: 3}

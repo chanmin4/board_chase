@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
+  m_Name: LootObject_WeaponBox_01
+  m_EditorClassIdentifier: 
+  _worldPrefab: {fileID: 100100000, guid: d714687a61fd67a46be151682bd29a55, type: 3}
+  _displayName: Weapon Box 01
+  _lootSlotCount: 6
+  _lootObjectType: {fileID: 11400000, guid: 5d2f266f249e41d2a647f6485b3a5415, type: 2}
+  _lootTable: {fileID: 11400000, guid: b330000000000000000000000000001a, type: 2}

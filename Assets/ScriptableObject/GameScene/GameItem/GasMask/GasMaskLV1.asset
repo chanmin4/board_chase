@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1f75e6673e74eab9f6f3a0e39d67a11, type: 3}
+  m_Name: GasMaskLV1
+  m_EditorClassIdentifier: 
+  _guid: c1a00000000000000000000000000001
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: 3f76da25896d6d748bd7717bb68bfb8d, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _purchasePrice: 55
+  _worldVisualPrefab: {fileID: 6244533929590124771, guid: 3c29b46e537c8e940a0bf8f500eca42a, type: 3}
+  _maxStack: 1
+  _maxOwnedAmount: 1
+  _gasMaskId: gas_mask_normal
+  _displayName: Normal Gas Mask
+  _tier: 0
+  _gasInfectionMultiplier: 0.65
+  _maxFilterDurability: 100
+  _filterDurabilityLossPerRawInfection: 0.35
+  _repairPermanentLossRatio: 0.1
+  _equippedVisualPrefab: {fileID: 100100000, guid: 6241e094365f1f948bf8c6a981cdda68, type: 3}
+  _equippedVisualSocket: 7
+  _visualCoverage: 4
+  _equippedVisualTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  references:
+    version: 2
+    RefIds: []

@@ -40,6 +40,9 @@ MonoBehaviour:
   _weaponViewLocalPosition: {x: 0, y: 0.1, z: 0}
   _weaponViewLocalEulerAngles: {x: -0, y: 90, z: 0}
   _weaponViewLocalScale: {x: 2, y: 2, z: 2}
+  _weaponType: 2
+  _damageMultiplier: 0.65
+  _shotsPerSecondMultiplier: 2
   _fireAudioCue: {fileID: 11400000, guid: 47c38486d64cc354fabc37455c1e8c9d, type: 2}
   _hitConfirmAudioCue: {fileID: 11400000, guid: 1370460f65ab9ca47baa2bec9cf50eb3, type: 2}
   _playerReloadAudioCue: {fileID: 11400000, guid: 65fa96f1cec58a144b81264ae215841d, type: 2}

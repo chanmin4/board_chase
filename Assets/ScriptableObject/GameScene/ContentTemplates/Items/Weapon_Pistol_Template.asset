@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 294f4c0238c50334cb4be1a12dce5779, type: 3}
+  m_Name: Weapon_Pistol_Template
+  m_EditorClassIdentifier: 
+  _guid: template_weapon_pistol
+  _name: {m_TableReference: {m_TableCollectionName: }, m_TableEntryReference: {m_KeyId: 0, m_Key: }, m_FallbackState: 0, m_WaitForCompletion: 0, m_LocalVariables: []}
+  _previewImage: {fileID: 0}
+  _description: {m_TableReference: {m_TableCollectionName: }, m_TableEntryReference: {m_KeyId: 0, m_Key: }, m_FallbackState: 0, m_WaitForCompletion: 0, m_LocalVariables: []}
+  _rarity: 0
+  _purchasePrice: 10
+  _worldItemPrefab: {fileID: 0}
+  _maxStack: 1
+  _weaponId: template_weapon_id
+  _displayName: Template Pistol
+  _weaponViewPrefab: {fileID: 0}
+  _weaponViewLocalPosition: {x: 0, y: 0, z: 0}
+  _weaponViewLocalEulerAngles: {x: 0, y: 0, z: 0}
+  _weaponViewLocalScale: {x: 1, y: 1, z: 1}
+  _weaponType: 0
+  _damageMultiplier: 1
+  _shotsPerSecondMultiplier: 1
+  _magazineSize: 8
+  _fireAudioCue: {fileID: 0}
+  _hitConfirmAudioCue: {fileID: 0}
+  _playerReloadAudioCue: {fileID: 0}
+  _enemyReloadAudioCue: {fileID: 0}
+  _muzzleParticlePrefab: {fileID: 0}
+  _statModifiers: []
+  _gunshotSoundRadiusMultiplier: 1
+  _gunshotSoundRadiusAdd: 0
+  _showEnemyAimLaser: 1

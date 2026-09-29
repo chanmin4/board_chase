@@ -417,6 +417,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7053913567114170851}
+  - component: {fileID: 8894107763188664301}
   - component: {fileID: 2314258856705450698}
   - component: {fileID: 8454348731592367904}
   - component: {fileID: 1600421156328720945}
@@ -453,6 +454,29 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!223 &8894107763188664301
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7807565820523552725}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 0
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 0
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 25
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 32760
+  m_TargetDisplay: 0
 --- !u!225 &2314258856705450698
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -563,6 +587,8 @@ MonoBehaviour:
   _stateText: {fileID: 7835726252655436672}
   _screenOffset: {x: 180, y: 80}
   _clampToScreen: 1
+  _minimumWidth: 160
+  _maximumWidth: 420
 --- !u!1 &9115400315846417448
 GameObject:
   m_ObjectHideFlags: 0

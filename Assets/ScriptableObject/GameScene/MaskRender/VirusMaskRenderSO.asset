@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a394daad45bbf01478d84f30a482a335, type: 3}
+  m_Name: VirusMaskRenderSO
+  m_EditorClassIdentifier: 
+  _guid: 251d93254641a2a4888757907321c610
+  description: 
+  _channel: 1
+  _surfaceState: 2
+  _baseMaterial: {fileID: 2100000, guid: fdb19f6fa4db56f489e46c44ce245ae5, type: 2}
+  _previewTexture: {fileID: 0}
+  _paintBubbleParticlePrefab: {fileID: 0}
+  _hostileContactEffects:
+  - {fileID: 11400000, guid: 4d1598f44b17416e81145ee4d62514aa, type: 2}
+  - {fileID: 11400000, guid: 5367a83bd8094de59cc2f828e972f0f7, type: 2}

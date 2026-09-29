@@ -33,20 +33,28 @@ MonoBehaviour:
     m_WaitForCompletion: 0
     m_LocalVariables: []
   _rarity: 0
+  _purchasePrice: 10
   _worldItemPrefab: {fileID: 6875246725044659727, guid: d6638a083af86b14d848ad8d88949499, type: 3}
+  _maxStack: 1
   _weaponId: weapon
-  _displayName: Weapon
+  _displayName: Pistol2
   _weaponViewPrefab: {fileID: 2874331260001655343, guid: d6638a083af86b14d848ad8d88949499, type: 3}
   _weaponViewLocalPosition: {x: 0, y: 0, z: 0}
   _weaponViewLocalEulerAngles: {x: -0, y: 90, z: 0}
   _weaponViewLocalScale: {x: 1, y: 1, z: 1}
+  _weaponType: 0
+  _damageMultiplier: 1
+  _shotsPerSecondMultiplier: 1
+  _magazineSize: 8
   _fireAudioCue: {fileID: 11400000, guid: a877e8df9eb63d54d8f22a91f2c4b912, type: 2}
   _hitConfirmAudioCue: {fileID: 11400000, guid: 1370460f65ab9ca47baa2bec9cf50eb3, type: 2}
   _playerReloadAudioCue: {fileID: 11400000, guid: 65fa96f1cec58a144b81264ae215841d, type: 2}
   _enemyReloadAudioCue: {fileID: 0}
+  _muzzleParticlePrefab: {fileID: 0}
   _statModifiers: []
   _gunshotSoundRadiusMultiplier: 1
   _gunshotSoundRadiusAdd: 0
+  _showEnemyAimLaser: 1
   references:
     version: 2
     RefIds: []

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1f7691d7f7f92746a603ce79c2f40db, type: 3}
+  m_Name: ContentProfile_SpecialLoot_Template
+  m_EditorClassIdentifier: 
+  _slotDefinitions:
+  - slotId: loot_a
+    contentKind: 0
+    enabled: 1
+    spawnChancePercent: 100
+    prefabCandidates:
+    - prefab: {fileID: 320000000000000072, guid: a0000000000000000000000000000009, type: 3}
+      weight: 1
+    - prefab: {fileID: 320000000000000082, guid: a000000000000000000000000000000a, type: 3}
+      weight: 1
+  - slotId: special_interactable_a
+    contentKind: 2
+    enabled: 1
+    spawnChancePercent: 20
+    prefabCandidates:
+    - prefab: {fileID: 320000000000000092, guid: a000000000000000000000000000000b, type: 3}
+      weight: 1

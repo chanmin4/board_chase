@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3190473909285749944}
   - component: {fileID: 838268026702917746}
   - component: {fileID: 7103779146766475585}
+  - component: {fileID: 3606265341101455799}
   m_Layer: 7
   m_Name: SM_Props_07
   m_TagString: Untagged
@@ -110,3 +111,21 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.6978025, y: 3.168026, z: 1.785175}
   m_Center: {x: 0, y: 1.584013, z: 0}
+--- !u!114 &3606265341101455799
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1198762498021282215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7bc84fcd44e401438f289f582a2bc95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _objectAudioEventChannel: {fileID: 11400000, guid: c1c0a5a5046bf7344a513ad6ec101a1f, type: 2}
+  _hitReceivedEventChannel: {fileID: 11400000, guid: 38bfe3f5cedaebb49bbadc6c6dfd4afb, type: 2}
+  _sfxEventChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+  _audioConfig: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  _gameState: {fileID: 11400000, guid: 8e8b48267ef954f49a75dbff9d394778, type: 2}
+  _onHitCue: {fileID: 11400000, guid: 632c02c57a24d11498d6d1d5f70b5874, type: 2}

@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e4c1c1e09594f1e8aa9744761fc95bf, type: 3}
+  m_Name: Pill_LV1
+  m_EditorClassIdentifier: 
+  _guid: 15b7ef97fdb14e3ca63e5f0018d3e01a
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 21300000, guid: 8a40bdf1d08576745b5edaf9156b012b, type: 3}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _purchasePrice: 35
+  _worldVisualPrefab: {fileID: 1930443933466900, guid: d02e44945fbf4e34c9e553fa4157a26e, type: 3}
+  _maxStack: 3
+  _maxOwnedAmount: 0
+  _usableId: painkiller
+  _usableDisplayName: Painkiller
+  _heldViewPrefab: {fileID: 0}
+  _heldViewLocalPosition: {x: 0, y: 0, z: 0}
+  _heldViewLocalEulerAngles: {x: 0, y: 0, z: 0}
+  _heldViewLocalScale: {x: 1, y: 1, z: 1}
+  _healAmount: 0
+  _markRecoveryAmount: 0
+  _useDurationSeconds: 2
+  _appliedStatusEffect: {fileID: 11400000, guid: a9e0fc8b4fd7493a9a4e398be70d89e8, type: 2}
+  _curesInjuries: 1
+  references:
+    version: 2
+    RefIds: []

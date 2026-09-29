@@ -1,0 +1,143 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae080927fbef4ec880ed87871e2b57e0, type: 3}
+  m_Name: Stage2Definition
+  m_EditorClassIdentifier:
+  _stageIndex: 2
+  _displayName: 2_Stage
+  _mapPolicy: 1
+  _raidMap:
+    bossSpawnPercent: 65
+    minimumExtractionPathDistance: 9
+    normalWeight: 70
+    armoryWeight: 10
+    medicalWeight: 15
+    vaultWeight: 5
+  _raidRuntime:
+    durationSeconds: 1200
+    overtimeInfectionPerSecond: 6
+    generatorBattery: {fileID: 11400000, guid: 2a26d19e459447788d8bc8941260b528, type: 2}
+    batteryAmount: 1
+    terminalPrefab: {fileID: 0}
+    prototypeFont: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+    sfxChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+    audioConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+    generatorCue: {fileID: 11400000, guid: 9ff639b7616047f7b2b7b5585e9b7216, type: 2}
+    extractionCue: {fileID: 11400000, guid: 9ff639b7616047f7b2b7b5585e9b7216, type: 2}
+    rejectedCue: {fileID: 11400000, guid: ace4292ea9214fa58e39b45ec3f93727, type: 2}
+    specialExtractionWip: 0
+    specialExtractionMinimumStage: 3
+    rooms:
+    - role: 3
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: fbaa1ff2ac3d32ccc0c3bd68339ac405, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e790, type: 2}
+    - role: 2
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: dfb6f9a93489f592b686a1a520b2097a, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e791, type: 2}
+    - role: 4
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: 647d3e770f1f194dbe46efa77e30a4ef, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e792, type: 2}
+    - role: 6
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: dea9ac4d1effbac75fe2f976ca3c93cb, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 0}
+    - role: 7
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: 7548474fc35104670e5d781c335d765a, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 0}
+    - role: 8
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: 5dc05e27ef5b4a0c25663fad02da3089, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 0}
+  _roomGridSize: 9
+  _useStartSectorOnly: 0
+  _startSectorPresets:
+  - preset: {fileID: 11400000, guid: 181b3e86598d4b1683e8facd05398b2a, type: 2}
+    weight: 1
+  _normalBattle:
+    sectorPresets:
+    - preset: {fileID: 11400000, guid: 8f6d9673b28dfa64c9d800aafbe14756, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 52d70aecb0f5c084b9074d9bfa70da88, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 2ce55fe4fa8ad0241b4a7d28102b5bbc, type: 2}
+      weight: 1
+    encounterPresets:
+    - preset: {fileID: 11400000, guid: d2a4b6c8e0f14931a2b3c4d5e6f70035, type: 2}
+      weight: 1
+    timerSeconds: 30
+    resetTimerWhenRequirementLost: 0
+  _roomTraitTable: {fileID: 11400000, guid: e0000000000000000000000000000021, type: 2}
+  _enableBiochemicalGas: 1
+  _biochemicalGas:
+    enabled: 1
+    applyToNormalRooms: 1
+    applyToBossRooms: 0
+    baselineInfectionPerSecond: 0
+    timerFailureLeakInfectionPerSecond: 8
+    maxTimerFailureLeakStacks: 3
+    tickInterval: 0.5
+  _treasure:
+    enabled: 0
+    minCount: 0
+    maxCount: 1
+    extraChancePerNoHitStage: 0
+    maxExtraChance: 1
+    excludeFirstRoom: 1
+    sectorPresets:
+    - preset: {fileID: 11400000, guid: bfb27cf577304361aedcfe29cc6d3950, type: 2}
+      weight: 1
+    dropTable: {fileID: 0}
+  _shop:
+    enabled: 0
+    minCount: 0
+    maxCount: 1
+    extraRoomChance: 0
+    excludeFirstRoom: 1
+    sectorPresets:
+    - preset: {fileID: 11400000, guid: e084352ad70049b4b15df14c2f4c2222, type: 2}
+      weight: 1
+    dropTable: {fileID: 0}
+    allowReroll: 1
+  _bossBattles:
+  - encounterPreset: {fileID: 11400000, guid: 4950049b5fbe4a3a9fc55ee81c14297e, type: 2}
+    sectorPreset: {fileID: 11400000, guid: cdca93fb975c44a49d6906207a556f0d, type: 2}
+    weight: 1
+  _advanceStageOnStartSectorComplete: 0
+  _infectionControlRecoverOnComplete: 0

@@ -1,4 +1,10 @@
-﻿using System.Collections.Generic;
+/*
+ * Role hierarchy: StateMachine > ScriptableObjects
+ * Primary responsibility: Defines StateActionSO state behavior or transitions that drive the runtime flow.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VSplatter.StateMachine.ScriptableObjects
@@ -19,11 +25,13 @@ namespace VSplatter.StateMachine.ScriptableObjects
 			action.Awake(stateMachine);
 			return action;
 		}
+		// Purpose: Creates the action owned by this workflow.
 		protected abstract StateAction CreateAction();
 	}
 
 	public abstract class StateActionSO<T> : StateActionSO where T : StateAction, new()
 	{
+		// Purpose: Creates the action owned by this workflow.
 		protected override StateAction CreateAction() => new T();
 	}
 }

@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 556fdb624bcf49a99675eccbcd24101a, type: 3}
+  m_Name: Rocket
+  m_EditorClassIdentifier: 
+  _guid: 8972c670d21874a4da74162eae55de35
+  _name:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _previewImage: {fileID: 0}
+  _description:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _rarity: 0
+  _purchasePrice: 10
+  _worldVisualPrefab: {fileID: 0}
+  _maxStack: 1
+  bulletId: bullet_default
+  displayName: Bullet
+  projectilePrefab: {fileID: 0}
+  projectileTrailPrefab: {fileID: 0}
+  speed: 250
+  castRadius: 0.08
+  maxLifetime: 2
+  spawnOffset: 0.12
+  _projectileFlybySoundRadius: 4
+  _projectileFlybyEmitDistance: 3
+  _projectileFlybySoundIntensity: 0.65
+  _projectileImpactSoundRadius: 8
+  _projectileImpactSoundIntensity: 1
+  _projectileSoundInvestigateDelaySeconds: 0.05
+  projectileCollisionMask:
+    serializedVersion: 2
+    m_Bits: 0
+  projectileTriggerInteraction: 1
+  statModifiers: []
+  playerDamageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 0
+  enemyDamageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 0
+  penetrationClass: 1
+  _tier: 1
+  _healthDamage: 30
+  _infectionDamage: 10
+  _markAmount: 25
+  references:
+    version: 2
+    RefIds: []

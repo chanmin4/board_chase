@@ -1,0 +1,170 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e27a454e74f73745b473c6fafffc143, type: 3}
+  m_Name: RaiderStage2ShooterConfig
+  m_EditorClassIdentifier:
+  _initialHealth: 200
+  _moveSpeed: 20
+  _baseArmorClass: 0
+  _paintMark:
+    _usePaintMark: 1
+    _markAmountPerStack: 100
+    _maxVaccineMarkStacks: 3
+    _maxVirusMarkStacks: 3
+    _startWithVirusMark: 0
+    _startingVirusMarkAmount: 0
+    _gainMultiplierPerCompletedStack: 0.75
+    _inactiveSlowDecayAmountPerTick: 1
+    _activeSlowDecayAmountPerTick: 0.5
+    _armorClassReductionPerStack: 1
+  _vision:
+    _visionRange: 70
+    _closeVisionRadius: 7.5
+    _useLineOfSight: 1
+    _lineOfSightBlockerMask:
+      serializedVersion: 2
+      m_Bits: 2176
+    _eyeHeight: 1
+    _targetHeight: 1
+    _useForwardArc: 1
+    _baseArcAngle: 60
+    _aimArcAngleMultiplier: 1
+  _infection:
+    _zoneTickInterval: 0.01
+    _naturalDecayInterval: 0.1
+    _naturalDecayAmountPerTick: 0.5
+    _infectionRecoveryTimeWait: 5
+  _armor:
+    _healthDurabilityLossMultiplier: 1
+    _infectionDurabilityLossMultiplier: 0.5
+  _shooter:
+    _healthDamageCoefficient: 1
+    _infectionDamageCoefficient: 1
+    _markAmountCoefficient: 1
+    _maxRange: 100
+    _shotsPerSecond: 7.8
+    _reloadDurationSeconds: 1.2
+    _magazineSize: 6
+    _penetrationClassBonus: 0
+    _aimSpeed: 8
+    _hipFireSpreadAngleDeg: 24
+    _aimSpreadAngleDeg: 6
+    _aimRangeMultiplier: 1.25
+    _aimMoveSpeedMultiplier: 0.6
+    _recoilAngleDeg: 1
+    _recoilRecoverySpeedDegPerSecond: 18
+    _recoilForwardDistancePerShot: 0.35
+    _recoilSideDistancePerShot: 0.2
+    _maxRecoilDistance: 2
+    _recoilDistanceRecoveryPerSecond: 4
+    _hipFireSpreadRadius: 0.8
+    _aimSpreadRadius: 0.08
+    _gunshotSoundRadius: 250
+    _soundInvestigateDelaySeconds: 0.25
+    _footstepSoundRadius: 125
+    _footstepSoundInterval: 0.35
+    _inventoryCapacity: 8
+  _loadoutTable: {fileID: 11400000, guid: d2a4b6c8e0f14931a2b3c4d5e6f70022, type: 2}
+  _enemy:
+    _id: raider_stage2
+    _displayName: Raider
+    _runCurrencyOnDeath: 0
+    _droppableRewardConfig: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
+    _healthBarUI:
+      _worldOffset: {x: 0, y: 0, z: 0}
+      _screenPixelOffset: {x: 0, y: 50}
+      _hideWhenBehindCamera: 1
+      _hideWhenOffScreen: 1
+      _clampToScreen: 1
+      _screenEdgePadding: 24
+    _infectionCastBarUI:
+      _worldOffset: {x: 0, y: 0, z: 0}
+      _screenPixelOffset: {x: 0, y: 40}
+      _hideWhenBehindCamera: 1
+      _hideWhenOffScreen: 1
+      _clampToScreen: 1
+      _screenEdgePadding: 24
+  _enemyRole: 0
+  _fsmArchetype: 0
+  _enemyShooterPrefab: {fileID: 3586708470977516792, guid: de4d3cabff57d2a4f8c90e54d9bea671, type: 3}
+  _alertOnDamaged: 1
+  _targetSearchInterval: 0.5
+  _targetMemorySeconds: 20
+  _targetLockMinSeconds: 5
+  _chaseLastKnownPosition: 1
+  _lastKnownInvestigationSeconds: 6
+  _soundInvestigationMemorySeconds: 5
+  _investigationReenterCooldown: 0.5
+  _ignoreEnemySoundStimuli: 1
+  _soundStimulusDuplicateCooldown: 5
+  _useMaxRangeAsAttackKeepRange: 1
+  _attackKeepRange: 0
+  _usePreferredRangeBeforeStationaryAttack: 1
+  _stationaryAttackKeepRangePadding: 14
+  _chaseStoppingDistance: 0
+  _chaseLoseRange: 0
+  _playerDiscoveryReactionTime: 0.6
+  _pursuitReacquireReactionTime: 0.3
+  _burstCount: 2
+  _burstInterval: 0.16666667
+  _finishStartedBurstAfterSightLost: 1
+  _navMeshAcceleration: 80
+  _attackMovementMode: 0
+  _combatMoveRefreshInterval: 0.1
+  _burstCooldownSeconds: 1
+  _attackPreferredDistance: 70
+  _attackStrafeDistance: 3
+  _patrolRadius: 30
+  _patrolIdleSeconds: 3
+  _patrolDestinationRefreshInterval: 5
+  _patrolArriveDistance: 5
+  _navMeshSampleDistance: 3
+  _investigateArriveDistance: 0.75
+  _investigateSearchSeconds: 1.25
+  _investigateMinimumCommitSeconds: 0.5
+  _investigateRetargetCooldown: 0.35
+  _queueSoundDuringInvestigationWait: 1
+  _aimTrackingSpeedDegPerSecond: 720
+  _aimErrorAngleDeg: 1
+  _targetLeadSeconds: 0
+  _avoidHarmfulAreas: 1
+  _avoidHarmfulAreasWhileAttacking: 1
+  _harmfulAreaCheckInterval: 0.2
+  _harmfulAreaSearchRadius: 4
+  _harmfulAreaSampleCount: 8
+  _harmfulAreaNavMeshSampleDistance: 2
+  _useMeleeAttack: 0
+  _meleeRangePadding: 0.25
+  _meleeAttackCooldownSeconds: 1.2
+  _meleeActionSeconds: 0.35
+  _useThrowableAttack: 0
+  _throwableCooldownSeconds: 20
+  _throwableMinRange: 8
+  _throwableMaxRange: 35
+  _throwableRecentlyKnownSeconds: 3
+  _throwablePreferWhenNoLineOfSight: 1
+  _throwableBlockWhenCanAttack: 1
+  _throwableActionSeconds: 0.8
+  _throwableSelfSafetyPadding: 1
+  _throwableAllySafetyMask:
+    serializedVersion: 2
+    m_Bits: 0
+  _throwableAllySafetyPadding: 1
+  _useDash: 0
+  _dashOnDamaged: 1
+  _dashChanceOnDamaged: 1
+  _dashWhenHealthBelowThreshold: 1
+  _dashHealthNormalizedThreshold: 0.35
+  _dashCooldownSeconds: 4
+  _dashDurationSeconds: 0.18
+  _dashSpeed: 14
+  _dashAwayFromTarget: 1

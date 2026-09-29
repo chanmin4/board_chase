@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af9ca6116795d5e4fae7eafcae9330ef, type: 3}
+  m_Name: Campaign_01_Raider_Contact
+  m_EditorClassIdentifier: 
+  _questId: campaign_01_raider_contact
+  _displayName: Campaign 01 - Raider Contact
+  _description: Template: establish contact with basic Raider shooters.
+  _prerequisites: []
+  _objectives:
+  - _objectiveType: 0
+    _targetConfig: {fileID: 11400000, guid: 8e672eefeaa28284f94ed3ae9346d2dc, type: 2}
+    _targetItem: {fileID: 0}
+    _requiredWeapon: {fileID: 0}
+    _requiredCount: 5
+    _distanceRule: 0
+    _distanceMeters: 10
+  _rewards: []
+  _persistentRewardSummary: TODO - author reward
+  _completionAudioCue: {fileID: 0}

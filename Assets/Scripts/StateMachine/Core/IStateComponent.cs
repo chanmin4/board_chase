@@ -1,4 +1,10 @@
-﻿namespace VSplatter.StateMachine
+﻿/*
+ * Role hierarchy: StateMachine > Core
+ * Primary responsibility: Defines the shared contract implemented by the IStateComponent role group.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+namespace VSplatter.StateMachine
 {
 	interface IStateComponent
 	{

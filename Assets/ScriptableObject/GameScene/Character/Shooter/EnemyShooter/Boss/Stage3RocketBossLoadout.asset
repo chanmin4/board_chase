@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da89a76dceea94940a4d4b9b656eaacf, type: 3}
+  m_Name: Stage3RocketBossLoadout
+  m_EditorClassIdentifier: 
+  _weaponEntries:
+  - setId: stage3_rocket_boss
+    weaponSlot0: {fileID: 11400000, guid: 38d6821b4cdf8fc49a359fa508f5db04, type: 2}
+    weaponSlot0Amount: 1
+    weaponSlot1: {fileID: 0}
+    weaponSlot1Amount: 0
+    weight: 1
+  _ammoPools:
+  - weaponSetId: stage3_rocket_boss
+    sourceWeaponSlotIndex: 0
+    destinationAmmoSlotIndex: 0
+    ammoType: 0
+    candidates:
+    - bullet: {fileID: 11400000, guid: 8972c670d21874a4da74162eae55de35, type: 2}
+      weight: 1
+      minAmount: 12
+      maxAmount: 18
+  _armorEntries: []
+  _inventoryEntries: []

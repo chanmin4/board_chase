@@ -1,4 +1,10 @@
-﻿using UnityEditor;
+/*
+ * Role hierarchy: StateMachine > Editor > Utilities
+ * Primary responsibility: Provides the SerializedTransition authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using UnityEditor;
 
 namespace VSplatter.StateMachine.Editor
 {
@@ -37,6 +43,7 @@ namespace VSplatter.StateMachine.Editor
 			Index = index;
 		}
 
+		// Purpose: Clears the current properties state.
 		internal void ClearProperties()
 		{
 			FromState.objectReferenceValue = null;

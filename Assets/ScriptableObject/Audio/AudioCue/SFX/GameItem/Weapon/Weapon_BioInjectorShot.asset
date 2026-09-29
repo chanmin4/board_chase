@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: Weapon_BioInjectorShot
+  m_EditorClassIdentifier: 
+  _guid: 6e8286381a2c419aa441fc0ce6d732b1
+  description: Infection injector ammunition firing feedback.
+  _cueId: 6e8286381a2c419aa441fc0ce6d732b1
+  _category: 4
+  _authoringNotes: Project-owned bio projectile source reserved for Infection Bullet authoring. Replace if final item sound differs.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  looping: 0
+  _gainDb: -2
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 7918a6e758069e0479ecd20f045c3fca, type: 3}

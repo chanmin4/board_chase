@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af9ca6116795d5e4fae7eafcae9330ef, type: 3}
+  m_Name: Campaign_13_Rocket_Evasion
+  m_EditorClassIdentifier: 
+  _questId: campaign_13_rocket_evasion
+  _displayName: Campaign 13 - Return Fire
+  _description: Template: land hits on Raiders while fighting at range.
+  _prerequisites:
+  - {fileID: 11400000, guid: 11aa22bb33cc44dd55ee66ff77000012, type: 2}
+  _objectives:
+  - _objectiveType: 1
+    _targetConfig: {fileID: 11400000, guid: 8e672eefeaa28284f94ed3ae9346d2dc, type: 2}
+    _targetItem: {fileID: 0}
+    _requiredWeapon: {fileID: 0}
+    _requiredCount: 25
+    _distanceRule: 1
+    _distanceMeters: 20
+  _rewards: []
+  _persistentRewardSummary: TODO - author reward
+  _completionAudioCue: {fileID: 0}

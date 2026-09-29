@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: UI_TransactionSuccess
+  m_EditorClassIdentifier: 
+  _guid: 976ffdda624e41eb9593cf9cc92394d9
+  description: Successful shop buy, sell, repair, and currency transaction feedback.
+  _cueId: 976ffdda624e41eb9593cf9cc92394d9
+  _category: 1
+  _authoringNotes: Uses the project currency pickup source as a temporary successful transaction sound.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: e3896df5369aeeb418a30c172001dce0, type: 2}
+  looping: 0
+  _gainDb: -1
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 2fe1d9e973744bb43bb5121009e2e3ac, type: 3}

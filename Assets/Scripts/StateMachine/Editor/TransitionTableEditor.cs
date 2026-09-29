@@ -1,4 +1,10 @@
-﻿using System.Collections.Generic;
+/*
+ * Role hierarchy: StateMachine > Editor
+ * Primary responsibility: Provides the TransitionTableEditor authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -28,6 +34,7 @@ namespace VSplatter.StateMachine.Editor
 		private UnityEditor.Editor _cachedStateEditor;
 		private bool _displayStateEditor;
 
+		// Purpose: Activates runtime subscriptions and refreshes the enabled state.
 		private void OnEnable()
 		{
 			_addTransitionHelper = new AddTransitionHelper(this);
@@ -35,6 +42,7 @@ namespace VSplatter.StateMachine.Editor
 			Reset();
 		}
 
+		// Purpose: Releases active subscriptions and transient state while disabled.
 		private void OnDisable()
 		{
 			Undo.undoRedoPerformed -= Reset;
@@ -53,6 +61,7 @@ namespace VSplatter.StateMachine.Editor
 			_toggledIndex = toggledState ? _fromStates.IndexOf(toggledState) : -1;
 		}
 
+		// Purpose: Responds to the inspector gui callback.
 		public override void OnInspectorGUI()
 		{
 			if (!_displayStateEditor)
@@ -61,6 +70,7 @@ namespace VSplatter.StateMachine.Editor
 				StateEditorGUI();
 		}
 
+		// Purpose: Performs the state editor gui workflow for this component.
 		private void StateEditorGUI()
 		{
 			Separator();
@@ -84,6 +94,7 @@ namespace VSplatter.StateMachine.Editor
 			_cachedStateEditor.OnInspectorGUI();
 		}
 
+		// Purpose: Performs the transition table gui workflow for this component.
 		private void TransitionTableGUI()
 		{
 			Separator();
@@ -206,6 +217,7 @@ namespace VSplatter.StateMachine.Editor
 			EndHorizontal();
 		}
 
+		// Purpose: Performs the display state editor workflow for this component.
 		internal void DisplayStateEditor(Object state)
 		{
 			if (_cachedStateEditor == null)
@@ -315,11 +327,13 @@ namespace VSplatter.StateMachine.Editor
 				_toggledIndex = stateIndex;
 		}
 
+		// Purpose: Returns the current state transitions.
 		internal List<SerializedTransition> GetStateTransitions(Object state)
 		{
 			return _transitionsByFromStates[_fromStates.IndexOf(state)].Select(t => t.SerializedTransition).ToList();
 		}
 
+		// Purpose: Copies conditions into the destination state.
 		private void CopyConditions(SerializedProperty copyTo, SerializedProperty copyFrom)
 		{
 			for (int i = 0, j = copyTo.arraySize; i < copyFrom.arraySize; i++, j++)
@@ -333,6 +347,7 @@ namespace VSplatter.StateMachine.Editor
 			}
 		}
 
+		// Purpose: Attempts to get existing transition and reports whether the request succeeded.
 		private bool TryGetExistingTransition(SerializedProperty from, SerializedProperty to, out int fromIndex, out int toIndex)
 		{
 			fromIndex = _fromStates.IndexOf(from.objectReferenceValue);
@@ -346,6 +361,7 @@ namespace VSplatter.StateMachine.Editor
 			return toIndex >= 0;
 		}
 
+		// Purpose: Performs the group by from state workflow for this component.
 		private void GroupByFromState()
 		{
 			var groupedTransitions = new Dictionary<Object, List<TransitionDisplayHelper>>();
@@ -382,6 +398,7 @@ namespace VSplatter.StateMachine.Editor
 				_transitionsByFromStates.Add(groupedTransitions[fromState]);
 		}
 
+		// Purpose: Applies the requested modifications change.
 		private void ApplyModifications(string msg)
 		{
 			Undo.RecordObject(serializedObject.targetObject, msg);

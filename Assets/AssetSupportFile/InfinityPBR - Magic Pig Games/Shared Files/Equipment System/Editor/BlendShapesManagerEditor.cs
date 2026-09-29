@@ -728,18 +728,5 @@ namespace InfinityPBR
                 EditorGUILayout.Space();
         }
         
-        private string symbolInfo = "ⓘ";
-        private string symbolX = "✘";
-        private string symbolCheck = "✔";
-        private string symbolCheckSquare = "☑";
-        private string symbolDollar = "$";
-        private string symbolCent = "¢";
-        private string symbolCarrotRight = "‣";
-        private string symbolCarrotLeft = "◄";
-        private string symbolCarrotUp = "▲";
-        private string symbolCarrotDown = "▼";
-        private string symbolDash = "⁃";
-        private string symbolBulletClosed = "⦿";
-        private string symbolBulletOpen = "⦾";
     }
 }

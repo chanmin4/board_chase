@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: Player_InfectionCureComplete_Temp
+  m_EditorClassIdentifier: 
+  _guid: f85e52a6c656450ab9648d19553fe85f
+  description: Temporary cue after an infection cure completes successfully.
+  _cueId: f85e52a6c656450ab9648d19553fe85f
+  _category: 3
+  _authoringNotes: "TEMP CLIP: seeded for the InfectionCureItemSO completion. Replace only the clip with a final medical completion sound."
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: a72b1f3c8d5e4f91b6c2a7e9d0145f83, type: 2}
+  looping: 0
+  _gainDb: -4
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 2fe1d9e973744bb43bb5121009e2e3ac, type: 3}

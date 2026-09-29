@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: WoodImpact
+  m_EditorClassIdentifier: 
+  _guid: 73570fa67c7340e19fac7c60bf9d2f8a
+  description: Shared obstacle bullet impact cue.
+  _cueId: 73570fa67c7340e19fac7c60bf9d2f8a
+  _category: 8
+  _authoringNotes: Short wood impact variants from the installed Universal Sound FX pack. Initial bullet-on-wood selection; tune in Audio Cue Library.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  looping: 0
+  _gainDb: -3
+  _audioClipGroups:
+  - sequenceMode: 1
+    audioClips:
+    - {fileID: 8300000, guid: 44e800478d552d94fbb3606217785710, type: 3}
+    - {fileID: 8300000, guid: 14887bc128c91014383c4450d59a9973, type: 3}
+    - {fileID: 8300000, guid: eb4e6775e2f44984a8c42be4be7aa5eb, type: 3}

@@ -1,4 +1,10 @@
-﻿using System;
+/*
+ * Role hierarchy: StateMachine > ScriptableObjects
+ * Primary responsibility: Defines the TransitionTableSO data asset used to configure runtime rules in the Inspector.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -47,6 +53,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 				: throw new InvalidOperationException($"TransitionTable {name} is empty.");
 		}
 
+		// Purpose: Performs the process condition usages workflow for this component.
 		private static void ProcessConditionUsages(
 			StateMachine stateMachine,
 			ConditionUsage[] conditionUsages,

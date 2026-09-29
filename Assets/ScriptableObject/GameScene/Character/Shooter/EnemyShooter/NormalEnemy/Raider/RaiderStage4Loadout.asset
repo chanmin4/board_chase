@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da89a76dceea94940a4d4b9b656eaacf, type: 3}
+  m_Name: RaiderStage4Loadout
+  m_EditorClassIdentifier:
+  _weaponEntries:
+  - setId: raider_pistol
+    weaponSlot0: {fileID: 11400000, guid: 354172926f99b4446b917baa42f6a51e, type: 2}
+    weaponSlot0Amount: 1
+    weaponSlot1: {fileID: 0}
+    weaponSlot1Amount: 0
+    weight: 4
+  - setId: raider_revolver
+    weaponSlot0: {fileID: 11400000, guid: 19b686301c9d44c44943a0dd0b1046f6, type: 2}
+    weaponSlot0Amount: 1
+    weaponSlot1: {fileID: 0}
+    weaponSlot1Amount: 0
+    weight: 1
+  _ammoPools:
+  - weaponSetId: raider_pistol
+    sourceWeaponSlotIndex: 0
+    destinationAmmoSlotIndex: 0
+    ammoType: 0
+    candidates:
+    - bullet: {fileID: 11400000, guid: f21b26d9f3dae58c049af815e845b282, type: 2}
+      weight: 3
+      minAmount: 10
+      maxAmount: 20
+    - bullet: {fileID: 11400000, guid: e992c8031f81d14ff09d4ab17fab20f0, type: 2}
+      weight: 1
+      minAmount: 10
+      maxAmount: 20
+  - weaponSetId: raider_revolver
+    sourceWeaponSlotIndex: 0
+    destinationAmmoSlotIndex: 0
+    ammoType: 0
+    candidates:
+    - bullet: {fileID: 11400000, guid: fb12b8b4a068a39e38fb8a96eebfef69, type: 2}
+      weight: 3
+      minAmount: 8
+      maxAmount: 16
+    - bullet: {fileID: 11400000, guid: 6125bd60b470e171ad0c9e94c4c638df, type: 2}
+      weight: 1
+      minAmount: 8
+      maxAmount: 16
+  _armorEntries:
+  - armor: {fileID: 11400000, guid: d93a905ffabdc5843b630c27dfe3a658, type: 2}
+    weight: 3
+    durability: -1
+  - armor: {fileID: 11400000, guid: 1e3a2b6e7c1ac8643aa3e0d5fefb878b, type: 2}
+    weight: 1
+    durability: -1
+  _inventoryEntries: []

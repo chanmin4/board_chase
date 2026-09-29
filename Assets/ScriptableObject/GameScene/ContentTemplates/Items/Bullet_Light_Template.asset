@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31e6c2435e704bf4ac847a5f88178df0, type: 3}
+  m_Name: Bullet_Light_Template
+  m_EditorClassIdentifier: 
+  _guid: template_light_bullet
+  _name: {m_TableReference: {m_TableCollectionName: }, m_TableEntryReference: {m_KeyId: 0, m_Key: }, m_FallbackState: 0, m_WaitForCompletion: 0, m_LocalVariables: []}
+  _previewImage: {fileID: 0}
+  _description: {m_TableReference: {m_TableCollectionName: }, m_TableEntryReference: {m_KeyId: 0, m_Key: }, m_FallbackState: 0, m_WaitForCompletion: 0, m_LocalVariables: []}
+  _rarity: 0
+  _purchasePrice: 10
+  _worldVisualPrefab: {fileID: 0}
+  _maxStack: 120
+  bulletId: template_light_bullet
+  displayName: Template Light Bullet
+  projectilePrefab: {fileID: 0}
+  projectileTrailPrefab: {fileID: 0}
+  speed: 300
+  castRadius: 0.08
+  maxLifetime: 3
+  spawnOffset: 0.12
+  _projectileFlybySoundRadius: 4
+  _projectileFlybyEmitDistance: 3
+  _projectileFlybySoundIntensity: 0.65
+  _projectileImpactSoundRadius: 8
+  _projectileImpactSoundIntensity: 1
+  _projectileSoundInvestigateDelaySeconds: 0.05
+  projectileCollisionMask: {serializedVersion: 2, m_Bits: 2248}
+  projectileTriggerInteraction: 2
+  statModifiers: []
+  playerDamageableTargetMask: {serializedVersion: 2, m_Bits: 64}
+  enemyDamageableTargetMask: {serializedVersion: 2, m_Bits: 8}
+  penetrationClass: 1
+  _tier: 1
+  _healthDamage: 30
+  _infectionDamage: 0
+  _markAmount: 0

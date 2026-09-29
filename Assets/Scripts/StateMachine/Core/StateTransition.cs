@@ -1,4 +1,10 @@
-﻿namespace VSplatter.StateMachine
+/*
+ * Role hierarchy: StateMachine > Core
+ * Primary responsibility: Implements the focused StateTransition responsibility and collaborates with its role group.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+namespace VSplatter.StateMachine
 {
 	public class StateTransition : IStateComponent
 	{
@@ -13,6 +19,7 @@
 			Init(targetState, conditions, resultGroups);
 		}
 
+		// Purpose: Performs the init workflow for this component.
 		internal void Init(State targetState, StateCondition[] conditions, int[] resultGroups = null)
 		{
 			_targetState = targetState;
@@ -32,18 +39,21 @@
 			return state != null;
 		}
 
+		// Purpose: Responds to the state enter callback.
 		public void OnStateEnter()
 		{
 			for (int i = 0; i < _conditions.Length; i++)
 				_conditions[i]._condition.OnStateEnter();
 		}
 
+		// Purpose: Responds to the state exit callback.
 		public void OnStateExit()
 		{
 			for (int i = 0; i < _conditions.Length; i++)
 				_conditions[i]._condition.OnStateExit();
 		}
 
+		// Purpose: Performs the should transition workflow for this component.
 		private bool ShouldTransition()
 		{
 #if UNITY_EDITOR
@@ -68,6 +78,7 @@
 			return ret;
 		}
 
+		// Purpose: Clears the current conditions cache state.
 		internal void ClearConditionsCache()
 		{
 			for (int i = 0; i < _conditions.Length; i++)

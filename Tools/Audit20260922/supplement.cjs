@@ -1,0 +1,13 @@
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const out='Tools/Audit20260922/output', read=p=>fs.readFileSync(p,'utf8');
+const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name).replaceAll('\\','/')]);
+const files=walk('Assets'),g=JSON.parse(read(out+'/guids.json')),scripts=JSON.parse(read(out+'/scripts.json'));
+const other=files.filter(p=>p.endsWith('.cs')&&!scripts.some(s=>s.path===p)).map(p=>({path:p,lines:read(p).split('\n').length,sha256:crypto.createHash('sha256').update(read(p)).digest('hex')}));
+const orphanMetaTargets=Object.entries(g).filter(([guid,p])=>p.startsWith('Assets/')&&!fs.existsSync(p));
+const locale=files.filter(p=>p.startsWith('Assets/LocalizationFile/')&&/_(ko|en)\.asset$/.test(p)).map(p=>{const s=read(p),entries=[...s.matchAll(/- m_Id: (\d+)\s+\n?\s*m_Localized:([^\r\n]*)/g)];return {path:p,entries:entries.length,empty:entries.filter(m=>!m[2].trim()||m[2].trim()==='""').map(m=>m[1]),shared:s.match(/m_SharedData:.*guid: (\w+)/)?.[1]};});
+const missing=JSON.parse(read(out+'/missing.json'));
+const cues=files.filter(p=>p.startsWith('Assets/ScriptableObject/Audio/AudioCue/')&&p.endsWith('.asset')).map(p=>{const s=read(p);return {path:p,clips:[...s.matchAll(/fileID: 8300000, guid: (\w+)/g)].map(m=>({guid:m[1],path:g[m[1]]||null})),temporary:/temporary|_Temp/i.test(s)};});
+const stats={extensions:files.filter(p=>!p.endsWith('.meta')).reduce((a,p)=>(a[path.extname(p)]=(a[path.extname(p)]||0)+1,a),{}),otherScripts:other.length,orphanMetaTargets:orphanMetaTargets.length,localeTables:locale,cues,missingInCatalogOrPlayer:missing.filter(x=>/RuntimeContentCatalog|Player\.prefab|PlayerBasicShooterLoadout|HomeShopConfig|DefaultVolumeProfile/.test(x.path)),visualRig:scripts.find(s=>s.path.endsWith('/ShooterVisualRig.cs')),shields:scripts.find(s=>s.path.endsWith('/ShieldArmorRuntime.cs'))};
+fs.writeFileSync(out+'/supplement.json',JSON.stringify(stats,null,2));
+fs.writeFileSync(out+'/scripts-external-and-generated.md','# 프로젝트 외부 패키지·지원·생성 소스 인덱스\n\n2026-09-22: 파일 존재·행수·해시 검사. 공급사 코드의 모든 동작을 검증했다는 뜻은 아닙니다. 자사 스크립트 866개 인덱스와 합쳐 Assets 안의 C# 1221개를 다룹니다.\n\n'+other.map(x=>`- ${x.path} | ${x.lines}행 | SHA256 ${x.sha256}`).join('\n'));
+console.log(JSON.stringify({extensions:stats.extensions,otherScripts:other.length,orphanMetaTargets:orphanMetaTargets.length,cueCount:cues.length,cuesNoClips:cues.filter(x=>!x.clips.length),cuesMissing:cues.filter(x=>x.clips.some(c=>!c.path)),locale:locale.filter(x=>x.path.includes('/UI_')),missingInCatalogOrPlayer:stats.missingInCatalogOrPlayer,visualRigRefs:stats.visualRig.serializedAssets,shieldRefs:stats.shields.serializedAssets},null,2));

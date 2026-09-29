@@ -242,6 +242,20 @@ namespace Melon
             }
 
             EditorGUILayout.Space();
+            EditorGUILayout.HelpBox(
+                "Captures all Light/Medium/Heavy/Sniper/Shotgun tier prefabs with this Icon Maker's real camera, lighting and materials. Existing PNG GUIDs are preserved.",
+                MessageType.Info);
+
+            using (new EditorGUI.DisabledScope(
+                       EditorApplication.isPlayingOrWillChangePlaymode ||
+                       EditorApplication.isCompiling ||
+                       EditorApplication.isUpdating))
+            {
+                if (GUILayout.Button("Render All 40 Bullet Tier Icons", regularButtonStyle))
+                    EditorApplication.ExecuteMenuItem("Tools/Icon Maker/Bullet Tier Icons/Render All 40 Icons");
+            }
+
+            EditorGUILayout.Space();
 
             #region References Foldout
 

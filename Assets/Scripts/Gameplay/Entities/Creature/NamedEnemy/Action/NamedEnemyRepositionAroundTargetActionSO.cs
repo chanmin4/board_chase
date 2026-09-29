@@ -1,0 +1,270 @@
+/*
+ * Role hierarchy: Gameplay > Entities > Creature > NamedEnemy > Action
+ * Primary responsibility: Defines NamedEnemyRepositionAroundTargetActionSO state behavior or transitions that drive the runtime flow.
+ * Execution boundary: Runtime (Assembly-CSharp)
+ */
+
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.Serialization;
+using VSplatter.StateMachine;
+using VSplatter.StateMachine.ScriptableObjects;
+
+[CreateAssetMenu(
+    fileName = "NamedEnemyRepositionAroundTargetAction",
+    menuName = "State Machines/Named Enemy Actions/Reposition Around Target")]
+public class NamedEnemyRepositionAroundTargetActionSO : StateActionSO<NamedEnemyRepositionAroundTargetAction>
+{
+    public enum SpeedSource
+    {
+        FixedValue,
+        MovementStatsNormal,
+        AgentCurrentValue
+    }
+
+    [Header("Stat Config")]
+    [FormerlySerializedAs("_mutarusStatConfig")]
+    [SerializeField] private NamedEnemyStatConfigSO _enemyStatConfig;
+
+    public bool HasDefinitionConfig => _enemyStatConfig != null;
+
+    public SpeedSource MoveSpeedSource => ConvertSpeedSource(_enemyStatConfig.MoveSpeedSource);
+    public float FixedMoveSpeed => _enemyStatConfig.RepositionFixedMoveSpeed;
+    public float TooCloseDistance => _enemyStatConfig.TooCloseDistance;
+    public float PreferredDistance => _enemyStatConfig.PreferredDistance;
+    public float TooFarDistance => _enemyStatConfig.TooFarDistance;
+    public float StrafeDistance => _enemyStatConfig.StrafeDistance;
+    public float DestinationRefreshInterval => _enemyStatConfig.DestinationRefreshInterval;
+    public float NavMeshSampleDistance => _enemyStatConfig.NavMeshSampleDistance;
+    public bool FaceTarget => _enemyStatConfig.FaceTarget;
+    public float TurnSpeedDegPerSecond => _enemyStatConfig.TurnSpeedDegPerSecond;
+    public bool DebugDrawDistances => _enemyStatConfig.DebugDrawDistances;
+    public float DebugDrawHeight => _enemyStatConfig.DebugDrawHeight;
+
+    // Purpose: Converts the current data to speed source.
+    private static SpeedSource ConvertSpeedSource(NamedEnemyStatConfigSO.RepositionSpeedSource source)
+    {
+        switch (source)
+        {
+            case NamedEnemyStatConfigSO.RepositionSpeedSource.MovementStatsNormal:
+                return SpeedSource.MovementStatsNormal;
+
+            case NamedEnemyStatConfigSO.RepositionSpeedSource.AgentCurrentValue:
+                return SpeedSource.AgentCurrentValue;
+
+            default:
+                return SpeedSource.FixedValue;
+        }
+    }
+}
+
+public class NamedEnemyRepositionAroundTargetAction : StateAction
+{
+    private NamedEnemyRepositionAroundTargetActionSO _origin;
+    private Enemy _enemy;
+    private NavMeshAgent _agent;
+    private EnemyMovementStatsProvider _movementStatsProvider;
+    private Transform _owner;
+
+    private float _side;
+    private float _nextRefreshTime;
+    private bool _hasConfig;
+
+    // Purpose: Caches the component references required before runtime initialization.
+    public override void Awake(StateMachine stateMachine)
+    {
+        _origin = (NamedEnemyRepositionAroundTargetActionSO)OriginSO;
+        _enemy = stateMachine.GetComponent<Enemy>();
+        _agent = stateMachine.GetComponent<NavMeshAgent>();
+        stateMachine.TryGetComponent(out _movementStatsProvider);
+
+        _owner = _enemy != null ? _enemy.transform : stateMachine.transform;
+    }
+
+    // Purpose: Responds to the state enter callback.
+    public override void OnStateEnter()
+    {
+        _hasConfig = _origin.HasDefinitionConfig;
+        _side = Random.value < 0.5f ? -1f : 1f;
+        _nextRefreshTime = 0f;
+
+        if (!_hasConfig)
+        {
+            Debug.LogError("[NamedEnemyRepositionAroundTargetAction] Named Enemy Stat Config is missing.", _owner);
+            return;
+        }
+
+        if (!IsAgentReady())
+            return;
+
+        _agent.speed = ResolveMoveSpeed();
+        _agent.isStopped = false;
+    }
+
+    // Purpose: Responds to the update callback.
+    public override void OnUpdate()
+    {
+        if (!_hasConfig)
+            return;
+
+        if (_enemy == null || _enemy.currentTarget == null)
+        {
+            StopAgent();
+            return;
+        }
+
+        Vector3 targetPos = _enemy.currentTarget.transform.position;
+
+        if (_origin.FaceTarget)
+            RotateToward(targetPos);
+
+        if (_origin.DebugDrawDistances)
+            DrawDistanceDebug(targetPos);
+
+        if (!IsAgentReady())
+            return;
+
+        if (Time.time < _nextRefreshTime)
+            return;
+
+        _nextRefreshTime = Time.time + _origin.DestinationRefreshInterval;
+
+        Vector3 destination = PickDestination(targetPos);
+
+        if (NavMesh.SamplePosition(
+                destination,
+                out NavMeshHit hit,
+                _origin.NavMeshSampleDistance,
+                NavMesh.AllAreas))
+        {
+            _agent.isStopped = false;
+            _agent.SetDestination(hit.position);
+        }
+    }
+
+    // Purpose: Responds to the state exit callback.
+    public override void OnStateExit()
+    {
+        StopAgent();
+    }
+
+    // Purpose: Performs the pick destination workflow for this component.
+    private Vector3 PickDestination(Vector3 targetPos)
+    {
+        Vector3 selfPos = _owner.position;
+
+        Vector3 fromTarget = selfPos - targetPos;
+        fromTarget.y = 0f;
+
+        if (fromTarget.sqrMagnitude < 0.0001f)
+            fromTarget = -_owner.forward;
+
+        float distance = fromTarget.magnitude;
+        Vector3 away = fromTarget.normalized;
+        Vector3 toward = -away;
+        Vector3 tangent = new Vector3(-away.z, 0f, away.x) * _side;
+
+        if (distance < _origin.TooCloseDistance)
+        {
+            Vector3 move = (away + tangent * 0.55f).normalized;
+            return selfPos + move * _origin.StrafeDistance;
+        }
+
+        if (distance > _origin.TooFarDistance)
+        {
+            Vector3 move = (toward + tangent * 0.35f).normalized;
+            return selfPos + move * _origin.StrafeDistance;
+        }
+
+        return targetPos +
+               away * _origin.PreferredDistance +
+               tangent * _origin.StrafeDistance;
+    }
+
+    // Purpose: Performs the rotate toward workflow for this component.
+    private void RotateToward(Vector3 targetPos)
+    {
+        Vector3 direction = targetPos - _owner.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+
+        _owner.rotation = Quaternion.RotateTowards(
+            _owner.rotation,
+            targetRotation,
+            _origin.TurnSpeedDegPerSecond * Time.deltaTime);
+    }
+
+    // Purpose: Resolves the move speed needed by this component.
+    private float ResolveMoveSpeed()
+    {
+        switch (_origin.MoveSpeedSource)
+        {
+            case NamedEnemyRepositionAroundTargetActionSO.SpeedSource.MovementStatsNormal:
+                if (_movementStatsProvider != null)
+                    return _movementStatsProvider.NormalMovementSpeed;
+                break;
+
+            case NamedEnemyRepositionAroundTargetActionSO.SpeedSource.AgentCurrentValue:
+                if (_agent != null)
+                    return _agent.speed;
+                break;
+        }
+
+        return _origin.FixedMoveSpeed;
+    }
+
+    // Purpose: Checks whether agent ready is currently true.
+    private bool IsAgentReady()
+    {
+        return _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
+    }
+
+    // Purpose: Stops the active agent behavior.
+    private void StopAgent()
+    {
+        if (!IsAgentReady())
+            return;
+
+        _agent.ResetPath();
+        _agent.isStopped = true;
+    }
+
+    // Purpose: Draws the distance debug authoring UI.
+    private void DrawDistanceDebug(Vector3 targetPos)
+    {
+        Vector3 center = targetPos;
+        center.y = _owner.position.y + _origin.DebugDrawHeight;
+
+        DrawCircle(center, _origin.TooCloseDistance, Color.red);
+        DrawCircle(center, _origin.PreferredDistance, Color.green);
+        DrawCircle(center, _origin.TooFarDistance, Color.yellow);
+
+        Vector3 self = _owner.position;
+        self.y = center.y;
+
+        Debug.DrawLine(center, self, Color.cyan);
+    }
+
+    // Purpose: Draws the circle authoring UI.
+    private static void DrawCircle(Vector3 center, float radius, Color color)
+    {
+        const int segments = 64;
+        Vector3 previous = center + new Vector3(radius, 0f, 0f);
+
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = i / (float)segments * Mathf.PI * 2f;
+            Vector3 next = center + new Vector3(
+                Mathf.Cos(angle) * radius,
+                0f,
+                Mathf.Sin(angle) * radius);
+
+            Debug.DrawLine(previous, next, color);
+            previous = next;
+        }
+    }
+}

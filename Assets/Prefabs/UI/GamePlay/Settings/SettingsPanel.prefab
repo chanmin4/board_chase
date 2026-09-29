@@ -645,10 +645,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_StringReference:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName: UI_Settings
     m_TableEntryReference:
       m_KeyId: 0
-      m_Key: 
+      m_Key: Settings_CurrentDifficulty
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
@@ -726,8 +726,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Current Difficulty
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+  m_sharedMaterial: {fileID: -3010159193059958693, guid: 971716747b9ba724291872bab3bf58df, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -920,32 +920,45 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _inputActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  _inputReader: {fileID: 11400000, guid: 21b411e260f76fd47a3096ef9faac720, type: 2}
   _bindingPrefsKey: GameInput.BindingOverrides
+  _stringTable:
+    m_TableCollectionName: UI_Settings
+  _rebindTitleEntryKey: Settings_Key_RebindTitle
+  _rebindCancelEntryKey: Settings_Key_RebindCancel
   _bindingRows:
   - displayName: MoveUp
     action: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-    bindingIndex: 0
+    actionMapName: Gameplay
+    actionName: Move
+    bindingIndex: 1
     titleText: {fileID: 7739375569042377462}
     resetButton: {fileID: 6096221500460188686}
     rebindButton: {fileID: 2463335541712630212}
     bindingText: {fileID: 2600454594566928845}
   - displayName: MoveDown
     action: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-    bindingIndex: 1
+    actionMapName: Gameplay
+    actionName: Move
+    bindingIndex: 2
     titleText: {fileID: 6317252382386977917}
     resetButton: {fileID: 7518350175836222085}
     rebindButton: {fileID: 2225671151950088015}
     bindingText: {fileID: 1790745091984346950}
   - displayName: MoveLeft
     action: {fileID: 0}
-    bindingIndex: 2
+    actionMapName: Gameplay
+    actionName: Move
+    bindingIndex: 3
     titleText: {fileID: 4350599131779201378}
     resetButton: {fileID: 260512688051763098}
     rebindButton: {fileID: 8442034131934233168}
     bindingText: {fileID: 8291422004321995353}
   - displayName: MoveRight
     action: {fileID: 0}
-    bindingIndex: 3
+    actionMapName: Gameplay
+    actionName: Move
+    bindingIndex: 4
     titleText: {fileID: 3585423046770549238}
     resetButton: {fileID: 1025716217884520206}
     rebindButton: {fileID: 8685672158824389316}
@@ -1439,8 +1452,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+  m_sharedMaterial: {fileID: -3010159193059958693, guid: 971716747b9ba724291872bab3bf58df, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1665,8 +1678,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Press ESC to cancel
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+  m_sharedMaterial: {fileID: -3010159193059958693, guid: 971716747b9ba724291872bab3bf58df, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

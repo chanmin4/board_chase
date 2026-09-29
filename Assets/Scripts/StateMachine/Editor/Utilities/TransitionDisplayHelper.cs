@@ -1,4 +1,10 @@
-﻿using UnityEditor;
+/*
+ * Role hierarchy: StateMachine > Editor > Utilities
+ * Primary responsibility: Provides the TransitionDisplayHelper authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using static UnityEditor.EditorGUI;
@@ -19,6 +25,7 @@ namespace VSplatter.StateMachine.Editor
 			_editor = editor;
 		}
 
+		// Purpose: Performs the display workflow for this component.
 		internal bool Display(ref Rect position)
 		{
 			var rect = position;
@@ -112,6 +119,7 @@ namespace VSplatter.StateMachine.Editor
 			return false;
 		}
 
+		// Purpose: Updates the setup conditions list state.
 		private static void SetupConditionsList(ReorderableList reorderableList)
 		{
 			reorderableList.elementHeight *= 2.3f;

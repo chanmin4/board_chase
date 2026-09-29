@@ -17,7 +17,7 @@ MonoBehaviour:
   m_SharedData: {fileID: 11400000, guid: 41b74adf4121a468e9dbe8958eb2f813, type: 2}
   m_Metadata:
     m_Items:
-    - id: 0
+    - rid: 0
   m_TableData:
   - m_Id: 24397351017934848
     m_Localized: Knife
@@ -31,12 +31,12 @@ MonoBehaviour:
     m_Localized: Lemon
     m_Metadata:
       m_Items:
-      - id: 0
+      - rid: 0
   - m_Id: 38497147220385792
     m_Localized: Lobster
     m_Metadata:
       m_Items:
-      - id: 0
+      - rid: 0
   - m_Id: 38507295636709376
     m_Localized: Ginger
     m_Metadata:
@@ -145,9 +145,20 @@ MonoBehaviour:
     m_Localized: Savory Cake with pepper
     m_Metadata:
       m_Items: []
+  - m_Id: 745158948936441856
+    m_Localized: 'Money
+
+'
+    m_Metadata:
+      m_Items: []
   references:
-    version: 1
-    00000000:
+    version: 2
+    RefIds:
+    - rid: 0
       type: {class: SmartFormatTag, ns: UnityEngine.Localization.Metadata, asm: Unity.Localization}
       data:
-        m_Entries: 00e06ffe2fc4880000e0ef90f3c4880000e06f6acccc8800
+        m_Entries: 
+        m_SharedEntries:
+        - id: 38496307243900928
+        - id: 38497147220385792
+        - id: 38505775163760640

@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    Unity generates a very large IDE-only ProjectReference graph. On this
+    workstation's .NET 10 SDK, resolving that graph can terminate inside
+    GetTargetFrameworks without a compiler diagnostic, even though
+    Assembly-CSharp itself compiles normally. Unity owns package assembly
+    compilation; this keeps the requested dotnet Assembly-CSharp verification
+    focused on the gameplay assembly and stable across generated csproj files.
+  -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Assembly-CSharp'">
+    <BuildProjectReferences>false</BuildProjectReferences>
+  </PropertyGroup>
+</Project>

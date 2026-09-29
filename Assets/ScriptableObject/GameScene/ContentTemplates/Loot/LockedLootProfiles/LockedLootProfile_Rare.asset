@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9942f0a18a8d4ca0a8cb6395b5df374d, type: 3}
+  m_Name: LockedLootProfile_Rare
+  m_EditorClassIdentifier: 
+  _requiredKeyTier: 1
+  _displayName: Rare Locked Loot
+  _minAdditionalRolls: 1
+  _maxAdditionalRolls: 1
+  _normalWeightMultiplier: 0.5
+  _rareWeightMultiplier: 1.3
+  _uniqueWeightMultiplier: 1.8
+  _legendaryWeightMultiplier: 2.5

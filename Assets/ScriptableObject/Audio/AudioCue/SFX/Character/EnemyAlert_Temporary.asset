@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: EnemyAlert_Temporary
+  m_EditorClassIdentifier: 
+  _guid: 4a564d01f5914f0d91fecb20ff3a76ad
+  description: Temporary low-pitch enemy suspicion cue. Replace its clip when enemy voice/audio is authored.
+  _cueId: 4a564d01f5914f0d91fecb20ff3a76ad
+  _category: 5
+  _authoringNotes: Temporary placeholder using the existing aiming click at a low pitch. Played once when any Shooter enters Alert.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 42e00a4f51c44b8a9fc33951420f2e67, type: 2}
+  looping: 0
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 3fe7b1f8b1e04a240b7fc44291feaa5e, type: 3}

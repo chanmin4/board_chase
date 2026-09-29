@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af9ca6116795d5e4fae7eafcae9330ef, type: 3}
+  m_Name: Campaign_08_Stage2_Boss
+  m_EditorClassIdentifier: 
+  _questId: campaign_08_stage2_boss
+  _displayName: Campaign 08 - Unique Sniper
+  _description: Template: defeat the Stage 2 unique sniper boss.
+  _prerequisites:
+  - {fileID: 11400000, guid: 11aa22bb33cc44dd55ee66ff77000007, type: 2}
+  _objectives:
+  - _objectiveType: 0
+    _targetConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a102, type: 2}
+    _targetItem: {fileID: 0}
+    _requiredWeapon: {fileID: 0}
+    _requiredCount: 1
+    _distanceRule: 0
+    _distanceMeters: 10
+  _rewards: []
+  _persistentRewardSummary: TODO - author Stage 2 boss reward
+  _completionAudioCue: {fileID: 0}

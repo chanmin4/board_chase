@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ffab91c62b4fcd478c4352c94501f06, type: 3}
   m_Name: ArmorLV3
   m_EditorClassIdentifier: 
-  _guid: c636cf491b9913f46816eb4473d0bf2d
+  _guid: c1d9900155203f9489b09c1358be0488
   _name:
     m_TableReference:
       m_TableCollectionName: GUID:1024c6550f7ddd84588d7f16e30075c3
@@ -22,7 +22,7 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _previewImage: {fileID: 21300000, guid: 16e69f3b244471749ac42b2f18596912, type: 3}
+  _previewImage: {fileID: 21300000, guid: 6ce39e9eb8efb3c48b73125fe1957ce2, type: 3}
   _description:
     m_TableReference:
       m_TableCollectionName: 
@@ -32,16 +32,22 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 0
-  _worldItemPrefab: {fileID: 8548514042937584122, guid: fe823cc1d22aed7459d0281e3fbe09ac, type: 3}
+  _rarity: 1
+  _purchasePrice: 10
+  _worldVisualPrefab: {fileID: 6812778170764767024, guid: 8e5619d115c581d488e24dea1dd9d929, type: 3}
+  _maxStack: 1
   _armorId: armor
   _displayName: ArmorLv3
   _armorClass: 3
-  _damageTakenMultiplierAdditive: -0.6
-  _equippedVisualPrefab: {fileID: 8548514042937584122, guid: fe823cc1d22aed7459d0281e3fbe09ac, type: 3}
-  _equippedVisualLocalPosition: {x: 0, y: 0.8, z: 0.1}
+  _maxDurability: 100
+  _sameOrHigherPenetrationHealthDamageMultiplier: 1
+  _healthDamageMultiplierPerClassGap: 0.5
+  _sameOrHigherPenetrationMarkDamageMultiplier: 1
+  _markDamageMultiplierPerClassGap: 0.75
+  _equippedVisualPrefab: {fileID: 6812778170764767024, guid: 8e5619d115c581d488e24dea1dd9d929, type: 3}
+  _equippedVisualLocalPosition: {x: 0, y: 0.8, z: 0}
   _equippedVisualLocalEulerAngles: {x: -0.000004325711, y: 0, z: 0}
-  _equippedVisualLocalScale: {x: 3.2, y: 1.5, z: 3}
+  _equippedVisualLocalScale: {x: 2.9, y: 1.7, z: 3.4}
   _statModifiers: []
   references:
     version: 2

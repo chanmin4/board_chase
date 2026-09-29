@@ -13,7 +13,8 @@ GameObject:
   - component: {fileID: 1086493225111981030}
   - component: {fileID: 861733518207883168}
   - component: {fileID: 3035093864527332420}
-  m_Layer: 0
+  - component: {fileID: 8486729879915971478}
+  m_Layer: 7
   m_Name: ShopMachine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -133,7 +134,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3640873652562682150}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: UIAnchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -165,7 +166,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5569029791969222229}
   - component: {fileID: 1332911893353824735}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: TriggerCollider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -210,3 +211,21 @@ CapsuleCollider:
   m_Height: 5
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8486729879915971478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1446503911900097075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7bc84fcd44e401438f289f582a2bc95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _objectAudioEventChannel: {fileID: 11400000, guid: c1c0a5a5046bf7344a513ad6ec101a1f, type: 2}
+  _hitReceivedEventChannel: {fileID: 11400000, guid: 38bfe3f5cedaebb49bbadc6c6dfd4afb, type: 2}
+  _sfxEventChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+  _audioConfig: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  _gameState: {fileID: 11400000, guid: 8e8b48267ef954f49a75dbff9d394778, type: 2}
+  _onHitCue: {fileID: 11400000, guid: 632c02c57a24d11498d6d1d5f70b5874, type: 2}

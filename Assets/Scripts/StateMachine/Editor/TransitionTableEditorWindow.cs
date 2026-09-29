@@ -1,3 +1,9 @@
+/*
+ * Role hierarchy: StateMachine > Editor
+ * Primary responsibility: Provides the TransitionTableEditorWindow authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -16,6 +22,7 @@ namespace VSplatter.StateMachine.Editor
 		private UnityEditor.Editor _transitionTableEditor;
 
 		[MenuItem("State Machine Editor", menuItem = "ChopChop/State Machine Editor")]
+		// Purpose: Performs the display workflow for this component.
 		internal static void Display()
 		{
 			if (_window == null)
@@ -24,6 +31,7 @@ namespace VSplatter.StateMachine.Editor
 			_window.Show();
 		}
 
+		// Purpose: Activates runtime subscriptions and refreshes the enabled state.
 		private void OnEnable()
 		{
 			var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(_uxmlPath);
@@ -41,11 +49,13 @@ namespace VSplatter.StateMachine.Editor
 			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 		}
 
+		// Purpose: Releases active subscriptions and transient state while disabled.
 		private void OnDisable()
 		{
 			EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
 		}
 
+		// Purpose: Responds to the play mode state changed callback.
 		private void OnPlayModeStateChanged(PlayModeStateChange obj)
 		{
 			if (obj == PlayModeStateChange.EnteredPlayMode)
@@ -63,12 +73,14 @@ namespace VSplatter.StateMachine.Editor
 				_doRefresh = true;
 		}
 
+		// Purpose: Responds to the lost focus callback.
 		private void OnLostFocus()
 		{
 			ListView listView = rootVisualElement.Q<ListView>(className: "table-list");
 			listView.selectionChanged -= OnListSelectionChanged;
 		}
 
+		// Purpose: Processes this component's per-frame runtime work.
 		private void Update()
 		{
 			if (!_doRefresh)
@@ -78,6 +90,7 @@ namespace VSplatter.StateMachine.Editor
 			_doRefresh = false;
 		}
 
+		// Purpose: Creates the list view owned by this workflow.
 		private void CreateListView()
 		{
 			var assets = FindAssets();
@@ -105,6 +118,7 @@ namespace VSplatter.StateMachine.Editor
 				listView.selectedIndex = System.Array.IndexOf(assets, _transitionTableEditor.target);
 		}
 
+		// Purpose: Responds to the list selection changed callback.
 		private void OnListSelectionChanged(IEnumerable<object> enumerable)
 		{
 			IMGUIContainer editor = rootVisualElement.Q<IMGUIContainer>(className: "table-editor");
@@ -149,6 +163,7 @@ namespace VSplatter.StateMachine.Editor
 		}
 
 
+		// Purpose: Finds the requested assets.
 		private TransitionTableSO[] FindAssets()
 		{
 			var guids = AssetDatabase.FindAssets($"t:{nameof(TransitionTableSO)}");

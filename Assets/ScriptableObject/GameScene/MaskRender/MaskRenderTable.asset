@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2fced790f589b445b584f358a990d27, type: 3}
+  m_Name: MaskRenderTable
+  m_EditorClassIdentifier: 
+  _guid: 
+  description: 
+  _entries:
+  - _channel: 0
+    _maskRender: {fileID: 11400000, guid: d6ba6a0820e0ff14c835d5be28f0773d, type: 2}
+  - _channel: 1
+    _maskRender: {fileID: 11400000, guid: 251d93254641a2a4888757907321c610, type: 2}
+  - _channel: 2
+    _maskRender: {fileID: 11400000, guid: b79185314c5e42a45ad3e0f8d70d6d2f, type: 2}
+  - _channel: 3
+    _maskRender: {fileID: 11400000, guid: c925e497f58093345b18c6092d29eba6, type: 2}

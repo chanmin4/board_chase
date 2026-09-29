@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da89a76dceea94940a4d4b9b656eaacf, type: 3}
+  m_Name: PlayerBasicShooterLoadout
+  m_EditorClassIdentifier: 
+  _weaponEntries:
+  - setId: player_default
+    weaponSlot0: {fileID: 11400000, guid: e2ae47b96800d3944b44e462d3b3ef6b, type: 2}
+    weaponSlot0Amount: 1
+    weaponSlot1: {fileID: 0}
+    weaponSlot1Amount: 0
+    weight: 1
+  _ammoPools:
+  - weaponSetId: player_default
+    sourceWeaponSlotIndex: 0
+    destinationAmmoSlotIndex: 0
+    ammoType: 0
+    candidates:
+    - bullet: {fileID: 11400000, guid: d98829dc5a864e14da9d9c47117c0bce, type: 2}
+      weight: 1
+      minAmount: 99
+      maxAmount: 99
+  _armorEntries: []
+  _inventoryEntries:
+  - item: {fileID: 11400000, guid: 59d36ae99b6e4d539f72ccff0dc92d7e, type: 2}
+    probability: 100
+    minAmount: 1
+    maxAmount: 1
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 65bca7d88920e4c46b8721f9d89dcf78, type: 2}
+    probability: 100
+    minAmount: 5
+    maxAmount: 5
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 8261ecedbebf48c4ebbde438e62a742b, type: 2}
+    probability: 100
+    minAmount: 4
+    maxAmount: 4
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 39cef0d049257ef2e6e8b635dbd8c9fe, type: 2}
+    probability: 100
+    minAmount: 5
+    maxAmount: 5
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 3634bd08e7d774240b33474483be6122, type: 2}
+    probability: 100
+    minAmount: 1
+    maxAmount: 1
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 41ba073e98c29c0d44855bfb100301b5, type: 2}
+    probability: 100
+    minAmount: 4
+    maxAmount: 4
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: f2101c77d6ed7c1c602e81a3a02b358a, type: 2}
+    probability: 100
+    minAmount: 4
+    maxAmount: 4
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 15b7ef97fdb14e3ca63e5f0018d3e01a, type: 2}
+    probability: 100
+    minAmount: 1
+    maxAmount: 1
+    armorDurability: 0
+  - item: {fileID: 11400000, guid: 5ee9c1275d95499da28f35a008f4489d, type: 2}
+    probability: 100
+    minAmount: 1
+    maxAmount: 1
+    armorDurability: 0

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: Interactable_KeyRejected
+  m_EditorClassIdentifier: 
+  _guid: 4fc4d1d61e60402a8b0eba9314164957
+  description: Incorrect or missing key feedback.
+  _cueId: 4fc4d1d61e60402a8b0eba9314164957
+  _category: 7
+  _authoringNotes: "TEMP CLIP: stable Key Tool rejection intent. Replace with final failed lock foley later."
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: a72b1f3c8d5e4f91b6c2a7e9d0145f83, type: 2}
+  looping: 0
+  _gainDb: -7
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 571c8de82b49cdb43ab9281909dad2b0, type: 3}

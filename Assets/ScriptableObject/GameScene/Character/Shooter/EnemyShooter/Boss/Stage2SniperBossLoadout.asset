@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da89a76dceea94940a4d4b9b656eaacf, type: 3}
+  m_Name: Stage2SniperBossLoadout
+  m_EditorClassIdentifier: 
+  _weaponEntries:
+  - setId: stage2_sniper_boss
+    weaponSlot0: {fileID: 11400000, guid: a01ef61d564917c409d9ecdc0e8214de, type: 2}
+    weaponSlot0Amount: 1
+    weaponSlot1: {fileID: 0}
+    weaponSlot1Amount: 0
+    weight: 1
+  _ammoPools:
+  - weaponSetId: stage2_sniper_boss
+    sourceWeaponSlotIndex: 0
+    destinationAmmoSlotIndex: 0
+    ammoType: 0
+    candidates:
+    - bullet: {fileID: 11400000, guid: c802d3ccafbdf6af8e1b17c28b0ab452, type: 2}
+      weight: 1
+      minAmount: 32
+      maxAmount: 48
+  _armorEntries: []
+  _inventoryEntries: []

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e27a454e74f73745b473c6fafffc143, type: 3}
+  m_Name: Stage5BossTemplateConfig
+  m_EditorClassIdentifier: 
+  _initialHealth: 900
+  _moveSpeed: 16
+  _baseArmorClass: 4
+  _loadoutTable: {fileID: 11400000, guid: 9f02a2e133984c5c91be6c7a1001002b, type: 2}
+  _enemy:
+    _id: stage5_boss_tbd
+    _displayName: Stage 5 Boss - TBD
+    _runCurrencyOnDeath: 0
+    _droppableRewardConfig: {fileID: 11400000, guid: 373ec251fe56de74e9eaf3e80565e39c, type: 2}
+  _enemyRole: 2
+  _fsmArchetype: 5
+  _enemyShooterPrefab: {fileID: 4396171065796695293, guid: 9f02a2e133984c5c91be6c7a10010024, type: 3}
+  _alertOnDamaged: 1
+  _playerDiscoveryReactionTime: 0.4
+  _pursuitReacquireReactionTime: 0.2
+  _useCoverTactics: 0
+  _useDash: 0
+  _useThrowableAttack: 0

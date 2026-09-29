@@ -96,6 +96,10 @@ MonoBehaviour:
   _edgeSoftnessPixels: 80
   _fogShader: {fileID: 4800000, guid: 32fa1121c5ca07648b6f6698ca9cd45f, type: 3}
   _shaderName: UI/VisionFog
+  _occlusionAngularSamples: 256
+  _occlusionRefreshInterval: 0.05
+  _occlusionEdgeSoftnessPixels: 4
+  _occlusionSafetyBiasWorld: 0.08
   _autoFindViewer: 1
   _hideWhenMissingRefs: 1
 --- !u!1 &6916559550727808466
@@ -110,6 +114,7 @@ GameObject:
   - component: {fileID: 8511782241220546109}
   - component: {fileID: 6417497704809787643}
   - component: {fileID: 5467973873587521059}
+  - component: {fileID: 910200000000000001}
   m_Layer: 5
   m_Name: Canvas-Vision
   m_TagString: Untagged
@@ -126,7 +131,7 @@ RectTransform:
   m_GameObject: {fileID: 6916559550727808466}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6264628001218762010}
@@ -200,3 +205,15 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!225 &910200000000000001
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6916559550727808466}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0

@@ -1,3 +1,9 @@
+/*
+ * Role hierarchy: StateMachine > ScriptableObjects
+ * Primary responsibility: Defines the DescriptionSMActionBaseSO data asset used to configure runtime rules in the Inspector.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
 using UnityEngine;
 
 namespace VSplatter.StateMachine.ScriptableObjects

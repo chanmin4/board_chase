@@ -1,4 +1,10 @@
-﻿using System.IO;
+/*
+ * Role hierarchy: StateMachine > Editor > Templates
+ * Primary responsibility: Provides the ScriptTemplates authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using System.IO;
 using System.Text;
 using UnityEngine;
 using UnityEditor;
@@ -9,6 +15,7 @@ internal class ScriptTemplates
 	private static readonly string _path = "Assets/Scripts/StateMachine/Editor/Templates";
 
 	[MenuItem("Assets/Create/State Machines/Action Script", false, 0)]
+	// Purpose: Creates the action script owned by this workflow.
 	public static void CreateActionScript() =>
 		ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0,
 			ScriptableObject.CreateInstance<DoCreateStateMachineScriptAsset>(),
@@ -17,6 +24,7 @@ internal class ScriptTemplates
 			$"{_path}/StateAction.txt");
 
 	[MenuItem("Assets/Create/State Machines/Condition Script", false, 0)]
+	// Purpose: Creates the condition script owned by this workflow.
 	public static void CreateConditionScript() =>
 		ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0,
 			ScriptableObject.CreateInstance<DoCreateStateMachineScriptAsset>(),
@@ -26,6 +34,7 @@ internal class ScriptTemplates
 
 	private class DoCreateStateMachineScriptAsset : EndNameEditAction
 	{
+		// Purpose: Performs the action workflow for this component.
 		public override void Action(int instanceId, string pathName, string resourceFile)
 		{
 			string text = File.ReadAllText(resourceFile);

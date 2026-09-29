@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: Player_InfectionCureUse_Temp
+  m_EditorClassIdentifier: 
+  _guid: b4b1b91d58c64416b50c7806535604a2
+  description: Temporary cue for infection cure injection beginning.
+  _cueId: b4b1b91d58c64416b50c7806535604a2
+  _category: 3
+  _authoringNotes: "TEMP CLIP: seeded for the InfectionCureItemSO cast start. Replace with syringe/medical use audio when supplied."
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: a72b1f3c8d5e4f91b6c2a7e9d0145f83, type: 2}
+  looping: 0
+  _gainDb: -4
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 3fe7b1f8b1e04a240b7fc44291feaa5e, type: 3}

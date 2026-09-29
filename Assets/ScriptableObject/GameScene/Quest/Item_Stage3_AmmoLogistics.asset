@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af9ca6116795d5e4fae7eafcae9330ef, type: 3}
+  m_Name: Item_Stage3_AmmoLogistics
+  m_EditorClassIdentifier: 
+  _questId: item_stage3_ammo_logistics
+  _displayName: Item 03 - Ammo Logistics
+  _description: Placeholder ItemNPC quest after Stage 3. Replace the item objective and unlock reward.
+  _branch: 1
+  _prerequisites:
+  - {fileID: 11400000, guid: a100c8d1e0cf4ae69e14d0e7a4b12c03, type: 2}
+  _objectives:
+  - _objectiveType: 2
+    _targetConfig: {fileID: 0}
+    _targetItem: {fileID: 11400000, guid: d98829dc5a864e14da9d9c47117c0bce, type: 2}
+    _requiredWeapon: {fileID: 0}
+    _requiredCount: 60
+    _distanceRule: 0
+    _distanceMeters: 10
+  _rewards: []
+  _persistentRewardSummary: TODO - Item unlock reward for Stage 3.
+  _completionAudioCue: {fileID: 0}

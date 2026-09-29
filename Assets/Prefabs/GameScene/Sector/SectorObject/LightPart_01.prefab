@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7629942925585648986}
   - component: {fileID: 3141301438979309357}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: TriggerCollider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -67,6 +67,7 @@ GameObject:
   - component: {fileID: 1615690002130701777}
   - component: {fileID: 3405128512352895360}
   - component: {fileID: 4028578963813050384}
+  - component: {fileID: -4003057993263578789}
   m_Layer: 0
   m_Name: LightPart_01
   m_TagString: Untagged
@@ -144,8 +145,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &4028578963813050384
-MeshCollider:
+--- !u!65 &4028578963813050384
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -162,10 +163,9 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: cedb3ac44bcf505419f889c94c07ca9f, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 0.01, y: 0.00529722639, z: 0.01}
+  m_Center: {x: 0, y: -0.00077390908, z: 0}
 --- !u!1 &6361872892149409693
 GameObject:
   m_ObjectHideFlags: 0
@@ -197,3 +197,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 3320488923866704111}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &-4003057993263578789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5379516766679263873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7bc84fcd44e401438f289f582a2bc95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _objectAudioEventChannel: {fileID: 11400000, guid: c1c0a5a5046bf7344a513ad6ec101a1f, type: 2}
+  _hitReceivedEventChannel: {fileID: 11400000, guid: 38bfe3f5cedaebb49bbadc6c6dfd4afb, type: 2}
+  _sfxEventChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+  _audioConfig: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  _gameState: {fileID: 11400000, guid: 8e8b48267ef954f49a75dbff9d394778, type: 2}
+  _onHitCue: {fileID: 11400000, guid: 632c02c57a24d11498d6d1d5f70b5874, type: 2}

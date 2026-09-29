@@ -1,4 +1,10 @@
-﻿using UnityEditor;
+/*
+ * Role hierarchy: StateMachine > Editor > Utilities
+ * Primary responsibility: Provides the InitOnlyAttributeDrawer authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using UnityEditor;
 using UnityEngine;
 
 namespace VSplatter.StateMachine.Editor
@@ -38,6 +44,7 @@ namespace VSplatter.StateMachine.Editor
             }
         }
 
+        // Purpose: Responds to the gui callback.
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             if (EditorApplication.isPlaying)
@@ -51,6 +58,7 @@ namespace VSplatter.StateMachine.Editor
             EditorGUI.PropertyField(position, property, label);
         }
 
+        // Purpose: Returns the current property height.
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             float height = EditorGUI.GetPropertyHeight(property, label);

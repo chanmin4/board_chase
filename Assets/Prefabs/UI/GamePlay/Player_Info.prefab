@@ -500,6 +500,7 @@ RectTransform:
   - {fileID: 6179693134999231008}
   - {fileID: 5029878348139651230}
   - {fileID: 5695368458673140981}
+  - {fileID: 7724931846729095831}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -526,6 +527,7 @@ MonoBehaviour:
   _infectionFill: {fileID: 1352977838718261654}
   _healthText: {fileID: 410439940844137832}
   _infectionText: {fileID: 4367260003449590751}
+  _statusEffectIconRoot: {fileID: 7724931846729095831}
   _reloadKeyHints:
   - label: Reload
     reloadImage: {fileID: 2504299812673782828}
@@ -542,6 +544,58 @@ MonoBehaviour:
     keyText: {fileID: 4212597548789795250}
     comboFormat: '{0} + {1}'
   _bindingDisplayOptions: 4
+--- !u!1 &7724931846729095832
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7724931846729095831}
+  - component: {fileID: 7724931846729095833}
+  m_Layer: 5
+  m_Name: StatusEffectSector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7724931846729095831
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7724931846729095832}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5029878347000118064}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 54}
+  m_SizeDelta: {x: 135, y: 30}
+  m_Pivot: {x: 0, y: 0}
+--- !u!114 &7724931846729095833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7724931846729095832}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61d3e5825b7c4cad8f9ad51afb018044, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _iconSize: 30
+  _spacing: 5
+  _layoutMode: 1
+  _iconsPerRow: 4
 --- !u!1 &5029878347271338215
 GameObject:
   m_ObjectHideFlags: 0

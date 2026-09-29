@@ -1,4 +1,10 @@
-﻿using UnityEditor;
+/*
+ * Role hierarchy: StateMachine > Editor > Utilities
+ * Primary responsibility: Provides the ContentStyle authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using UnityEditor;
 using UnityEngine;
 
 namespace VSplatter.StateMachine.Editor
@@ -21,6 +27,7 @@ namespace VSplatter.StateMachine.Editor
 		private static bool _initialised = false;
 
 		[InitializeOnLoadMethod]
+		// Purpose: Initializes initialize for use by this component.
 		internal static void Initialize()
 		{
 			if (_initialised)

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: Weapon_ThrowableExplosion
+  m_EditorClassIdentifier: 
+  _guid: 1603d1731de34e88af917683aa383f58
+  description: Throwable and grenade detonation sound.
+  _cueId: 1603d1731de34e88af917683aa383f58
+  _category: 4
+  _authoringNotes: Project-owned grenade detonation source. Future specific grenade items may override this shared fallback.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+  looping: 0
+  _gainDb: 0
+  _audioClipGroups:
+  - sequenceMode: 2
+    audioClips:
+    - {fileID: 8300000, guid: 6581b478d1b3fa24389cb66ac645336b, type: 3}

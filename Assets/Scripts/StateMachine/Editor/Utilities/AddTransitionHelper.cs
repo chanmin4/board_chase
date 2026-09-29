@@ -1,4 +1,10 @@
-﻿using System;
+/*
+ * Role hierarchy: StateMachine > Editor > Utilities
+ * Primary responsibility: Provides the AddTransitionHelper authoring tool and its editor workflow.
+ * Execution boundary: Editor only (VSplatter.StateMachine.Editor)
+ */
+
+using System;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -24,6 +30,7 @@ namespace VSplatter.StateMachine.Editor
 			SetupConditionsList(_list);
 		}
 
+		// Purpose: Performs the display workflow for this component.
 		internal void Display(Rect position)
 		{
 			position.x += 8;
@@ -112,6 +119,7 @@ namespace VSplatter.StateMachine.Editor
 			}
 		}
 
+		// Purpose: Performs the dispose workflow for this component.
 		public void Dispose()
 		{
 			UnityEngine.Object.DestroyImmediate(_transition.targetObject);
@@ -119,6 +127,7 @@ namespace VSplatter.StateMachine.Editor
 			GC.SuppressFinalize(this);
 		}
 
+		// Purpose: Updates the setup conditions list state.
 		private static void SetupConditionsList(ReorderableList reorderableList)
 		{
 			reorderableList.elementHeight *= 2.3f;

@@ -29,12 +29,12 @@ MonoBehaviour:
     - 15
     costPerLevel: 3200000032000000320000006400000064000000c8000000
   - id: 1
-    displayName: Attack Damage
-    description: Permanently increases player attack damage.
+    displayName: Health Damage Coefficient
+    description: Permanently increases final health damage dealt by ammunition.
     icon: {fileID: 21300000, guid: f071dbf80bf74ca49be889a77a29bb24, type: 3}
     statId: 0
-    modifierType: 0
-    valueFormat: +{0:0}
+    modifierType: 1
+    valueFormat: +{0:0}%
     effectPerLevel:
     - 1
     - 1

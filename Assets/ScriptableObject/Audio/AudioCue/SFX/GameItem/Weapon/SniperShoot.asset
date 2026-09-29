@@ -14,6 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _guid: a1ba1c741fd2c124887d7c4967a4662b
   description: 
+  _cueId: a1ba1c741fd2c124887d7c4967a4662b
+  _category: 4
+  _authoringNotes: Imported existing weapon cue. Uses a generic spatial fallback; caller-specific settings still override it.
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
   looping: 0
   _audioClipGroups:
   - sequenceMode: 2

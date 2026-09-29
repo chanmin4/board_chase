@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd927857a8df0844891988d5a0a78acc, type: 3}
+  m_Name: NPCVoice_Config
+  m_EditorClassIdentifier: 
+  _guid: b807819b412d438b8c9e9ed6530a3104
+  description: Near-field positional interaction audio.
+  outputMixerGroup: {fileID: 24300040, guid: 4ec18c545f8f1864cbc96259630c5eec, type: 2}
+  volume: 1
+  pitch: 1
+  randomPitch: 0
+  pitchMin: 0.95
+  pitchMax: 1.05
+  spatialBlend: 1
+  minDistance: 2
+  maxDistance: 16
+  spread: 0
+  useDistanceAttenuationFloor: 0
+  useScreenDirectionAssist: 0
+  stopFadeTime: 0.12

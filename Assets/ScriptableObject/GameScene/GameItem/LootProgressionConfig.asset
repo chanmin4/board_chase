@@ -1,0 +1,697 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13022a61637744d0b3189f992d780493, type: 3}
+  m_Name: LootProgressionConfig
+  m_EditorClassIdentifier: 
+  _sources:
+  - sourceId: raider
+    displayName: Raider
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 8e672eefeaa28284f94ed3ae9346d2dc, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items:
+        - item: {fileID: 11400000, guid: 57c6b7f775811444c9a92a2c3c70476e, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: fdc819f4768126d4596fb98939a02fc4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 1
+        chancePercent: 25
+        items:
+        - item: {fileID: 11400000, guid: 714559da120559f4781ae4e4349e0c06, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: c2a00000000000000000000000000001, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: c1a00000000000000000000000000001, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 24bdeb6c7f93b5b468fbe283bed27924, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 1
+          manualSharePercent: 5
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 029964076ffec7d4790ae21bd43c4bd6, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 1
+          manualSharePercent: 10
+  - sourceId: raider_upgrade
+    displayName: Raider Upgrade
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 11aa22bb33cc44dd55ee66ff77000101, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: scraper
+    displayName: Scraper
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 9f02a2e133984c5c91be6c7a1001000a, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: agent
+    displayName: Agent
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 9f02a2e133984c5c91be6c7a1001000f, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items:
+        - item: {fileID: 11400000, guid: c2a00000000000000000000000000001, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: c1a00000000000000000000000000002, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: c1a00000000000000000000000000003, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 1
+          manualSharePercent: 25
+      - rarity: 2
+        chancePercent: 0.5
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: punisher
+    displayName: Punisher
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 6395aa840d7a2bb4b8d52be48ace30fc, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items:
+        - item: {fileID: 11400000, guid: 8cee1890adf848c4ebbbe53232277f7e, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: stage1_revolver_boss
+    displayName: Stage 1 Revolver Boss
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a101, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: stage2_sniper_boss
+    displayName: Stage 2 Unique Sniper Boss
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a102, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: stage3_rocket_boss
+    displayName: Stage 3 Rocket Boss
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a103, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: stage4_lmg_boss
+    displayName: Stage 4 LMG Boss
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a104, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: stage5_boss_tbd
+    displayName: Stage 5 Boss - TBD
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 11aa22bb33cc44dd55ee66ff77000102, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items:
+        - item: {fileID: 11400000, guid: 1775d59dc7974a239ec59fa7083d225f, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+      - rarity: 2
+        chancePercent: 2
+        items:
+        - item: {fileID: 11400000, guid: 7c89fd67a9a84f07b4ac89f3de0c98d4, type: 2}
+          minAmount: 1
+          maxAmount: 1
+          useManualShare: 0
+          manualSharePercent: 0
+  - sourceId: boss_guard
+    displayName: Boss Guard
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: fdb7ae732e264d8793ae0dda98c1121c, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: stage1_boss_guard
+    displayName: Stage 1 Boss Guard
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 9f02a2e133984c5c91be6c7a10010033, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: stage2_boss_guard
+    displayName: Stage 2 Boss Guard
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 9f02a2e133984c5c91be6c7a10010034, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: stage3_boss_guard
+    displayName: Stage 3 Boss Guard
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 9f02a2e133984c5c91be6c7a10010035, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: stage4_demolition_guard
+    displayName: Stage 4 Bomb Carrier
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a105, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  - sourceId: butcher
+    displayName: Butcher
+    localizedDisplayName:
+      m_TableReference:
+        m_TableCollectionName: 
+      m_TableEntryReference:
+        m_KeyId: 0
+        m_Key: 
+      m_FallbackState: 0
+      m_WaitForCompletion: 0
+      m_LocalVariables: []
+    lootSlotCount: 6
+    sourceKind: 0
+    enemyShooterConfig: {fileID: 11400000, guid: 3e92f72e47da50247b53c53de2a941d2, type: 2}
+    lootObjectPrefab: {fileID: 0}
+    stagePools:
+    - stageIndex: 0
+      minRollCount: 1
+      maxRollCount: 1
+      rarityTiers:
+      - rarity: 0
+        chancePercent: 65
+        items: []
+      - rarity: 1
+        chancePercent: 25
+        items: []
+      - rarity: 3
+        chancePercent: 8
+        items: []
+      - rarity: 2
+        chancePercent: 2
+        items: []
+  _valuableLootItems:
+  - {fileID: 11400000, guid: 4420ff7c33cb42209efb9f4890cfc329, type: 2}
+  - {fileID: 11400000, guid: 0a71671abdcd4d50a5a5762384858b4f, type: 2}
+  - {fileID: 11400000, guid: dd3db0d39c9b4eaf8dc879dd38b27b43, type: 2}
+  - {fileID: 11400000, guid: a075f5c4dc6741499e5d34ededf7b673, type: 2}
+  - {fileID: 11400000, guid: 20ee4a6edf99487ebe7a0d9f8dd70e01, type: 2}
+  - {fileID: 11400000, guid: ee2e775788b0484c9b0a95fa7c5721bf, type: 2}
+  - {fileID: 11400000, guid: e8bb9271eaad4051a0063cf68ce407b8, type: 2}
+  - {fileID: 11400000, guid: 2a26d19e459447788d8bc8941260b528, type: 2}
+  - {fileID: 11400000, guid: 1d3963dc1de84d7abb57fbeafaf93a8d, type: 2}
+  - {fileID: 11400000, guid: 793a3c5eadfd4481a98ae1f2e5c4b153, type: 2}
+  - {fileID: 11400000, guid: 08e1732f40c54e84b1112414465a9251, type: 2}
+  - {fileID: 11400000, guid: eb798e9578934a488c1ffa33fdf173f1, type: 2}
+  - {fileID: 11400000, guid: c9cb33577c5043c1ba4bb3161167402c, type: 2}
+  - {fileID: 11400000, guid: d207d39d6c884696a2ff6430845cfc34, type: 2}
+  - {fileID: 11400000, guid: 8b546ed9357b4f6a8a1398aaf478d054, type: 2}
+  - {fileID: 11400000, guid: e3a7f429686c445c85a2c53147683fe8, type: 2}
+  - {fileID: 11400000, guid: cc07c101c7c949f5af1352d3bb8fa1b4, type: 2}
+  - {fileID: 11400000, guid: b15b999c541f48d9828eea612414ab51, type: 2}
+  - {fileID: 11400000, guid: 00a86a05c1c346638d3c8476a5fc00b6, type: 2}
+  - {fileID: 11400000, guid: 2a1c50608dcd4656b547c2fa84875cbb, type: 2}
+  - {fileID: 11400000, guid: 4d7ce837411843d3b81e28192bd8d29a, type: 2}
+  - {fileID: 11400000, guid: 08f04bd053104004a3e2d48bf5ef56aa, type: 2}
+  - {fileID: 11400000, guid: 8b393a7398bb4cb29a7f887e78f033bf, type: 2}
+  - {fileID: 11400000, guid: 4631c4b0639c4463ac65da58007c25b9, type: 2}
+  - {fileID: 11400000, guid: 32f5542fc9454df0b6d161a0a4a93b72, type: 2}
+  - {fileID: 11400000, guid: 14c4555abffe422597676ebf2c655f3c, type: 2}
+  - {fileID: 11400000, guid: 7d47e454e28f4f809658e268183f89f2, type: 2}
+  - {fileID: 11400000, guid: 8469e4f46e4a462c98e33a20861ca0f9, type: 2}
+  - {fileID: 11400000, guid: 0f1b701c56eb4a58b6f8c03d9f456372, type: 2}
+  - {fileID: 11400000, guid: 96c925418fbc443e8513244496a81532, type: 2}
+  _valuableLootRollChance: 0.35
+  references:
+    version: 2
+    RefIds: []

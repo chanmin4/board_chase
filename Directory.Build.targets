@@ -1,0 +1,32 @@
+<Project>
+  <!--
+    Unity already compiles every asmdef into Library/ScriptAssemblies. The
+    generated Assembly-CSharp.csproj also expresses those DLLs as a huge
+    ProjectReference graph, which the installed .NET 10 SDK can fail to
+    resolve in GetProjectReferenceTargetFrameworkProperties without reporting
+    a compiler error. For the required CLI validation only, compile the game
+    scripts against Unity's current produced assemblies instead.
+    Unity itself does not use this MSBuild target for player/editor builds.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Assembly-CSharp'">
+    <!--
+      Remove Unity's generated ProjectReference graph during project evaluation,
+      before the .NET SDK asks every referenced project for its target
+      framework. Removing it only in a later target is too late on .NET 10 and
+      can make the Assembly-CSharp no-restore CLI validation stop before
+      it reaches Assembly-CSharp's C# compiler invocation.
+    -->
+    <ProjectReference Remove="@(ProjectReference)" />
+
+    <Reference Include="Library/ScriptAssemblies/*.dll"
+               Exclude="Library/ScriptAssemblies/Assembly-CSharp.dll;Library/ScriptAssemblies/Assembly-CSharp-Editor.dll;Library/ScriptAssemblies/Assembly-CSharp-Editor-firstpass.dll">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="UseUnityScriptAssembliesForCliValidation"
+          BeforeTargets="_GetProjectReferenceTargetFrameworkProperties;ResolveProjectReferences"
+          Condition="'$(MSBuildProjectName)' == 'Assembly-CSharp'">
+    <!-- ProjectReference entries were removed during evaluation above. -->
+  </Target>
+</Project>

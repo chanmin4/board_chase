@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6de84a605bc12c43b68ee942082cc9a, type: 3}
+  m_Name: Quest_Accepted
+  m_EditorClassIdentifier: 
+  _guid: b807819b412d438b8c9e9ed6530a3202
+  description: Audio groundwork temporary feedback.
+  _cueId: b807819b412d438b8c9e9ed6530a3202
+  _category: 1
+  _authoringNotes: "Temporary existing-library feedback. Replace only the clips after audition."
+  _defaultPlaybackConfiguration: {fileID: 11400000, guid: e3896df5369aeeb418a30c172001dce0, type: 2}
+  looping: 0
+  _gainDb: -6
+  _audioClipGroups:
+  - sequenceMode: 1
+    audioClips:
+    - {fileID: 8300000, guid: a8c60f79eb2ed5c499e0c7be5513536a, type: 3}

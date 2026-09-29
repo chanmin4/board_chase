@@ -1,4 +1,10 @@
-﻿using VSplatter.StateMachine.ScriptableObjects;
+﻿/*
+ * Role hierarchy: StateMachine > Core
+ * Primary responsibility: Implements the focused StateAction responsibility and collaborates with its role group.
+ * Execution boundary: Runtime (VSplatter.StateMachine)
+ */
+
+using VSplatter.StateMachine.ScriptableObjects;
 
 namespace VSplatter.StateMachine
 {
