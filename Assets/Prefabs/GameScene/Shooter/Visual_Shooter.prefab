@@ -68,6 +68,7 @@ Transform:
   - {fileID: 526100007311100002}
   - {fileID: 526100007311100020}
   - {fileID: 526100007311100022}
+  - {fileID: 526100010011100002}
   m_Father: {fileID: 8471085537717374537}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2220254343731293019
@@ -673,6 +674,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8475264583216434159}
   - component: {fileID: 6699817276302984180}
+  - component: {fileID: 920260930100000001}
   m_Layer: 0
   m_Name: Visual_Shooter
   m_TagString: Player
@@ -818,4 +820,63 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8471085537717374537}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &920260930100000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8470056084066338813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dce341d25b343f68c5c3aed21d1ba89, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _bodyVisualRoot: {fileID: 8467050443786692231}
+  _gameplayColliderRoot: {fileID: 920230923100000002}
+  _armorSocket: {fileID: 1895872504910729488}
+  _rightHandSocket: {fileID: 1112000770457627546}
+  _leftHandSocket: {fileID: 3057753601049600039}
+  _hairSocket: {fileID: 3299975881152083262}
+  _eyesSocket: {fileID: 7687992251962953671}
+  _mouthSocket: {fileID: 526100007311100001}
+  _faceSocket: {fileID: 526100007311100002}
+  _bodySocket: {fileID: 526100007311100020}
+  _feetSocket: {fileID: 526100007311100022}
+  _maskSocket: {fileID: 0}
+  _backSocket: {fileID: 526100010011100002}
+  _defaultCustomize: {fileID: 0}
+  _characterCustomize: {fileID: 0}
+  _defaultAppearanceProfile: {fileID: 0}
+--- !u!1 &526100010011100001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 526100010011100002}
+  m_Layer: 0
+  m_Name: BackAccessorySocket
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &526100010011100002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 526100010011100001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: -0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7384502672483452904}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

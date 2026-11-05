@@ -1,0 +1,120 @@
+// Archived verifier. Deliberately copy into Assets/Editor with a fresh report path to rerun, then remove.
+// Only generated test assets are edited; never run while the user is working in Prefab Mode.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+[InitializeOnLoad]
+internal static class SectorMakerWorkspaceVerificationOnce
+{
+    private const string Report = "Library/SectorMakerWorkspace-20260929/result-v1.txt";
+    private static readonly List<string> Lines = new();
+    private static readonly Dictionary<string, Rect> Controls = new();
+    private static SectorMakerWorkspaceTests _fixture;
+    private static SectorMakerWindow _window;
+    private static EditorWindow _previous;
+    private static int _phase, _frames, _passed;
+    private static double _started;
+    static SectorMakerWorkspaceVerificationOnce() { EditorApplication.delayCall += Start; }
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode || PrefabStageUtility.GetCurrentPrefabStage() != null)
+        { EditorApplication.delayCall += Start; return; }
+        _previous = EditorWindow.focusedWindow;
+        try
+        {
+            foreach (var type in new[] { typeof(SectorMakerWorkspaceTests), typeof(SectorPrefabHierarchyTests) })
+                foreach (var method in type.GetMethods())
+                {
+                    var cases = method.GetCustomAttributes<TestCaseAttribute>().ToArray();
+                    var args = cases.Length > 0 ? cases.Select(c => c.Arguments).ToArray() : method.IsDefined(typeof(TestAttribute)) ? new[] { Array.Empty<object>() } : Array.Empty<object[]>();
+                    foreach (var arguments in args)
+                    {
+                        object fixture = Activator.CreateInstance(type);
+                        try
+                        {
+                            foreach (var setup in type.GetMethods().Where(m => m.IsDefined(typeof(SetUpAttribute)))) setup.Invoke(fixture, null);
+                            method.Invoke(fixture, arguments);
+                            Check(true, type.Name + "." + method.Name);
+                        }
+                        finally { foreach (var cleanup in type.GetMethods().Where(m => m.IsDefined(typeof(TearDownAttribute)))) cleanup.Invoke(fixture, null); }
+                    }
+                }
+            _fixture = new SectorMakerWorkspaceTests(); _fixture.SetUp();
+            _window = SectorMakerWorkspaceTests.Get<SectorMakerWindow>(_fixture, "_window");
+            _window.titleContent = new GUIContent("Sector Maker UI verification");
+            _window.position = new Rect(40, 35, 1360, 900);
+            SectorMakerWorkspaceTests.Call(_window, "OpenRoomForEditing");
+            _window.ShowUtility();
+            _window.ObserveControl = (id, rect) => Controls[id] = rect;
+            _started = EditorApplication.timeSinceStartup;
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Tick()
+    {
+        try
+        {
+            if (_window == null) throw new Exception("Verification window closed early");
+            if (EditorApplication.timeSinceStartup - _started > 75) throw new Exception("UI verification timeout");
+            _window.Repaint();
+            if (++_frames < 14 || !Controls.ContainsKey("StartPlacement")) return;
+            _frames = 0;
+            switch (_phase++)
+            {
+                case 0:
+                    Check(Controls.ContainsKey("RoomDrop") && Controls.ContainsKey("OpenRoom") && Controls.ContainsKey("SaveRoom"), "Prefab input, Scene and save controls render");
+                    Check(SectorMakerWorkspaceTests.Get<bool>(_window, "_showGuide"), "First-use guide defaults open");
+                    Click("Guide"); break;
+                case 1:
+                    Check(!SectorMakerWorkspaceTests.Get<bool>(_window, "_showGuide"), "Guide toggles off by click");
+                    Click("Category/3"); break;
+                case 2:
+                    Check(!SectorMakerWorkspaceTests.Get<bool[]>(_window, "_roomGroups")[3], "Medical category collapses by click");
+                    SectorMakerWorkspaceTests.Set(_window, "_catalogWidth", 320f);
+                    // Render the marker tool, without placing anything in any real scene.
+                    var modeField = typeof(SectorMakerWindow).GetField("_mode", BindingFlags.Instance | BindingFlags.NonPublic);
+                    modeField.SetValue(_window, Enum.ToObject(modeField.FieldType, 1));
+                    break;
+                case 3:
+                    Click("StartPlacement"); break;
+                case 4:
+                    Check(SectorMakerWorkspaceTests.Get<bool>(_window, "_paintingEnabled"), "Marker tool starts with automatic parents");
+                    Click("StartPlacement"); break;
+                case 5:
+                    Check(!SectorMakerWorkspaceTests.Get<bool>(_window, "_paintingEnabled"), "Stop button disarms painting");
+                    Check(SectorMakerWorkspaceTests.Get<float>(_window, "_catalogWidth") == 320f, "Catalog accepts a wider panel");
+                    Finish("COMPLETE: Only temporary test assets changed. Real prefabs, presets, stages and the user's scene were not saved or modified."); break;
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Click(string id)
+    {
+        var rect = Controls[id];
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, clickCount = 1, mousePosition = rect.center });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, clickCount = 1, mousePosition = rect.center });
+    }
+    private static void Check(bool value, string label)
+    { if (!value) throw new Exception(label); Lines.Add("PASS " + label); _passed++; }
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        if (_window != null) _window.ObserveControl = null;
+        try { _fixture?.TearDown(); } catch (Exception ex) { result += "\nCLEANUP FAIL " + ex; }
+        _fixture = null; _window = null;
+        if (_previous != null) _previous.Focus();
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Path.GetDirectoryName(Report)); File.WriteAllLines(Report, Lines);
+        if (result.StartsWith("COMPLETE") && !result.Contains("FAIL")) Debug.Log("[Sector Maker] " + _passed + " checks passed. " + Report);
+        else Debug.LogError("[Sector Maker] " + result);
+    }
+}

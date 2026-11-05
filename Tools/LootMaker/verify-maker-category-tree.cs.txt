@@ -1,0 +1,159 @@
+// Manual read-only UI regression probe. Temporarily copy to Assets/Editor/
+// MakerCategoryFoldoutVerificationOnce.cs and Refresh; remove the temporary script/meta afterward.
+// Use a fresh Report path for a deliberate new run. Does not save, drop, or delete authored assets.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class MakerCategoryFoldoutVerificationOnce
+{
+    private const string Report = "Library/MakerCategoryTree-20260929/verification-v1.txt";
+    private static readonly string[] Scopes = { "ItemMaker", "LootMaker", "QuestMaker" };
+    private static readonly string[] Groups = { "Weapon", "Ammo", "Main" };
+    private static readonly Type[] Windows = { typeof(ItemMakerWindow), typeof(LootProgressionEditorWindow), typeof(QuestDesignTreeWindow) };
+    private static readonly string[] Filters = { "_category", "_worldCategoryFilter", "_branchIndex" };
+    private static readonly string[] Selections = { "_category", "_selectedWorldLootObject", "_selectedQuest" };
+    private static readonly Dictionary<string, (bool existed, bool value)> Preferences = new();
+    private static readonly Dictionary<string, Rect> Rects = new();
+    private static readonly List<string> Lines = new();
+    private static EditorWindow _window;
+    private static int _maker, _phase, _frames, _passed;
+    private static object _filter, _selection;
+    private static double _started;
+    private static Object[] _dragObjects;
+    private static string[] _dragPaths;
+    static MakerCategoryFoldoutVerificationOnce() { EditorApplication.delayCall += Start; }
+    private static object Read(string field) => _window.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_window);
+
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Start; return; }
+        try
+        {
+            _started = EditorApplication.timeSinceStartup;
+            _dragObjects = DragAndDrop.objectReferences; _dragPaths = DragAndDrop.paths;
+            foreach (string scope in Scopes)
+                foreach (string key in new[] { "Weapon", "Bullet", "Consumable", "Unassigned" }
+                    .Concat(Enum.GetNames(typeof(LootContainerCategory))).Concat(QuestMakerGraph.Branches.Select(b => b.ToString())).Distinct())
+                {
+                    string pref = MakerCategoryTreeUi.PreferenceKey(scope, key);
+                    Preferences[pref] = (EditorPrefs.HasKey(pref), EditorPrefs.GetBool(pref));
+                    MakerCategoryTreeUi.SetExpanded(scope, key, false);
+                }
+            foreach (var test in typeof(MakerCategoryTreeTests).GetMethods().Where(m => m.IsDefined(typeof(NUnit.Framework.TestAttribute))))
+            {
+                var fixture = new MakerCategoryTreeTests();
+                try { fixture.Setup(); test.Invoke(fixture, null); Pass(test.Name); }
+                finally { fixture.Cleanup(); }
+            }
+            MakerCategoryTreeUi.ControlObserved = (owner, id, rect) =>
+            {
+                if (owner != _window) return;
+                if (id == "Begin") Rects.Clear(); else Rects[id] = rect;
+            };
+            OpenNext();
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+
+    private static void OpenNext()
+    {
+        Rects.Clear(); _phase = 0; _frames = 0;
+        _window = (EditorWindow)ScriptableObject.CreateInstance(Windows[_maker]);
+        _window.titleContent = new GUIContent("Category UI verification (read-only)");
+        _window.position = new Rect(90, 80, 1380, 900);
+        _window.ShowUtility();
+        _filter = Read(Filters[_maker]);
+    }
+
+    private static string ChildId() => _maker == 0 ? "ItemMaker/WeaponSmg/select" :
+        Rects.Keys.FirstOrDefault(id => id.StartsWith(Scopes[_maker] + (_maker == 1 ? "/Box:" : "/Quest:")));
+    private static void Click(string id)
+    {
+        if (!Rects.TryGetValue(id, out Rect rect)) throw new Exception("Control not drawn: " + id);
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, mousePosition = rect.center });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, mousePosition = rect.center });
+    }
+    private static void Check(bool success, string label)
+    {
+        if (!success) throw new Exception(Scopes[_maker] + " phase=" + _phase + ": " + label);
+        Pass(Scopes[_maker] + " " + label);
+    }
+    private static void Pass(string label) { _passed++; Lines.Add("PASS " + label); }
+
+    private static void Tick()
+    {
+        try
+        {
+            if (_window == null) throw new Exception("Verification window closed early.");
+            if (EditorApplication.timeSinceStartup - _started > 150) throw new Exception("Timed out");
+            _window.Repaint();
+            if (++_frames < 12 || Rects.Count == 0) return;
+            _frames = 0;
+            string scope = Scopes[_maker], group = Groups[_maker], toggle = scope + "/" + group + "/toggle";
+            switch (_phase)
+            {
+                case 0:
+                    Check(!MakerCategoryTreeUi.IsExpanded(scope, group), "default collapsed");
+                    Click(toggle); _phase++; break;
+                case 1:
+                    Check(MakerCategoryTreeUi.IsExpanded(scope, group) && Rects.ContainsKey(ChildId()), "arrow reveals children");
+                    Check(Equals(_filter, Read(Filters[_maker])), "arrow keeps filter unchanged");
+                    Click(ChildId()); _phase++; break;
+                case 2:
+                    _selection = Read(Selections[_maker]);
+                    Check(_selection != null && (_maker != 0 || _selection.ToString() == "WeaponSmg"), "child can be selected");
+                    _filter = Read(Filters[_maker]);
+                    Click(toggle); _phase++; break;
+                case 3:
+                    Check(!MakerCategoryTreeUi.IsExpanded(scope, group), "arrow collapses group");
+                    Check(Equals(_selection, Read(Selections[_maker])) && Equals(_filter, Read(Filters[_maker])), "collapse preserves selection and filter");
+                    Click(scope + "/" + group + "/select"); _phase++; break;
+                case 4:
+                    Check(!MakerCategoryTreeUi.IsExpanded(scope, group), "category name does not toggle expansion");
+                    Click(scope + "/ExpandAll"); _phase++; break;
+                case 5:
+                    Check(MakerCategoryTreeUi.IsExpanded(scope, group), "Expand All works");
+                    Click(scope + "/CollapseAll"); _phase++; break;
+                case 6:
+                    Check(!MakerCategoryTreeUi.IsExpanded(scope, group), "Collapse All works");
+                    if (_maker < 2)
+                    {
+                        Object payload = _maker == 0 ? ((System.Collections.IEnumerable)Read("_items")).Cast<Object>().First() :
+                            ((System.Collections.IEnumerable)Read("_containerCatalog")).Cast<Object>().First();
+                        DragAndDrop.objectReferences = new[] { payload };
+                        DragAndDrop.paths = new[] { AssetDatabase.GetAssetPath(payload) };
+                        _window.SendEvent(new Event { type = EventType.DragUpdated, mousePosition = Rects[toggle].center });
+                        Check(DragAndDrop.visualMode == DragAndDropVisualMode.Move, "collapsed parent accepts drag hover (no drop performed)");
+                        DragAndDrop.objectReferences = _dragObjects; DragAndDrop.paths = _dragPaths;
+                    }
+                    _window.Close(); _window = null;
+                    if (++_maker == Windows.Length) Finish("COMPLETE: no item, loot or quest assets edited.");
+                    else OpenNext();
+                    break;
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        MakerCategoryTreeUi.ControlObserved = null;
+        if (_window != null) _window.Close();
+        foreach (var pref in Preferences)
+            if (pref.Value.existed) EditorPrefs.SetBool(pref.Key, pref.Value.value); else EditorPrefs.DeleteKey(pref.Key);
+        if (_dragObjects != null) DragAndDrop.objectReferences = _dragObjects;
+        if (_dragPaths != null) DragAndDrop.paths = _dragPaths;
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Path.GetDirectoryName(Report)); File.WriteAllLines(Report, Lines);
+    }
+}

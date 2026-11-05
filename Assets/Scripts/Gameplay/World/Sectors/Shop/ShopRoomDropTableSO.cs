@@ -496,6 +496,8 @@ public class ShopRoomDropTableSO : ScriptableObject
         if (candidate == null || candidate.item == null)
             return false;
 
+        if (candidate.item is InfectionCureItemSO medicine && medicine.IsSyringe) return false;
+
         if (!IsSupportedItem(candidate.item))
             return false;
 

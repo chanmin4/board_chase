@@ -49,6 +49,11 @@ namespace VSplatter.StateMachine.Editor
 			FromState.objectReferenceValue = null;
 			ToState.objectReferenceValue = null;
 			Conditions.ClearArray();
+			Transition.FindPropertyRelative("Priority").intValue = 0;
+			Transition.FindPropertyRelative("Always").boolValue = false;
+			Transition.FindPropertyRelative("ExitReason").enumValueIndex = 0;
+			Transition.FindPropertyRelative("UseSharedRule").boolValue = false;
+			Transition.FindPropertyRelative("SharedRule").objectReferenceValue = null;
 		}
 	}
 }

@@ -48,6 +48,8 @@ MonoBehaviour:
     _shopUnlockNodeId: key_normal_purchase
     _stageToUnlock: {fileID: 0}
     _warehouseSlotAmount: 1
-  _persistentRewardSummary: Unlock Stage 2 and Normal Key Permit.
+  - _rewardType: 3
+    _stageToUnlock: {fileID: 11400000, guid: d16f7a0e1f3b4b93a92f3c6e9a110003, type: 2}
+  _persistentRewardSummary: Unlock both expedition branches (Stages 2 and 3) and Normal Key Permit.
   _completionAudioCue: {fileID: 0}
   _acceptedAudioCue: {fileID: 0}

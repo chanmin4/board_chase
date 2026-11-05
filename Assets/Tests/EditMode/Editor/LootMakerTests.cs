@@ -32,28 +32,55 @@ public sealed class LootMakerTests
             Is.EqualTo(Enumerable.Range(0, 8).ToArray()));
     }
 
-    [TestCase(LootContainerSize.Small, 4, 1, 3, 65)]
-    [TestCase(LootContainerSize.Medium, 8, 2, 5, 80)]
-    [TestCase(LootContainerSize.Large, 12, 4, 8, 90)]
-    public void PresetsChangeOnlySelectedVariant(LootContainerSize size, int slots, int min, int max, int chance)
+    [TestCase(LootContainerSize.VerySmall, 3, false)]
+    [TestCase(LootContainerSize.Small, 4, false)]
+    [TestCase(LootContainerSize.Medium, 6, false)]
+    [TestCase(LootContainerSize.Large, 9, false)]
+    [TestCase(LootContainerSize.VeryLarge, 12, false)]
+    [TestCase(LootContainerSize.VerySmall, 3, true)]
+    [TestCase(LootContainerSize.Small, 4, true)]
+    [TestCase(LootContainerSize.Medium, 6, true)]
+    [TestCase(LootContainerSize.Large, 9, true)]
+    [TestCase(LootContainerSize.VeryLarge, 12, true)]
+    public void PresetsChangeOnlySelectedVariant(LootContainerSize size, int slots, bool overrideRolls)
     {
         var table = Table();
         var family = Family(table);
         var selected = Variant(family);
         var sibling = Variant(family);
+        selected.RollSettings.overrideTableRollCount = overrideRolls;
+        selected.RollSettings.minRollCount = 2;
+        selected.RollSettings.maxRollCount = 7;
+        selected.RollSettings.rollSuccessChancePercent = 43f;
+        string originalSettings = JsonUtility.ToJson(selected.RollSettings);
         string originalTable = JsonUtility.ToJson(table);
         selected.ApplySizePreset(size);
         Assert.That(selected.LootSlotCount, Is.EqualTo(slots));
-        Assert.That(selected.RollSettings.overrideTableRollCount, Is.True);
-        Assert.That(selected.RollSettings.MinRolls, Is.EqualTo(min));
-        Assert.That(selected.RollSettings.MaxRolls, Is.EqualTo(max));
-        Assert.That(selected.RollSettings.SuccessChance, Is.EqualTo(chance));
+        Assert.That(selected.SizeClass, Is.EqualTo(size));
+        Assert.That(JsonUtility.ToJson(selected.RollSettings), Is.EqualTo(originalSettings));
         Assert.That(selected.LootTable, Is.SameAs(sibling.LootTable));
         Assert.That(sibling.LootSlotCount, Is.EqualTo(6));
         Assert.That(sibling.RollSettings.overrideTableRollCount, Is.False);
         Assert.That(JsonUtility.ToJson(table), Is.EqualTo(originalTable));
         selected.ApplySizePreset(LootContainerSize.Custom);
         Assert.That(selected.LootSlotCount, Is.EqualTo(slots), "Custom is a label, not a reset.");
+        Assert.That(JsonUtility.ToJson(selected.RollSettings), Is.EqualTo(originalSettings));
+    }
+
+    [Test]
+    public void SizeLabelsKeepSerializedIdsAndDoNotMigrateExistingCapacity()
+    {
+        Assert.That((int)LootContainerSize.Custom, Is.EqualTo(0));
+        Assert.That((int)LootContainerSize.Small, Is.EqualTo(1));
+        Assert.That((int)LootContainerSize.Medium, Is.EqualTo(2));
+        Assert.That((int)LootContainerSize.Large, Is.EqualTo(3));
+        Assert.That((int)LootContainerSize.VerySmall, Is.EqualTo(4));
+        Assert.That((int)LootContainerSize.VeryLarge, Is.EqualTo(5));
+        var legacy = Asset<LootObjectSO>();
+        JsonUtility.FromJsonOverwrite("{\"_sizeClass\":2,\"_lootSlotCount\":8}", legacy);
+        typeof(LootObjectSO).GetMethod("OnValidate", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(legacy, null);
+        Assert.That(legacy.SizeClass, Is.EqualTo(LootContainerSize.Medium));
+        Assert.That(legacy.LootSlotCount, Is.EqualTo(8), "Existing assets only change when a preset is clicked.");
     }
 
     [TestCase(0)]
@@ -158,7 +185,7 @@ public sealed class LootMakerTests
     public void ValidEmptyContainerIsCommittedOnceAndSurvivesSaveRestore()
     {
         var source = Variant(Family(Table()));
-        Set(source, "_rollSettings", Rules(4, 0));
+        source.SetGeneratedSlotRange(0, 0);
         var container = Container(source);
         container.BindRaidState("loot-test", 123, null, null);
         Assert.That(container.TryPrepareLoot(), Is.True);
@@ -166,7 +193,7 @@ public sealed class LootMakerTests
         var state = container.CaptureRaidState();
         Assert.That(state.rolled, Is.True);
         Assert.That(state.items, Is.Empty);
-        source.RollSettings.rollSuccessChancePercent = 100;
+        source.SetGeneratedSlotRange(4, 4);
         Assert.That(container.TryPrepareLoot(), Is.True);
         Assert.That(container.CaptureRaidState().items, Is.Empty, "Reopening must not reroll.");
         var restored = Container(source);
@@ -250,12 +277,12 @@ public sealed class LootMakerTests
         source.ApplySizePreset(LootContainerSize.Large);
         using var serialized = new SerializedObject(source);
         Assert.That(serialized.FindProperty("_sizeClass").intValue, Is.EqualTo((int)LootContainerSize.Large));
-        Assert.That(serialized.FindProperty("_lootSlotCount").intValue, Is.EqualTo(12));
+        Assert.That(serialized.FindProperty("_lootSlotCount").intValue, Is.EqualTo(9));
         var settings = serialized.FindProperty("_rollSettings");
-        Assert.That(settings.FindPropertyRelative("overrideTableRollCount").boolValue, Is.True);
-        Assert.That(settings.FindPropertyRelative("minRollCount").intValue, Is.EqualTo(4));
-        Assert.That(settings.FindPropertyRelative("maxRollCount").intValue, Is.EqualTo(8));
-        Assert.That(settings.FindPropertyRelative("rollSuccessChancePercent").floatValue, Is.EqualTo(90));
+        Assert.That(settings.FindPropertyRelative("overrideTableRollCount").boolValue, Is.False);
+        Assert.That(settings.FindPropertyRelative("minRollCount").intValue, Is.EqualTo(1));
+        Assert.That(settings.FindPropertyRelative("maxRollCount").intValue, Is.EqualTo(1));
+        Assert.That(settings.FindPropertyRelative("rollSuccessChancePercent").floatValue, Is.EqualTo(100));
         Assert.That(serialized.FindProperty("_lootObjectType"), Is.Not.Null);
     }
 
@@ -344,6 +371,172 @@ public sealed class LootMakerTests
         select.Invoke(window, new object[] { null });
         Assert.That(currentTable.GetValue(window), Is.Null);
         Assert.That(JsonUtility.ToJson(first), Is.EqualTo(firstBefore));
+    }
+
+    [TestCase(0, 0)]
+    [TestCase(0, 3)]
+    [TestCase(2, 4)]
+    [TestCase(3, 3)]
+    [TestCase(9, 99)]
+    public void FilledSlotCountIsGuaranteedWithinCapacity(int min, int max)
+    {
+        var box = Variant(Family(Table()));
+        box.SetGeneratedSlotRange(min, max);
+        box.RollSettings.rollSuccessChancePercent = 0; // retired, never causes an empty slot
+        var results = new List<LootRollResult>();
+        for (int seed = 0; seed < 100; seed++)
+        {
+            Assert.That(box.LootTable.TryGenerateSlots(new System.Random(seed), results, box), Is.True);
+            Assert.That(results.Count, Is.InRange(box.MinGeneratedSlots, box.MaxGeneratedSlots));
+            Assert.That(results.Count, Is.LessThanOrEqualTo(box.LootSlotCount));
+        }
+    }
+
+    [Test]
+    public void DuplicateItemsOccupySeparateSlotsAndQuantityFitsOneStack()
+    {
+        var table = Table();
+        var entry = table.Pool.FindTier(PlayerShopItemRarity.Normal).items[0];
+        Set(entry.item, "_maxStack", 10);
+        entry.minAmount = 50; entry.maxAmount = 99;
+        var box = Variant(Family(table)); box.ApplySizePreset(LootContainerSize.VerySmall);
+        box.SetGeneratedSlotRange(3, 3);
+        var container = Container(box);
+        container.BindRaidState("filled-test", 701, null, null);
+        Assert.That(container.TryPrepareLoot(), Is.True);
+        var stacks = container.GetComponent<StructureLootInventoryRuntime>().ItemStacks.Where(s => !s.IsEmpty).ToList();
+        Assert.That(stacks.Count, Is.EqualTo(3));
+        Assert.That(stacks.All(s => s.Item == entry.item && s.Amount == 10), Is.True);
+        Assert.That(container.CaptureRaidState().items.Select(s => s.slotIndex).Distinct().Count(), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void BoxWeightsRenormalizeOnlyEligibleTiersAndKeepTableUnchanged()
+    {
+        var table = Asset<LootTableSO>();
+        var unique = Item(PlayerShopItemRarity.Unique); var legendary = Item(PlayerShopItemRarity.Legendary);
+        Add(table, unique); Add(table, legendary);
+        var box = Variant(Family(table)); box.SetGeneratedSlotRange(1, 1);
+        box.RarityWeights.normal = 60; box.RarityWeights.rare = 30;
+        box.RarityWeights.unique = 8; box.RarityWeights.legendary = 2;
+        string before = JsonUtility.ToJson(table);
+        Assert.That(table.GetEffectiveTierPercent(PlayerShopItemRarity.Normal, box.RarityWeights), Is.Zero);
+        Assert.That(table.GetEffectiveTierPercent(PlayerShopItemRarity.Unique, box.RarityWeights), Is.EqualTo(80));
+        Assert.That(table.GetEffectiveTierPercent(PlayerShopItemRarity.Legendary, box.RarityWeights), Is.EqualTo(20));
+        var results = new List<LootRollResult>(); var random = new System.Random(179);
+        int goldCount = 0;
+        for (int i = 0; i < 5000; i++)
+        {
+            Assert.That(table.TryGenerateSlots(random, results, box), Is.True);
+            Assert.That(results.Count, Is.EqualTo(1));
+            if (results[0].Item == legendary) goldCount++;
+        }
+        Assert.That(goldCount, Is.InRange(850, 1150));
+        Assert.That(JsonUtility.ToJson(table), Is.EqualTo(before));
+    }
+
+    [Test]
+    public void ItemSharesAreConditionalWithinTierAndFinalPreviewIsNormalized()
+    {
+        var table = Table(); var tier = table.Pool.FindTier(PlayerShopItemRarity.Normal);
+        Add(table, Item(PlayerShopItemRarity.Normal)); Add(table, Item(PlayerShopItemRarity.Rare));
+        tier.items[0].useManualShare = true; tier.items[0].manualSharePercent = 10;
+        tier.items[1].useManualShare = true; tier.items[1].manualSharePercent = 30;
+        var box = Variant(Family(table)); box.RarityWeights.normal = 80; box.RarityWeights.rare = 20;
+        Assert.That(table.GetEffectiveItemPercent(tier, tier.items[0], box.RarityWeights), Is.EqualTo(20).Within(.001));
+        Assert.That(table.GetEffectiveItemPercent(tier, tier.items[1], box.RarityWeights), Is.EqualTo(60).Within(.001));
+        Assert.That(table.GetEffectiveTierPercent(PlayerShopItemRarity.Rare, box.RarityWeights), Is.EqualTo(20));
+    }
+
+    [Test]
+    public void SharedTableBoxesHaveIndependentQualityAndFillCounts()
+    {
+        var table = Table(); var rare = Item(PlayerShopItemRarity.Rare); Add(table, rare);
+        var family = Family(table); var a = Variant(family); var b = Variant(family);
+        a.SetGeneratedSlotRange(1, 1); b.SetGeneratedSlotRange(4, 4);
+        a.RarityWeights.rare = 0; b.RarityWeights.normal = 0;
+        var results = new List<LootRollResult>();
+        Assert.That(table.TryGenerateSlots(new System.Random(7), results, a), Is.True);
+        Assert.That(results.Count, Is.EqualTo(1)); Assert.That(results[0].Item.Rarity, Is.EqualTo(PlayerShopItemRarity.Normal));
+        Assert.That(table.TryGenerateSlots(new System.Random(7), results, b), Is.True);
+        Assert.That(results.Count, Is.EqualTo(4)); Assert.That(results.All(r => r.Item == rare), Is.True);
+    }
+
+    [Test]
+    public void InvalidWeightsCannotGenerateAndExplicitZeroSlotsCanBeEmptyWithoutItems()
+    {
+        var box = Variant(Family(Table())); box.SetGeneratedSlotRange(1, 1);
+        box.RarityWeights.normal = float.NaN; box.RarityWeights.rare = float.PositiveInfinity;
+        box.RarityWeights.unique = -1; box.RarityWeights.legendary = 0;
+        var results = new List<LootRollResult>();
+        Assert.That(box.LootTable.TryGenerateSlots(new System.Random(0), results, box), Is.False);
+        Assert.That(results, Is.Empty);
+        box.AssignLootObjectType(Family(Asset<LootTableSO>())); box.SetGeneratedSlotRange(0, 0);
+        Assert.That(box.LootTable.TryGenerateSlots(new System.Random(0), results, box), Is.True);
+        box.SetGeneratedSlotRange(0, 1);
+        Assert.That(box.LootTable.TryGenerateSlots(new System.Random(0), results, box), Is.False, "Missing candidates are not a random empty result.");
+    }
+
+    [Test]
+    public void LegacyRangeAdaptsWithoutMutatingOnReadThenFreezesOnTableChange()
+    {
+        var oldTable = Table(); oldTable.Pool.minRollCount = 2; oldTable.Pool.maxRollCount = 9;
+        var box = Variant(Family(oldTable));
+        string before = JsonUtility.ToJson(box);
+        Assert.That(box.MinGeneratedSlots, Is.EqualTo(2)); Assert.That(box.MaxGeneratedSlots, Is.EqualTo(6));
+        Assert.That(JsonUtility.ToJson(box), Is.EqualTo(before));
+        box.AssignLootObjectType(Family(Table()));
+        Assert.That(box.HasSlotGenerationSettings, Is.True);
+        Assert.That(box.MinGeneratedSlots, Is.EqualTo(2)); Assert.That(box.MaxGeneratedSlots, Is.EqualTo(6));
+    }
+
+    [Test]
+    public void FilledSettingsUndoAndSizePresetsPreserveQuality()
+    {
+        var box = Variant(Family(Table())); box.SetGeneratedSlotRange(2, 6);
+        box.RarityWeights.legendary = .1f;
+        Undo.IncrementCurrentGroup(); Undo.RecordObject(box, "Test fill edit");
+        box.SetGeneratedSlotRange(0, 1);
+        Undo.FlushUndoRecordObjects(); Undo.PerformUndo();
+        Assert.That(box.MinGeneratedSlots, Is.EqualTo(2)); Assert.That(box.MaxGeneratedSlots, Is.EqualTo(6));
+        box.ApplySizePreset(LootContainerSize.VerySmall);
+        Assert.That(box.MaxGeneratedSlots, Is.EqualTo(3));
+        Assert.That(box.RarityWeights.legendary, Is.EqualTo(.1f));
+        Undo.ClearUndo(box);
+    }
+
+    [Test]
+    public void SeededSlotsAndNonEmptySavedContentsSurviveReopeningAndCapacityReduction()
+    {
+        var table = Table(); var item = table.Pool.FindTier(PlayerShopItemRarity.Normal).items[0].item;
+        Set(item, "_guid", "slot-generation-save-test");
+        var box = Variant(Family(table)); box.SetGeneratedSlotRange(6, 6);
+        var first = Container(box); first.BindRaidState("save-test", 191, null, null);
+        var second = Container(box); second.BindRaidState("save-test", 191, null, null);
+        Assert.That(first.TryPrepareLoot(), Is.True); Assert.That(second.TryPrepareLoot(), Is.True);
+        var saved = first.CaptureRaidState(); string before = JsonUtility.ToJson(saved);
+        Assert.That(JsonUtility.ToJson(second.CaptureRaidState()), Is.EqualTo(before));
+        var catalog = Asset<RuntimeContentCatalogSO>(); Set(catalog, "_contentAssets", new Object[] { item });
+        box.ApplySizePreset(LootContainerSize.VerySmall); box.SetGeneratedSlotRange(0, 0);
+        Assert.That(first.TryPrepareLoot(), Is.True); Assert.That(JsonUtility.ToJson(first.CaptureRaidState()), Is.EqualTo(before));
+        var restored = Container(box);
+        restored.BindRaidState("save-test", 191, JsonUtility.FromJson<RaidLootContainerSaveData>(before), catalog);
+        Assert.That(restored.TryPrepareLoot(), Is.True);
+        Assert.That(JsonUtility.ToJson(restored.CaptureRaidState()), Is.EqualTo(before));
+    }
+
+    [Test]
+    public void LockProfileDoesNotOverrideExplicitBoxSlotContract()
+    {
+        var box = Variant(Family(Table())); box.SetGeneratedSlotRange(2, 2);
+        var container = Container(box);
+        var profile = Asset<LockedLootProfileSO>();
+        Set(profile, "_minAdditionalRolls", 99); Set(profile, "_maxAdditionalRolls", 99);
+        Set(profile, "_normalWeightMultiplier", 0f);
+        var gate = container.gameObject.AddComponent<LockableLootObject>();
+        Set(gate, "_lockedLootProfile", profile);
+        Assert.That(container.TryPrepareLoot(), Is.True);
+        Assert.That(container.GetComponent<StructureLootInventoryRuntime>().ItemStacks.Count(s => !s.IsEmpty), Is.EqualTo(2));
     }
 
     private T Asset<T>() where T : ScriptableObject

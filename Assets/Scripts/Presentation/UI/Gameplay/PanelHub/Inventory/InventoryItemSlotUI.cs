@@ -111,6 +111,7 @@ public class InventoryItemSlotUI : MonoBehaviour,
         {
             _iconImage.sprite = item != null ? item.PreviewImage : null;
             _iconImage.enabled = item != null && _iconImage.sprite != null;
+            ModuleRuneView.Bind(_iconImage, item);
         }
 
         BindDisplayName(item);
@@ -210,6 +211,13 @@ public class InventoryItemSlotUI : MonoBehaviour,
 
         if (!HasItem)
             return;
+
+        if (_dragSourceKind == InventoryDragSourceKind.KeyTool && _owner is KeyToolContainerPanel keyTool)
+        {
+            InventoryDragContext.BeginKeyToolDrag(keyTool.Inventory, _slotIndex);
+            ShowDragGhost(eventData);
+            return;
+        }
 
         if (_dragSourceKind == InventoryDragSourceKind.EnemyInventory &&
             _owner is EnemyInventoryUI enemyInventory)
@@ -338,6 +346,14 @@ public class InventoryItemSlotUI : MonoBehaviour,
             return;
         }
 
+        if (item is ConsumableItemSO medical && medical.UsesDurability)
+        {
+            float max = stack.WeaponMaxDurability > 0f ? stack.WeaponMaxDurability : medical.MaxDurability;
+            float current = stack.WeaponCurrentDurability >= 0f ? stack.WeaponCurrentDurability : max;
+            SetDurabilityInfo(current, max);
+            return;
+        }
+
         if (item.MaxStack <= 1 && !(item is CurrencyItemSO))
             return;
 
@@ -383,6 +399,7 @@ public class InventoryItemSlotUI : MonoBehaviour,
 
         _boundItemNameFallback = InventoryItemDisplayUtility.ResolveItemName(item);
         _displayNameText.text = _boundItemNameFallback;
+        if(item!=null&&ItemRarityStyleSO.Active!=null)_displayNameText.color=ItemRarityStyleSO.Active.RarityColor(item.Rarity);
 
         if (!InventoryItemDisplayUtility.TryGetItemNameReference(item, out _boundItemName))
             return;

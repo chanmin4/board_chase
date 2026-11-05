@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_MilitaryCase_05_WornGreenDamaged
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: b1b26295871f98748a45ef6d3676a7ce, type: 3}
-  _displayName: Military Case 05 Worn Green Damaged
-  _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: 5d2f266f249e41d2a647f6485b3a5415, type: 2}
-  _lootTable: {fileID: 11400000, guid: b3300000000000000000000000000009, type: 2}
+  _worldPrefab: {fileID: 510000000000000041, guid: b1b26295871f98748a45ef6d3676a7ce, type: 3}
+  _displayName: BrokenMillitaryBox
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lootSlotCount: 4
+  _sizeClass: 1
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 1
+  _maxGeneratedSlots: 1
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 6
+    legendary: 1
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 3
+  _lootTable: {fileID: 11400000, guid: d695c7f104b14034692726e12de4597b, type: 2}
+  references:
+    version: 2
+    RefIds: []

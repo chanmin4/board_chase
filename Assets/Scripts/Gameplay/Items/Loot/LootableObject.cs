@@ -36,7 +36,7 @@ public sealed class LootableObject : MonoBehaviour
     public void BindRaidState(string key, int seed, RaidLootContainerSaveData saved, RuntimeContentCatalogSO catalog)
     {
         _raidSaveKey = key;
-        _raidRollSeed = seed;
+        _raidRollSeed = saved != null && saved.hasRollSeed ? saved.rollSeed : seed;
         ResolveRefs();
         if (saved == null) return;
         _rolled = saved.rolled;
@@ -69,6 +69,7 @@ public sealed class LootableObject : MonoBehaviour
         var saved = new RaidLootContainerSaveData
         {
             key = _raidSaveKey, rolled = _rolled,
+            hasRollSeed = _raidRollSeed.HasValue, rollSeed = _raidRollSeed ?? 0,
             unlocked = _lockableLoot != null && !_lockableLoot.IsLocked
         };
         if (!_rolled || _lootInventory == null) return saved;
@@ -139,10 +140,14 @@ public sealed class LootableObject : MonoBehaviour
     {
         ResolveRefs();
 
+        // Restored or previously opened contents (including empty) are authoritative.
+        // Reapplying a smaller authored capacity here would discard restored slots.
+        if (_rolled) return true;
+
         if (!ConfigureLootInventoryFromTable(logMissingBinding: true))
             return false;
 
-        return _rolled || TryRollIntoLootHub();
+        return TryRollIntoLootHub();
     }
 
     /// <summary>
@@ -187,49 +192,31 @@ public sealed class LootableObject : MonoBehaviour
             return false;
         }
 
-        var lockProfile = _lockableLoot != null ? _lockableLoot.LockedLootProfile : null;
-        if (!table.HasRollableItems(lockProfile))
+        int seed = ResolveRollSeed();
+        System.Random random = new System.Random(seed);
+        int stageIndex = LootProgressionRuntime.Instance != null ? LootProgressionRuntime.Instance.CurrentLootStageIndex : 0;
+        if (!table.TryGenerateSlots(random, _rollResults, _lootObject, stageIndex))
         {
             Debug.LogWarning(
-                $"[LootableObject] Loot Table '{table.name}' has no rollable item entries. object={name}",
+                $"[LootableObject] Loot Table '{table.name}' has no eligible items with positive rarity/category/item weights at stage {stageIndex}. Armor/ammo must include an eligible LV for this stage. object={name}",
                 this);
             return false;
         }
 
-        int seed = ResolveRollSeed();
-        System.Random random = new System.Random(seed);
-        table.TryRoll(random, _rollResults, lockProfile, _lootObject.RollSettings);
         // A configured container may legitimately roll empty. Commit that result once,
         // including to raid saves, instead of rerolling or rejecting the lock transaction.
         _lootInventory.ClearAllLoot();
 
+        // Finish quantity/rarity/item rolls first, then pack from the upper-left.
+        // Never shuffle slot positions, merge duplicates, or refill taken items.
+        int slotIndex = 0;
         for (int i = 0; i < _rollResults.Count; i++)
         {
             LootRollResult result = _rollResults[i];
-            if (result.Item == null)
-                continue;
-
-            if (_lootInventory.TryAddItemStack(result.Item, result.Amount, out string _))
-                continue;
-
-            Vector3 position = _worldDropOrigin != null
-                ? _worldDropOrigin.position
-                : transform.position;
-            if (!WorldItemPickupSpawner.TrySpawn(
-                    result.Item,
-                    result.Amount,
-                    result.Item is BulletSO ? result.Amount : 1,
-                    0f,
-                    result.Item is ArmorItemSO armor ? armor.MaxDurability : -1f,
-                    position,
-                    Quaternion.identity,
-                    out _))
-            {
-                Debug.LogError(
-                    $"[LootableObject] Rolled loot was lost because the LootHub was full and the WorldItemPickupSpawner is unavailable. " +
-                    $"object={name}, item={result.Item.name}",
-                    this);
-            }
+            if (result.Item == null || result.Amount <= 0) continue;
+            float armor = result.Item is ArmorItemSO armorItem ? armorItem.MaxDurability : -1f;
+            float weapon = result.Item is RangedWeaponSO weaponItem ? weaponItem.MaxDurability : -1f;
+            _lootInventory.SetItemStack(slotIndex++, result.Item, result.Amount, armor, weapon, weapon);
         }
 
         _rolled = true;

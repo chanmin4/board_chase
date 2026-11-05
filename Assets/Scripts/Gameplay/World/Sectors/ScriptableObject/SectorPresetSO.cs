@@ -14,6 +14,8 @@ public class SectorPresetSO : ScriptableObject
     [Header("Display")]
     [Tooltip("Inspector label for this authored sector preset. The asset name is used when this is empty.")]
     [SerializeField] private string _displayName;
+    [Tooltip("WIP 호환 데이터. 지도 이미지는 공통 SectorMapIconSetSO에서 종류별로 설정합니다. 이 값은 표시 계산에 사용하지 않습니다.")]
+    [HideInInspector, SerializeField] private Sprite _mapIcon;
 
     [Header("Sector")]
     [Tooltip("Stage room type that may select this preset. Concrete battle preset types keep this value fixed automatically.")]
@@ -35,6 +37,7 @@ public class SectorPresetSO : ScriptableObject
         : _displayName;
 
     public virtual StageRoomType RoomType => _roomType;
+    public Sprite MapIcon => _mapIcon;
     public SectorRuntime SectorPrefab => _sectorPrefab;
     public NormalSectorPolicySO NormalSectorPolicy => _normalSectorPolicy;
     public SectorContentProfileSO ContentProfile => _contentProfile;

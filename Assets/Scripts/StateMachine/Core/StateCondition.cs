@@ -16,6 +16,7 @@ namespace VSplatter.StateMachine
 		private bool _isCached = false;
 		private bool _cachedStatement = default;
 		internal StateConditionSO _originSO;
+        public StateMachineContext Context { get; internal set; }
 
 		/// <summary>
 		/// Use this property to access shared data from the <see cref="StateConditionSO"/> that corresponds to this <see cref="Condition"/>
@@ -28,6 +29,10 @@ namespace VSplatter.StateMachine
 		/// <returns></returns>
 		protected abstract bool Statement();
 
+		/// <summary>Explicit legacy preparation boundary. Called once per uncached evaluation,
+		/// lazily after short-circuiting, immediately before the read-only predicate.</summary>
+		protected virtual void PrepareEvaluation() { }
+
 		/// <summary>
 		/// Wrap the <see cref="Statement"/> so it can be cached.
 		/// </summary>
@@ -36,6 +41,7 @@ namespace VSplatter.StateMachine
 			if (!_isCached)
 			{
 				_isCached = true;
+				PrepareEvaluation();
 				_cachedStatement = Statement();
 			}
 
@@ -65,12 +71,14 @@ namespace VSplatter.StateMachine
 		internal readonly StateMachine _stateMachine;
 		internal readonly Condition _condition;
 		internal readonly bool _expectedResult;
+        private readonly StateMachineContext _context;
 
-		public StateCondition(StateMachine stateMachine, Condition condition, bool expectedResult)
+		public StateCondition(StateMachine stateMachine, Condition condition, bool expectedResult, StateMachineContext context = null)
 		{
 			_stateMachine = stateMachine;
 			_condition = condition;
 			_expectedResult = expectedResult;
+            _context = context;
 		}
 
 		// Purpose: Checks whether met is currently true.
@@ -80,7 +88,7 @@ namespace VSplatter.StateMachine
 			bool isMet = statement == _expectedResult;
 
 #if UNITY_EDITOR
-			_stateMachine._debugger.TransitionConditionResult(_condition._originSO.name, statement, isMet);
+            (_context?.Debugger ?? _stateMachine?._debugger)?.TransitionConditionResult(_condition._originSO != null ? _condition._originSO.name : "Condition", statement, isMet);
 #endif
 			return isMet;
 		}

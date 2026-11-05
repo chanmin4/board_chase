@@ -455,7 +455,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3354987478954973295}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b269eed2e9394350a7a8f0e79f002b30, type: 3}
   m_Name: 
@@ -1047,9 +1047,7 @@ GameObject:
   - component: {fileID: 8994133820209950284}
   - component: {fileID: 3725409875933228798}
   - component: {fileID: 6986756209375199965}
-  - component: {fileID: 723617969344722977}
   - component: {fileID: 4537753811123894838}
-  - component: {fileID: 8017175232211933994}
   - component: {fileID: 7683861469152231654}
   - component: {fileID: 3317305660062618241}
   - component: {fileID: 275426932314564021}
@@ -1175,27 +1173,6 @@ MonoBehaviour:
   tripodSize: 1
   boneColor: {r: 0, g: 0, b: 1, a: 0.5}
   m_Transforms: []
---- !u!114 &723617969344722977
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6915450752968060550}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 71b601e08d84d324fbc1dff9f84f20c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _transitionTableSO: {fileID: 11400000, guid: 5fa584140f462684a9bcc79d0f1210e3, type: 2}
-  _logStateChanges: 0
-  _debugOwnerLabel: 
-  _logInitialState: 0
-  _debugger:
-    debugTransitions: 1
-    appendConditionsInfo: 1
-    appendActionsInfo: 1
-    currentState: 
 --- !u!114 &4537753811123894838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1205,9 +1182,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 6915450752968060550}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 60a6b2c19999f504da354acd124867d5, type: 3}
+  m_Script: {fileID: 11500000, guid: d26f1002000000000000000000000004, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _definition: {fileID: 11400000, guid: d26f100200000000000000000000000e, type: 2}
   _transitionTableSO: {fileID: 11400000, guid: a15f7d901a35c08408740d76b264c7c8, type: 2}
   _logStateChanges: 0
   _debugOwnerLabel: 
@@ -1216,36 +1194,7 @@ MonoBehaviour:
     debugTransitions: 1
     appendConditionsInfo: 1
     appendActionsInfo: 1
-    currentState: 
---- !u!114 &8017175232211933994
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6915450752968060550}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ecd6d1a63112ede4bac9a904854e4205, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _parentStateMachine: {fileID: 4537753811123894838}
-  _childStateMachine: {fileID: 723617969344722977}
-  _forceDisableChildOnAwake: 1
-  _defaultChildEnabled: 0
-  _refreshEveryFrame: 1
-  _parentStateRules:
-  - parentState: {fileID: 11400000, guid: b48cc61d0f2e4bc58cd61120bdad0001, type: 2}
-    enableChildStateMachine: 0
-  - parentState: {fileID: 11400000, guid: b48cc61d0f2e4bc58cd61120bdad0002, type: 2}
-    enableChildStateMachine: 1
-  - parentState: {fileID: 11400000, guid: 3331abe11a44eb548927d4aee2c8d23b, type: 2}
-    enableChildStateMachine: 0
-  - parentState: {fileID: 11400000, guid: b48cc61d0f2e4bc58cd61120bdad0003, type: 2}
-    enableChildStateMachine: 0
-  _currentParentState: {fileID: 0}
-  _resolvedChildEnabled: 0
-  _childStateMachineEnabled: 0
+    currentState:
 --- !u!114 &7683861469152231654
 MonoBehaviour:
   m_ObjectHideFlags: 0

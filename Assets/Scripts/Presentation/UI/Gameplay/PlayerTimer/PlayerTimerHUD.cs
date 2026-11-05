@@ -60,6 +60,13 @@ public class PlayerTimerHUD : MonoBehaviour
     private TextMeshProUGUI _compactTimeText;
     private SectorStateManager _sectorStateManager;
     private SectorRuntime _lastCompactSector;
+    private int _lastCompactStageIndex = -1;
+    private bool _lastCompactIsHideout;
+    private int _lastRaidDisplaySecond = -1;
+    private bool _lastRaidGasReleased;
+    private PlayerShooterInfection _medicalPlayer;
+    private float _nextMedicalLookup;
+    private string _lastMedicalLabel;
     private StageProgressSnapshot _latestSnapshot;
     private Coroutine _localizationRefreshRoutine;
 
@@ -123,14 +130,7 @@ public class PlayerTimerHUD : MonoBehaviour
     {
         EnsureCompactMiniMapPresentation();
         RefreshCompactPresentation(force: false);
-        if (_compactTimeText != null && RaidRuntime.Active?.State?.active == true)
-        {
-            RaidRunSaveData raid = RaidRuntime.Active.State;
-            if (raid.timerEnabled)
-                _compactTimeText.text = UIRuntimeLocalization.Get("UI_Map", raid.gasReleased ? "Raid_Gas" : "Raid_Time", raid.gasReleased ? "GAS" : "Raid")
-                    + " " + FormatClockTime(raid.remainingSeconds)
-                    + (_hasSnapshot ? " | " + FormatClockTime(_latestSnapshot.remainingSeconds) : string.Empty);
-        }
+        RefreshMedicalTimer();
 
         if (!_hasSnapshot || _fillImage == null)
             return;
@@ -146,13 +146,29 @@ public class PlayerTimerHUD : MonoBehaviour
         _fillImage.fillAmount = _currentFill;
     }
 
+    private void RefreshMedicalTimer()
+    {
+        if (_medicalPlayer == null && Time.unscaledTime >= _nextMedicalLookup)
+        {
+            _nextMedicalLookup = Time.unscaledTime + 1f;
+            _medicalPlayer = FindFirstObjectByType<PlayerShooterInfection>();
+        }
+        if (_compactTimeText == null) return;
+        string label = _medicalPlayer == null ? "" : !GameProgressionRuntime.InRaid ? "안전구역" :
+            _medicalPlayer.IsAmpouleActive ? "앰플 " + FormatClockTime(Mathf.Ceil(_medicalPlayer.AmpouleRemainingSeconds)) :
+            _medicalPlayer.CurrentBiochemicalGasInfectionPerSecond > 0f ? "감염 노출 중" : "감염 관리";
+        if (label == _lastMedicalLabel && _compactTimeText.text == label) return;
+        _lastMedicalLabel = label;
+        _compactTimeText.text = label;
+    }
+
     // Purpose: Responds to the stage progress snapshot changed callback.
     private void OnStageProgressSnapshotChanged(StageProgressSnapshot snapshot)
     {
         _hasSnapshot = true;
         _latestSnapshot = snapshot;
 
-        bool showTimer = snapshot.showPlayerTimer;
+        bool showTimer = false; // The old room deadline is retired.
 
         _targetFill = !showTimer
             ? 0f
@@ -169,7 +185,7 @@ public class PlayerTimerHUD : MonoBehaviour
     // Purpose: Applies the requested texts change.
     private void ApplyTexts(StageProgressSnapshot snapshot)
     {
-        bool showTimer = snapshot.showPlayerTimer;
+        bool showTimer = false;
 
         if (_timeText != null)
         {
@@ -186,8 +202,7 @@ public class PlayerTimerHUD : MonoBehaviour
 
         ApplyStageText(snapshot);
 
-        if (_compactTimeText != null)
-            _compactTimeText.text = FormatClockTime(snapshot.remainingSeconds);
+        RefreshMedicalTimer();
     }
     // Purpose: Applies the requested stage text change.
     private void ApplyStageText(StageProgressSnapshot snapshot)
@@ -250,6 +265,7 @@ public class PlayerTimerHUD : MonoBehaviour
 
     private void HandleLocaleChanged(UnityEngine.Localization.Locale locale)
     {
+        _lastRaidDisplaySecond = -1;
         RequestLocalizationRefresh();
     }
 
@@ -425,7 +441,7 @@ public class PlayerTimerHUD : MonoBehaviour
             font,
             TextAlignmentOptions.MidlineRight,
             flexibleWidth: 0f,
-            preferredWidth: 82f);
+            preferredWidth: 120f);
         _compactTimeText.text = _hasSnapshot
             ? FormatClockTime(_latestSnapshot.remainingSeconds)
             : "00:00";
@@ -482,45 +498,20 @@ public class PlayerTimerHUD : MonoBehaviour
             ? _sectorStateManager.CurrentSector
             : null;
 
-        if (!force && sector == _lastCompactSector)
-            return;
-
         _lastCompactSector = sector;
-
-        if (sector != null && sector.GetComponent<HideoutRuntime>() != null)
+        bool isHideout = sector != null && sector.GetComponent<HideoutRuntime>() != null;
+        int stageIndex = Mathf.Max(1, _latestSnapshot.stageIndex > 0 ? _latestSnapshot.stageIndex :
+            _sectorStateManager != null ? _sectorStateManager.CurrentStage : 1);
+        if (!force && _lastCompactStageIndex == stageIndex && _lastCompactIsHideout == isHideout) return;
+        _lastCompactStageIndex = stageIndex;
+        _lastCompactIsHideout = isHideout;
+        if (isHideout)
         {
             _compactLocationText.text = LocalizeCompact("PlayerTimer_Hideout", "Hideout");
             return;
         }
 
-        int stageIndex = Mathf.Max(
-            1,
-            _latestSnapshot.stageIndex > 0
-                ? _latestSnapshot.stageIndex
-                : _sectorStateManager != null ? _sectorStateManager.CurrentStage : 1);
-
-        if (sector == null)
-        {
-            _compactLocationText.text = FormatCompactStage(stageIndex);
-            return;
-        }
-
-        StageRoomType roomType = StageRoomType.Empty;
-        bool hasRoomType = _sectorStateManager != null &&
-            _sectorStateManager.TryGetStageRoomType(sector, out roomType);
-        bool isStart = sector.IsStartSector || roomType == StageRoomType.Start;
-
-        if (isStart)
-        {
-            _compactLocationText.text = $"{FormatCompactStage(stageIndex)} {LocalizeCompact("PlayerTimer_Start", "Start")}";
-            return;
-        }
-
-        string coordinate = FormatRoomCoordinate(sector.coord);
-        string roomLabel = hasRoomType ? FormatRoomType(roomType) : string.Empty;
-        _compactLocationText.text = string.IsNullOrEmpty(roomLabel)
-            ? $"{FormatCompactStage(stageIndex)} {coordinate}"
-            : $"{FormatCompactStage(stageIndex)} {coordinate} {roomLabel}";
+        _compactLocationText.text = FormatCompactStage(stageIndex);
     }
 
     private static string FormatCompactStage(int stageIndex)

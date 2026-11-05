@@ -4,7 +4,7 @@
  * Execution boundary: Runtime (Assembly-CSharp)
  *
  * Ownership and refactor contract:
- * - _items is the backpack source for ordinary item stacks and stack splitting.
+ * - _items owns Pocket, permanent Inventory, and backpack bonus stacks in that order.
  * - EntityEquipmentRuntime owns equipped weapon/armor instances and durability.
  * - PlayerQuickSlotRuntime slots 0-1 mirror equipment; only usable slots own
  *   independent item amounts and must be included in ownership totals once.
@@ -142,6 +142,14 @@ public sealed class PlayerInventoryItemStack
                 0f,
                 _weaponMaxDurability);
         }
+        else if (item is ConsumableItemSO medical && medical.UsesDurability)
+        {
+            // Reuse the existing current/max instance-condition transport. Legacy field names
+            // are retained so warehouse, world drops, loot and run saves do not lose condition.
+            _weaponMaxDurability = weaponMaxDurability > 0f ? Mathf.Min(weaponMaxDurability, medical.MaxDurability) : medical.MaxDurability;
+            _weaponCurrentDurability = Mathf.Clamp(weaponCurrentDurability >= 0f ? weaponCurrentDurability :
+                _weaponMaxDurability, 0f, _weaponMaxDurability);
+        }
         else
         {
             _weaponCurrentDurability = -1f;
@@ -196,7 +204,24 @@ public sealed class PlayerInventoryItemStack
             return false;
 
         _amount -= amount;
+        // Old saves may contain a full stack of bandages. Condition belongs to its leading
+        // unit; removing/transferring that unit leaves full unused units, never duplicates it.
+        if (_amount > 0 && _item is ConsumableItemSO medical && medical.UsesDurability)
+            _weaponCurrentDurability = _weaponMaxDurability = medical.MaxDurability;
         return _amount <= 0;
+    }
+
+    public bool TrySpendConsumableDurability(ConsumableItemSO medical)
+    {
+        if (IsEmpty || _item != medical || !medical.UsesDurability) return false;
+        float maximum = _weaponMaxDurability > 0f ? _weaponMaxDurability : medical.MaxDurability;
+        float current = _weaponCurrentDurability >= 0f ? _weaponCurrentDurability : maximum;
+        if (current <= 0f) return false;
+        current = Mathf.Max(0f, current - medical.DurabilityCostPerUse);
+        if (current <= 0f)
+        { if (Remove(1)) Clear(); }
+        else { _weaponCurrentDurability = current; _weaponMaxDurability = maximum; }
+        return true;
     }
 }
 
@@ -288,10 +313,6 @@ public enum PlayerInventoryEquipmentSlotKind
 [DisallowMultipleComponent]
 public partial class PlayerInventoryRuntime : InventoryRuntimeBase
 {
-    [Header("Capacity")]
-    [Tooltip("General backpack slot count. Equipped weapon, equipped armor, and ammo loadout slots are separate.")]
-    [SerializeField, Min(0)] private int _inventoryCapacity = 12;
-
     [Header("Virtual Magazine Runtime")]
     [Tooltip("Current virtual-magazine runtime. Legacy AmmoSlot UI compatibility methods are isolated under Assets/Scripts/WIP/Legacy; do not add new ammo equipment slots.")]
     [SerializeField] private PlayerBulletLoadoutRuntime _bulletLoadout;
@@ -363,6 +384,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     // Purpose: Returns the current total owned item amount.
     public int GetTotalOwnedItemAmount(ItemSO item)
     {
+        if (item is PassiveItemSO passive && passive.IsRolledInstance) item = passive.SourceDefinition;
         if (item == null)
             return 0;
 
@@ -442,6 +464,24 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     }
 
     // Purpose: Attempts to consume inventory item and reports whether the request succeeded.
+    // Medical doses are batched without callbacks until both inventory and quick slots are updated.
+    public bool TryConsumeMedicalItemAmount(ConsumableItemSO item, int amount)
+    {
+        NormalizeStorage();
+        if (item == null || amount <= 0 || GetInventoryItemAmount(item) < amount) return false;
+        int remaining = amount;
+        foreach (var stack in _items)
+        {
+            if (remaining <= 0) break;
+            if (stack == null || stack.IsEmpty || !IsSameItemIdentity(stack.Item, item)) continue;
+            int taken = Mathf.Min(remaining, stack.Amount);
+            if (stack.Remove(taken)) stack.Clear();
+            remaining -= taken;
+        }
+        return remaining == 0;
+    }
+    public void PublishMedicalItemChange() => NotifyChanged();
+
     public bool TryConsumeInventoryItem(ItemSO item, int amount, out string message)
     {
         if (item == null || amount <= 0)
@@ -523,18 +563,45 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     public bool TryConsumeInventoryItemRequirements(
         IReadOnlyList<ShopTradeRequirement> requirements,
         out string message)
+        => TryConsumeInventoryItemRequirements(requirements, out _, out message);
+
+    public bool TryConsumeInventoryItemRequirements(
+        IReadOnlyList<ShopTradeRequirement> requirements,
+        out List<ShopTradeRequirement> receipt,
+        out string message)
     {
+        receipt = new List<ShopTradeRequirement>();
         if (!TryAggregateItemRequirements(requirements, out List<ShopTradeRequirement> aggregated, out message) ||
             !TryValidateInventoryItemRequirements(aggregated, out message))
         {
             return false;
         }
 
-        List<ShopTradeRequirement> consumed = new List<ShopTradeRequirement>();
-
-        for (int index = 0; index < aggregated.Count; index++)
+        var planned = new List<ShopTradeRequirement>();
+        var equipped = GetComponent<PlayerPassiveInventoryRuntime>()?.EquippedSlots;
+        foreach (var requirement in aggregated)
         {
-            ShopTradeRequirement requirement = aggregated[index];
+            if (requirement.Item is not PassiveItemSO) { planned.Add(requirement); continue; }
+            int remaining = requirement.Amount;
+            foreach (var stack in _items)
+            {
+                if (remaining == 0) break;
+                if (stack == null || stack.IsEmpty || !IsSameItemIdentity(stack.Item, requirement.Item)) continue;
+                if (stack.Item is PassiveItemSO { IsBound: true }) continue;
+                bool isEquipped = false;
+                if (equipped != null) foreach (var item in equipped) if (item == stack.Item) { isEquipped = true; break; }
+                if (isEquipped) continue;
+                int take = Mathf.Min(remaining, stack.Amount);
+                planned.Add(new ShopTradeRequirement(stack.Item, take));
+                remaining -= take;
+            }
+            if (remaining > 0) return Fail("장착 중인 패시브는 자동 제출/교환하지 않습니다. 해제하거나 여분을 준비하세요.", out message);
+        }
+        List<ShopTradeRequirement> consumed = receipt;
+
+        for (int index = 0; index < planned.Count; index++)
+        {
+            ShopTradeRequirement requirement = planned[index];
             if (TryConsumeInventoryItem(requirement.Item, requirement.Amount, out message))
             {
                 consumed.Add(requirement);
@@ -571,6 +638,12 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
             if (requirement == null || !requirement.IsValid)
                 continue;
 
+            if (requirement.Item is PassiveItemSO { IsRolledInstance: true })
+            {
+                if (!TryStoreItem(requirement.Item, requirement.Amount, out message)) return false;
+                NotifyChanged();
+                continue;
+            }
             if (TryPickup(requirement.Item, requirement.Amount, out message))
                 continue;
 
@@ -693,6 +766,13 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
             return;
         }
 
+        if (!TryPrepareStartingLoadoutBackpack(snapshot, out string backpackMessage))
+        {
+            Debug.LogError("[PlayerInventoryRuntime] Failed to prepare starting backpack. " +
+                $"reason={backpackMessage}", this);
+            return;
+        }
+
         _startingLoadoutInventoryApplied = true;
 
         if (snapshot.inventoryStacks == null)
@@ -705,20 +785,10 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
             if (!stack.HasItem)
                 continue;
 
-            // Backpacks are equipment rather than an ordinary carried stack. Keeping this
-            // branch here makes the initial loadout authoritative without duplicating the
-            // starter bag inside its own inventory.
-            if (stack.item is BackpackItemSO backpack)
-            {
-                if (TryApplyStartingLoadoutBackpack(backpack, out string backpackMessage))
-                    continue;
-
-                Debug.LogError(
-                    $"[PlayerInventoryRuntime] Failed to equip starting backpack. " +
-                    $"item={backpack.name}, reason={backpackMessage}",
-                    this);
+            // The preparation pass already equipped the starter bag, regardless
+            // of this row's position. Never duplicate it inside its own cargo.
+            if (stack.item is BackpackItemSO)
                 continue;
-            }
 
             if (TryStoreItem(
                     stack.item,
@@ -839,8 +909,30 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         if (!CanAcquireOwnedAmount(item, Mathf.Max(1, amount), out message))
             return false;
 
-        if (!item.AllowDuplicatePickup && ContainsPassive(item))
+        if (!item.AllowDuplicatePickup && ContainsPassive(item.SourceDefinition))
             return Fail("Passive item already owned.", out message);
+
+        if (item.IsRolledInstance && amount != 1)
+            return Fail("개체형 패시브는 한 번에 한 개만 이동할 수 있습니다.", out message);
+        if (PassiveInstanceRuntime.NeedsRoll(item))
+        {
+            NormalizeStorage();
+            int count = Mathf.Max(1, amount);
+            if (CalculateStoreCapacity(item) < count) return Fail("Inventory is full.", out message);
+            // Prepare every instance before changing inventory. Invalid authoring consumes nothing.
+            var instances = new List<PassiveItemSO>(count);
+            for (int i = 0; i < count; i++)
+            {
+                var rolled = PassiveInstanceRuntime.Create(item) as PassiveItemSO;
+                if (rolled == null) return Fail("Item Maker의 패시브 랜덤 범위 설정이 필요합니다.", out message);
+                instances.Add(rolled);
+            }
+            foreach (var instance in instances)
+                if (!TryStoreItem(instance, 1, out message)) return false;
+            message = $"{ResolveItemName(item)} x{count} picked up.";
+            NotifyPickedUp(instances[0]);
+            return true;
+        }
 
         if (!TryStoreItem(item, Mathf.Max(1, amount), out message))
             return false;
@@ -946,6 +1038,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
             return Fail("Invalid inventory slot.", out message);
 
         ItemSO item = _items[index].Item;
+        if (!GameProgressionRuntime.CanUse(item,out message)) return false;
 
         if (item is WeaponSO weapon)
             return TryEquipWeaponFromInventory(index, weapon, out message);
@@ -979,6 +1072,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
             return Fail("Invalid inventory slot.", out message);
 
         ItemSO item = _items[index].Item;
+        if (!GameProgressionRuntime.CanUse(item,out message)) return false;
 
         if (item is WeaponSO weapon)
             return TryEquipWeaponFromInventory(index, weapon, out message);
@@ -1031,6 +1125,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
 
         if (!IsValidIndex(index))
             return Fail("Invalid inventory slot.", out message);
+
+        if(!GameProgressionRuntime.CanUse(_items[index].Item,out message))return false;
 
         switch (slotKind)
         {
@@ -1326,6 +1422,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     {
         ResolveRefs();
 
+        if(!GameProgressionRuntime.CanUse(item,out message))return false;
+
         if (!CanAcquireOwnedAmount(item, Mathf.Max(1, amount), out message))
             return false;
 
@@ -1535,6 +1633,9 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         ItemSO item = stack.Item;
         int removeAmount = Mathf.Clamp(amount <= 0 ? stack.Amount : amount, 1, stack.Amount);
 
+        if (IsRaidLockedEquippedModule(item))
+            return Fail("장착 중인 모듈은 HOME에서 해제한 뒤 옮기거나 버릴 수 있습니다.", out message);
+
         if (item is KeyToolItemSO && GetStoredKeyCount() > 0)
             return Fail("Remove the keys from the Key Tool before discarding it.", out message);
 
@@ -1707,6 +1808,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         {
             case PlayerInventoryEquipmentSlotKind.Weapon:
                 WeaponSO weapon = GetEquippedWeapon(equipmentSlotIndex);
+                if (_equipmentRuntime != null && _equipmentRuntime.IsWeaponJammed(equipmentSlotIndex))
+                    return Fail("고장 난 총기는 T키 기능처치 후 옮길 수 있습니다.", out message);
                 int amount = GetEquippedWeaponAmount(equipmentSlotIndex);
                 float weaponCurrentDurability = GetEquippedWeaponCurrentDurability(equipmentSlotIndex);
                 float weaponMaxDurability = GetEquippedWeaponMaxDurability(equipmentSlotIndex);
@@ -1763,6 +1866,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         out string message)
     {
         repairedAmount = 0f;
+        if (!EquipmentRepairPolicy.Enabled) return Fail(EquipmentRepairPolicy.DisabledMessage, out message);
         NormalizeStorage();
 
         if (!IsValidIndex(index))
@@ -1810,6 +1914,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         out string message)
     {
         repairedAmount = 0f;
+        if (!EquipmentRepairPolicy.Enabled) return Fail(EquipmentRepairPolicy.DisabledMessage, out message);
         ResolveRefs();
 
         if (_equipmentRuntime == null || _equipmentRuntime.CurrentArmor == null)
@@ -1841,6 +1946,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         out string message)
     {
         repairedAmount = 0f;
+        if (!EquipmentRepairPolicy.Enabled) return Fail(EquipmentRepairPolicy.DisabledMessage, out message);
         NormalizeStorage();
 
         if (!IsValidIndex(index))
@@ -1878,6 +1984,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         out string message)
     {
         repairedAmount = 0f;
+        if (!EquipmentRepairPolicy.Enabled) return Fail(EquipmentRepairPolicy.DisabledMessage, out message);
         ResolveRefs();
 
         if (_equipmentRuntime == null || _equipmentRuntime.GetWeapon(slotIndex) is not RangedWeaponSO weapon)
@@ -1963,6 +2070,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     /// </summary>
     public void ClearForRunLoss()
     {
+        SaveSystem.Active?.RunData.recyclingSlots?.Clear();
         ResolveRefs();
 
         for (int i = 0; i < _items.Count; i++)
@@ -2145,8 +2253,10 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         int equipmentSlotIndex,
         out string message)
     {
+        if (_equipmentRuntime != null && _equipmentRuntime.IsWeaponJammed(equipmentSlotIndex))
+            return Fail("기존 총기를 T키로 기능처치한 후 교체하세요. 다른 무기 슬롯 선택은 가능합니다.", out message);
         if (weapon is MeleeWeaponSO)
-            return Fail("Melee weapons are WIP. Use an empty weapon slot for fists.", out message);
+            return Fail("근접 무기 교체는 WIP입니다. Combat Knife는 V키로 사용합니다.", out message);
         if (_equipmentRuntime == null && _equipmentController == null)
             return Fail("Shooter equipment runtime is missing.", out message);
 
@@ -2210,8 +2320,10 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         int equipmentSlotIndex,
         out string message)
     {
+        if (_equipmentRuntime != null && _equipmentRuntime.IsWeaponJammed(equipmentSlotIndex))
+            return Fail("고장 난 총기를 T키로 기능처치한 후 교체하세요.", out message);
         if (weapon is MeleeWeaponSO)
-            return Fail("Melee weapons are WIP. Use an empty weapon slot for fists.", out message);
+            return Fail("근접 무기 교체는 WIP입니다. Combat Knife는 V키로 사용합니다.", out message);
         if (_equipmentRuntime == null && _equipmentController == null)
             return Fail("Shooter equipment runtime is missing.", out message);
 
@@ -2512,6 +2624,10 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
                 gasMaskMaxFilterDurability);
             _items[emptyIndex] = stack;
             remainingAmount -= stackAmount;
+            // Legacy stacked medical saves have one partly-used leading unit.
+            // When unfolded into non-stackable instances, only the first inherits that condition.
+            if (item is ConsumableItemSO medical && medical.UsesDurability)
+                weaponCurrentDurability = weaponMaxDurability = medical.MaxDurability;
         }
 
         message = stacked
@@ -2613,6 +2729,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
         int targetIndex,
         out string message)
     {
+        if (_equipmentRuntime != null && _equipmentRuntime.IsWeaponJammed(equipmentSlotIndex))
+            return Fail("고장 난 총기는 T키 기능처치 후 옮길 수 있습니다.", out message);
         WeaponSO weapon = GetEquippedWeapon(equipmentSlotIndex);
         int amount = GetEquippedWeaponAmount(equipmentSlotIndex);
         float currentDurability = GetEquippedWeaponCurrentDurability(equipmentSlotIndex);
@@ -2851,7 +2969,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
 
         int maxStack = ResolveMaxStack(item);
 
-        for (int i = 0; i < _items.Count; i++)
+        for (int i = 0; i < Capacity && i < _items.Count; i++)
         {
             PlayerInventoryItemStack candidate = _items[i];
 
@@ -2877,6 +2995,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     // Purpose: Checks whether same item identity is currently true.
     private static bool IsSameItemIdentity(ItemSO first, ItemSO second)
     {
+        if (second is PassiveItemSO requested && !requested.IsRolledInstance && first is PassiveItemSO)
+            return PassiveInstanceRuntime.MatchesDefinition(first, second);
         if (ReferenceEquals(first, second))
             return true;
 
@@ -2964,7 +3084,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     // Purpose: Resolves the max stack needed by this component.
     private static int ResolveMaxStack(ItemSO item)
     {
-        return item != null ? Mathf.Max(1, item.MaxStack) : 1;
+        return item is ConsumableItemSO medical && medical.UsesDurability ? 1 :
+            item != null ? Mathf.Max(1, item.MaxStack) : 1;
     }
 
     // Purpose: Calculates store capacity from the current inputs.
@@ -2979,7 +3100,9 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
 
         NormalizeStorage();
 
-        for (int i = 0; i < _items.Count; i++)
+        // Storage may retain empty slots after dropping a bag. They are not
+        // usable capacity; counting them can partially store a failed pickup.
+        for (int i = 0; i < Capacity && i < _items.Count; i++)
         {
             PlayerInventoryItemStack candidate = _items[i];
 
@@ -3303,6 +3426,7 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     // Purpose: Publishes the changed notification.
     private void NotifyChanged()
     {
+        _carryWeightFrame = -1;
         NormalizeStorage();
         OnChanged?.Invoke();
     }

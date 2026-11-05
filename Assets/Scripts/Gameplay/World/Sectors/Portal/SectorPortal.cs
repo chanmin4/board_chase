@@ -33,6 +33,7 @@ public class SectorPortal : MonoBehaviour
     public bool IsAvailable => _isAvailable;
     public bool IsExtraction => _isExtraction;
     public bool CanInteract => _isAvailable && _manager != null;
+    public bool HasPendingKeyConfirmation => ShopPurchaseTradePanel.IsKeySubmissionOwnedBy(this);
 
     public Vector3 ArrivalPosition =>
         _arrivalPoint != null ? _arrivalPoint.position : transform.position;

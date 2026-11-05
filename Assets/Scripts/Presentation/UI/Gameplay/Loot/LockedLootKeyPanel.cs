@@ -116,6 +116,7 @@ public sealed class LockedLootKeyPanel : MonoBehaviour, IUIOverlayLifecycle
     // Purpose: Activates input subscriptions needed while the panel is visible.
     private void OnEnable()
     {
+        RegisterEscapeHandler();
         ResolveRuntimeReferences();
         SubscribeInputReader();
     }
@@ -123,6 +124,7 @@ public sealed class LockedLootKeyPanel : MonoBehaviour, IUIOverlayLifecycle
     // Purpose: Releases input subscriptions when this panel leaves the scene.
     private void OnDisable()
     {
+        UIEscapeRouter.Unregister(this);
         UnsubscribeInputReader();
     }
 
@@ -137,13 +139,14 @@ public sealed class LockedLootKeyPanel : MonoBehaviour, IUIOverlayLifecycle
     private void Update()
     {
         if (_isOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            Close();
+            UIEscapeRouter.TryCloseTopPopup();
     }
 
     // Purpose: Refreshes the Key Tool rows when the owning overlay becomes visible.
     public void OnOverlayShown()
     {
         _isOpen = true;
+        RegisterEscapeHandler();
         _openedAt = Time.unscaledTime;
         RefreshView();
     }
@@ -155,6 +158,9 @@ public sealed class LockedLootKeyPanel : MonoBehaviour, IUIOverlayLifecycle
         _draggedTier = null;
         _selectedTier = null;
     }
+
+    private void RegisterEscapeHandler() => UIEscapeRouter.Register(this,
+        () => _isOpen && (_overlayManager == null || !_overlayManager.isActiveAndEnabled), Close, 100);
 
     // Purpose: Starts a represented Key Tool tier drag for the central socket.
     public void BeginTierDrag(LootKeyTier tier)
@@ -329,7 +335,7 @@ public sealed class LockedLootKeyPanel : MonoBehaviour, IUIOverlayLifecycle
         if (!_isOpen)
             return;
 
-        if (_overlayManager != null)
+        if (_overlayManager != null && _overlayManager.isActiveAndEnabled)
             _overlayManager.Close(UIOverlayId.LockedLootKey);
         else
             _overlay.Hide();

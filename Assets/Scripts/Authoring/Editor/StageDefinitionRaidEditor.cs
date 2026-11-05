@@ -7,6 +7,7 @@ public sealed class StageDefinitionRaidEditor : Editor
     private int _previewSeed = 1;
     public override void OnInspectorGUI()
     {
+        if (GUILayout.Button("Stage Maker에서 편집 · 랜덤 맵 미리보기")) StageMakerWindow.OpenAsset((StageDefinitionSO)target);
         DrawDefaultInspector();
         var stage = (StageDefinitionSO)target;
         if (stage.MapPolicy != StageMapPolicy.OddSquareRaid) return;
@@ -17,7 +18,7 @@ public sealed class StageDefinitionRaidEditor : Editor
                 stage.RaidMap, out StageMapLayout map, out string error))
         { EditorGUILayout.HelpBox(error, MessageType.Error); return; }
         EditorGUILayout.HelpBox($"S = Start return {map.startSectorCoord}, P = First room {map.firstRoomCoord}.\n" +
-            "G = Generator, H = Hatch, E = Extraction, B = Boss (b = absent).\n" +
+            "G = Generator, H = Hatch, E = ordinary room with an extraction portal, B = Boss (b = absent).\n" +
             "New raids choose one of four corners. Boss/exit: opposite quadrant; generator: either side quadrant. " +
             "Branch topologies are preserved but ignored by this policy.", MessageType.Info);
         int minX = Mathf.Min(0, map.startSectorCoord.x);
@@ -43,6 +44,7 @@ public sealed class StageDefinitionRaidEditor : Editor
                     RaidRoomRole.Boss => map.bossSpawned ? "B" : "b", RaidRoomRole.Armory => "A",
                     RaidRoomRole.Medical => "M", RaidRoomRole.Vault => "V", _ => "."
                 };
+                if (map.IsExtractionSector(coord)) label = "E";
                 if (coord == map.startSectorCoord) label = "S";
                 else if (coord == map.firstRoomCoord) label = "P";
                 GUILayout.Label(new GUIContent(label, $"({x},{y}) {room.raidRole}"), EditorStyles.miniButton, cellWidth);

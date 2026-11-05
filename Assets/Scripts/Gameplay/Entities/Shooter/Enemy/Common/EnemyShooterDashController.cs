@@ -15,10 +15,7 @@ public sealed class EnemyShooterDashController : ShooterDashController
 
     private EnemyShooterConfigSO EnemyConfig => _shoot != null ? _shoot.Config : null;
 
-    // Normal enemies intentionally share the PlayerDashConfig assigned on the
-    // base prefab. The combat controller may still provide temporary values
-    // from Debug Monitor, but those should never replace the common player
-    // dash in normal gameplay.
+    // Player and enemy use the same stat-owned settings. Debug overrides stay runtime-only.
     private bool HasRuntimeDashOverride =>
         _combat != null && _combat.HasRuntimeCombatOverrides;
 
@@ -45,9 +42,9 @@ public sealed class EnemyShooterDashController : ShooterDashController
     // Purpose: Checks whether start dash is currently permitted.
     protected override bool CanStartDash()
     {
-        return _combat != null
+        return base.CanStartDash() && (_combat != null
             ? _combat.EffectiveUseDash
-            : EnemyConfig != null && EnemyConfig.UseDash;
+            : EnemyConfig != null && EnemyConfig.UseDash);
     }
 
     // Purpose: Performs the use forward when no movement input workflow for this component.

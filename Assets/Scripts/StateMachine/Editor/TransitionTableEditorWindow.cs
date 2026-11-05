@@ -20,6 +20,8 @@ namespace VSplatter.StateMachine.Editor
 		private bool _doRefresh;
 
 		private UnityEditor.Editor _transitionTableEditor;
+		private MakerSelectionUiState _selectionUi;
+		private MakerSelectionUiState SelectionUi => _selectionUi ??= new MakerSelectionUiState();
 
 		[MenuItem("State Machine Editor", menuItem = "ChopChop/State Machine Editor")]
 		// Purpose: Performs the display workflow for this component.
@@ -121,6 +123,7 @@ namespace VSplatter.StateMachine.Editor
 		// Purpose: Responds to the list selection changed callback.
 		private void OnListSelectionChanged(IEnumerable<object> enumerable)
 		{
+			SelectionUi.SelectionClicked();
 			IMGUIContainer editor = rootVisualElement.Q<IMGUIContainer>(className: "table-editor");
 			editor.onGUIHandler = null;
 
@@ -158,6 +161,7 @@ namespace VSplatter.StateMachine.Editor
 					}
 				}
 
+				SelectionUi.Synchronize(_transitionTableEditor.target);
 				_transitionTableEditor.OnInspectorGUI();
 			};
 		}

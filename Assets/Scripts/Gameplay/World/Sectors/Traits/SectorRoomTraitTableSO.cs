@@ -15,7 +15,9 @@ public enum SectorRoomTraitType
     Darkness = 1,
     Armed = 2,
     AmmoScavenger = 3,
-    Fear = 4
+    Fear = 4,
+    EnemyDamage = 5,
+    GasBoost = 6
 }
 
 [Serializable]
@@ -56,6 +58,9 @@ public sealed class SectorRoomTraitTableSO : ScriptableObject
     [Header("Weighted Room Traits")]
     [Tooltip("One eligible room trait is selected deterministically per generated room. Keep Normal in this list as the no-trait outcome.")]
     [SerializeField] private List<SectorRoomTraitWeight> _roomTraits = new();
+    [Header("Raid anomaly gate")]
+    [SerializeField] private bool _useAnomalyGate;
+    [SerializeField, Range(0f, 1f)] private float _anomalyChance = .1f;
 
     [Header("Darkness")]
     [Tooltip("Final multiplier applied after player stats, passives, and status effects. This affects both close-circle and forward-cone vision.")]
@@ -91,8 +96,13 @@ public sealed class SectorRoomTraitTableSO : ScriptableObject
     public float BiochemicalGasTickInterval => Mathf.Max(0.1f, _biochemicalGasTickInterval);
 
     // Purpose: Performs the pick trait workflow for this component.
-    public SectorRoomTraitType PickTrait(int seed, StageRoomType roomType)
+    public SectorRoomTraitType PickTrait(int seed, StageRoomType roomType, int stageIndex = 0, bool combatRoom = true)
     {
+        bool Eligible(SectorRoomTraitWeight entry) => entry != null && entry.IsEligibleFor(roomType) &&
+            (!_useAnomalyGate || (entry.trait != SectorRoomTraitType.Normal &&
+                (entry.trait != SectorRoomTraitType.GasBoost || stageIndex >= 3)));
+        if (_useAnomalyGate && (roomType != StageRoomType.Normal || !combatRoom ||
+            new System.Random(seed ^ 0x2B194D).NextDouble() >= _anomalyChance)) return SectorRoomTraitType.Normal;
         if (_roomTraits == null ||
             (roomType != StageRoomType.Normal && roomType != StageRoomType.Boss))
         {
@@ -103,7 +113,7 @@ public sealed class SectorRoomTraitTableSO : ScriptableObject
         for (int i = 0; i < _roomTraits.Count; i++)
         {
             SectorRoomTraitWeight entry = _roomTraits[i];
-            if (entry != null && entry.IsEligibleFor(roomType))
+            if (Eligible(entry))
                 totalWeight += entry.weight;
         }
 
@@ -114,7 +124,7 @@ public sealed class SectorRoomTraitTableSO : ScriptableObject
         for (int i = 0; i < _roomTraits.Count; i++)
         {
             SectorRoomTraitWeight entry = _roomTraits[i];
-            if (entry == null || !entry.IsEligibleFor(roomType))
+            if (!Eligible(entry))
                 continue;
 
             roll -= entry.weight;

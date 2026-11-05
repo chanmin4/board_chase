@@ -23,7 +23,7 @@ public class UIMainMenu : MonoBehaviour
 
     [Header("WIP Legacy Entry")]
     [Tooltip("The permanent-meta upgrade screen is retired from the player flow until it is redesigned around the current quest progression.")]
-    [SerializeField] private bool _enableWipMetaUpgradeEntry;
+    [SerializeField,HideInInspector] private bool _enableWipMetaUpgradeEntry;
 
     [Header("Text Localization")]
     [Tooltip("Main menu button texts string table. Usually UI_MainMenu.")]
@@ -57,6 +57,7 @@ public class UIMainMenu : MonoBehaviour
     // Purpose: Caches the component references required before runtime initialization.
     private void Awake()
     {
+        _enableWipMetaUpgradeEntry=false;
         if (_playerUpgradeButton != null)
             _playerUpgradeButton.gameObject.SetActive(_enableWipMetaUpgradeEntry);
 
@@ -66,6 +67,7 @@ public class UIMainMenu : MonoBehaviour
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
     private void OnEnable()
     {
+        _enableWipMetaUpgradeEntry=false;
         if (_newGameButton != null)
             _newGameButton.onClick.AddListener(HandleNewGameClicked);
 
@@ -165,7 +167,7 @@ public class UIMainMenu : MonoBehaviour
     // Purpose: Handles the incoming player upgrade clicked request or event.
     private void HandlePlayerUpgradeClicked()
     {
-        PlayerUpgradeButtonAction.Invoke();
+        // WIP serialized callbacks are intentionally inert.
     }
 
     // Purpose: Handles the incoming settings clicked request or event.

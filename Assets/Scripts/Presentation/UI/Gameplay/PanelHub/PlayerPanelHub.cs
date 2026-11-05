@@ -84,17 +84,16 @@ public class PlayerPanelHub : PanelUI
     // Shop uses the available HUD area as a two-column workspace. Loot instead
     // uses two equal inventory columns with the shared item description between
     // them, so moving items never changes the player's available slot footprint.
-    private const float ContextInventoryScale = 0.76f;
-    private const float ContextLeftPanelCenterX = -430f;
-    private const float ContextShopPanelCenterX = 440f;
-    private static readonly Vector2 ContextShopPlayerPanelSize = new(1020f, 1120f);
+    private const float ContextInventoryScale = 1f;
+    private const float ContextLeftPanelCenterX = -470f;
+    private const float ContextShopPanelCenterX = 470f;
+    private static readonly Vector2 ContextShopPlayerPanelSize = InventorySplitLayout.PanelSize;
     private static readonly Vector2 ContextShopPanelSize = new(860f, 850f);
-    // Loot uses a dedicated three-column transfer workspace. The two inventories
-    // deliberately have identical bounds, while the shared item description owns
-    // the narrow middle column: Player 4 : Description 2 : Loot 4.
-    private const float LootTransferPlayerPanelCenterX = -556f;
-    private const float LootTransferLootPanelCenterX = 556f;
-    private static readonly Vector2 LootTransferSidePanelSize = new(720f, 840f);
+    // Approved A layout: two equal 900x760 split panels. Detail is a transient overlay,
+    // no longer a permanent middle column consuming inventory width.
+    private const float LootTransferPlayerPanelCenterX = -470f;
+    private const float LootTransferLootPanelCenterX = 470f;
+    private static readonly Vector2 LootTransferSidePanelSize = InventorySplitLayout.PanelSize;
 
     public PlayerPanelHubMode CurrentMode { get; private set; } = PlayerPanelHubMode.Inventory;
     public PlayerInventoryUI PlayerInventoryPanel => _playerInventoryPanel;
@@ -154,6 +153,7 @@ public class PlayerPanelHub : PanelUI
         {
             _inputReader.PlayerMenuEvent += HandlePlayerMenuInput;
             _inputReader.MapEvent += HandleMapInput;
+            _inputReader.MissionsEvent += HandleMissionsInput;
         }
     }
 
@@ -164,6 +164,7 @@ public class PlayerPanelHub : PanelUI
         {
             _inputReader.PlayerMenuEvent -= HandlePlayerMenuInput;
             _inputReader.MapEvent -= HandleMapInput;
+            _inputReader.MissionsEvent -= HandleMissionsInput;
         }
 
         if (_shopOpenRequestChannel != null)
@@ -211,6 +212,28 @@ public class PlayerPanelHub : PanelUI
         SetMode(PlayerPanelHubMode.Inventory);
     }
 
+    // Reuse the inventory overlay/input blocking and the shop's left-hand layout
+    // without opening a merchant or bypassing the overlay stack.
+    public bool OpenKeySubmissionInventory()
+    {
+        ResolveRefs();
+        if (_overlayRequestChannel == null || _playerInventoryPanel == null) return false;
+        _overlayRequestChannel.Open(UIOverlayId.PlayerPanelHub);
+        SetMode(PlayerPanelHubMode.Inventory);
+        ConfigureContextPlayerPanelRect(_playerInventoryPanel.transform as RectTransform);
+        _playerInventoryPanel.SetInteractionMode(PlayerInventoryInteractionMode.Normal);
+        return true;
+    }
+
+    public bool IsKeySubmissionInventoryVisible => IsPrimaryHubOpen() && CurrentMode == PlayerPanelHubMode.Inventory;
+
+    public void CloseKeySubmissionInventory()
+    {
+        KeyToolContainerPanel.CloseFor(_playerInventoryPanel);
+        _overlayRequestChannel?.Close(UIOverlayId.PlayerPanelHub);
+        RestorePlayerInventoryHome();
+    }
+
     // Purpose: Opens the character stats UI or workflow.
     public void OpenCharacterStats()
     {
@@ -230,13 +253,22 @@ public class PlayerPanelHub : PanelUI
     {
         ResolveRefs();
 
+        if (_overlayRequestChannel == null)
+        {
+            Debug.LogError("[PlayerPanelHub] Mission page cannot open without the overlay request channel. Direct visibility would bypass combat/aim input blocking.", this);
+            return;
+        }
+
+        // NPC 진입도 Tab/상점과 같은 관리자 경로로 열어야 입력 차단과 ESC 닫기가 함께 적용됩니다.
+        // 먼저 열어 컨텍스트 정리를 마친 뒤 새 NPC/임무 탭을 선택합니다.
+        _overlayRequestChannel.Open(UIOverlayId.PlayerPanelHub);
+
         QuestRuntime runtime = QuestRuntime.EnsureRuntime();
         if (questGiver != null)
             runtime.SelectQuestGiver(questGiver);
 
         _missionsPanel?.SetQuestGiver(questGiver);
         _missionsPanel?.Refresh();
-        SetHubVisible(true);
         SetMode(PlayerPanelHubMode.Missions);
     }
 
@@ -288,6 +320,11 @@ public class PlayerPanelHub : PanelUI
         }
 
         HandlePrimaryPageInput(PlayerPanelHubMode.FullMap);
+    }
+
+    private void HandleMissionsInput()
+    {
+        HandlePrimaryPageInput(PlayerPanelHubMode.Missions);
     }
 
     // Purpose: Handles the incoming primary page input request or event.
@@ -356,6 +393,11 @@ public class PlayerPanelHub : PanelUI
         SetCanvasGroup(_playerInventoryPanelGroup, inventoryVisible, inventoryVisible);
         SetCanvasGroup(_statsPanelGroup, statsVisible, statsVisible);
         SetCanvasGroup(_missionsPanelGroup, missionsVisible, missionsVisible);
+        foreach (QuestMissionPanelUI panel in GetComponentsInChildren<QuestMissionPanelUI>(true))
+        {
+            if (panel.GetComponentInParent<PlayerPanelHub>(true) == this)
+                panel.SetVisible(missionsVisible && panel == _missionsPanel);
+        }
 
         if (_fullMapPanel != null)
         {
@@ -796,13 +838,21 @@ public class PlayerPanelHub : PanelUI
         if (_fullMapPanel == null)
             _fullMapPanel = GetComponentInChildren<FullMapUI>(true);
 
-        if (_missionsPanel == null)
-            _missionsPanel = GetComponentInChildren<QuestMissionPanelUI>(true);
+        if (_missionsPanel == null || _missionsPanel.GetComponentInParent<PlayerPanelHub>(true) != this)
+        {
+            _missionsPanel = null;
+            foreach (QuestMissionPanelUI panel in GetComponentsInChildren<QuestMissionPanelUI>(true))
+            {
+                if (panel.GetComponentInParent<PlayerPanelHub>(true) != this) continue;
+                _missionsPanel = panel;
+                break;
+            }
+        }
 
-        if (_missionsPanel == null)
+        if (_missionsPanel == null && Application.isPlaying)
             _missionsPanel = QuestMissionPanelUI.CreateRuntime(transform, gameObject.layer);
 
-        if (_missionsPanelGroup == null && _missionsPanel != null)
+        if (_missionsPanel != null)
             _missionsPanelGroup = GetOrAddCanvasGroup(_missionsPanel.gameObject);
 
         if (_shopPanel == null)

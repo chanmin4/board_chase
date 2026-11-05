@@ -15,7 +15,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public class StageProgressionManager : MonoBehaviour
+public partial class StageProgressionManager : MonoBehaviour
 {
     private const string LegacyHighestUnlockedStagePrefsKey =
         "StageProgression.HighestUnlockedStage";
@@ -82,6 +82,16 @@ public class StageProgressionManager : MonoBehaviour
     public int CurrentStageIndex => _currentStageIndex;
     public int HighestUnlockedStageIndex => _highestUnlockedStageIndex;
     public bool CurrentStageCompletionClaimed => _currentStageCompletionClaimed;
+    public string LastExtractionFailure { get; private set; } = string.Empty;
+
+    // Initial Home entry deliberately has no generated raid map. SceneLoader
+    // must wait for this explicit outcome, not infer success from a Home marker
+    // that can also be present while a saved raid is failing to resume.
+    public bool IsInitialRuntimePrepared { get; private set; }
+    public bool InitialEntryRequiresGeneratedMap { get; private set; } = true;
+    public string InitialRuntimePreparationFailure { get; private set; } = string.Empty;
+    public SectorRuntime InitialHideoutSector => _stageSectorInstantiator != null
+        ? _stageSectorInstantiator.HideoutSector : null;
 
     private int _highestUnlockedStageIndex;
 
@@ -104,9 +114,7 @@ public class StageProgressionManager : MonoBehaviour
     {
         get
         {
-            return _currentStage != null
-                ? _currentStage.NormalBattleTimerSeconds
-                : 30f;
+            return 0f; // All room deadlines are retired; personal suppression owns the HUD clock.
         }
     }
 
@@ -183,11 +191,16 @@ public class StageProgressionManager : MonoBehaviour
             _initialHomeEntryRoutine = null;
         }
 
+        IsInitialRuntimePrepared = false;
+
     }
 
     // Purpose: Initializes initial home entry for use by this component.
     private IEnumerator InitializeInitialHomeEntry()
     {
+        IsInitialRuntimePrepared = false;
+        InitialEntryRequiresGeneratedMap = true;
+        InitialRuntimePreparationFailure = string.Empty;
         const float timeoutSeconds = 10f;
         float deadline = Time.realtimeSinceStartup + timeoutSeconds;
 
@@ -203,6 +216,7 @@ public class StageProgressionManager : MonoBehaviour
 
             if (Time.realtimeSinceStartup >= deadline)
             {
+                InitialRuntimePreparationFailure = "Authored HomeSector did not become available.";
                 Debug.LogError(
                     "[StageProgressionManager] Initial Home entry timed out. " +
                     "Make sure HomeScene is loaded additively and contains one HomeSector prefab.",
@@ -217,13 +231,27 @@ public class StageProgressionManager : MonoBehaviour
         RaidRunSaveData pendingRaid = (_saveSystem != null ? _saveSystem : SaveSystem.Active)?.RunData.raid;
         if (pendingRaid != null && pendingRaid.active && pendingRaid.layout != null && !pendingRaid.extractionCommitted)
         {
-            if (!BeginStage(pendingRaid.layout.stageIndex, pendingRaid))
+            IsInitialRuntimePrepared = BeginStage(pendingRaid.layout.stageIndex, pendingRaid);
+            if (!IsInitialRuntimePrepared)
+            {
+                InitialRuntimePreparationFailure = "Saved raid could not be resumed; its snapshot was preserved.";
                 Debug.LogError("[Raid] Saved raid could not be resumed. Preserved its snapshot; no replacement raid was generated.", this);
+            }
         }
         else if (_flow != null && _flow.TryGetStage(_startingStageIndex, out var firstStage) &&
-                 firstStage.MapPolicy == StageMapPolicy.OddSquareRaid)
-            EnterHideout(); // Do not instantiate 49 unused rooms just to show Home.
-        else if (BeginStage(_startingStageIndex)) EnterHideout();
+                 firstStage.MapPolicy != StageMapPolicy.Legacy)
+        {
+            InitialEntryRequiresGeneratedMap = false;
+            IsInitialRuntimePrepared = EnterHideout(); // Generate the raid only on deployment.
+            if (!IsInitialRuntimePrepared)
+                InitialRuntimePreparationFailure = "Initial Hideout entry failed.";
+        }
+        else
+        {
+            IsInitialRuntimePrepared = BeginStage(_startingStageIndex) && EnterHideout();
+            if (!IsInitialRuntimePrepared)
+                InitialRuntimePreparationFailure = "Initial legacy stage or Hideout entry failed.";
+        }
 
         _initialHomeEntryRoutine = null;
     }
@@ -272,6 +300,9 @@ public class StageProgressionManager : MonoBehaviour
     // Purpose: Processes this component's per-frame runtime work.
     private void Update()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return;
+#endif
         SyncActiveSector();
 
         if (!_hasRule || _activeSector == null)
@@ -335,6 +366,9 @@ public class StageProgressionManager : MonoBehaviour
     /// </summary>
     public bool TrySkipActiveSector(SectorRuntime requestedSector)
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (!_hasRule ||
             requestedSector == null ||
             requestedSector != _activeSector ||
@@ -434,35 +468,48 @@ public class StageProgressionManager : MonoBehaviour
     /// ends the current visit without claiming boss completion, rewards, or a
     /// stage unlock; carried runtime inventory remains untouched.
     /// </summary>
-    public bool TryExtractToHomeFromNormalExit(SectorRuntime extractionSector)
+    public bool TryExtractToHomeFromNormalExit(SectorRuntime extractionSector, Action<bool> onCompleted = null)
     {
-        if (!_hasRule ||
-            extractionSector == null ||
-            _isCompleted ||
-            _currentStageCompletionClaimed ||
-            _stageTransitionPending ||
-            _sectorStateManager == null ||
-            _sectorStateManager.CurrentSector != extractionSector)
-        {
-            return false;
-        }
+        LastExtractionFailure = string.Empty;
+        if (!_hasRule) return RejectHomeExtraction("현재 스테이지 설정이 없습니다.");
+        if (extractionSector == null) return RejectHomeExtraction("탈출 요청 섹터가 없습니다.");
+        // _isCompleted is the current ROOM clear state, not a completed raid.
+        // Clearing an extraction room unlocks its exit; it must never forbid Home entry.
+        if (_currentStageCompletionClaimed) return RejectHomeExtraction("스테이지 완료 처리가 이미 진행되었습니다.");
+        if (_stageTransitionPending) return RejectHomeExtraction("다른 씬/스테이지 이동이 진행 중입니다.");
+        if (_sectorStateManager == null) return RejectHomeExtraction("SectorStateManager가 없습니다.");
+        if (_sectorStateManager.CurrentSector != extractionSector)
+            return RejectHomeExtraction("탈출 요청 섹터와 플레이어의 현재 섹터가 다릅니다.");
 
         StageMapLayout raidLayout = _sectorStateManager.CurrentStageMapLayout;
         if (raidLayout != null && raidLayout.usesRaidLayout &&
-            RaidRuntime.Active?.State?.extractionCommitted != true) return false;
+            RaidRuntime.Active?.State?.extractionCommitted != true)
+            return RejectHomeExtraction("RaidRuntime의 탈출 트랜잭션을 거치지 않은 요청입니다.");
+        if ((raidLayout == null || !raidLayout.usesRaidLayout) && !extractionSector.IsCleared)
+            return RejectHomeExtraction("일반 탈출은 탈출방을 먼저 클리어해야 합니다.");
         PlayerInventoryRuntime extractingPlayer = FindFirstObjectByType<PlayerInventoryRuntime>();
-        if (extractingPlayer != null && extractingPlayer.GetComponent<Damageable>()?.IsDead == true) return false;
-        bool returnedHome = EnterHideout();
-
-        if (returnedHome)
+        if (extractingPlayer == null) return RejectHomeExtraction("탈출할 플레이어 인벤토리가 없습니다.");
+        if (extractingPlayer.GetComponent<Damageable>()?.IsDead == true)
+            return RejectHomeExtraction("사망한 플레이어는 탈출할 수 없습니다.");
+        bool accepted = EnterHideout(success =>
         {
-            Debug.Log(
+            if (success) Debug.Log(
                 $"[StageProgressionManager] Early extraction returned the player to Home without stage completion. " +
-                $"stage={_currentStageIndex}, sector={extractionSector.name}",
-                extractionSector);
-        }
+                $"stage={_currentStageIndex}", this);
+            else RejectHomeExtraction("HOME 씬 로딩 또는 플레이어 이동이 완료되지 않았습니다. SceneLoader 오류 로그를 확인하세요.");
+            onCompleted?.Invoke(success);
+        });
+        if (!accepted)
+            return RejectHomeExtraction($"HOME 복귀 요청이 거절되었습니다. instantiator={_stageSectorInstantiator != null}, " +
+                $"sectors={_sectorStateManager != null}, loader={SceneLoader.Instance != null}, transitionPending={_stageTransitionPending}");
+        return true;
+    }
 
-        return returnedHome;
+    private bool RejectHomeExtraction(string reason)
+    {
+        LastExtractionFailure = reason;
+        Debug.LogWarning("[StageProgressionManager][Extraction] " + reason, this);
+        return false;
     }
 
     // Purpose: Performs the complete final stage workflow for this component.
@@ -551,7 +598,30 @@ public class StageProgressionManager : MonoBehaviour
     /// Returns the player to the persistent Hideout without registering it as a
     /// stage room. The generated Start sector remains an internal entry node.
     /// </summary>
-    public bool EnterHideout()
+    public bool EnterHideout(Action<bool> onCompleted = null)
+    {
+        if (_stageSectorInstantiator == null || _sectorStateManager == null) return false;
+        SceneLoader loader = SceneLoader.Instance;
+        if (_stageSectorInstantiator.HasAuthoredHomeSector &&
+            (loader == null || !loader.IsHomeEnvironmentUnloading))
+        {
+            bool entered = EnterPreparedHideout();
+            if (entered) onCompleted?.Invoke(true);
+            return entered;
+        }
+        if (!Application.isPlaying || loader == null || _stageTransitionPending) return false;
+        _stageTransitionPending = true;
+        bool accepted = loader.RequestHomeTransition(EnterPreparedHideout, success =>
+        {
+            _stageTransitionPending = false;
+            PublishSnapshot();
+            onCompleted?.Invoke(success);
+        });
+        if (!accepted) _stageTransitionPending = false;
+        return accepted; // accepted request, not a completed scene load
+    }
+
+    private bool EnterPreparedHideout()
     {
         if (_stageSectorInstantiator == null ||
             _sectorStateManager == null ||
@@ -564,6 +634,9 @@ public class StageProgressionManager : MonoBehaviour
         }
 
         SectorRuntime hideout = _stageSectorInstantiator.HideoutSector;
+        var home=hideout!=null?hideout.GetComponent<HomeSector>():null;
+        if(home!=null&&!home.TryPrepareSafeSpawn(out string spawnError))
+        {Debug.LogError("[Home Spawn] "+spawnError,this);return false;}
 
         if (!_sectorStateManager.SetExternalCurrentSector(
                 hideout,
@@ -573,7 +646,11 @@ public class StageProgressionManager : MonoBehaviour
         }
 
         _activeSector = null;
+        if (RaidRuntime.Active?.State?.extractionCommitted == true)
+            GameProgressionRuntime.Settle(true);
         RaidRuntime.Active?.EndRaid();
+        var passiveInventory = FindFirstObjectByType<PlayerInventoryRuntime>();
+        passiveInventory?.EndPassiveRaid();
         SetActiveSceneForSector(hideout);
         SnapCameraToPlayer();
         PublishSnapshot();
@@ -587,6 +664,9 @@ public class StageProgressionManager : MonoBehaviour
     /// </summary>
     public bool TryEnterUnlockedStage(int stageIndex)
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (_stageTransitionPending || !IsStageUnlocked(stageIndex))
         {
             Debug.LogWarning(
@@ -723,7 +803,7 @@ public class StageProgressionManager : MonoBehaviour
         SetActiveSceneForSector(entrySector);
         SnapCameraToPlayer();
         RunLifecycleCoordinator.NotifyRunStarted(stageIndex);
-        if (restoredRaid == null) (_saveSystem != null ? _saveSystem : SaveSystem.Active)?.TrySaveRunDataToDisk();
+        if (restoredRaid == null && !_continuingThroughHatch) (_saveSystem != null ? _saveSystem : SaveSystem.Active)?.TrySaveRunDataToDisk();
         return true;
     }
 
@@ -825,6 +905,9 @@ public class StageProgressionManager : MonoBehaviour
     /// </summary>
     public bool DebugTryBeginStage(int stageIndex)
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (!Application.isPlaying)
         {
             Debug.LogWarning(
@@ -858,6 +941,8 @@ public class StageProgressionManager : MonoBehaviour
 
         bool built = BeginStage(stage.StageIndex);
 
+        if (built) SceneLoader.Instance?.ReleaseHomeEnvironmentForRun();
+
         if (built)
         {
             Debug.Log(
@@ -876,6 +961,9 @@ public class StageProgressionManager : MonoBehaviour
     /// </summary>
     public bool DebugTryBeginNextStage()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (!Application.isPlaying)
         {
             Debug.LogWarning(
@@ -905,6 +993,8 @@ public class StageProgressionManager : MonoBehaviour
         _stageTransitionPending = false;
 
         bool built = BeginStage(nextStage.StageIndex);
+
+        if (built) SceneLoader.Instance?.ReleaseHomeEnvironmentForRun();
 
         if (built)
         {
@@ -1090,6 +1180,9 @@ public class StageProgressionManager : MonoBehaviour
     // Purpose: Responds to the player hit received callback.
     private void OnPlayerHitReceived(GameObject _)
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return;
+#endif
         if (!_hasRule || _currentStageIndex <= 0 || _finalStageCompleted)
             return;
 
@@ -1174,6 +1267,8 @@ public class StageProgressionManager : MonoBehaviour
     // Purpose: Processes one update step for normal battle judge.
     private void TickNormalBattleJudge()
     {
+        if (_currentStage != null && _currentStage.MapPolicy != StageMapPolicy.Legacy)
+        { _remainingSeconds = 0f; return; }
         float timerDuration = _hasRule ? Mathf.Max(0f, CurrentNormalBattleTimerSeconds) : 0f;
 
         if (timerDuration <= 0f)
@@ -1197,6 +1292,7 @@ public class StageProgressionManager : MonoBehaviour
     // Purpose: Applies the requested normal battle timer expired penalty change.
     private void ApplyNormalBattleTimerExpiredPenalty()
     {
+        if (_currentStage != null && _currentStage.MapPolicy != StageMapPolicy.Legacy) return;
         if (!_hasRule)
             return;
 
@@ -1368,6 +1464,8 @@ public class StageProgressionManager : MonoBehaviour
     // Purpose: Performs the should show player timer for sector workflow for this component.
     private bool ShouldShowPlayerTimerForSector(SectorRuntime sector)
     {
+        if (_currentStage != null && _currentStage.MapPolicy != StageMapPolicy.Legacy)
+            return false;
         if (!_hasRule || sector == null)
             return false;
 

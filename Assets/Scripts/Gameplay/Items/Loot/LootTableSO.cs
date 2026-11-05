@@ -10,7 +10,7 @@ using UnityEngine;
 
 /// <summary>
 /// One fixed, object-owned loot pool. World-object placement determines where
-/// a table can appear; this data never branches by stage.
+/// a table can appear. A shared runtime rule adjusts only armor/ammo LV within its authored candidates.
 /// </summary>
 [Serializable]
 public sealed class LootObjectPool
@@ -23,6 +23,19 @@ public sealed class LootObjectPool
     [Min(1)] public int minRollCount = 1;
     [Min(1)] public int maxRollCount = 1;
     public List<LootRarityTier> rarityTiers = new();
+    // Container-only settings: enemy stage pools retain their own existing contract.
+    public List<LootRarityCategorySettings> categorySettings = new();
+
+    public LootRarityCategorySettings FindCategorySettings(PlayerShopItemRarity rarity) =>
+        categorySettings?.Find(settings => settings != null && settings.rarity == rarity);
+
+    public LootRarityCategorySettings EnsureCategorySettings(PlayerShopItemRarity rarity)
+    {
+        categorySettings ??= new();
+        var settings = FindCategorySettings(rarity);
+        if (settings == null) { settings = new LootRarityCategorySettings { rarity = rarity }; categorySettings.Add(settings); }
+        return settings;
+    }
 
     /// <summary>
     /// Restores the four project-wide rarity rows while preserving authored
@@ -78,13 +91,13 @@ public sealed class LootObjectPool
 }
 
 /// <summary>
-/// Directly referenced contents for one searchable world object. A table may
-/// be intentionally shared, but it always has exactly one fixed loot pool.
+/// Directly referenced contents for one searchable world object. Loot Maker
+/// authors one independent table per box, containing exactly one fixed pool.
 /// </summary>
 [CreateAssetMenu(fileName = "LootTable_", menuName = "Game/Loot/Loot Table")]
 public sealed class LootTableSO : ScriptableObject
 {
-    [Tooltip("The one fixed pool for this object. Place different loot objects in different stages instead of creating stage overrides here.")]
+    [Tooltip("Fixed authored candidates. The common Stage 1–5 rule adjusts armor/ammo LV weights within these candidates; it never adds items.")]
     [SerializeField] private LootObjectPool _pool = new();
 
     public LootObjectPool Pool
@@ -106,9 +119,8 @@ public sealed class LootTableSO : ScriptableObject
     }
 
     /// <summary>
-    /// Rolls the object's fixed pool into a caller-owned list. Lock profiles
-    /// can still multiply rarity weights, but stage index is intentionally not
-    /// part of the world-container contract.
+    /// Legacy roll-count API, retained for old callers. World containers use
+    /// TryGenerateSlots with their actual stage and explicit occupied-slot range.
     /// </summary>
     public bool TryRoll(
         System.Random random,
@@ -121,6 +133,114 @@ public sealed class LootTableSO : ScriptableObject
         foreach (var tier in Pool.rarityTiers)
             if (HasValidItems(tier) && GetTierWeight(tier, lockedLootProfile) > 0f) return true;
         return false;
+    }
+
+    public bool HasSlotItems(LootContainerRarityWeights weights, int stageIndex = 0)
+    {
+        if (StageEquipmentLootDistribution.AppliesToStage(stageIndex)) return GetStageDistribution(weights, stageIndex).HasCandidates;
+        foreach (var tier in Pool.rarityTiers)
+            if (HasValidItems(tier) && weights != null && weights.Get(tier.rarity) > 0f) return true;
+        return false;
+    }
+
+    /// <summary>Actual per-filled-slot chance, excluding empty/disabled tiers. No hidden lock multipliers.</summary>
+    public float GetEffectiveTierPercent(PlayerShopItemRarity rarity, LootContainerRarityWeights weights, int stageIndex = 0)
+    {
+        if (weights == null) return 0f;
+        if (StageEquipmentLootDistribution.AppliesToStage(stageIndex)) return GetStageDistribution(weights, stageIndex).RarityPercent(rarity);
+        double total = 0d, selected = 0d;
+        foreach (var tier in Pool.rarityTiers)
+        {
+            if (!HasValidItems(tier)) continue;
+            double weight = weights.Get(tier.rarity);
+            total += weight;
+            if (tier.rarity == rarity) selected += weight;
+        }
+        return total > 0d ? (float)(selected / total * 100d) : 0f;
+    }
+
+    public float GetEffectiveItemPercent(LootRarityTier tier, LootItemEntry entry, LootContainerRarityWeights weights, int stageIndex = 0)
+    {
+        if (tier == null) return 0f;
+        if (StageEquipmentLootDistribution.AppliesToStage(stageIndex)) return GetStageDistribution(weights, stageIndex).ItemPercent(entry);
+        return GetEffectiveTierPercent(tier.rarity, weights) * GetCategorySelection(tier).ItemPercentInTier(entry) / 100f;
+    }
+
+    public LootCategorySelection GetCategorySelection(LootRarityTier tier) =>
+        new(tier, tier != null ? _pool?.FindCategorySettings(tier.rarity) : null);
+
+    public StageEquipmentLootDistribution GetStageDistribution(LootContainerRarityWeights weights, int stageIndex)
+    {
+        var distribution = new StageEquipmentLootDistribution();
+        foreach (var tier in Pool.rarityTiers)
+            distribution.AddTier(tier, GetCategorySelection(tier), weights != null ? weights.Get(tier.rarity) : 0);
+        distribution.ApplyStage(stageIndex);
+        return distribution;
+    }
+
+    /// <summary>
+    /// One result equals one occupied slot. Duplicate items remain separate results;
+    /// amounts fit one stack. True includes an intentionally empty (zero-slot) result.
+    /// Legacy attempt chances and lock bonus rolls do not affect this explicit box contract.
+    /// </summary>
+    public bool TryGenerateSlots(System.Random random, List<LootRollResult> results, LootObjectSO box, int stageIndex = 0)
+    {
+        if (results == null) return false;
+        results.Clear();
+        if (box == null) return false;
+        if (box.MaxGeneratedSlots == 0) return true;
+        random ??= new System.Random();
+        if (StageEquipmentLootDistribution.AppliesToStage(stageIndex))
+        {
+            var distribution = GetStageDistribution(box.RarityWeights, stageIndex);
+            if (distribution.HasLeveledEquipment)
+            {
+                if (!distribution.HasCandidates) return false;
+                int slots = random.Next(box.MinGeneratedSlots, box.MaxGeneratedSlots + 1);
+                for (int i = 0; i < slots; i++)
+                {
+                    var row = distribution.Pick(random);
+                    var entry = row.Entry;
+                    int limit = Mathf.Max(1, entry.item.MaxStack);
+                    int min = Mathf.Clamp(entry.minAmount, 1, limit), max = Mathf.Clamp(entry.maxAmount, min, limit);
+                    int amount = min + (int)(random.NextDouble() * ((long)max - min + 1));
+                    PassiveInstanceRuntime.Append(results, entry.item, amount, row.Rarity, random);
+                }
+                return true;
+            }
+        }
+        var choices = new List<(LootRarityTier tier, LootCategorySelection selection, float weight)>();
+        double total = 0d;
+        foreach (var tier in Pool.rarityTiers)
+        {
+            var selection = GetCategorySelection(tier);
+            float weight = box.RarityWeights.Get(tier.rarity);
+            if (!selection.HasCandidates || weight <= 0f) continue;
+            choices.Add((tier, selection, weight)); total += weight;
+        }
+        if (total <= 0d) return false;
+        int count = random.Next(box.MinGeneratedSlots, box.MaxGeneratedSlots + 1);
+        for (int i = 0; i < count; i++)
+        {
+            double pick = random.NextDouble() * total;
+            var chosen = choices[choices.Count - 1];
+            foreach (var choice in choices)
+            {
+                chosen = choice;
+                if (pick < choice.weight) break;
+                pick -= choice.weight;
+            }
+            // Each slot has fresh rarity, category and item draws, with replacement.
+            var entry = chosen.selection.Pick(random);
+            if (entry?.item == null) { results.Clear(); return false; }
+            int stackLimit = Mathf.Max(1, entry.item.MaxStack);
+            int min = Mathf.Clamp(entry.minAmount, 1, stackLimit);
+            int max = Mathf.Clamp(entry.maxAmount, min, stackLimit);
+            // NextDouble avoids int.MaxValue + 1 overflow for large stack capacities.
+            int amount = min + (int)(random.NextDouble() * ((long)max - min + 1));
+            PassiveInstanceRuntime.Append(results, entry.item, amount, chosen.tier.rarity, random);
+        }
+        return true;
     }
 
     public bool TryRoll(
@@ -152,13 +272,13 @@ public sealed class LootTableSO : ScriptableObject
             if (successChance <= 0f || (successChance < 100f && random.NextDouble() * 100d >= successChance))
                 continue;
             if (TryRollOne(pool, random, lockedLootProfile, out LootRollResult result))
-                results.Add(result);
+                PassiveInstanceRuntime.Append(results, result.Item, result.Amount, result.Rarity, random);
         }
 
         return results.Count > 0;
     }
 
-    private static bool TryRollOne(
+    private bool TryRollOne(
         LootObjectPool pool,
         System.Random random,
         LockedLootProfileSO lockedLootProfile,
@@ -179,7 +299,7 @@ public sealed class LootTableSO : ScriptableObject
         return true;
     }
 
-    private static LootRarityTier PickTier(
+    private LootRarityTier PickTier(
         List<LootRarityTier> tiers,
         System.Random random,
         LockedLootProfileSO lockedLootProfile)
@@ -202,7 +322,7 @@ public sealed class LootTableSO : ScriptableObject
         for (int i = 0; i < tiers.Count; i++)
         {
             LootRarityTier tier = tiers[i];
-            if (!HasValidItems(tier))
+            if (!HasValidItems(tier) || GetTierWeight(tier, lockedLootProfile) <= 0f)
                 continue;
 
             roll -= GetTierWeight(tier, lockedLootProfile);
@@ -213,33 +333,7 @@ public sealed class LootTableSO : ScriptableObject
         return null;
     }
 
-    private static LootItemEntry PickItem(LootRarityTier tier, System.Random random)
-    {
-        if (tier?.items == null)
-            return null;
-
-        float total = 0f;
-        for (int i = 0; i < tier.items.Count; i++)
-            total += LootProgressionConfigSO.GetResolvedItemSharePercent(tier, tier.items[i]);
-
-        if (total <= 0f)
-            return null;
-
-        float roll = (float)(random.NextDouble() * total);
-        for (int i = 0; i < tier.items.Count; i++)
-        {
-            LootItemEntry entry = tier.items[i];
-            float share = LootProgressionConfigSO.GetResolvedItemSharePercent(tier, entry);
-            if (share <= 0f)
-                continue;
-
-            roll -= share;
-            if (roll <= 0f)
-                return entry;
-        }
-
-        return null;
-    }
+    private LootItemEntry PickItem(LootRarityTier tier, System.Random random) => GetCategorySelection(tier).Pick(random);
 
     private static float GetTierWeight(LootRarityTier tier, LockedLootProfileSO lockedLootProfile)
     {
@@ -252,20 +346,7 @@ public sealed class LootTableSO : ScriptableObject
         return Mathf.Max(0f, tier.chancePercent) * Mathf.Max(0f, multiplier);
     }
 
-    private static bool HasValidItems(LootRarityTier tier)
-    {
-        if (tier?.items == null)
-            return false;
-
-        for (int i = 0; i < tier.items.Count; i++)
-        {
-            LootItemEntry entry = tier.items[i];
-            if (entry?.item != null && LootProgressionConfigSO.GetResolvedItemSharePercent(tier, entry) > 0f)
-                return true;
-        }
-
-        return false;
-    }
+    private bool HasValidItems(LootRarityTier tier) => GetCategorySelection(tier).HasCandidates;
 
     private void OnValidate()
     {

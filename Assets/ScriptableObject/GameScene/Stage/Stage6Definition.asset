@@ -1,0 +1,158 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae080927fbef4ec880ed87871e2b57e0, type: 3}
+  m_Name: Stage6Definition
+  m_EditorClassIdentifier: 
+  _stageIndex: 6
+  _encounterRules:
+    infectedRoomCount: 6
+    infectionSpreadEnabled: 1
+    infectionSpreadIntervalSeconds: 60
+    maximumNewInfectedRoomsPerTick: 0
+    infectedRoomGasPressure: 3
+    infectedEnemyChance: 0.25
+    extraEnemyChance: 0.15
+    replacementEnemy: {fileID: 0}
+    replacementChance: 0
+  _developmentOnly: 1
+  _displayName: Stage6_WIP_NOT_PLAYABLE
+  _mapPolicy: 2
+  _raidMap:
+    roomDensity: 0.32
+    braidPercent: 25
+    candidateCount: 4
+    extractionCount: 2
+    merchantRoomCount: 1
+    vaultNearCandidateChance: 0.25
+    bossSpawnPercent: 65
+    minimumExtractionPathDistance: 8
+    normalWeight: 70
+    armoryWeight: 0
+    medicalWeight: 0
+    vaultWeight: 5
+  _raidRuntime:
+    durationSeconds: 1200
+    overtimeInfectionPerSecond: 6
+    generatorBattery: {fileID: 11400000, guid: 2a26d19e459447788d8bc8941260b528, type: 2}
+    batteryAmount: 1
+    terminalPrefab: {fileID: 0}
+    prototypeFont: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
+    sfxChannel: {fileID: 11400000, guid: 18a62691805b26c4bb60fb95bcea2b50, type: 2}
+    audioConfiguration: {fileID: 11400000, guid: 6e1408e0ae1d029429f3c9c042876463, type: 2}
+    generatorCue: {fileID: 11400000, guid: 9ff639b7616047f7b2b7b5585e9b7216, type: 2}
+    extractionCue: {fileID: 11400000, guid: 9ff639b7616047f7b2b7b5585e9b7216, type: 2}
+    rejectedCue: {fileID: 11400000, guid: ace4292ea9214fa58e39b45ec3f93727, type: 2}
+    specialExtractionWip: 0
+    specialExtractionMinimumStage: 3
+    rooms:
+    - role: 3
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: fbaa1ff2ac3d32ccc0c3bd68339ac405, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 11400000, guid: a2200000000000000000000000000002, type: 2}
+    - role: 2
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: dfb6f9a93489f592b686a1a520b2097a, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 11400000, guid: a220000000000000000000000000001a, type: 2}
+    - role: 4
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: 647d3e770f1f194dbe46efa77e30a4ef, type: 2}
+        weight: 1
+      encounter: {fileID: 11400000, guid: e201040070014ba39f5b6600fac10005, type: 2}
+      content: {fileID: 0}
+      lootObject: {fileID: 11400000, guid: a220000000000000000000000000000b, type: 2}
+    - role: 6
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: dea9ac4d1effbac75fe2f976ca3c93cb, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 0}
+    - role: 7
+      sectorPreset: {fileID: 0}
+      sectorVariants:
+      - preset: {fileID: 11400000, guid: 7548474fc35104670e5d781c335d765a, type: 2}
+        weight: 1
+      encounter: {fileID: 0}
+      content: {fileID: 0}
+      lootObject: {fileID: 0}
+    merchantConfig: {fileID: 11400000, guid: c0f41d7310094ade8eca600400040001, type: 2}
+    merchantInitialMoney: 1000
+    merchantOpenChannel: {fileID: 11400000, guid: 293b940d4882d5144952cea9a94e9c32, type: 2}
+    merchantOverlayChannel: {fileID: 11400000, guid: 04fa04120420a7b4caadc06b33088982, type: 2}
+    vaultEntryKeyTier: 0
+    normalSupplyChance: 0.25
+    weaponSupplyShare: 0.5
+    normalWeaponSupply: {fileID: 11400000, guid: a220000000000000000000000000001a, type: 2}
+    normalMedicalSupply: {fileID: 11400000, guid: a2200000000000000000000000000002, type: 2}
+  _raidAnomalyTable: {fileID: 11400000, guid: b0eed10404004f00a000000000000002, type: 2}
+  _anomalyGasBaseline: 17
+  _roomGridSize: 26
+  _useStartSectorOnly: 0
+  _sectorTheme: {fileID: 11400000, guid: 8c3df88db2c2ceb4b99f5f3a6db06d24, type: 2}
+  _branchTopologies: []
+  _startSectorPresets:
+  - preset: {fileID: 11400000, guid: 181b3e86598d4b1683e8facd05398b2a, type: 2}
+    weight: 1
+  _normalBattle:
+    sectorPresets:
+    - preset: {fileID: 11400000, guid: 8f6d9673b28dfa64c9d800aafbe14756, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 52d70aecb0f5c084b9074d9bfa70da88, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 2ce55fe4fa8ad0241b4a7d28102b5bbc, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: b88b6ab972df5a44f88bd6df4fbeda46, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 97dc696286425824ca643a6183a5980f, type: 2}
+      weight: 1
+    encounterPresets:
+    - preset: {fileID: 11400000, guid: bdeab7e257548904cb70dbd79e762b9f, type: 2}
+      weight: 1
+    timerSeconds: 30
+    resetTimerWhenRequirementLost: 0
+  _roomTraitTable: {fileID: 11400000, guid: e0000000000000000000000000000021, type: 2}
+  _enableBiochemicalGas: 1
+  _biochemicalGas:
+    enabled: 1
+    applyToNormalRooms: 1
+    applyToBossRooms: 1
+    baselineInfectionPerSecond: 17
+    timerFailureLeakInfectionPerSecond: 10
+    maxTimerFailureLeakStacks: 4
+    tickInterval: 0.5
+  _treasure:
+    enabled: 0
+    minCount: 0
+    maxCount: 1
+    extraChancePerNoHitStage: 0
+    maxExtraChance: 1
+    excludeFirstRoom: 1
+    sectorPresets:
+    - preset: {fileID: 11400000, guid: bfb27cf577304361aedcfe29cc6d3950, type: 2}
+      weight: 1
+    dropTable: {fileID: 0}
+  _bossBattles:
+  - encounterPreset: {fileID: 11400000, guid: 6b7e77008a7445af84403409c80693d2, type: 2}
+    sectorPreset: {fileID: 11400000, guid: c27b67a0b087470a920cd19ae13e6929, type: 2}
+    weight: 1
+  _advanceStageOnStartSectorComplete: 0
+  _infectionControlRecoverOnComplete: 0

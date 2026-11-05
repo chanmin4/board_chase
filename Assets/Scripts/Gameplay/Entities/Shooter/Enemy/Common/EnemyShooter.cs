@@ -23,6 +23,18 @@ public class EnemyShooter : Enemy
     // these roots. Only the body and equipped item renderers are gated while
     // the shared enemy spawn state has not completed.
     private readonly Dictionary<Renderer, bool> _spawnHiddenRendererStates = new();
+    private readonly ShooterSpawnLookSession _spawnLook = new();
+    public ShooterCustomizeSO SelectedSpawnLook => _spawnLook.Selected;
+#if UNITY_EDITOR
+    public EnemyShooterLoadout DebugSpawnLoadout { get; private set; }
+#endif
+
+    // Scene-authored enemies also get their configured look. Config-bound spawns already applied it.
+    private void Start()
+    {
+        _spawnLook.ApplyOnce(Config, GetComponentInChildren<ShooterVisualRig>(true));
+        ApplySpawnVisualVisibility(IsSpawnReady);
+    }
 
     public EnemyShooterConfigSO Config =>
         _statsRuntime != null ? _statsRuntime.Config :
@@ -52,13 +64,28 @@ public class EnemyShooter : Enemy
 
     // Purpose: Updates the enemy shooter config state.
     public void SetEnemyShooterConfig(EnemyShooterConfigSO config)
+        => SetEnemyShooterConfig(config, 0);
+
+    /// <summary>Stage affects equipment only. Identity, combat rules and appearance remain on the single config.</summary>
+    public void SetEnemyShooterConfig(EnemyShooterConfigSO config, int stageIndex)
     {
         ResolveRefs();
 
         if (_statsRuntime != null)
+        {
+            _statsRuntime.ResetPassiveModules();
             _statsRuntime.SetConfig(config);
+        }
 
-        EnemyShooterLoadout loadout = ResolveSpawnLoadout(config);
+        // Apply before creating equipment, and before the final spawn-visibility gate.
+        // Re-enabling this instance does not reroll its identity.
+        _spawnLook.ApplyOnce(config, GetComponentInChildren<ShooterVisualRig>(true));
+
+        EnemyShooterLoadout loadout = ResolveSpawnLoadout(config, stageIndex);
+        loadout = RaidGearTableSO.ApplyToRaid(loadout, stageIndex, CurrentSector);
+#if UNITY_EDITOR
+        DebugSpawnLoadout = loadout;
+#endif
         ArmorItemSO armor = loadout.Armor;
 
         EquipWeaponLoadout(
@@ -271,10 +298,10 @@ public class EnemyShooter : Enemy
     }
 
     // Purpose: Resolves the spawn loadout needed by this component.
-    private static EnemyShooterLoadout ResolveSpawnLoadout(EnemyShooterConfigSO config)
+    private static EnemyShooterLoadout ResolveSpawnLoadout(EnemyShooterConfigSO config, int stageIndex)
     {
         return config != null
-            ? config.PickEnemyLoadout()
+            ? config.PickEnemyLoadout(stageIndex)
             : default;
     }
 }

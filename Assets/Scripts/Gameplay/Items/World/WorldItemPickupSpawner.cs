@@ -144,6 +144,14 @@ public sealed class WorldItemPickupSpawner : MonoBehaviour
     {
         pickup = null;
 
+        if (PassiveInstanceRuntime.NeedsRoll(item) && amount != 1)
+        {
+            pickup = null;
+            Debug.LogError("[Passive] 랜덤 패시브 바닥 배치는 자리당 1개로 설정하세요. 여러 개는 별도 슬롯으로 배치합니다.");
+            return false;
+        }
+        item = PassiveInstanceRuntime.Create(item);
+        if (item == null) { pickup = null; return false; }
         WorldItemPickupSpawner spawner = ResolveActiveSpawner();
 
         if (spawner == null)
@@ -227,6 +235,20 @@ public sealed class WorldItemPickupSpawner : MonoBehaviour
             : null;
     }
 
+    /// <summary>사전 배치 아이템. 알려진 섹터에 바로 소속시키고 드롭/포물선 연출을 사용하지 않습니다.</summary>
+    public static bool TrySpawnPlaced(SectorRuntime sector, ItemSO item,
+        RaidSectorContentSpawnSaveData state, out WorldItemPickup pickup)
+    {
+        pickup = null;
+        var spawner = ResolveActiveSpawner();
+        if (spawner == null || sector == null || state == null || item == null || item.WorldVisualPrefab == null) return false;
+        return spawner.TrySpawnInternal(item, state.amount, item is BulletSO ? state.amount : 1, 0f,
+            state.armorDurability, state.weaponDurability, state.weaponMaxDurability,
+            state.filterDurability, state.armorMaxDurability, state.filterMaxDurability,
+            sector.transform.TransformPoint(state.localPosition), sector.transform.rotation * state.localRotation,
+            out pickup, sector);
+    }
+
     // Purpose: Attempts to spawn internal and reports whether the request succeeded.
     private bool TrySpawnInternal(
         ItemSO item,
@@ -241,7 +263,8 @@ public sealed class WorldItemPickupSpawner : MonoBehaviour
         float gasMaskMaxFilterDurability,
         Vector3 position,
         Quaternion rotation,
-        out WorldItemPickup pickup)
+        out WorldItemPickup pickup,
+        SectorRuntime owner = null)
     {
         pickup = null;
 
@@ -257,8 +280,9 @@ public sealed class WorldItemPickupSpawner : MonoBehaviour
             return false;
         }
 
-        Transform fieldItemRoot = ResolveFieldItemRoot(position);
+        Transform fieldItemRoot = owner != null ? owner.WorldItemContainer : ResolveFieldItemRoot(position);
         pickup = Instantiate(_itemPickupPrefab, position, rotation, fieldItemRoot);
+        pickup.SetDiscoveryEligibility(false);
         pickup.Initialize(
             item,
             Mathf.Max(1, amount),

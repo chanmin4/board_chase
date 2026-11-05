@@ -45,7 +45,7 @@ public class ThrowableUsableItemSO : UsableItemSO
     [SerializeField, Min(0.01f)] private float _explosionRadius = 4f;
     [SerializeField, Min(0f)] private float _healthDamage;
     [SerializeField, Min(0f)] private float _infectionDamage;
-    [SerializeField, Min(0)] private int _penetrationClass;
+    [SerializeField, Min(0)] private float _penetrationClass;
     [SerializeField, Min(0f)] private float _armorHealthDurabilityLossMultiplier = 1f;
     [SerializeField, Min(0f)] private float _armorInfectionDurabilityLossMultiplier = 0.5f;
 
@@ -106,8 +106,10 @@ public class ThrowableUsableItemSO : UsableItemSO
     public float SoundInvestigateDelaySeconds => Mathf.Max(0f, _soundInvestigateDelaySeconds);
     public float ExplosionRadius => Mathf.Max(0.01f, _explosionRadius);
     public float HealthDamage => Mathf.Max(0f, _healthDamage);
+    [SerializeField, Min(0f)] private float _infectionExposureOnImpact;
+    public float InfectionExposureOnImpact => Mathf.Max(0f, _infectionExposureOnImpact);
     public float InfectionDamage => Mathf.Max(0f, _infectionDamage);
-    public int PenetrationClass => Mathf.Max(0, _penetrationClass);
+    public float PenetrationClass => Mathf.Max(0, _penetrationClass);
     public float ArmorHealthDurabilityLossMultiplier => Mathf.Max(0f, _armorHealthDurabilityLossMultiplier);
     public float ArmorInfectionDurabilityLossMultiplier => Mathf.Max(0f, _armorInfectionDurabilityLossMultiplier);
     public StatusEffectDefinitionSO ImpactStatusEffect => _impactStatusEffect;
@@ -132,15 +134,15 @@ public class ThrowableUsableItemSO : UsableItemSO
 
     // Purpose: Resolves the damage target mask needed by this component.
     public LayerMask ResolveDamageTargetMask(ShooterFaction faction) =>
-        faction == ShooterFaction.Enemy ? _enemyDamageTargetMask : _playerDamageTargetMask;
+        faction != ShooterFaction.Player ? _enemyDamageTargetMask : _playerDamageTargetMask;
 
     // Purpose: Resolves the mask render needed by this component.
     public MaskRenderSO ResolveMaskRender(ShooterFaction faction) =>
-        faction == ShooterFaction.Enemy ? _enemyMaskRender : _playerMaskRender;
+        faction != ShooterFaction.Player ? _enemyMaskRender : _playerMaskRender;
 
     // Purpose: Resolves the fallback paint channel needed by this component.
     public PaintChannel ResolveFallbackPaintChannel(ShooterFaction faction) =>
-        faction == ShooterFaction.Enemy ? _enemyFallbackChannel : _playerFallbackChannel;
+        faction != ShooterFaction.Player ? _enemyFallbackChannel : _playerFallbackChannel;
 
     // Purpose: Performs the should detonate immediately workflow for this component.
     public bool ShouldDetonateImmediately(Vector3 origin, Vector3 targetPoint)

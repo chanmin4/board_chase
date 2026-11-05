@@ -61,10 +61,11 @@ public sealed class SectorPrefabHierarchyTests
     [Test]
     public void FiveStagesUseSpecialRoomPoolsAndDedicatedBossVariants()
     {
-        var roles = new[] { RaidRoomRole.Armory, RaidRoomRole.Medical, RaidRoomRole.Vault, RaidRoomRole.Generator, RaidRoomRole.Hatch, RaidRoomRole.Extraction };
+        var roles = new[] { RaidRoomRole.Armory, RaidRoomRole.Medical, RaidRoomRole.Vault, RaidRoomRole.Generator, RaidRoomRole.Hatch };
         for (int n = 1; n <= 5; n++)
         {
             var stage = AssetDatabase.LoadAssetAtPath<StageDefinitionSO>($"Assets/ScriptableObject/GameScene/Stage/Stage{n}Definition.asset");
+            Assert.IsNull(stage.RaidRuntime.FindRoom(RaidRoomRole.Extraction), "Exits use ordinary rooms, not a dedicated preset.");
             foreach (var role in roles)
             {
                 var binding = stage.RaidRuntime.FindRoom(role);

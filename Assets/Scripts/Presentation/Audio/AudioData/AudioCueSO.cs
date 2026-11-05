@@ -17,6 +17,9 @@ public class AudioCueSO : DescriptionBaseSO
     [Tooltip("Content ownership category used by the Audio Cue Library for filtering and validation.")]
     [SerializeField] private AudioCueCategory _category = AudioCueCategory.Uncategorized;
 
+    [Tooltip("Fine-grained authoring category only. Empty lets the library browser suggest a group from the cue name; playback is unchanged.")]
+    [SerializeField] private string _subcategory;
+
     [Tooltip("Optional handoff note for audio/design. This is authoring data only and has no runtime behaviour.")]
     [SerializeField, TextArea(2, 5)] private string _authoringNotes;
 
@@ -34,6 +37,7 @@ public class AudioCueSO : DescriptionBaseSO
 
     public string CueId => _cueId;
     public AudioCueCategory Category => _category;
+    public string Subcategory => _subcategory;
     public string AuthoringNotes => _authoringNotes;
     public AudioConfigurationSO DefaultPlaybackConfiguration => _defaultPlaybackConfiguration;
     public float GainDb => _gainDb;

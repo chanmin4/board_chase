@@ -11,7 +11,7 @@ using VSplatter.StateMachine.ScriptableObjects;
 
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(0)]
-public class StateMachineGroupCoordinator : MonoBehaviour
+public class StateMachineGroupCoordinator : MonoBehaviour, IStateMachineHierarchySource
 {
     [Serializable]
     private struct ChildRule
@@ -141,12 +141,14 @@ public class StateMachineGroupCoordinator : MonoBehaviour
         if (child == null)
             return;
 
-        bool wasEnabled = child.enabled;
+        StateMachineChildGate.Apply(child, shouldEnable, rule.resetOnEnable);
+    }
 
-        if (wasEnabled != shouldEnable)
-            child.enabled = shouldEnable;
-
-        if (!wasEnabled && shouldEnable && rule.resetOnEnable)
-            child.ResetToInitialState(true, false);
+    public void GetHierarchyBindings(System.Collections.Generic.List<StateMachineChildBinding> bindings)
+    {
+        if (_childRules == null) return;
+        foreach (var rule in _childRules)
+            bindings.Add(new StateMachineChildBinding(_parentStateMachine, rule.parentState, rule.childStateMachine,
+                rule.enableChild, rule.resetOnEnable, _defaultChildEnabled));
     }
 }

@@ -122,12 +122,30 @@ public class PlayerTooltipUI : MonoBehaviour
         string description = item.Description != null && !item.Description.IsEmpty
             ? item.Description.GetLocalizedString()
             : string.Empty;
+        if (item is InfectionCureItemSO ampoule)
+            description += ampoule.IsSyringe ? $"\n최대 HP 잠식 {ampoule.InfectionRecoveryAmount:0.#} 복구. 현재 HP는 별도 치료." :
+                $"\n{ampoule.InfectionRecoveryDurationSeconds:0.#}초간 감염 유입 ×{ampoule.ExposureGainMultiplier:0.##}, 회복 대기 후 원형 게이지 +{ampoule.InfectionRecoveryPerSecond:0.#}/초 회복. 최대 HP 잠식 회복 불가.";
+        else if (item is PassiveItemSO passive)
+        {
+            description += $"\n{(passive.Category == PassiveCategory.Combat ? "전투" : "생존")} · 원정 한정";
+            description += passive.DisabledForRaid ? "\n해제됨 · 재장착/분해 불가 · 귀환 시 소멸" :
+                passive.EverEquipped ? "\n귀속 · 타인 획득/분해 불가 · 해제하면 재사용 불가 · 귀환 시 소멸" : "\n미장착 · 반입/시간제 분해 가능 · 판매 불가";
+            foreach (var stat in passive.StatModifiers ?? System.Array.Empty<PlayerStatModifier>())
+                if (ShooterStatPolicy.IsPassiveStat(stat.stat) && stat.value != 0f)
+                {
+                    var applied = PassiveModuleRulesSO.Active != null ? PassiveModuleRulesSO.Active.ApplyStrength(passive, stat) : stat;
+                    description += applied.stat == PlayerStatId.ExperienceGainBonus ? $"\n획득 경험치: +{applied.value*100:0.#}%" : $"\n{stat.stat}: {applied.value:+0.###;-0.###;0}";
+                }
+        }
+        else if (item is ConsumableItemSO medicine && medicine.InfectionSuppressionSeconds > 0f)
+            description += $"\n{medicine.InfectionSuppressionSeconds:0}초간 바이러스 증식을 억제합니다. 감염 수치를 낮추지는 않습니다.";
 
+        if (item is ValuableItemSO valuable) description = "물품 분류 · " + valuable.ValuableCategoryLabel + "\n" + description;
         ShowText(
             InventoryItemDisplayUtility.ResolveItemName(item),
             description,
             string.Empty,
-            $"{item.Rarity} / {item.Kind}",
+            item is PassiveItemSO ? $"{item.Rarity} / 원정 패시브 · 슬롯 해금 Lv.{GameProgressionRuntime.Level}" : $"{item.Rarity} / {item.Kind} / 필요 Lv.{ItemUsageRulesSO.Active?.usage.Required(item)??1} · 현재 Lv.{GameProgressionRuntime.Level}",
             anchor,
             side,
             gap);

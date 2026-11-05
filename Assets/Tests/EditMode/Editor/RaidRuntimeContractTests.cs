@@ -133,6 +133,16 @@ public sealed class RaidRuntimeContractTests
     }
 
     [Test]
+    public void UninitializedShortcutRejectsWithoutMovingOrThrowing()
+    {
+        var raid = Go().AddComponent<RaidRuntime>();
+        var actor = Go(); actor.SetActive(false);
+        var inventory = actor.AddComponent<PlayerInventoryRuntime>();
+        Assert.IsFalse(raid.TryReturnThroughShortcut(inventory));
+        Assert.IsNull(actor.transform.parent);
+    }
+
+    [Test]
     public void GeneratorRejectsNoBatteryConsumesOnceAndRestoresPower()
     {
         var definition = Asset<StageDefinitionSO>();

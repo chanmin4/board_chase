@@ -21,7 +21,7 @@ public sealed class EquipmentInventoryGasMaskSlotUI : EquipmentInventorySlotUI
     protected override void Awake()
     {
         base.Awake();
-        SetRuntimeSlotTypeOverride("HEAD");
+        SetRuntimeSlotTypeOverride("감염방호");
     }
 
     // Purpose: Binds the equipped gas mask and its current filter condition.

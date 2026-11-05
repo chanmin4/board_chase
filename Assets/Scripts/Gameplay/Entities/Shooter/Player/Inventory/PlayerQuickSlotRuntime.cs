@@ -22,6 +22,10 @@ public sealed class PlayerQuickSlotBinding
     [SerializeField, Min(0)] private int _sourceSlotIndex;
     [SerializeField] private UsableItemSO _usableItem;
     [SerializeField, Min(0)] private int _amount;
+    [SerializeField] private float _currentDurability = -1f;
+    [SerializeField] private float _maxDurability = -1f;
+    public float CurrentDurability => _currentDurability;
+    public float MaxDurability => _maxDurability;
 
     public PlayerQuickSlotBindingKind Kind => _kind;
     public int SourceSlotIndex => Mathf.Max(0, _sourceSlotIndex);
@@ -63,16 +67,33 @@ public sealed class PlayerQuickSlotBinding
         _amount = _usableItem != null
             ? Mathf.Max(0, amount)
             : 0;
+        _currentDurability = _maxDurability = _usableItem is ConsumableItemSO medical && medical.UsesDurability
+            ? medical.MaxDurability : -1f;
     }
 
     // Purpose: Updates the usable state.
-    public void SetUsable(UsableItemSO usableItem, int amount)
+    public void SetUsable(UsableItemSO usableItem, int amount, float currentDurability = -1f, float maxDurability = -1f)
     {
         Set(
             PlayerQuickSlotBindingKind.Usable,
             0,
             usableItem,
             amount);
+        if (usableItem is ConsumableItemSO medical && medical.UsesDurability)
+        {
+            _maxDurability = maxDurability > 0f ? Mathf.Min(maxDurability, medical.MaxDurability) : medical.MaxDurability;
+            _currentDurability = Mathf.Clamp(currentDurability >= 0f ? currentDurability : _maxDurability, 0f, _maxDurability);
+        }
+    }
+
+    public bool SpendDurability(ConsumableItemSO medical)
+    {
+        if (_usableItem != medical || _amount <= 0 || !medical.UsesDurability) return false;
+        float current = _currentDurability >= 0f ? _currentDurability : medical.MaxDurability;
+        if (current <= 0f) return false;
+        _currentDurability = Mathf.Max(0f, current - medical.DurabilityCostPerUse);
+        if (_currentDurability <= 0f) { Remove(1); if (_amount <= 0) Clear(); }
+        return true;
     }
 
     // Purpose: Removes the requested remove from this component.
@@ -87,6 +108,8 @@ public sealed class PlayerQuickSlotBinding
         }
 
         _amount -= amount;
+        if (_amount > 0 && _usableItem is ConsumableItemSO medical && medical.UsesDurability)
+            _currentDurability = _maxDurability = medical.MaxDurability;
         return true;
     }
 
@@ -97,6 +120,7 @@ public sealed class PlayerQuickSlotBinding
         _sourceSlotIndex = 0;
         _usableItem = null;
         _amount = 0;
+        _currentDurability = _maxDurability = -1f;
     }
 }
 
@@ -140,9 +164,21 @@ public readonly struct PlayerQuickSlotSnapshot
 /// and are not owned by this runtime.
 /// </summary>
 [DisallowMultipleComponent]
-public class PlayerQuickSlotRuntime : MonoBehaviour
+public partial class PlayerQuickSlotRuntime : MonoBehaviour
 {
     public const int SlotCount = 5;
+    public float CarriedUsableWeightKg
+    {
+        get
+        {
+            float total = 0f;
+            if (_bindings != null)
+                foreach (var binding in _bindings)
+                    if (binding != null && binding.Kind == PlayerQuickSlotBindingKind.Usable)
+                        total += binding.UsableItem?.WeightForAmount(binding.Amount) ?? 0f;
+            return total;
+        }
+    }
 
     [Header("Refs")]
     [SerializeField] private PlayerInventoryRuntime _inventoryRuntime;
@@ -367,6 +403,54 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
         return true;
     }
 
+    public int GetUsableItemAmount(UsableItemSO item)
+    {
+        NormalizeBindings();
+        int total = 0;
+        foreach (var binding in _bindings)
+            if (binding.Kind == PlayerQuickSlotBindingKind.Usable && binding.UsableItem == item)
+                total += binding.Amount;
+        return total;
+    }
+
+    public bool TryConsumeUsableItemAmount(UsableItemSO item, int amount, out string message, bool notify = true)
+    {
+        if (item == null || amount <= 0 || GetUsableItemAmount(item) < amount)
+        { message = "약물 수량이 부족합니다."; return false; }
+        int remaining = amount;
+        for (int i = 0; i < _bindings.Length && remaining > 0; i++)
+        {
+            var binding = _bindings[i];
+            if (binding.Kind != PlayerQuickSlotBindingKind.Usable || binding.UsableItem != item) continue;
+            int taken = Mathf.Min(remaining, binding.Amount);
+            binding.Remove(taken);
+            remaining -= taken;
+            if (binding.Amount <= 0)
+            {
+                binding.Clear();
+                if (_activeQuickSlotIndex == i) _activeQuickSlotIndex = -1;
+            }
+        }
+        if (notify) PublishMedicalItemChange();
+        message = null;
+        return true;
+    }
+    public void PublishMedicalItemChange()
+    {
+        RefreshSelectionVisual();
+        OnChanged?.Invoke();
+    }
+
+    public bool TrySpendConsumableDurability(ConsumableItemSO item, out string message)
+    {
+        NormalizeBindings();
+        if (!IsValidSlot(_activeQuickSlotIndex) || !_bindings[_activeQuickSlotIndex].SpendDurability(item))
+        { message = "The selected usable item has no condition left."; return false; }
+        if (_bindings[_activeQuickSlotIndex].Amount <= 0) _activeQuickSlotIndex = -1;
+        RefreshSelectionVisual(); OnChanged?.Invoke();
+        message = "내구도 소모"; return true;
+    }
+
     // Purpose: Attempts to get snapshot and reports whether the request succeeded.
     public bool TryGetSnapshot(
         int quickSlotIndex,
@@ -426,6 +510,11 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
             case PlayerQuickSlotBindingKind.Usable:
                 item = binding.UsableItem;
                 amount = binding.Amount;
+                if (item is ConsumableItemSO { UsesDurability: true })
+                {
+                    currentDurability = binding.CurrentDurability;
+                    maxDurability = binding.MaxDurability;
+                }
                 break;
         }
 
@@ -484,7 +573,7 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
         NormalizeBindings();
         addedAmount = 0;
 
-        if (usableItem == null || amount <= 0)
+        if (usableItem == null || amount <= 0 || usableItem is ConsumableItemSO { UsesDurability: true })
         {
             message = "Invalid usable stack transfer.";
             return false;
@@ -644,7 +733,8 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
                 _bindings[quickSlotIndex];
 
             if (target.Kind == PlayerQuickSlotBindingKind.Usable &&
-                IsSameUsableIdentity(target.UsableItem, usable))
+                IsSameUsableIdentity(target.UsableItem, usable) &&
+                usable is not ConsumableItemSO { UsesDurability: true })
             {
                 int maxStack = Mathf.Max(1, usable.MaxStack);
                 int availableSpace = Mathf.Max(0, maxStack - target.Amount);
@@ -723,7 +813,9 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
 
             target.SetUsable(
                 movedUsable,
-                movedFromInventory.amount);
+                movedFromInventory.amount,
+                movedFromInventory.weaponCurrentDurability,
+                movedFromInventory.weaponMaxDurability);
             _autoBindPassCompleted = true;
             RefreshSelectionVisual();
             OnChanged?.Invoke();
@@ -873,7 +965,9 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
 
                     binding.SetUsable(
                         displacedUsable,
-                        displaced.amount);
+                        displaced.amount,
+                        displaced.weaponCurrentDurability,
+                        displaced.weaponMaxDurability);
                 }
                 else
                 {
@@ -1460,7 +1554,9 @@ public class PlayerQuickSlotRuntime : MonoBehaviour
             ? new PlayerInventoryRemovedStack(
                 binding.UsableItem,
                 binding.Amount,
-                -1f)
+                -1f,
+                binding.CurrentDurability,
+                binding.MaxDurability)
             : default;
     }
 

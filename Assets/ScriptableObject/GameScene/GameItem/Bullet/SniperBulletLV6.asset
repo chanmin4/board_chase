@@ -32,10 +32,11 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 0
+  _rarity: 3
   _purchasePrice: 10
   _worldVisualPrefab: {fileID: 7611937310320503209, guid: 3f232e3ad45c058280235e989901acf0, type: 3}
-  _maxStack: 120
+  _maxStack: 60
+  _maxOwnedAmount: 0
   bulletId: sniperbullet_lv6
   displayName: SniperBulletLV6
   projectilePrefab: {fileID: 7611937310320503209, guid: 3f232e3ad45c058280235e989901acf0, type: 3}
@@ -65,7 +66,6 @@ MonoBehaviour:
   _tier: 6
   _healthDamage: 30
   _infectionDamage: 10
-  _markAmount: 25
   references:
     version: 2
     RefIds: []

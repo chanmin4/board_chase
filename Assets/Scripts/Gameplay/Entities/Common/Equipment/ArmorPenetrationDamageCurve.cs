@@ -22,7 +22,7 @@ public static class ArmorPenetrationDamageCurve
     /// <c>Armor Class +0.5</c> affect the same curve without rounding.
     /// Item armor and bullet penetration authoring remain integer classes.
     /// </summary>
-    public static float ResolveMinimumMultiplier(float effectiveArmorClass, int penetrationClass)
+    public static float ResolveMinimumMultiplier(float effectiveArmorClass, float penetrationClass)
     {
         float classGap = Mathf.Max(0f, effectiveArmorClass - Mathf.Max(0, penetrationClass));
         if (classGap <= 0f)
@@ -34,7 +34,7 @@ public static class ArmorPenetrationDamageCurve
     }
 
     // Purpose: Rolls the multiplier result from its configured probabilities.
-    public static float RollMultiplier(float effectiveArmorClass, int penetrationClass)
+    public static float RollMultiplier(float effectiveArmorClass, float penetrationClass)
     {
         float minimumMultiplier = ResolveMinimumMultiplier(
             effectiveArmorClass,

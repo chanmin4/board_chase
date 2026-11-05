@@ -3,15 +3,21 @@
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af9ca6116795d5e4fae7eafcae9330ef, type: 3}
   m_Name: Item_Stage1_AmmoCache
   m_EditorClassIdentifier: 
   _questId: item_stage1_ammo_cache
   _displayName: Item 01 - Ammo Cache
-  _description: Placeholder ItemNPC quest after Stage 1. Replace the item objective and unlock reward.
+  _description: Placeholder ItemNPC quest after Stage 1. Replace the item objective
+    and unlock reward.
   _branch: 1
-  _prerequisites:
-  - {fileID: 11400000, guid: a100c8d1e0cf4ae69e14d0e7a4b12c01, type: 2}
+  _prerequisites: []
   _objectives:
   - _objectiveType: 2
     _targetConfig: {fileID: 0}
@@ -23,3 +29,4 @@ MonoBehaviour:
   _rewards: []
   _persistentRewardSummary: TODO - Item unlock reward for Stage 1.
   _completionAudioCue: {fileID: 0}
+  _acceptedAudioCue: {fileID: 0}

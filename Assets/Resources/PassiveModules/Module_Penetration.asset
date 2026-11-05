@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99ca85af63a94240aa97cd468d889997, type: 3}
+  m_Name: 관통 증강
+  m_EditorClassIdentifier:
+  _previewImage: {fileID: 21300000, guid: 121110ca2db9e7a42a01255a1e2a7b0c, type: 3}
+  _guid: c0261026000000000000000000000101
+  _rarity: 0
+  _purchasePrice: 0
+  _maxStack: 1
+  _maxOwnedAmount: 0
+  _effectGroup: Penetration
+  _category: 0
+  _randomStatsEnabled: 1
+  _allowNumericReroll: 1
+  _dismantlePartAmount: 1
+  _allowDuplicatePickup: 1
+  _allowDuplicateEquip: 0
+  _effectStrength: 1
+  _statModifiers: []
+  _featureFlags: []
+  _rarityRolls:
+  - rarity: 0
+    stats:
+    - stat: 34
+      minimum: 0.05
+      maximum: 0.25
+      type: 0
+      step: 0.05
+    - stat: 0
+      minimum: -5
+      maximum: -5
+      type: 1
+      step: 0
+  - rarity: 1
+    stats:
+    - stat: 34
+      minimum: 0.3
+      maximum: 0.5
+      type: 0
+      step: 0.05
+    - stat: 0
+      minimum: -10
+      maximum: -10
+      type: 1
+      step: 0
+  - rarity: 3
+    stats:
+    - stat: 34
+      minimum: 0.55
+      maximum: 0.75
+      type: 0
+      step: 0.05
+    - stat: 0
+      minimum: -15
+      maximum: -15
+      type: 1
+      step: 0
+  - rarity: 2
+    stats:
+    - stat: 34
+      minimum: 0.8
+      maximum: 1
+      type: 0
+      step: 0.05
+    - stat: 0
+      minimum: -20
+      maximum: -20
+      type: 1
+      step: 0

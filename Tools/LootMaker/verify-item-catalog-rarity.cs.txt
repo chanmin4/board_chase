@@ -1,0 +1,162 @@
+// Manual read-only probe: temporarily place in Assets/Editor and Refresh, then remove.
+// Uses only in-memory items and an isolated window. Change Report for a deliberate new run.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
+
+[InitializeOnLoad]
+internal static class ItemCatalogRarityVerificationOnce
+{
+    private const string Report = "Library/MakerCategoryTree-20260929/item-rarity-v1.txt";
+    private static readonly Dictionary<string, (bool exists, bool value)> Prefs = new();
+    private static readonly Dictionary<string, Rect> Rects = new();
+    private static readonly List<string> Lines = new();
+    private static readonly List<ItemSO> Items = new();
+    private static ItemMakerWindow _window;
+    private static EditorWindow _previousWindow;
+    private static Action<EditorWindow, string, Rect> _previousObserver;
+    private static int _phase, _frames, _passed;
+    private static double _start;
+    private static ItemSO _selected;
+    private static readonly PlayerShopItemRarity[] Order = { PlayerShopItemRarity.Normal, PlayerShopItemRarity.Rare, PlayerShopItemRarity.Unique, PlayerShopItemRarity.Legendary };
+    static ItemCatalogRarityVerificationOnce() { EditorApplication.delayCall += Start; }
+    private static object Read(string field) => typeof(ItemMakerWindow).GetField(field, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(_window);
+    private static void Write(string field, object value) => typeof(ItemMakerWindow).GetField(field, BindingFlags.NonPublic | BindingFlags.Instance).SetValue(_window, value);
+    private static object Call(string method, params object[] args) => typeof(ItemMakerWindow).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(_window, args);
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Start; return; }
+        try
+        {
+            _start = EditorApplication.timeSinceStartup;
+            _previousWindow = EditorWindow.focusedWindow;
+            _previousObserver = MakerCategoryTreeUi.ControlObserved;
+            foreach (var rarity in Order)
+            {
+                string key = ItemMakerCatalogView.PreferenceKey(rarity);
+                Prefs[key] = (EditorPrefs.HasKey(key), EditorPrefs.GetBool(key));
+                EditorPrefs.DeleteKey(key); // Test actual default (expanded), then restore in Finish.
+            }
+            foreach (Type fixtureType in new[] { typeof(ItemMakerCatalogViewTests), typeof(MakerCategoryTreeTests) })
+                foreach (var test in fixtureType.GetMethods().Where(m => m.IsDefined(typeof(NUnit.Framework.TestAttribute))))
+                {
+                    object fixture = Activator.CreateInstance(fixtureType);
+                    try { fixtureType.GetMethod("Setup").Invoke(fixture, null); test.Invoke(fixture, null); Check(true, test.Name); }
+                    finally { fixtureType.GetMethod("Cleanup").Invoke(fixture, null); }
+                }
+            Add("zulu", PlayerShopItemRarity.Normal); Add("Marker", PlayerShopItemRarity.Normal); Add("alpha", PlayerShopItemRarity.Normal);
+            Add("Marker", PlayerShopItemRarity.Rare); Add("Beta", PlayerShopItemRarity.Rare);
+            Add("Marker", PlayerShopItemRarity.Unique); Add("Marker", PlayerShopItemRarity.Legendary);
+            _selected = Items[1];
+            MakerCategoryTreeUi.ControlObserved = (owner, id, rect) =>
+            {
+                if (owner != _window) return;
+                if (id == "Begin") Rects.Clear(); else Rects[id] = rect;
+            };
+            Open();
+            Call("SelectItem", _selected, false); // No Project selection mutation.
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Add(string name, PlayerShopItemRarity rarity)
+    {
+        ItemSO item = ScriptableObject.CreateInstance<ItemSO>();
+        item.name = name;
+        using var so = new SerializedObject(item);
+        so.FindProperty("_rarity").intValue = (int)rarity;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Items.Add(item);
+    }
+    private static void Open()
+    {
+        Rects.Clear(); _frames = 0;
+        _window = ScriptableObject.CreateInstance<ItemMakerWindow>();
+        _window.titleContent = new GUIContent("Rarity UI verification (read-only)");
+        var catalog = (List<ItemSO>)Read("_items"); catalog.Clear(); catalog.AddRange(Items);
+        _window.position = new Rect(90, 80, 1380, 900);
+        _window.ShowUtility();
+    }
+    private static void Click(string id)
+    {
+        Rect rect = Rects["ItemMaker/Rarity/" + id];
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, clickCount = 1, mousePosition = rect.center });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, clickCount = 1, mousePosition = rect.center });
+    }
+    private static int CardCount => Rects.Keys.Count(k => k.StartsWith("ItemMaker/Card/"));
+    private static void Check(bool condition, string label)
+    {
+        if (!condition) throw new Exception("phase=" + _phase + ": " + label);
+        Lines.Add("PASS " + label); _passed++;
+    }
+    private static void Tick()
+    {
+        try
+        {
+            if (_window == null) throw new Exception("Window closed early");
+            if (EditorApplication.timeSinceStartup - _start > 120) throw new Exception("Timed out");
+            _window.Repaint();
+            if (++_frames < 12 || !Rects.ContainsKey("ItemMaker/Rarity/CollapseAll")) return;
+            _frames = 0;
+            switch (_phase++)
+            {
+                case 0:
+                    Check(CardCount == 7, "default expanded groups render all cards");
+                    float[] ys = Order.Select(r => Rects["ItemMaker/Rarity/" + r + "/toggle"].y).ToArray();
+                    Check(ys.Zip(ys.Skip(1), (a,b) => a < b).All(x => x), "headers displayed Normal > Rare > Unique > Legendary");
+                    var sorted = (List<ItemSO>)Call("GetFilteredItems");
+                    Check(string.Join(",", sorted.Take(3).Select(i => i.name)) == "alpha,Marker,zulu", "actual window sorts names within rarity");
+                    Rect[] cards = sorted.Take(3).Select(i => Rects["ItemMaker/Card/" + i.GetInstanceID()]).ToArray();
+                    Check(cards.Zip(cards.Skip(1), (a,b) => b.y > a.y || (Mathf.Approximately(a.y,b.y) && b.x > a.x)).All(x => x), "normal cards flow left-to-right then next row in sorted order");
+                    Click("CollapseAll"); break;
+                case 1:
+                    Check(CardCount == 0, "Collapse All hides all cards");
+                    Check(Order.All(r => Rects.ContainsKey("ItemMaker/Rarity/" + r + "/toggle")), "collapsed headers remain available");
+                    Check((ItemSO)Read("_selectedItem") == _selected && ((ItemMakerSelection)Read("_selection")).Active == _selected, "collapse preserves workbench and selection");
+                    Click("Rare/toggle"); break;
+                case 2:
+                    Check(CardCount == 2 && Items.Where(i => i.Rarity == PlayerShopItemRarity.Rare).All(i => Rects.ContainsKey("ItemMaker/Card/" + i.GetInstanceID())), "rarity header expands only that group");
+                    Check(ItemMakerCatalogView.IsExpanded(PlayerShopItemRarity.Rare) && !ItemMakerCatalogView.IsExpanded(PlayerShopItemRarity.Normal), "independent group state persisted");
+                    _window.Close(); Open(); break;
+                case 3:
+                    Check(CardCount == 2 && !ItemMakerCatalogView.IsExpanded(PlayerShopItemRarity.Normal), "group foldouts restored on reopen");
+                    Click("ExpandAll"); break;
+                case 4:
+                    Check(CardCount == 7, "Expand All restores every group");
+                    Write("_search", "Marker"); break;
+                case 5:
+                    Check(CardCount == 4 && ((List<ItemSO>)Call("GetFilteredItems")).All(i => i.name == "Marker"), "search filters within grouped catalog");
+                    Write("_search", "__NoMatch__"); break;
+                case 6:
+                    Check(CardCount == 0 && !Rects.Keys.Any(k => k.EndsWith("/toggle") && k.StartsWith("ItemMaker/Rarity/")), "empty search shows no empty rarity sections");
+                    Write("_search", "");
+                    using (var so = new SerializedObject(Items[0])) { so.FindProperty("_rarity").intValue = (int)PlayerShopItemRarity.Legendary; so.ApplyModifiedPropertiesWithoutUndo(); }
+                    break;
+                case 7:
+                    var after = (List<ItemSO>)Call("GetFilteredItems");
+                    Check(after.Last() == Items[0], "live rarity edit moves card to correct group without Refresh");
+                    Check(CardCount == 7, "rarity edit loses no cards");
+                    Finish("COMPLETE: in-memory items only; no real item, scene, prefab, or Project selection changes."); break;
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        MakerCategoryTreeUi.ControlObserved = _previousObserver;
+        if (_window != null) _window.Close();
+        foreach (var pair in Prefs)
+            if (pair.Value.exists) EditorPrefs.SetBool(pair.Key, pair.Value.value); else EditorPrefs.DeleteKey(pair.Key);
+        foreach (ItemSO item in Items) UnityEngine.Object.DestroyImmediate(item);
+        Items.Clear();
+        if (_previousWindow != null) _previousWindow.Focus();
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Path.GetDirectoryName(Report)); File.WriteAllLines(Report, Lines);
+    }
+}

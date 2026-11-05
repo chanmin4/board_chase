@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c825957fa40f4605a38749c33c23cdcb, type: 3}
+  m_Name: Bleeding
+  m_EditorClassIdentifier:
+  _id: bleeding_persistent
+  _icon: {fileID: 0}
+  _iconKind: 0
+  _iconColor: {r: 0.9, g: 0.15, b: 0.15, a: 1}
+  _polarity: 0
+  _description: "출혈: 붕대로 치료하기 전까지 지속됩니다. 스택당 초당 HP 0.5 소모 (테스트값)."
+  _durationSeconds: 1
+  _persistentStacks: 1
+  _maximumStacks: 10
+  _damagePerStackPerSecond: 0.5
+  _damageTickInterval: 1
+  _isBleeding: 1
+  _removeOnFriendlyPaint: 0
+  _modifiers: []
+  _blocksActions: 0
+  _suppressesSoundIndicators: 0
+  _isInjury: 0
+  _suppressesInjuryApplications: 0
+  _armorClassDelta: 0
+  _worldVfxPrefab: {fileID: 0}

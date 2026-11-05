@@ -53,9 +53,19 @@ public sealed class BoardChaseAuthoringHubWindow : EditorWindow
             "Bind an enemy config or loot object and author its shared rarity pool. Automatic shares rebalance themselves.",
             LootProgressionEditorWindow.Open);
         DrawToolCard(
+            "Save Maker",
+            "Save / persistence contributor",
+            "Inspect device settings, permanent progress and the current run; configure save paths or explicitly back up, restore and reset local saves.",
+            SaveInspectorWindow.Open);
+        DrawToolCard(
+            "Game System Tool",
+            "캐릭터 능력치 / 상태이상 데이터 편집",
+            "플레이어·적 스탯, 상태이상, 경험치·레벨·사용 제한, 감염·이동·분해 규칙을 한 곳에서 직접 편집합니다.",
+            CharacterStatusMakerWindow.Open);
+        DrawToolCard(
             "Shooter Customize Station",
             "Character visual contributor",
-            "Edit one visual look in a scene preview, save it to ShooterCustomizeSO, then export a reusable visual only if needed.",
+            "Choose Player, NPC, enemy or Boss; edit visual presets in 3D and save a fixed look or a weighted spawn appearance pool. Gameplay equipment stays separate.",
             ShooterCustomizeStationWindow.Open);
 
         EditorGUILayout.Space(8f);

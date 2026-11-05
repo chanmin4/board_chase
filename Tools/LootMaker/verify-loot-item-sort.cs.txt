@@ -1,0 +1,121 @@
+// Archived probe: copy deliberately to Assets/Editor with a fresh report path to rerun, then remove.
+// Only in-memory test data is modified; no real tables/items/scenes are saved.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class LootItemSortVerificationOnce
+{
+    private const string Report = "Library/LootMakerItemSort-20260929/result-v1.txt";
+    private static readonly List<string> Lines = new();
+    private static readonly List<Object> Temporary = new();
+    private static readonly Dictionary<string, Rect> Controls = new();
+    private static LootProgressionEditorWindow _window;
+    private static EditorWindow _previous;
+    private static LootTableSO _table;
+    private static LootRarityTier _normal;
+    private static string _before;
+    private static int _phase, _frames, _passed;
+    private static double _started;
+    static LootItemSortVerificationOnce() { EditorApplication.delayCall += Start; }
+    private static T Temp<T>() where T : ScriptableObject
+    { var obj = ScriptableObject.CreateInstance<T>(); Temporary.Add(obj); return obj; }
+    private static LootItemEntry Item<T>(string name) where T : ItemSO
+    { var item = Temp<T>(); item.name = name; return new LootItemEntry { item = item, minAmount = 1, maxAmount = 1 }; }
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Start; return; }
+        try
+        {
+            _started = EditorApplication.timeSinceStartup;
+            foreach (var test in typeof(LootMakerItemViewTests).GetMethods().Where(m => m.IsDefined(typeof(TestAttribute))))
+            {
+                var fixture = new LootMakerItemViewTests();
+                try { test.Invoke(fixture, null); Check(true, test.Name); }
+                finally { fixture.Cleanup(); }
+            }
+            _table = Temp<LootTableSO>(); _table.name = "Sort verification only";
+            _normal = _table.Pool.FindTier(PlayerShopItemRarity.Normal);
+            _normal.items.Add(Item<PassiveItemSO>("A passive"));
+            _normal.items.Add(Item<ArmorItemSO>("Z armor"));
+            _normal.items.Add(Item<ArmorItemSO>("A armor"));
+            var box = Temp<LootObjectSO>(); box.name = "Loot sort test"; box.AssignOwnLootTable(_table);
+            _before = JsonUtility.ToJson(_table.Pool);
+            _previous = EditorWindow.focusedWindow;
+            _window = ScriptableObject.CreateInstance<LootProgressionEditorWindow>();
+            _window.titleContent = new GUIContent("Loot sort verification");
+            _window.position = new Rect(50, 40, 1260, 960);
+            typeof(LootProgressionEditorWindow).GetField("_containerCatalog", BindingFlags.NonPublic | BindingFlags.Instance)
+                .SetValue(_window, new List<LootObjectSO> { box });
+            typeof(LootProgressionEditorWindow).GetMethod("SelectContainer", BindingFlags.NonPublic | BindingFlags.Instance)
+                .Invoke(_window, new object[] { box });
+            _window.GuiControlObserved = (id, rect) => { if (id == "LootItems/Begin") Controls.Clear(); else Controls[id] = rect; };
+            _window.ShowUtility();
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Click(string id)
+    {
+        var rect = Controls[id];
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, clickCount = 1, mousePosition = rect.center });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, clickCount = 1, mousePosition = rect.center });
+    }
+    private static void Tick()
+    {
+        try
+        {
+            if (_window == null) throw new Exception("Verification window closed early.");
+            if (EditorApplication.timeSinceStartup - _started > 90) throw new Exception("Timed out.");
+            _window.Repaint();
+            if (++_frames < 12 || !Controls.ContainsKey("LootItems/Tier/Normal")) return;
+            _frames = 0;
+            switch (_phase++)
+            {
+                case 0:
+                    var rarities = new[] { "Normal", "Rare", "Unique", "Legendary" };
+                    var positions = rarities.Select(r => Controls["LootItems/Tier/" + r].y).ToArray();
+                    Check(positions.Zip(positions.Skip(1), (a,b) => a < b).All(x => x), "rarity headers keep Normal/Rare/Unique/Legendary order");
+                    Check(Controls["LootItems/Row/Normal/2"].y < Controls["LootItems/Row/Normal/1"].y &&
+                        Controls["LootItems/Row/Normal/1"].y < Controls["LootItems/Row/Normal/0"].y, "actual rows render Armor A/Z then Passive A");
+                    Check(Controls.Keys.Count(k => k.StartsWith("LootItems/Category/Normal/")) == 2, "two item-category headings rendered");
+                    Check(JsonUtility.ToJson(_table.Pool) == _before, "drawing preserves source order, quantities and probabilities");
+                    Click("LootItems/Tier/Normal"); break;
+                case 1:
+                    Check(!Controls.Keys.Any(k => k.StartsWith("LootItems/Row/Normal/")), "rarity folding hides sorted rows");
+                    Click("LootItems/Tier/Normal"); break;
+                case 2:
+                    Check(Controls.ContainsKey("LootItems/Delete/Normal/2"), "expanding restores the row actions");
+                    Undo.IncrementCurrentGroup();
+                    Click("LootItems/Delete/Normal/2"); break;
+                case 3:
+                    Check(_normal.items.Count == 2 && _normal.items[0].item.name == "A passive" && _normal.items[1].item.name == "Z armor",
+                        "delete on first displayed row removes only A armor, not first source entry");
+                    Finish("COMPLETE: only in-memory test data changed. No real items, tables, prefabs or scenes were modified/saved."); break;
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Check(bool value, string label)
+    { if (!value) throw new Exception(label); Lines.Add("PASS " + label); _passed++; }
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        if (_window != null) _window.Close();
+        foreach (var obj in Temporary) if (obj != null) { Undo.ClearUndo(obj); Object.DestroyImmediate(obj); }
+        Temporary.Clear();
+        if (_previous != null) _previous.Focus();
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Path.GetDirectoryName(Report)); File.WriteAllLines(Report, Lines);
+        if (result.StartsWith("COMPLETE")) Debug.Log("[Loot item sorting] " + _passed + " checks passed. " + Report);
+        else Debug.LogError("[Loot item sorting] " + result);
+    }
+}

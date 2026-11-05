@@ -24,6 +24,26 @@ public enum EnemyShooterTacticalIntent
 public static class EnemyShooterTacticalIntentSelector
 {
     private static readonly Dictionary<int, EnemyShooterCombatController> DuelHolders = new();
+    private static readonly Dictionary<int, List<EnemyShooterCombatController>> FlankSlots = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeSlots() { DuelHolders.Clear(); FlankSlots.Clear(); }
+
+    // Stable slots: shooters who have not entered Attack yet used to all inherit
+    // strafeSign=+1, choosing exactly the same first flank destination.
+    public static int ClaimFlankSlot(EnemyShooterCombatController requester, Transform target)
+    {
+        if (requester == null || target == null) return 0;
+        int key = target.GetInstanceID();
+        if (!FlankSlots.TryGetValue(key, out var slots))
+            FlankSlots[key] = slots = new List<EnemyShooterCombatController>();
+        int existing = slots.IndexOf(requester);
+        if (existing >= 0) return existing;
+        for (int i = 0; i < slots.Count; i++)
+            if (slots[i] == null) { slots[i] = requester; return i; }
+        slots.Add(requester);
+        return slots.Count - 1;
+    }
 
     // Purpose: Attempts to claim duel holder and reports whether the request succeeded.
     public static bool TryClaimDuelHolder(
@@ -107,6 +127,19 @@ public static class EnemyShooterTacticalIntentSelector
 
         if (found)
             DuelHolders.Remove(targetIdToRelease);
+        int emptyKey = 0;
+        bool empty = false;
+        foreach (var pair in FlankSlots)
+        {
+            int index = pair.Value.IndexOf(requester);
+            if (index < 0) continue;
+            pair.Value[index] = null;
+            empty = true;
+            foreach (var slot in pair.Value) if (slot != null) { empty = false; break; }
+            emptyKey = pair.Key;
+            break;
+        }
+        if (empty) FlankSlots.Remove(emptyKey);
     }
 
     // Purpose: Checks whether valid holder is currently true.

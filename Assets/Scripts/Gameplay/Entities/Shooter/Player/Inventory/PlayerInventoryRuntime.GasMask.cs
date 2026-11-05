@@ -36,6 +36,24 @@ public partial class PlayerInventoryRuntime
             _equippedGasMask.MaxFilterDurability)
         : 0f;
     public bool HasUsableGasMask => _equippedGasMask != null && EquippedGasMaskFilterDurability > 0f;
+    public int GasDefenseLevel => HasUsableGasMask ? _equippedGasMask.GasDefenseLevel : 0;
+    public float InfectionCapacityBonus => _equippedGasMask != null ? _equippedGasMask.InfectionCapacityBonus : 0f;
+
+    // Gas defense subtracts pressure levels, never the suppression-failure pressure.
+    public float ResolveGasPressureExposure(float pressure, float seconds, float rate)
+    {
+        if (pressure <= 0f || seconds <= 0f || rate <= 0f) return 0f;
+        if (!HasUsableGasMask) return pressure * seconds * rate;
+        float wearPerSecond = pressure * rate * _equippedGasMask.FilterDurabilityLossPerRawInfection;
+        float protectedSeconds = Mathf.Min(seconds, EquippedGasMaskFilterDurability / wearPerSecond);
+        float exposure = Mathf.Max(0f, pressure - GasDefenseLevel) * protectedSeconds * rate +
+            pressure * (seconds - protectedSeconds) * rate;
+        // Defense reduces new gas exposure only. It never changes accumulated status capacity/stacks.
+        _equippedGasMaskFilterDurability = Mathf.Max(0f,
+            EquippedGasMaskFilterDurability - protectedSeconds * wearPerSecond);
+        NotifyChanged();
+        return exposure;
+    }
 
     // Purpose: Equips a gas mask from a normal inventory slot and preserves the old mask as an inventory stack.
     private bool TryEquipGasMaskFromInventory(int index, GasMaskItemSO gasMask, out string message)
@@ -240,6 +258,7 @@ public partial class PlayerInventoryRuntime
         out string message)
     {
         repairedAmount = 0f;
+        if (!EquipmentRepairPolicy.Enabled) return Fail(EquipmentRepairPolicy.DisabledMessage, out message);
         NormalizeStorage();
 
         if (!IsValidIndex(index))
@@ -277,6 +296,7 @@ public partial class PlayerInventoryRuntime
         out string message)
     {
         repairedAmount = 0f;
+        if (!EquipmentRepairPolicy.Enabled) return Fail(EquipmentRepairPolicy.DisabledMessage, out message);
 
         if (_equippedGasMask == null)
             return Fail("No gas mask equipped.", out message);

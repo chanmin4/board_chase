@@ -137,6 +137,24 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
     [SerializeField][ReadOnly] private List<PlayerInventoryItemStack> _items = new();
 
     private bool _openInProgress;
+    private int? _configuredInventoryCapacity;
+    private bool _corpseArmorRolled;
+    private float _corpseArmorCap = float.PositiveInfinity;
+
+    public void PrepareCorpseArmorDrop()
+    {
+        if (_corpseArmorRolled) return;
+        _corpseArmorRolled = true;
+        ResolveRefs();
+        var config = _statsRuntime != null ? _statsRuntime.StatConfig as EnemyShooterConfigSO : null;
+        if (config == null || !config.LimitCorpseArmorDurability) return;
+        Vector2 range = config.ArmorDropDurabilityRange;
+        float min = Mathf.Max(0f, Mathf.Min(range.x, range.y));
+        float max = Mathf.Max(min, Mathf.Max(range.x, range.y));
+        _corpseArmorCap = UnityEngine.Random.Range(min, max);
+        SyncArmorDurabilityFromEquipment();
+        _armorDurability = Mathf.Min(_armorDurability, _corpseArmorCap);
+    }
     private float _interactionStartedTime;
     private float _interactionDuration;
 
@@ -147,10 +165,15 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
     public float ArmorDurability => ResolveArmorDurability();
     public IReadOnlyList<EnemyLootBulletStack> BulletStacks => _bulletStacks;
     public IReadOnlyList<PlayerInventoryItemStack> ItemStacks => _items;
-    public int InventoryCapacity =>
-        _statsRuntime != null && _statsRuntime.InventoryCapacity > 0
-            ? _statsRuntime.InventoryCapacity
-            : Mathf.Max(0, _fallbackInventoryCapacity);
+    public int PocketCapacity => _statsRuntime?.InventorySettings?.PocketCapacity ?? 0;
+    public int BaseInventoryCapacity => _statsRuntime?.InventorySettings?.BaseInventoryCapacity ?? Mathf.Max(0, _fallbackInventoryCapacity);
+    // Same slot policy as the player. A future enemy bag equipment owner can override this hook;
+    // it must also own transfer/persistence before it enables equipped bags on corpses.
+    protected virtual BackpackItemSO CapacityBackpack => null;
+    public float BackpackMoveSpeedMultiplier => CapacityBackpack != null ? CapacityBackpack.MoveSpeedMultiplier : 1f;
+    public int InventoryCapacity => _configuredInventoryCapacity ??
+        ((_statsRuntime?.InventorySettings?.ResolveCapacity(CapacityBackpack) ?? Mathf.Max(0, _fallbackInventoryCapacity))+
+        Mathf.FloorToInt(_statsRuntime?.AdditionalStat(PlayerStatId.InventorySlots)??0));
     public bool HasOpenRequestChannel => _openRequestChannel != null;
     public bool HasOverlayRequestChannel => _overlayRequestChannel != null;
     public float InteractSeconds => Mathf.Max(0f, _interactSeconds);
@@ -421,7 +444,7 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
     /// equipment or existing carried items. The operation is all-or-nothing so
     /// a failed corpse insertion can safely fall back to a world drop.
     /// </summary>
-    public bool TryAddItemStack(ItemSO item, int amount, out string message)
+    public bool TryAddItemStack(ItemSO item, int amount, out string message, float armorDurabilityOverride = -1f)
     {
         NormalizeItemStacks();
 
@@ -476,7 +499,8 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
             remaining -= added;
         }
 
-        float armorDurability = item is ArmorItemSO armor ? armor.MaxDurability : -1f;
+        float armorDurability = item is ArmorItemSO armor
+            ? Mathf.Clamp(armorDurabilityOverride >= 0f ? armorDurabilityOverride : armor.MaxDurability, 0f, armor.MaxDurability) : -1f;
         float weaponDurability = item is RangedWeaponSO weapon ? weapon.MaxDurability : -1f;
 
         for (int i = 0; i < capacity && remaining > 0; i++)
@@ -673,6 +697,7 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
     public void ConfigureInventoryCapacity(int capacity)
     {
         _fallbackInventoryCapacity = Mathf.Max(0, capacity);
+        _configuredInventoryCapacity = _fallbackInventoryCapacity; // Containers are independent from character stats.
 
         if (_items == null)
             _items = new List<PlayerInventoryItemStack>();
@@ -812,6 +837,14 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
         }
 
         OpenLootPanel(actor);
+        if(GameProgressionRuntime.InRaid && actor!=null && EntityComponentResolver.Resolve<PlayerStatsRuntime>(actor)!=null)
+        {
+            var rules=ExperienceRulesSO.Active;
+            bool first=GameProgressionRuntime.MarkDiscovery("container:"+GameProgressionRuntime.Identity(this));
+            for(int i=0;first&&rules!=null&&i<ItemStacks.Count;i++)
+                if(ItemStacks[i]?.IsEmpty==false)GameProgressionRuntime.Discover("loot:"+GameProgressionRuntime.Identity(this)+":"+i,rules.experience.Discovery(ItemStacks[i].Item.Rarity));
+            EntityComponentResolver.Resolve<PlayerShooterInfection>(actor)?.AddExposure(InfectionAggravationStatusSO.Active?.Settings.lootOpenExposure??0);
+        }
         return true;
     }
 
@@ -945,6 +978,8 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
         if (!inventory.TryPickupArmorLoot(armor, durability, out message))
             return false;
 
+        // Clear the authoritative equipment as well, so later UI sync cannot resurrect a looted vest.
+        if (_equipmentRuntime != null && _equipmentRuntime.CurrentArmor == armor) _equipmentRuntime.ClearArmor();
         _armor = null;
         _armorDurability = 0f;
         return true;
@@ -1061,10 +1096,11 @@ public class EnemyLootInventoryRuntime : InventoryRuntimeBase
         if (_equipmentRuntime == null)
             return;
 
-        if (_equipmentRuntime.CurrentArmor != _armor)
-            return;
-
-        _armorDurability = _equipmentRuntime.CurrentArmorDurability;
+        // Equipment is authoritative: a destroyed vest must not reappear in corpse loot.
+        _armor = _equipmentRuntime.CurrentArmor;
+        _armorDurability = _armor != null ? _equipmentRuntime.CurrentArmorDurability : 0f;
+        // Do not heal damaged armor on death; repeated UI syncs never reroll the quality cap.
+        if (_corpseArmorRolled) _armorDurability = Mathf.Min(_armorDurability, _corpseArmorCap);
     }
 
     // Purpose: Synchronizes equipment from runtime with the current source state.

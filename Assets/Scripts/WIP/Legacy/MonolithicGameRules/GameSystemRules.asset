@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0261026000000000000000000000001, type: 3}
+  m_Name: GameSystemRules
+  m_EditorClassIdentifier:
+  traversal:
+    freeSectorTravel: 1
+    portalCooldown: 6
+    portalCast: 1
+    hideUnvisited: 1
+    hideBossIcons: 1
+    dashCooldown: 10
+    dashDistanceMultiplier: 1.3
+    homeOnlyPassiveChanges: 1
+    alertReactionMultiplier: 0.5
+    alertMemorySeconds: 15
+    patrolRadiusMultiplier: 1.5
+    patrolIdleMultiplier: 0.75
+    extraEnemyChance: 0.15
+    stage3PunisherReplacementChance: 0.03
+    stage3Punisher: {fileID: 11400000, guid: 6395aa840d7a2bb4b8d52be48ace30fc, type: 2}
+  recycling:
+    baseSlots: 2
+    maximumSlots: 10
+    recipes:
+    - kind: 2
+      rarity: 0
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000200, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 0
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000201, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 1
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000202, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 1
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000203, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 3
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000204, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 3
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000205, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 2
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000206, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 2
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000207, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 4
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000208, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 4
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000209, type: 2}
+      outputAmount: 1
+      seconds: 60

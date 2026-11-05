@@ -28,7 +28,7 @@ public struct WeaponAmmoSlotSnapshot
     public bool canSell;
     public int totalAmmo;
     public int sellPricePerAmmo;
-    public int penetrationClass;
+    public float penetrationClass;
 
     public WeaponAmmoSlotSnapshot(
         int slotIndex,

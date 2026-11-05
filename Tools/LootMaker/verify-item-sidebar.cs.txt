@@ -1,0 +1,188 @@
+// Manual read-only UI probe. Temporarily place in Assets/Editor and Refresh, then remove.
+// v3 compares restored panel height and viewport bounds, not absolute window height:
+// ShowUtility and position setters can constrain the window differently on scaled displays.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class ItemSidebarVerificationOnce
+{
+    private const string Report = "Library/MakerCategoryTree-20260929/item-sidebar-v3.txt";
+    private static readonly Dictionary<string, (bool exists, bool value)> Bools = new();
+    private static readonly Dictionary<string, Rect> Rects = new();
+    private static readonly List<string> Lines = new();
+    private static ItemMakerWindow _window;
+    private static EditorWindow _previousWindow;
+    private static Action<EditorWindow, string, Rect> _observer;
+    private static string _heightKey;
+    private static bool _heightExists;
+    private static float _heightValue, _baselineHeight;
+    private static Object[] _dragObjects;
+    private static string[] _dragPaths;
+    private static int _phase, _frames, _passed;
+    private static double _started;
+    static ItemSidebarVerificationOnce() { EditorApplication.delayCall += Start; }
+    private static object Read(string field) => typeof(ItemMakerWindow).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_window);
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Start; return; }
+        try
+        {
+            _started = EditorApplication.timeSinceStartup;
+            _previousWindow = EditorWindow.focusedWindow;
+            _dragObjects = DragAndDrop.objectReferences; _dragPaths = DragAndDrop.paths;
+            _heightKey = ItemMakerWindow.SidebarPreferenceKey + ".CreateHeight";
+            _heightExists = EditorPrefs.HasKey(_heightKey); _heightValue = EditorPrefs.GetFloat(_heightKey);
+            foreach (string key in new[] { "Weapon", "Bullet", "Consumable" }.Select(k => MakerCategoryTreeUi.PreferenceKey("ItemMaker", k))
+                .Append(ItemMakerWindow.SidebarPreferenceKey + ".CreateExpanded"))
+                Bools[key] = (EditorPrefs.HasKey(key), EditorPrefs.GetBool(key));
+            EditorPrefs.SetFloat(_heightKey, ItemMakerWindow.DefaultCreatePanelHeight);
+            EditorPrefs.SetBool(ItemMakerWindow.SidebarPreferenceKey + ".CreateExpanded", true);
+            MakerCategoryTreeUi.SetAll("ItemMaker", new[] { "Weapon", "Bullet", "Consumable" }, false);
+            foreach (var test in typeof(MakerCategoryTreeTests).GetMethods().Where(m => m.IsDefined(typeof(NUnit.Framework.TestAttribute))))
+            {
+                var fixture = new MakerCategoryTreeTests();
+                try { fixture.Setup(); test.Invoke(fixture, null); Check(true, test.Name); }
+                finally { fixture.Cleanup(); }
+            }
+            _observer = MakerCategoryTreeUi.ControlObserved;
+            MakerCategoryTreeUi.ControlObserved = (owner, id, rect) =>
+            {
+                if (owner != _window) return;
+                if (id == "Begin") Rects.Clear(); else Rects[id] = rect;
+            };
+            Open();
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Open()
+    {
+        Rects.Clear(); _frames = 0;
+        _window = ScriptableObject.CreateInstance<ItemMakerWindow>();
+        _window.titleContent = new GUIContent("Item sidebar verification (read-only)");
+        _window.position = new Rect(90, 80, 1380, 900);
+        _window.ShowUtility();
+    }
+    private static Rect Control(string key) => Rects["ItemMaker/" + key];
+    private static void Click(string key, int count = 1)
+    {
+        Vector2 point = Control(key).center;
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, clickCount = count, mousePosition = point });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, clickCount = count, mousePosition = point });
+    }
+    private static void Drag(float delta)
+    {
+        Vector2 start = Control("CategorySplitter").center;
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, clickCount = 1, mousePosition = start });
+        _window.SendEvent(new Event { type = EventType.MouseDrag, button = 0, mousePosition = start + Vector2.up * delta, delta = Vector2.up * delta });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, mousePosition = start + Vector2.up * delta });
+    }
+    private static void Check(bool success, string label)
+    {
+        if (!success) throw new Exception("phase=" + _phase + ": " + label);
+        _passed++; Lines.Add("PASS " + label);
+    }
+    private static bool Near(float a, float b) => Mathf.Abs(a - b) < 1f;
+    private static void Tick()
+    {
+        try
+        {
+            if (_window == null) throw new Exception("Verification window closed early");
+            if (EditorApplication.timeSinceStartup - _started > 120) throw new Exception("Timed out");
+            _window.Repaint();
+            if (++_frames < 12 || !Rects.ContainsKey("ItemMaker/CategoryViewport")) return;
+            _frames = 0;
+            float listHeight = Control("CategoryViewport").height;
+            switch (_phase++)
+            {
+                case 0:
+                    Lines.Add("Window size (screen/DPI constrained): " + _window.position.size);
+                    Check(listHeight > 200, "default category viewport enlarged: " + listHeight);
+                    Check(Near(Control("CreateViewport").yMax, Control("SidebarViewport").yMax - 5), "sidebar consumes height through bottom padding");
+                    Check(Near(Control("CreateViewport").height, 184), "default create panel height");
+                    _baselineHeight = listHeight;
+                    Drag(60); break;
+                case 1:
+                    Check(Near(listHeight, _baselineHeight + 60), "drag down enlarges category viewport");
+                    Check(Near(EditorPrefs.GetFloat(_heightKey), 124), "drag release persists height");
+                    Check(Read("_category").ToString() == "All", "drag keeps category filter");
+                    Drag(-40); break;
+                case 2:
+                    Check(Near(listHeight, _baselineHeight + 20), "drag up enlarges create panel");
+                    Click("CategorySplitter", 2); break;
+                case 3:
+                    Check(Near(listHeight, _baselineHeight), "double-click restores default split");
+                    Click("CreateFoldout"); break;
+                case 4:
+                    Check(!Rects.ContainsKey("ItemMaker/CreateViewport"), "foldout hides creation form");
+                    Check(Near(listHeight, _baselineHeight + 184), "collapse returns palette height to list");
+                    Check(!EditorPrefs.GetBool(ItemMakerWindow.SidebarPreferenceKey + ".CreateExpanded"), "collapsed state persisted");
+                    _window.Close(); Open(); break;
+                case 5:
+                    Check(!(bool)Read("_createPanelExpanded") && !Rects.ContainsKey("ItemMaker/CreateViewport"), "collapsed state restored on reopen");
+                    Click("CreateFoldout"); break;
+                case 6:
+                    Check(Near(Control("CreateViewport").height, 184), "re-expansion restores previous split");
+                    Drag(-10000); break;
+                case 7:
+                    Check(Near(listHeight, 100), "extreme upward drag preserves minimum category height");
+                    Drag(10000); break;
+                case 8:
+                    Check(Near(Control("CreateViewport").height, 100), "extreme downward drag preserves scrollable creation form");
+                    Click("CategorySplitter", 2); break;
+                case 9:
+                    _window.position = new Rect(90, 80, 1008, 560); break;
+                case 10:
+                    Check(listHeight >= 100, "minimum window preserves category viewport");
+                    Check(Control("CreateViewport").yMax <= _window.position.height, "creation form stays inside minimum window");
+                    Check(Near((float)Read("_createPanelHeight"), 184), "window shrink does not overwrite preferred height");
+                    _window.position = new Rect(90, 80, 1380, 900); break;
+                case 11:
+                    Check(Near(Control("CreateViewport").height, ItemMakerWindow.DefaultCreatePanelHeight)
+                        && Near(Control("CreateViewport").yMax, Control("SidebarViewport").yMax - 5)
+                        && listHeight > 200, "growing window restores preferred panel height and fills available space");
+                    Click("Weapon/toggle"); break;
+                case 12:
+                    Check(Rects.ContainsKey("ItemMaker/WeaponSmg/select"), "category children still expand");
+                    Click("WeaponSmg/select"); break;
+                case 13:
+                    Check(Read("_category").ToString() == "WeaponSmg", "child filter remains selectable");
+                    Click("Weapon/toggle"); break;
+                case 14:
+                    Check(Read("_category").ToString() == "WeaponSmg", "folding category preserves selection");
+                    Object payload = ((System.Collections.IEnumerable)Read("_items")).Cast<Object>().First();
+                    DragAndDrop.objectReferences = new[] { payload };
+                    DragAndDrop.paths = new[] { AssetDatabase.GetAssetPath(payload) };
+                    _window.SendEvent(new Event { type = EventType.DragUpdated, mousePosition = Control("Weapon/select").center });
+                    Check(DragAndDrop.visualMode == DragAndDropVisualMode.Move, "collapsed parent still accepts drag hover; no drop performed");
+                    Finish("COMPLETE: read-only UI events; no authored assets or scenes saved."); break;
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        MakerCategoryTreeUi.ControlObserved = _observer;
+        if (_window != null) _window.Close();
+        foreach (var pair in Bools)
+            if (pair.Value.exists) EditorPrefs.SetBool(pair.Key, pair.Value.value); else EditorPrefs.DeleteKey(pair.Key);
+        if (_heightKey != null)
+        {
+            if (_heightExists) EditorPrefs.SetFloat(_heightKey, _heightValue); else EditorPrefs.DeleteKey(_heightKey);
+        }
+        if (_dragObjects != null) DragAndDrop.objectReferences = _dragObjects;
+        if (_dragPaths != null) DragAndDrop.paths = _dragPaths;
+        if (_previousWindow != null) _previousWindow.Focus();
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Path.GetDirectoryName(Report)); File.WriteAllLines(Report, Lines);
+    }
+}

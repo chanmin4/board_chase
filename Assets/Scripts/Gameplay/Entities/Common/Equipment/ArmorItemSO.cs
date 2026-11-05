@@ -19,8 +19,8 @@ public class ArmorItemSO : ItemSO
     [SerializeField, Min(0)] private int _armorClass = 1;
 
     [Header("Durability")]
-    [Tooltip("Runtime armor durability when equipped. Absorbed damage reduces this value.")]
-    [SerializeField, Min(0f)] private float _maxDurability = 100f;
+    [Tooltip("방탄복이 흡수할 수 있는 피해량입니다. 체력 피해 1을 흡수하면 내구도 1이 소모됩니다. 신품 기본값은 1000입니다.")]
+    [SerializeField, Min(0f)] private float _maxDurability = 1000f;
 
     [Tooltip("Fraction of missing durability permanently removed from this armor's instance maximum when it is repaired. 0 keeps the maximum unchanged.")]
     [SerializeField, Range(0f, 1f)] private float _repairPermanentLossRatio = 0.1f;
@@ -67,7 +67,7 @@ public class ArmorItemSO : ItemSO
             : _visualCoverage;
 
     // Purpose: Resolves the health damage multiplier needed by this component.
-    public float ResolveHealthDamageMultiplier(int penetrationClass, float baseArmorClass, float armorClassDelta)
+    public float ResolveHealthDamageMultiplier(float penetrationClass, float baseArmorClass, float armorClassDelta)
     {
         float effectiveArmorClass = Mathf.Max(0f, baseArmorClass + armorClassDelta);
         return Mathf.Max(
@@ -80,7 +80,7 @@ public class ArmorItemSO : ItemSO
     }
 
     // Purpose: Resolves the mark damage multiplier needed by this component.
-    public float ResolveMarkDamageMultiplier(int penetrationClass, float baseArmorClass, float armorClassDelta)
+    public float ResolveMarkDamageMultiplier(float penetrationClass, float baseArmorClass, float armorClassDelta)
     {
         float effectiveArmorClass = Mathf.Max(0f, baseArmorClass + ArmorClass + armorClassDelta);
         float classGap = Mathf.Max(0f, effectiveArmorClass - Mathf.Max(0, penetrationClass));

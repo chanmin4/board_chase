@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a70e18d36f44738a4d1a6f32b1c5e7d, type: 3}
+  m_Name: Player_Look
+  m_EditorClassIdentifier: 
+  _customizeId: 5be44da1190f44afa83643d5f4ea9e1f
+  _visualPrefab: {fileID: 1303186535666625397, guid: 32e16bcc6e5c4f448bd0bc5227eff0cc, type: 3}
+  _bodyTint: {r: 0.5283019, g: 0.5283019, b: 0.5283019, a: 1}
+  _bodyVisualTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: -0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  _socketPoses:
+  - socket: 0
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 1
+    localTransform:
+      localPosition: {x: 0.6, y: 1, z: 0.19999999}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 2
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 3
+    localTransform:
+      localPosition: {x: 0, y: 2, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 4
+    localTransform:
+      localPosition: {x: 0, y: 0.06, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 7
+    localTransform:
+      localPosition: {x: 0, y: -0.21, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 8
+    localTransform:
+      localPosition: {x: 0, y: 1.44, z: 0.5}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 9
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 10
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  _attachments: []

@@ -29,6 +29,65 @@ public class InheritanceWarehouseRuntime : EnemyLootInventoryRuntime
     public override bool ShowsEquipment => false;
     public override bool CanInteract => true;
 
+    public bool CanReceiveQuestItems(QuestRuntimeState state,out string message)
+    {
+        message="창고가 준비되지 않았습니다.";
+        if(!_isConfigured||_saveSystem==null||state?.Definition==null)return false;
+        var items=new ItemSO[InventoryCapacity];var amounts=new int[InventoryCapacity];
+        for(int i=0;i<items.Length&&i<ItemStacks.Count;i++)
+            if(ItemStacks[i]?.IsEmpty==false){items[i]=ItemStacks[i].Item;amounts[i]=ItemStacks[i].Amount;}
+        var rewards=state.Definition.Rewards;
+        for(int r=0;r<rewards.Length;r++)
+        {
+            var reward=rewards[r];
+            if(state.IsRewardGranted(r)||reward?.RewardType!=QuestRewardType.Item||
+                (_saveSystem.Profile.questWarehouseItemReceipts??=new()).Contains(state.Definition.QuestId+":"+r))continue;
+            var item=reward.Item;if(item==null){message="물품 보상 원본이 없습니다.";return false;}
+            if(!PassiveInstanceRuntime.CanCreate(item,out message))return false;
+            int remaining=reward.ItemAmount;
+            for(int i=0;i<items.Length&&remaining>0;i++)
+            {
+                if(items[i]!=item||item.MaxStack<=1)continue;
+                int add=Mathf.Min(remaining,Mathf.Max(0,item.MaxStack-amounts[i]));amounts[i]+=add;remaining-=add;
+            }
+            for(int i=0;i<items.Length&&remaining>0;i++)
+            {
+                if(items[i]!=null)continue;
+                int add=Mathf.Min(remaining,item.MaxStack);items[i]=item;amounts[i]=add;remaining-=add;
+            }
+            if(remaining>0){message="창고 공간이 부족합니다. 모든 물품 보상을 받을 공간을 확보한 뒤 완료하세요.";return false;}
+        }
+        message="창고 보상 공간 확인 완료.";return true;
+    }
+    public bool TryReceiveQuestItem(ItemSO item,int amount,string receipt,out string message)
+    {
+        message="창고가 준비되지 않았습니다.";
+        if(!_isConfigured||_saveSystem==null||item==null)return false;
+        var receipts=_saveSystem.Profile.questWarehouseItemReceipts??=new();
+        if(receipts.Contains(receipt)){message="이미 지급된 창고 보상입니다.";return true;}
+        if(!PassiveInstanceRuntime.CanCreate(item,out message))return false;
+        if(PassiveInstanceRuntime.NeedsRoll(item))
+        {
+            var empty=new List<int>();
+            for(int i=0;i<InventoryCapacity;i++)if(i>=ItemStacks.Count||ItemStacks[i]?.IsEmpty!=false)empty.Add(i);
+            int count=Mathf.Max(1,amount);
+            if(empty.Count<count){message="창고 공간이 부족합니다.";return false;}
+            var prepared=new List<ItemSO>();
+            for(int i=0;i<count;i++)
+            {
+                var instance=PassiveInstanceRuntime.Create(item);
+                if(instance==null){message="보상 패시브 생성 실패. 창고는 변경하지 않았습니다.";return false;}
+                prepared.Add(instance);
+            }
+            for(int i=0;i<count;i++)SetItemStack(empty[i],prepared[i],1);
+        }
+        else if(!TryAddItemStack(item,amount,out message))return false;
+        receipts.Add(receipt);
+        // Capture only. QuestRuntime persists the grant marker and warehouse in the same profile write.
+        PersistContents(BuildFingerprint(),false);
+        return true;
+    }
+
     // Purpose: Caches the component references required before runtime initialization.
     protected override void Awake()
     {
@@ -462,7 +521,8 @@ public class InheritanceWarehouseRuntime : EnemyLootInventoryRuntime
                     continue;
                 }
 
-                if (!itemLookup.TryGetValue(entry.itemGuid, out ItemSO item) ||
+                if (!(itemLookup.TryGetValue(entry.itemGuid, out ItemSO item) ||
+                      PassiveInstanceRuntime.TryResolve(entry.itemGuid, Resources.Load<RuntimeContentCatalogSO>("RuntimeContentCatalog"), out item)) ||
                     item == null)
                 {
                     Debug.LogError(
@@ -523,7 +583,7 @@ public class InheritanceWarehouseRuntime : EnemyLootInventoryRuntime
     }
 
     // Purpose: Performs the persist contents workflow for this component.
-    private void PersistContents(string fingerprint)
+    private void PersistContents(string fingerprint,bool writeToDisk=true)
     {
         if (_saveSystem == null ||
             _saveSystem.saveData == null ||
@@ -573,7 +633,7 @@ public class InheritanceWarehouseRuntime : EnemyLootInventoryRuntime
         }
 
         warehouse.EnsureDefaults();
-        _saveSystem.SaveDataToDisk();
+        if(writeToDisk)_saveSystem.SaveDataToDisk();
         _lastPersistedFingerprint = fingerprint;
     }
 

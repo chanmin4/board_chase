@@ -35,6 +35,7 @@ public sealed class HomeQuestNpc : MonoBehaviour
     public QuestBranch Role => _role;
     public QuestDefinitionSO[] OfferedQuests => _offeredQuests ?? Array.Empty<QuestDefinitionSO>();
     public bool CanInteract => isActiveAndEnabled;
+    public bool IsConversationOpen => _conversationOpen;
 
     // Purpose: Prevents an authored quest from being offered by the wrong Home NPC branch.
     public bool CanOffer(QuestDefinitionSO definition)

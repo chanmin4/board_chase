@@ -127,6 +127,10 @@ public class MiniMapUI : MonoBehaviour
     // Purpose: Processes this component's per-frame runtime work.
     private void Update()
     {
+        // CanvasGroup hiding does not disable Update. Do not scan/rebuild a map
+        // covered by the FullMap page or an opacity setting of zero.
+        if (_uicanvasGroupOpacity != null && _uicanvasGroupOpacity.CurrentAlpha <= .001f)
+            return;
         if (_useCurrentSectorTacticalMap)
             _tacticalGraphic?.Tick();
     }
@@ -159,10 +163,10 @@ public class MiniMapUI : MonoBehaviour
         _latestSnapshotCurrentCoord = snapshot.currentSectorCoord;
         _hasLatestSnapshotCurrentCoord = true;
 
-        CacheSnapshotCells(snapshot);
-
         if (_useCurrentSectorTacticalMap)
             return;
+
+        CacheSnapshotCells(snapshot);
 
         Vector2Int displayCenter = ResolveDisplayCenterCoord(snapshot.currentSectorCoord);
 
@@ -214,14 +218,20 @@ public class MiniMapUI : MonoBehaviour
     {
         if (snapshot.hasPublicRaidMarker && !snapshot.isStartSector && (snapshot.isLocked || !snapshot.isRevealed))
         {
-            cellUI.SetOpened(new Color(.15f, .45f, .4f), null, string.Empty, string.Empty,
-                false, false, string.Empty, false, 1f);
+            Sprite marker = GetIcon(snapshot);
+            cellUI.SetOpened(new Color(.15f, .45f, .4f), marker, string.Empty, string.Empty,
+                marker != null, false, string.Empty, false, 1f);
+            ApplyExtractionOverlay(cellUI, snapshot, marker);
             cellUI.SetSpecialTimer(RaidMapLabels.ForRole(snapshot.raidRole), true);
             return;
         }
         if (snapshot.isStartSector)
         {
-            cellUI.SetStartSector(GetStartSectorColor(), GetCellAlpha(snapshot));
+            Sprite marker = GetIcon(snapshot);
+            cellUI.SetOpened(GetStartSectorColor(), marker, string.Empty, string.Empty,
+                marker != null, false, string.Empty, false, GetCellAlpha(snapshot));
+            if (snapshot.hasPublicRaidMarker)
+                cellUI.SetSpecialTimer(snapshot.isExtraction ? "탈출 · 해치" : "해치 · 전력 필요", true);
             return;
         }
 
@@ -262,6 +272,8 @@ public class MiniMapUI : MonoBehaviour
             judgeTimeText,
             showJudgeTime,
             visibleAlpha);
+
+        ApplyExtractionOverlay(cellUI, snapshot, iconSprite);
 
         ApplyNamedTimer(cellUI, snapshot);
         if (snapshot.hasPublicRaidMarker && !HasNamedOrBoss(snapshot))
@@ -521,16 +533,14 @@ public class MiniMapUI : MonoBehaviour
     // Purpose: Returns the current icon.
     private Sprite GetIcon(SectorMapCellSnapshot snapshot)
     {
-        if (snapshot.isLocked || !snapshot.isRevealed)
-            return GetLockedIcon();
+        return SectorMapIconPolicy.MiniMapIcon(SectorMapIconPolicy.RoomIconSnapshot(snapshot), _settings, _lockedIcon, _namedIcon, _bossIcon);
+    }
 
-        if ((snapshot.specialState & SectorSpecialState.BossActive) != 0)
-            return GetBossIcon();
-
-        if ((snapshot.specialState & SectorSpecialState.NamedActive) != 0)
-            return GetNamedIcon();
-
-        return null;
+    private void ApplyExtractionOverlay(MiniMapCellUI cellUI, SectorMapCellSnapshot snapshot, Sprite roomIcon)
+    {
+        var overlay = SectorMapIconPolicy.ExtractionOverlay(snapshot, _settings != null ? _settings.SectorIcons : null,
+            _settings != null ? _settings.GetLandmarkIcon(RaidRoomRole.Extraction, true) : null);
+        cellUI.SetExtractionOverlay(roomIcon, overlay);
     }
 
     // Purpose: Checks whether this component has named or boss.

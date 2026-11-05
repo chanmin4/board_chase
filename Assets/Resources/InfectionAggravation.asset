@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0281028000000000000000000000003, type: 3}
+  m_Name: InfectionAggravation
+  m_EditorClassIdentifier:
+  _id: infection_aggravation
+  _icon: {fileID: 0}
+  _iconKind: 4
+  _iconColor: {r: 0.95, g: 0.65, b: 0.15, a: 1}
+  _polarity: 0
+  _description: 감염 게이지가 가득 찰 때마다 감염 전 최대 체력의 10%가 잠식됩니다. 자연 감소하지 않으며 잠식은 주사기나 HOME 정화장치로 회복합니다.
+  _persistentStacks: 1
+  _maximumStacks: 20
+  _damagePerStackPerSecond: 0
+  _damageTickInterval: 5
+  _removeOnFriendlyPaint: 0
+  _modifiers: []
+  _aggravation:
+    enabled: 1
+    baseGaugeCapacity: 100
+    naturalGaugeRecoveryPerSecond: 0
+    naturalRecoveryDelaySeconds: 0
+    maxHealthLossFraction: 0.1
+    currentHealthLossExposureFraction: 0.5
+    overdueSuppressionExposurePerSecond: 1
+    maximumHealthLossPerStack: 5
+    infectedRoomHitDamageRatio: 0.1
+    lootOpenExposure: 0
+    itemPickupExposure: 0
+    hitExposure: 0
+    bleedingExposurePerSecond: 0
+    gasExposurePerPressureSecond: 5
+    infectedBulletExposure: 15

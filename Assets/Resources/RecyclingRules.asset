@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0281028000000000000000000000004, type: 3}
+  m_Name: RecyclingRules
+  m_EditorClassIdentifier:
+  recycling:
+    baseSlots: 2
+    maximumSlots: 10
+    recipes:
+    - kind: 2
+      rarity: 0
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000200, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 0
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000201, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 1
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000202, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 1
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000203, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 3
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000204, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 3
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000205, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 2
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000206, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 2
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000207, type: 2}
+      outputAmount: 1
+      seconds: 60
+    - kind: 2
+      rarity: 4
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000208, type: 2}
+      outputAmount: 1
+      seconds: 120
+    - kind: 3
+      rarity: 4
+      exactInput: {fileID: 0}
+      output: {fileID: 11400000, guid: c0261026000000000000000000000209, type: 2}
+      outputAmount: 1
+      seconds: 60

@@ -11,6 +11,7 @@ using UnityEngine;
 public sealed class SectorEnemyTraitModifier : MonoBehaviour
 {
     [ReadOnly] [SerializeField] private bool _armed;
+    [ReadOnly] [SerializeField] private bool _damageAnomaly;
     [ReadOnly] [SerializeField] private float _attackDamageMultiplier = 1f;
     [ReadOnly] [SerializeField] private float _maxHealthMultiplier = 1f;
     [ReadOnly] [SerializeField] private float _moveSpeedMultiplier = 1f;
@@ -23,12 +24,20 @@ public sealed class SectorEnemyTraitModifier : MonoBehaviour
     public float MaxHealthMultiplier => Mathf.Max(1f, _maxHealthMultiplier);
     public float MoveSpeedMultiplier => Mathf.Max(1f, _moveSpeedMultiplier);
     public int ArmorClassBonus => Mathf.Max(0, _armorClassBonus);
+    // Firearms already snapshot AttackDamageMultiplier through EnemyShooterStatsRuntime.
+    // Non-firearm attacks use this helper so the V3 anomaly is applied once, not twice.
+    public static float NonFirearmAnomalyMultiplier(Component owner)
+    {
+        var modifier = owner != null ? EntityComponentResolver.Resolve<SectorEnemyTraitModifier>(owner) : null;
+        return modifier != null && modifier._damageAnomaly ? modifier.AttackDamageMultiplier : 1f;
+    }
 
     // Purpose: Configures this component''s configure.
-    public void Configure(SectorRoomTraitTableSO table, bool armed)
+    public void Configure(SectorRoomTraitTableSO table, bool armed, bool damageAnomaly = false)
     {
         _armed = armed && table != null;
-        _attackDamageMultiplier = _armed ? table.ArmedEnemyAttackDamageMultiplier : 1f;
+        _damageAnomaly = damageAnomaly && !_armed;
+        _attackDamageMultiplier = _armed ? table.ArmedEnemyAttackDamageMultiplier : damageAnomaly ? 1.25f : 1f;
         _maxHealthMultiplier = _armed ? table.ArmedEnemyMaxHealthMultiplier : 1f;
         _moveSpeedMultiplier = _armed ? table.ArmedEnemyMoveSpeedMultiplier : 1f;
         _armorClassBonus = _armed ? table.ArmedEnemyArmorClassBonus : 0;

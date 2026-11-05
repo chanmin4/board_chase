@@ -11,16 +11,33 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ae080927fbef4ec880ed87871e2b57e0, type: 3}
   m_Name: Stage4Definition
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   _stageIndex: 4
+  _encounterRules:
+    infectedRoomCount: 4
+    infectionSpreadEnabled: 1
+    infectionSpreadIntervalSeconds: 60
+    maximumNewInfectedRoomsPerTick: 0
+    infectedRoomGasPressure: 3
+    infectedEnemyChance: 0.25
+    extraEnemyChance: 0.15
+    replacementEnemy: {fileID: 0}
+    replacementChance: 0
+  _developmentOnly: 0
   _displayName: 4_Stage
-  _mapPolicy: 1
+  _mapPolicy: 2
   _raidMap:
+    roomDensity: 0.32
+    braidPercent: 25
+    candidateCount: 4
+    extractionCount: 2
+    merchantRoomCount: 1
+    vaultNearCandidateChance: 0.25
     bossSpawnPercent: 65
-    minimumExtractionPathDistance: 13
+    minimumExtractionPathDistance: 8
     normalWeight: 70
-    armoryWeight: 10
-    medicalWeight: 15
+    armoryWeight: 0
+    medicalWeight: 0
     vaultWeight: 5
   _raidRuntime:
     durationSeconds: 1200
@@ -44,7 +61,7 @@ MonoBehaviour:
         weight: 1
       encounter: {fileID: 0}
       content: {fileID: 0}
-      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e790, type: 2}
+      lootObject: {fileID: 11400000, guid: a2200000000000000000000000000002, type: 2}
     - role: 2
       sectorPreset: {fileID: 0}
       sectorVariants:
@@ -52,15 +69,15 @@ MonoBehaviour:
         weight: 1
       encounter: {fileID: 0}
       content: {fileID: 0}
-      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e791, type: 2}
+      lootObject: {fileID: 11400000, guid: a220000000000000000000000000001a, type: 2}
     - role: 4
       sectorPreset: {fileID: 0}
       sectorVariants:
       - preset: {fileID: 11400000, guid: 647d3e770f1f194dbe46efa77e30a4ef, type: 2}
         weight: 1
-      encounter: {fileID: 0}
+      encounter: {fileID: 11400000, guid: e201040070014ba39f5b6600fac10004, type: 2}
       content: {fileID: 0}
-      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e792, type: 2}
+      lootObject: {fileID: 11400000, guid: a220000000000000000000000000000b, type: 2}
     - role: 6
       sectorPreset: {fileID: 0}
       sectorVariants:
@@ -77,16 +94,21 @@ MonoBehaviour:
       encounter: {fileID: 0}
       content: {fileID: 0}
       lootObject: {fileID: 0}
-    - role: 8
-      sectorPreset: {fileID: 0}
-      sectorVariants:
-      - preset: {fileID: 11400000, guid: 5dc05e27ef5b4a0c25663fad02da3089, type: 2}
-        weight: 1
-      encounter: {fileID: 0}
-      content: {fileID: 0}
-      lootObject: {fileID: 0}
-  _roomGridSize: 13
+    merchantConfig: {fileID: 11400000, guid: c0f41d7310094ade8eca600400040001, type: 2}
+    merchantInitialMoney: 1000
+    merchantOpenChannel: {fileID: 11400000, guid: 293b940d4882d5144952cea9a94e9c32, type: 2}
+    merchantOverlayChannel: {fileID: 11400000, guid: 04fa04120420a7b4caadc06b33088982, type: 2}
+    vaultEntryKeyTier: 0
+    normalSupplyChance: 0.25
+    weaponSupplyShare: 0.5
+    normalWeaponSupply: {fileID: 11400000, guid: a220000000000000000000000000001a, type: 2}
+    normalMedicalSupply: {fileID: 11400000, guid: a2200000000000000000000000000002, type: 2}
+  _raidAnomalyTable: {fileID: 11400000, guid: b0eed10404004f00a000000000000002, type: 2}
+  _anomalyGasBaseline: 17
+  _roomGridSize: 26
   _useStartSectorOnly: 0
+  _sectorTheme: {fileID: 11400000, guid: 8c3df88db2c2ceb4b99f5f3a6db06d24, type: 2}
+  _branchTopologies: []
   _startSectorPresets:
   - preset: {fileID: 11400000, guid: 181b3e86598d4b1683e8facd05398b2a, type: 2}
     weight: 1
@@ -128,17 +150,6 @@ MonoBehaviour:
     - preset: {fileID: 11400000, guid: bfb27cf577304361aedcfe29cc6d3950, type: 2}
       weight: 1
     dropTable: {fileID: 0}
-  _shop:
-    enabled: 0
-    minCount: 0
-    maxCount: 1
-    extraRoomChance: 0
-    excludeFirstRoom: 1
-    sectorPresets:
-    - preset: {fileID: 11400000, guid: e084352ad70049b4b15df14c2f4c2222, type: 2}
-      weight: 1
-    dropTable: {fileID: 0}
-    allowReroll: 1
   _bossBattles:
   - encounterPreset: {fileID: 11400000, guid: d9b89aa6d1ef47e2a0a16ef6bc443d91, type: 2}
     sectorPreset: {fileID: 11400000, guid: 453e6235512a4c52a22431c636d19ffd, type: 2}

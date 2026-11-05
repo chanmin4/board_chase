@@ -40,6 +40,19 @@ MonoBehaviour:
   _weaponViewLocalPosition: {x: 0, y: 0.1, z: 0}
   _weaponViewLocalEulerAngles: {x: -0, y: 90, z: 0}
   _weaponViewLocalScale: {x: 2, y: 2, z: 2}
+  _combat:
+    maxRange: 100
+    shotsPerSecond: 15.6
+    reloadDurationSeconds: 2
+    aimSpeed: 3
+    hipFireSpreadAngleDeg: 36
+    aimSpreadAngleDeg: 4
+    aimingMoveSpeedMultiplier: 0.6
+    penetrationClassBonus: -0.2
+    gunshotSoundRadius: 150
+    shotKickDistance: 0.35
+    maximumShotKickDistance: 2
+    shotKickRecoveryPerSecond: 2.5
   _weaponType: 2
   _damageMultiplier: 0.65
   _shotsPerSecondMultiplier: 2

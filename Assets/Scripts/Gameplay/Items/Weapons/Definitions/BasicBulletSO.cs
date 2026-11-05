@@ -20,7 +20,7 @@ public class BasicBulletSO : BulletSO
 
     [Header("Penetration")]
     [Tooltip("Equal or higher than the effective Armor Class deals full Health damage. Infection and Mark ignore armor penetration.")]
-    [SerializeField, Min(0)] private int penetrationClass = 1;
+    [SerializeField, Min(0)] private float penetrationClass = 1;
 
     [Header("Direct Combat Values")]
     [Tooltip("Balance tier used by loot, shops, and debug TTK tables. It adds no hidden damage.")]
@@ -31,12 +31,14 @@ public class BasicBulletSO : BulletSO
 
     [Tooltip("Legacy normal-bullet Infection value retained only so existing assets deserialize safely. It is disabled while the Infection Injection ammo WIP is active.")]
     [SerializeField, HideInInspector, Min(0f)] private float _infectionDamage = 10f;
+    [SerializeField, Min(0f)] private float _infectionExposureOnHit;
+    public override float InfectionExposureOnHit => Mathf.Max(0f, _infectionExposureOnHit);
 
     public override BulletAmmoType AmmoType => BulletAmmoType.Basic;
     // Existing BasicBulletSO assets remain light ammunition. Use a concrete
     // Medium/Heavy/Sniper/Shotgun/Rocket SO type for the other families.
     public override BulletFamily Family => BulletFamily.Light;
-    public override int PenetrationClass => Mathf.Max(0, penetrationClass);
+    public override float PenetrationClass => Mathf.Max(0, penetrationClass);
     public override BulletTier Tier => _tier;
     public override float HealthDamage => Mathf.Max(0f, _healthDamage);
     public override float InfectionDamage =>
@@ -51,7 +53,7 @@ public class BasicBulletSO : BulletSO
     // Purpose: Resolves the damage target mask needed by this component.
     public override LayerMask ResolveDamageTargetMask(ShooterFaction faction)
     {
-        return faction == ShooterFaction.Enemy
+        return faction != ShooterFaction.Player
             ? enemyDamageableTargetMask
             : playerDamageableTargetMask;
     }

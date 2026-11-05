@@ -14,17 +14,17 @@ using UnityEngine.Serialization;
 public class PlayerPassiveInventoryRuntime : MonoBehaviour
 {
     public const int MinimumUnlockedSlotCount = 2;
-    public const int MaximumSlotCount = 5;
+    public const int MaximumSlotCount = 8;
 
     private readonly List<PassiveItemSO> _equippedItems = new(MaximumSlotCount);
 
     [Header("Passive Slots")]
-    [Tooltip("The player starts with two passive slots. Progression can unlock up to five.")]
-    [SerializeField, Range(MinimumUnlockedSlotCount, MaximumSlotCount)]
+    [Tooltip("Legacy saved count only. Current slots use common combat/survival level thresholds.")]
+    [SerializeField, HideInInspector, Range(MinimumUnlockedSlotCount, MaximumSlotCount)]
     private int _unlockedSlotCount = MinimumUnlockedSlotCount;
 
     [Tooltip("Every equip, replacement, or removal starts this shared cooldown to prevent passive swapping exploits.")]
-    [SerializeField, Min(0f)] private float _changeCooldownSeconds = 10f;
+    [SerializeField, HideInInspector, Min(0f)] private float _changeCooldownSeconds = 10f;
 
     [SerializeField] private List<PassiveItemSO> _equippedSlots = new(MaximumSlotCount);
     [SerializeField, ReadOnly] private float _nextChangeAllowedAt;
@@ -52,12 +52,12 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     /// </summary>
     public IReadOnlyList<PassiveItemSO> Items => _equippedItems;
     public IReadOnlyList<PassiveItemSO> EquippedSlots => _equippedSlots;
-    public int UnlockedSlotCount => Mathf.Clamp(
-        _unlockedSlotCount,
-        MinimumUnlockedSlotCount,
-        MaximumSlotCount);
+    public int UnlockedSlotCount
+    {
+        get { int count = 0; for (int i = 0; i < MaximumSlotCount; i++) if (IsSlotUnlocked(i)) count++; return count; }
+    }
     public int MaxSlotCount => MaximumSlotCount;
-    public float ChangeCooldownSeconds => Mathf.Max(0f, _changeCooldownSeconds);
+    public float ChangeCooldownSeconds => Mathf.Max(0f, PassiveModuleRulesSO.Active?.changeCooldownSeconds ?? _changeCooldownSeconds);
     public float ChangeCooldownRemaining => Mathf.Max(0f, _nextChangeAllowedAt - Time.time);
     public bool IsChangeOnCooldown => ChangeCooldownRemaining > 0f;
 
@@ -98,7 +98,18 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     // Purpose: Checks whether slot unlocked is currently true.
     public bool IsSlotUnlocked(int slotIndex)
     {
-        return slotIndex >= 0 && slotIndex < UnlockedSlotCount;
+        return PassiveModuleRulesSO.Active != null
+            ? PassiveModuleRulesSO.Active.IsSlotUnlocked(slotIndex, GameProgressionRuntime.Level)
+            : slotIndex >= 0 && slotIndex < MinimumUnlockedSlotCount;
+    }
+
+    private int _lastLevel = -1;
+    private bool _lastEffectsActive;
+    private void Update()
+    {
+        if (_lastLevel == GameProgressionRuntime.Level && _lastEffectsActive == GameProgressionRuntime.PassiveEffectsActive) return;
+        _lastLevel = GameProgressionRuntime.Level; _lastEffectsActive = GameProgressionRuntime.PassiveEffectsActive;
+        RefreshModuleEffects();
     }
 
     // Purpose: Attempts to get equipped passive and reports whether the request succeeded.
@@ -125,6 +136,7 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
 
         EnsureSlotStorage();
         target.unlockedPassiveSlotCount = UnlockedSlotCount;
+        target.passiveSlotSchemaVersion = 2;
         target.equippedPassiveGuids.Clear();
 
         for (int index = 0; index < MaximumSlotCount; index++)
@@ -164,7 +176,8 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
             if (string.IsNullOrWhiteSpace(guid))
                 continue;
 
-            if (!catalog.TryResolveItem(guid, out ItemSO item) || item is not PassiveItemSO)
+            if (!catalog.TryResolveItem(guid, out ItemSO item) ||
+                (item is not PassiveItemSO && item is not ValuableItemSO { WasPassive: true }))
             {
                 message = $"Saved passive cannot be resolved. guid={guid}";
                 return false;
@@ -180,17 +193,30 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
         for (int index = 0; index < MaximumSlotCount; index++)
         {
             PassiveItemSO restored = null;
-            if (index < _unlockedSlotCount && index < source.equippedPassiveGuids.Count)
+            if (source.passiveSlotSchemaVersion >= 2 && index < source.equippedPassiveGuids.Count)
             {
                 string guid = source.equippedPassiveGuids[index];
                 if (!string.IsNullOrWhiteSpace(guid))
                 {
                     catalog.TryResolveItem(guid, out ItemSO item);
-                    restored = item as PassiveItemSO;
+                    restored = RestoreOwnedPassive(item as PassiveItemSO);
                 }
             }
 
-            _equippedSlots[index] = restored;
+            _equippedSlots[index] = source.passiveSlotSchemaVersion >= 2 && IsSlotUnlocked(index) && restored != null &&
+                !restored.DisabledForRaid && (int)restored.Category == index % 2 ? restored : null;
+        }
+        // Preserve the old five-slot snapshot's owned instances; migrate assignments by category.
+        if (source.passiveSlotSchemaVersion < 2)
+        {
+            foreach (string guid in source.equippedPassiveGuids)
+            {
+                if (!catalog.TryResolveItem(guid, out var entry) || entry is not PassiveItemSO sourcePassive) continue;
+                var passive = RestoreOwnedPassive(sourcePassive);
+                if (passive == null || passive.DisabledForRaid) continue;
+                for (int index = (int)passive.Category; index < MaximumSlotCount; index += 2)
+                    if (IsSlotUnlocked(index) && _equippedSlots[index] == null) { _equippedSlots[index] = passive; break; }
+            }
         }
 
         PruneSlotsWithoutOwnedCopies();
@@ -200,12 +226,20 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
         return true;
     }
 
+    private PassiveItemSO RestoreOwnedPassive(PassiveItemSO passive)
+    {
+        if (passive == null || passive.DisabledForRaid) return null;
+        if (passive.IsRolledInstance) return passive;
+        return _inventoryRuntime != null && _inventoryRuntime.TryBindOwnedPassive(passive, out var bound, out _) ? bound : null;
+    }
+
     // Purpose: Attempts to equip from inventory and reports whether the request succeeded.
     public bool TryEquipFromInventory(
         int inventoryIndex,
         int targetSlotIndex,
         out string message)
     {
+        if (!GameProgressionRuntime.CanChangePassives(out message)) return false;
         ResolveRefs();
 
         if (_inventoryRuntime == null ||
@@ -230,14 +264,15 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     // Purpose: Attempts to equip first available and reports whether the request succeeded.
     public bool TryEquipFirstAvailable(PassiveItemSO item, out string message)
     {
+        if (!GameProgressionRuntime.CanChangePassives(out message)) return false;
         EnsureSlotStorage();
 
         if (item == null)
             return Fail("Passive item is missing.", out message);
 
-        for (int i = 0; i < UnlockedSlotCount; i++)
+        for (int i = (int)item.Category; i < MaximumSlotCount; i += 2)
         {
-            if (_equippedSlots[i] == null)
+            if (IsSlotUnlocked(i) && _equippedSlots[i] == null)
                 return TryEquip(item, i, out message);
         }
 
@@ -247,10 +282,17 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     // Purpose: Attempts to equip and reports whether the request succeeded.
     public bool TryEquip(PassiveItemSO item, int targetSlotIndex, out string message)
     {
+        ResolveRefs();
+        if (_inventoryRuntime == null || !_useInventoryRuntime) return Fail("패시브 개체 소유권을 저장할 플레이어 인벤토리가 필요합니다.", out message);
+        if (GetComponent<Damageable>()?.IsDead == true) return Fail("사망한 플레이어는 패시브를 장착할 수 없습니다.", out message);
+        if (!GameProgressionRuntime.CanChangePassives(out message)) return false;
         EnsureSlotStorage();
 
         if (item == null)
             return Fail("Passive item is missing.", out message);
+
+        if (item.DisabledForRaid) return Fail("이 원정에서 해제한 패시브는 다시 장착할 수 없습니다.", out message);
+        if ((int)item.Category != targetSlotIndex % 2) return Fail("전투/생존 패시브 슬롯 종류가 다릅니다.", out message);
 
         if (!IsSlotUnlocked(targetSlotIndex))
             return Fail("This passive slot is locked.", out message);
@@ -263,6 +305,13 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
             return true;
         }
 
+        for (int i = 0; i < _equippedSlots.Count; i++)
+            {
+                var equipped = _equippedSlots[i];
+                if (i != targetSlotIndex && equipped != null && item.SharesEffectWith(equipped))
+                    return Fail("동일한 효과 종류의 패시브는 하나만 장착할 수 있습니다.", out message);
+            }
+
         if (IsChangeOnCooldown)
             return Fail(GetCooldownMessage(), out message);
 
@@ -273,10 +322,14 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
                 out message);
         }
 
+        if (_inventoryRuntime != null && !_inventoryRuntime.TryBindOwnedPassive(item, out item, out message)) return false;
+
         _equippedSlots[targetSlotIndex] = item;
         StartChangeCooldown();
         RebuildEquippedItems();
         OnChanged?.Invoke();
+
+        _inventoryRuntime?.DropPassiveCapacityOverflow();
 
         message = current == null
             ? $"{ResolveItemName(item)} equipped in passive slot {targetSlotIndex + 1}."
@@ -287,6 +340,8 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     // Purpose: Attempts to unequip and reports whether the request succeeded.
     public bool TryUnequip(int slotIndex, out string message)
     {
+        if (GetComponent<Damageable>()?.IsDead == true) return Fail("사망한 플레이어는 패시브를 변경할 수 없습니다.", out message);
+        if (!GameProgressionRuntime.CanChangePassives(out message)) return false;
         EnsureSlotStorage();
 
         if (!IsSlotUnlocked(slotIndex))
@@ -306,7 +361,36 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
         OnChanged?.Invoke();
 
         message = $"{ResolveItemName(current)} removed from passive slot {slotIndex + 1}.";
+        _inventoryRuntime?.DropPassiveCapacityOverflow();
         return true;
+    }
+
+    public void ForgetDestroyedPassive(PassiveItemSO item)
+    {
+        for (int i = 0; i < _equippedSlots.Count; i++) if (_equippedSlots[i] == item) _equippedSlots[i] = null;
+        RefreshModuleEffects();
+    }
+
+    private static float StorageSlots(PassiveItemSO item)
+    {
+        float value=0;
+        foreach(var mod in item?.StatModifiers??System.Array.Empty<PlayerStatModifier>())if(mod.stat==PlayerStatId.InventorySlots)value+=mod.value;
+        return value;
+    }
+
+    public void RefreshModuleEffects()
+    {
+        RebuildEquippedItems();
+        OnChanged?.Invoke();
+        _inventoryRuntime?.DropPassiveCapacityOverflow();
+    }
+
+    public void ResetRaidEquipment()
+    {
+        EnsureSlotStorage();
+        for (int i = 0; i < MaximumSlotCount; i++) _equippedSlots[i] = null;
+        _nextChangeAllowedAt = 0;
+        RefreshModuleEffects();
     }
 
     /// <summary>
@@ -317,44 +401,14 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     {
         EnsureSlotStorage();
 
-        if (UnlockedSlotCount >= MaximumSlotCount)
-            return Fail("All passive slots are already unlocked.", out message);
-
-        _unlockedSlotCount++;
-        OnChanged?.Invoke();
-        message = $"Passive slot {_unlockedSlotCount} unlocked.";
-        return true;
+        return Fail("패시브 슬롯은 Game System Tool의 전투/생존 해금 레벨로 확장합니다.", out message);
     }
 
     // Purpose: Updates the unlocked slot count state.
     public void SetUnlockedSlotCount(int value)
     {
-        EnsureSlotStorage();
-        int clamped = Mathf.Clamp(value, MinimumUnlockedSlotCount, MaximumSlotCount);
-
-        if (_unlockedSlotCount == clamped)
-            return;
-
-        _unlockedSlotCount = clamped;
-        bool changed = false;
-
-        for (int i = _unlockedSlotCount; i < MaximumSlotCount; i++)
-        {
-            if (_equippedSlots[i] == null)
-                continue;
-
-            _equippedSlots[i] = null;
-            changed = true;
-        }
-
-        if (!changed)
-        {
-            OnChanged?.Invoke();
-            return;
-        }
-
-        RebuildEquippedItems();
-        OnChanged?.Invoke();
+        // Kept for old quest/editor callers. Legacy profile counts no longer bypass level unlocks.
+        RefreshModuleEffects();
     }
 
     // Purpose: Attempts to add and reports whether the request succeeded.
@@ -466,7 +520,7 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     {
         int count = 0;
 
-        for (int i = 0; i < UnlockedSlotCount; i++)
+        for (int i = 0; i < MaximumSlotCount; i++)
         {
             if (_equippedSlots[i] == item)
                 count++;
@@ -482,12 +536,18 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
         Dictionary<PassiveItemSO, int> remainingOwned = new();
         bool changed = false;
 
-        for (int i = 0; i < UnlockedSlotCount; i++)
+        for (int i = 0; i < MaximumSlotCount; i++)
         {
             PassiveItemSO item = _equippedSlots[i];
 
             if (item == null)
                 continue;
+
+            if (!IsSlotUnlocked(i) || item.DisabledForRaid)
+            {
+                PassiveInstanceRuntime.Disable(item);
+                _equippedSlots[i] = null; changed = true; continue;
+            }
 
             if (!remainingOwned.TryGetValue(item, out int remaining))
             {
@@ -501,6 +561,7 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
                 continue;
             }
 
+            if (GetOwnedCount(item) <= 0) PassiveInstanceRuntime.Disable(item);
             _equippedSlots[i] = null;
             changed = true;
         }
@@ -533,11 +594,11 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
         EnsureSlotStorage();
         _equippedItems.Clear();
 
-        for (int i = 0; i < UnlockedSlotCount; i++)
+        for (int i = 0; i < MaximumSlotCount; i++)
         {
             PassiveItemSO item = _equippedSlots[i];
 
-            if (item != null)
+            if (item != null && IsSlotUnlocked(i) && !item.DisabledForRaid && GameProgressionRuntime.PassiveEffectsActive)
                 _equippedItems.Add(item);
         }
     }

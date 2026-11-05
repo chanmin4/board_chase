@@ -34,7 +34,7 @@ public sealed class ShopConfigSO : ScriptableObject
         public int Stock => Mathf.Max(1, _stock);
         public int BundleAmount => Mathf.Max(1, _bundleAmount);
         public bool IsBullet => _item is BulletSO;
-        public bool IsValid => _item != null && _offerWeight > 0f;
+        public bool IsValid => _item != null && _offerWeight > 0f && !(_item is InfectionCureItemSO medicine && medicine.IsSyringe);
         public IReadOnlyList<ShopTradeRequirement> TradeRequirements => _tradeRequirements;
         public bool UsesPhysicalPayment => _tradeRequirements != null && _tradeRequirements.Count > 0;
 

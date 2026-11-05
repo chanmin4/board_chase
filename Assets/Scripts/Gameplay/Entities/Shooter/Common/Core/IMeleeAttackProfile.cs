@@ -10,7 +10,7 @@ public interface IMeleeAttackProfile
 {
     string ProfileName { get; }
     float Damage { get; }
-    int PenetrationClass { get; }
+    float PenetrationClass { get; }
     float ArmorHealthDurabilityLossMultiplier { get; }
     float Range { get; }
     float ArcAngle { get; }

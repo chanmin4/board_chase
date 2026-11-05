@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_SM_BackPack_20
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: 5d519be07d2da924da0e1ed8d2cf40c8, type: 3}
-  _displayName: Backpack 20
+  _worldPrefab: {fileID: 5383560244779887553, guid: 5d519be07d2da924da0e1ed8d2cf40c8, type: 3}
+  _displayName: BackPack02
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: b8aa1000000000000000000000000001, type: 2}
-  _lootTable: {fileID: 11400000, guid: b3300000000000000000000000000010, type: 2}
+  _sizeClass: 0
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 1
+  _maxGeneratedSlots: 2
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 6
+    legendary: 1
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 6
+  _lootTable: {fileID: 11400000, guid: 09fdfc00ab3f2a643a15a2669bcbcf4b, type: 2}
+  references:
+    version: 2
+    RefIds: []

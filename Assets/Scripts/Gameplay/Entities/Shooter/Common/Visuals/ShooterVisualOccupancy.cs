@@ -21,3 +21,14 @@ public enum ShooterVisualOccupancy
     Back = 1 << 4,
     Hands = 1 << 5
 }
+
+/// <summary>외형 장식에만 적용되는 숨김 조건. 아이템 소유/능력치/충돌체에는 영향을 주지 않는다.</summary>
+[Flags]
+public enum ShooterVisualEquipmentKind
+{
+    None = 0,
+    Weapon = 1 << 0,
+    Armor = 1 << 1,
+    GasMask = 1 << 2,
+    Backpack = 1 << 3
+}

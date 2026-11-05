@@ -13,7 +13,8 @@ public enum TreasureRewardKind
     Passive,
     Bullet,
     Armor,
-    Currency
+    Currency,
+    Valuable
 }
 
 public readonly struct TreasureRoomReward
@@ -32,18 +33,18 @@ public readonly struct TreasureRoomReward
     public TreasureRoomReward(
         TreasureRewardKind kind,
         PlayerShopItemRarity rarity,
-        PassiveItemSO passiveItem,
+        ItemSO passiveItem,
         BulletSO bullet,
         ArmorItemSO armorItem,
         int bulletBundleAmount,
         float bulletSellPriceRate)
     {
-        Kind = kind;
+        Kind = kind == TreasureRewardKind.Passive && passiveItem is ValuableItemSO ? TreasureRewardKind.Valuable : kind;
         Rarity = rarity;
         Item = passiveItem != null
             ? (ItemSO)passiveItem
             : bullet != null ? (ItemSO)bullet : armorItem;
-        PassiveItem = passiveItem;
+        PassiveItem = passiveItem as PassiveItemSO;
         Bullet = bullet;
         ArmorItem = armorItem;
         CurrencyItem = null;
@@ -118,7 +119,8 @@ public class TreasureRoomDropTableSO : ScriptableObject
     [Serializable]
     public sealed class PassiveItemEntry
     {
-        public PassiveItemSO item;
+        [Tooltip("기존 슬롯 이름은 저장 호환용입니다. 이제 효과 없는 귀중품만 필드 보상으로 사용합니다.")]
+        public ItemSO item;
         [Min(0f)] public float weight = 1f;
     }
 
@@ -859,22 +861,7 @@ public class TreasureRoomDropTableSO : ScriptableObject
         PassiveItemEntry entry,
         IReadOnlyList<PassiveItemSO> ownedPassiveItems)
     {
-        if (entry == null || entry.item == null || entry.weight <= 0f)
-            return false;
-
-        if (entry.item.AllowDuplicatePickup)
-            return true;
-
-        if (ownedPassiveItems == null)
-            return true;
-
-        for (int i = 0; i < ownedPassiveItems.Count; i++)
-        {
-            if (ownedPassiveItems[i] == entry.item)
-                return false;
-        }
-
-        return true;
+        return entry != null && entry.item is ValuableItemSO && entry.weight > 0f;
     }
 
     // Purpose: Checks whether bullet candidate valid is currently true.

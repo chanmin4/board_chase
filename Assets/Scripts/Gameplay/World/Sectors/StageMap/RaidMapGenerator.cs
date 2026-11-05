@@ -8,7 +8,8 @@ public static class RaidMapGenerator
     public const int GenerationVersion = 2;
 
     // V1 is the saved bottom-left layout. Loading it must never rotate/reroll it.
-    public static bool IsSupportedGenerationVersion(int version) => version == 1 || version == GenerationVersion;
+    public static bool IsSupportedGenerationVersion(int version) => version == 1 || version == GenerationVersion ||
+        version == RadialBraidedRaidGenerator.GenerationVersion;
     private static readonly Vector2Int[] Offsets =
         { Vector2Int.left, Vector2Int.right, Vector2Int.down, Vector2Int.up };
     private static readonly StageRoomConnectionFlags[] Flags =
@@ -65,7 +66,7 @@ public static class RaidMapGenerator
             {
                 var coord = new Vector2Int(x, y);
                 northEast.Add(coord);
-                if (distances.TryGetValue(coord, out int distance) && distance >= settings.minimumExtractionPathDistance)
+                if ((x == size - 1 || y == size - 1) && distances.TryGetValue(coord, out int distance) && distance >= settings.minimumExtractionPathDistance)
                     exits.Add(coord);
             }
         if (exits.Count == 0)
@@ -101,6 +102,7 @@ public static class RaidMapGenerator
         // Rotate coordinates AND connections. Distances, room roles and the single external
         // hub link stay identical; room prefab art itself retains its world-axis portals.
         RotateLayout(candidate, GetQuarterTurns(seed));
+        if (!RaidExtractionPortalPolicy.TryPrepare(candidate, out error)) return false;
         layout = candidate;
         error = string.Empty;
         return true;

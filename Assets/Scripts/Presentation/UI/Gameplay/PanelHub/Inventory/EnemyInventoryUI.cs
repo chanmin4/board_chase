@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class EnemyInventoryUI : InventoryPanelUIBase,
+public partial class EnemyInventoryUI : InventoryPanelUIBase,
     IInventorySlotOwner,
     IInventoryItemContextMenuOwner
 {
@@ -33,6 +33,9 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
 
     [Tooltip("Enemy currently equipped armor slot.")]
     [SerializeField] private EquipmentInventoryArmorSlotUI _armorSlot;
+    [Tooltip("Reserved authored head view; enemy loot has no equipped mask owner yet, so this remains empty and inspect-only.")]
+    [SerializeField] private EquipmentInventoryGasMaskSlotUI _headSlot;
+    private RectTransform _enemyPocketGrid;
 
     [Tooltip("Enemy equipped ammo slots. Currently one slot is enough, but multiple slots are supported.")]
     [SerializeField] private EquipmentInventoryAmmoSlotUI[] _ammoSlots;
@@ -1154,6 +1157,7 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
         RefreshEquippedSlots();
         RefreshAmmoSlots();
         RefreshItemSlots();
+        RefreshPassiveModules();
     }
 
     /// <summary>
@@ -1163,90 +1167,49 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
     /// </summary>
     public void ApplyContextPresentation()
     {
-        RectTransform headerSection = FindChildRect("HeaderSection");
-        RectTransform inventoryArea = FindChildRect("InventoryArea");
-        RectTransform inventorySection = FindChildRect("InventorySection");
-        RectTransform inventoryHeader = inventorySection != null
-            ? inventorySection.Find("Header") as RectTransform
-            : null;
-        RectTransform inventoryScroll = FindChildRect("InventoryScrollView");
-        RectTransform equipmentSection = _equipmentSectionRoot != null
-            ? _equipmentSectionRoot.transform as RectTransform
-            : FindChildRect("EquipmentSection");
-
-        const float outerInset = 24f;
-        const float headerTopInset = 18f;
-        const float headerHeight = 54f;
-        const float sectionGap = 10f;
-        const float equipmentHeight = 146f;
-
-        // InventoryArea is the full-height Loot backdrop. It must render
-        // behind the HeaderSection; otherwise its Image appears in front of
-        // the Loot title and makes the layout look like duplicate panels.
-        inventoryArea?.SetAsFirstSibling();
-        AnchorTop(headerSection, headerTopInset, headerHeight, outerInset);
-
-        bool showsEquipment = _activeInventory == null || _activeInventory.ShowsEquipment;
-        if (_equipmentSectionRoot != null && _equipmentSectionRoot.activeSelf != showsEquipment)
-            _equipmentSectionRoot.SetActive(showsEquipment);
-
-        if (equipmentSection != null)
+        ResolveAuthoredPassiveRow();
+        var root=transform as RectTransform;if(root==null)return;
+        root.sizeDelta=InventorySplitLayout.PanelSize;
+        var header=FindChildRect("HeaderSection");var area=FindChildRect("InventoryArea");
+        var inventory=FindChildRect("InventorySection");var pocket=FindChildRect("PocketSection");
+        var equipment=_equipmentSectionRoot!=null?_equipmentSectionRoot.transform as RectTransform:FindChildRect("EquipmentSection");
+        var passive=transform.Find("PassiveSection") as RectTransform;
+        area?.SetAsFirstSibling();Stretch(area,Vector2.zero,Vector2.zero);
+        AnchorTop(header,18f,54f,24f);
+        bool character=_activeInventory==null||_activeInventory.ShowsEquipment;
+        if(equipment!=null)equipment.gameObject.SetActive(character);
+        if(passive!=null)passive.gameObject.SetActive(character);
+        if(pocket!=null)pocket.gameObject.SetActive(character);
+        InventorySplitLayout.Box(passive,24f,84f,260f,InventorySplitLayout.PassiveHeight);
+        if(passive!=null)
         {
-            equipmentSection.anchorMin = new Vector2(0f, 1f);
-            equipmentSection.anchorMax = new Vector2(1f, 1f);
-            equipmentSection.pivot = new Vector2(0.5f, 1f);
-            equipmentSection.anchoredPosition = new Vector2(0f, -(headerTopInset + headerHeight + sectionGap));
-            equipmentSection.sizeDelta = new Vector2(-outerInset * 2f, equipmentHeight);
-            ConfigureEquipmentRow(equipmentSection);
+            AnchorTop(passive.Find("PassiveTitle") as RectTransform,0f,28f,0f);
+            Stretch(_passiveModuleRow,new Vector2(0f,8f),new Vector2(0f,-28f));
+            if(_passiveModuleRow!=null&&_passiveModuleRow.TryGetComponent(out HorizontalLayoutGroup layout))layout.enabled=false;
         }
-
-        // Keep the scroll content after the equipment surface in hierarchy as
-        // well as vertically, so it cannot cover the equipment header while
-        // the UI is being edited in Scene view.
-        inventorySection?.SetAsLastSibling();
-
-        // The inventory always owns the remaining vertical space. Object loot
-        // has no equipment surface, so it starts directly below the title
-        // instead of preserving an empty character-equipment gap.
-        float inventoryTopInset = headerTopInset + headerHeight + sectionGap;
-        if (showsEquipment)
-            inventoryTopInset += equipmentHeight + sectionGap;
-
-        // InventoryArea owns the full Loot-panel backdrop, matching the
-        // Player panel's full-height background. InventorySection is only the
-        // lower content surface and moves below Equipment when it is shown.
-        Stretch(inventoryArea, Vector2.zero, Vector2.zero);
-        Stretch(inventorySection,
-            new Vector2(outerInset, outerInset),
-            new Vector2(-outerInset, -inventoryTopInset));
-        AnchorTop(inventoryHeader, 0f, 32f, 0f);
-        Stretch(inventoryScroll, new Vector2(16f, 14f), new Vector2(-16f, -42f));
-
-        Canvas.ForceUpdateCanvases();
-        if (_inventorySlotRoot is RectTransform content)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-    }
-
-    // Purpose: Keeps character-loot equipment in one compact row so it cannot
-    // overflow into the inventory surface beneath it.
-    private static void ConfigureEquipmentRow(RectTransform equipmentSection)
-    {
-        if (equipmentSection == null)
-            return;
-
-        RectTransform body = equipmentSection.Find("Body") as RectTransform;
-        RectTransform header = equipmentSection.Find("Header") as RectTransform;
-        AnchorTop(header, 0f, 24f, 0f);
-        Stretch(body, Vector2.zero, new Vector2(0f, -24f));
-
-        if (body == null || !body.TryGetComponent(out GridLayoutGroup grid))
-            return;
-
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = 6;
-        grid.cellSize = new Vector2(104f, 112f);
-        grid.spacing = new Vector2(8f, 0f);
-        grid.childAlignment = TextAnchor.UpperLeft;
+        InventorySplitLayout.Box(equipment,24f,InventorySplitLayout.EquipmentTop,260f,InventorySplitLayout.EquipmentHeight);
+        if(equipment!=null)
+        {
+            AnchorTop(equipment.Find("Header") as RectTransform,0f,28f,0f);
+            var body=equipment.Find("Body") as RectTransform;Stretch(body,Vector2.zero,new Vector2(0f,-28f));
+            InventorySplitLayout.EquipmentBody(body);
+        }
+        InventorySplitLayout.EquipmentSlot(_armorSlot,0);InventorySplitLayout.EquipmentSlot(_headSlot,1);
+        if(_headSlot!=null){_headSlot.Bind(null,0,0);_headSlot.enabled=false;}
+        if(_weaponSlots!=null)for(int i=0;i<_weaponSlots.Length;i++)InventorySplitLayout.EquipmentSlot(_weaponSlots[i],2+i);
+        if(_ammoSlots!=null)for(int i=0;i<_ammoSlots.Length;i++)InventorySplitLayout.EquipmentSlot(_ammoSlots[i],4+i);
+        float x=character?InventorySplitLayout.StorageLeft:24f;
+        float width=root.rect.width-x-24f;
+        InventorySplitLayout.Box(pocket,InventorySplitLayout.StorageLeft,84f,root.rect.width-InventorySplitLayout.StorageLeft-24f,InventorySplitLayout.PocketHeight);
+        InventorySplitLayout.Box(inventory,x,character?InventorySplitLayout.InventoryTop:84f,width,InventorySplitLayout.InventoryHeight);
+        if(pocket!=null)
+        {
+            AnchorTop(pocket.Find("Header") as RectTransform,0f,28f,0f);
+            _enemyPocketGrid=pocket.Find("PocketScrollView/Viewport/PocketGrid") as RectTransform;
+            InventorySplitLayout.Scroll(pocket.Find("PocketScrollView") as RectTransform,_enemyPocketGrid);
+        }
+        if(inventory!=null)AnchorTop(inventory.Find("Header") as RectTransform,0f,28f,0f);
+        InventorySplitLayout.Scroll(FindChildRect("InventoryScrollView"),_inventorySlotRoot as RectTransform);
     }
 
     // Purpose: Finds one authored loot RectTransform by name without expanding inspector wiring.
@@ -1366,6 +1329,8 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
             : 0;
 
         EnsureItemSlots(slotCount);
+        ApplyContextPresentation();
+        int pocketCount=_activeInventory!=null&&_activeInventory.ShowsEquipment?Mathf.Min(slotCount,_activeInventory.PocketCapacity):0;
 
         for (int i = 0; i < _itemSlots.Count; i++)
         {
@@ -1375,6 +1340,8 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
                 continue;
 
             bool active = i < slotCount;
+            Transform target=i<pocketCount?_enemyPocketGrid:_inventorySlotRoot;
+            if(target!=null&&slot.transform.parent!=target)slot.transform.SetParent(target,false);
             slot.gameObject.SetActive(active);
 
             if (active)
@@ -2100,6 +2067,7 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
 
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+        if(_enemyPocketGrid!=null)LayoutRebuilder.ForceRebuildLayoutImmediate(_enemyPocketGrid);
     }
 
     // Purpose: Performs the reset inventory scroll to top workflow for this component.
@@ -2109,6 +2077,8 @@ public class EnemyInventoryUI : InventoryPanelUIBase,
 
         if (_inventoryScrollRect != null)
             _inventoryScrollRect.verticalNormalizedPosition = 1f;
+        var pocket=FindChildRect("PocketScrollView");
+        if(pocket!=null&&pocket.TryGetComponent(out ScrollRect scroll))scroll.verticalNormalizedPosition=1f;
     }
 
     // Purpose: Hides the slot template if needed UI or visual state.

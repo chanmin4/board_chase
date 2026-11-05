@@ -8,10 +8,10 @@ public static class RaidStationFactory
         if (room.roomType == StageRoomType.Start) kind = RaidStationKind.StartReturn;
         else if (room.raidRole == RaidRoomRole.Generator) kind = RaidStationKind.Generator;
         else if (room.raidRole == RaidRoomRole.Hatch) kind = RaidStationKind.Hatch;
-        else if (room.raidRole == RaidRoomRole.Extraction) kind = RaidStationKind.NormalExtraction;
         else return;
 
-        RaidStation station = sector.GetComponentInChildren<RaidStation>(true);
+        SectorHatch authoredHatch = kind == RaidStationKind.Hatch ? sector.GetComponentInChildren<SectorHatch>(true) : null;
+        RaidStation station = authoredHatch != null ? authoredHatch.GetComponent<RaidStation>() : sector.GetComponentInChildren<RaidStation>(true);
         if (station == null && settings.terminalPrefab != null)
             station = Object.Instantiate(settings.terminalPrefab, sector.transform);
         if (station == null)
@@ -41,5 +41,27 @@ public static class RaidStationFactory
             station.SetPrototypeLabel(text);
         }
         station.Configure(raid, sector, kind);
+        if (raid.State.layout.generationVersion == 3 && kind == RaidStationKind.Hatch)
+            sector.PlayerStartPoint.position = station.transform.position + Vector3.left * 3.5f;
+        if (raid.State.layout.generationVersion == 3 && kind == RaidStationKind.Generator)
+        {
+            var shortcut = new GameObject("Raid_GeneratorShortcut");
+            shortcut.layer = station.gameObject.layer;
+            shortcut.transform.SetParent(sector.transform, false);
+            shortcut.transform.position = station.transform.position + Vector3.right * 3f;
+            var trigger = shortcut.AddComponent<SphereCollider>();
+            trigger.radius = 1.2f; trigger.center = Vector3.up * .6f; trigger.isTrigger = true;
+            var returnStation = shortcut.AddComponent<RaidStation>();
+            returnStation.Configure(raid, sector, RaidStationKind.GeneratorShortcut);
+            var label = new GameObject("ShortcutLabel");
+            label.transform.SetParent(shortcut.transform, false);
+            label.transform.localPosition = Vector3.up * 1.6f;
+            label.transform.localRotation = Quaternion.Euler(90, 0, 0);
+            var text = label.AddComponent<TMPro.TextMeshPro>();
+            text.font = settings.prototypeFont != null ? settings.prototypeFont : TMPro.TMP_Settings.defaultFontAsset;
+            text.fontSize = 3; text.alignment = TMPro.TextAlignmentOptions.Center;
+            text.rectTransform.sizeDelta = new Vector2(5, 2); text.raycastTarget = false;
+            text.color = Color.cyan; returnStation.SetPrototypeLabel(text);
+        }
     }
 }

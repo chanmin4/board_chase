@@ -179,7 +179,7 @@ public class PlayerInfoHUD : MonoBehaviour
         float currentHealth = snapshot.currentHealth;
         float currentInfection = snapshot.currentInfection;
         float health01 = maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
-        float infectionLimit = Mathf.Max(0f, currentHealth);
+        float infectionLimit = Mathf.Max(0f, maxHealth + currentInfection);
         float infection01 = infectionLimit > 0f
             ? Mathf.Clamp01(currentInfection / infectionLimit)
             : 0f;
@@ -206,15 +206,17 @@ public class PlayerInfoHUD : MonoBehaviour
     // Purpose: Displays only the active room-gas pressure, not the retired natural-recovery display value.
     private void RefreshInfectionRateText()
     {
-        float infectionLimit = Mathf.Max(0f, _lastSnapshot.currentHealth);
+        float infectionLimit = Mathf.Max(0f, _lastSnapshot.maxHealth + _lastSnapshot.currentInfection);
         RefreshInfectionRateText(_lastSnapshot.currentInfection, infectionLimit);
     }
 
     // Purpose: Applies the Infection total and its live environmental rate to the HUD.
     private void RefreshInfectionRateText(float currentInfection, float infectionLimit)
     {
-        if (_infectionText == null)
-            return;
+        float gauge = _playerInfection != null ? _playerInfection.ExposureGauge : 0f;
+        float capacity = _playerInfection != null ? _playerInfection.ExposureCapacity : 100f;
+        if (_infectionFill != null) _infectionFill.fillAmount = Mathf.Clamp01(gauge / Mathf.Max(1f, capacity));
+        if (_infectionText == null) return;
 
         float gasRate = _playerInfection != null
             ? _playerInfection.CurrentBiochemicalGasInfectionPerSecond
@@ -228,13 +230,7 @@ public class PlayerInfoHUD : MonoBehaviour
                 gasRate.ToString("0.#"))
             : "0/s";
 
-        _infectionText.text = UIRuntimeLocalization.Format(
-            _stringTable,
-            _infectionFormatKey,
-            "Infection {0} / {1}  {2}",
-            Mathf.CeilToInt(currentInfection),
-            Mathf.CeilToInt(infectionLimit),
-            gasRateText);
+        _infectionText.text = $"감염 {Mathf.FloorToInt(gauge)}/{Mathf.FloorToInt(capacity)} · {gasRateText}";
     }
 
     private void HandleLocaleChanged(UnityEngine.Localization.Locale locale)

@@ -1,6 +1,6 @@
 using UnityEngine;
-using UOP1.StateMachine;
-using UOP1.StateMachine.ScriptableObjects;
+using VSplatter.StateMachine;
+using VSplatter.StateMachine.ScriptableObjects;
 
 [CreateAssetMenu(fileName = "#RUNTIMENAME#", menuName = "State Machines/Actions/#RUNTIMENAME_WITH_SPACES#")]
 public class #SCRIPTNAME# : StateActionSO
@@ -25,6 +25,12 @@ public class #RUNTIMENAME# : StateAction
 	}
 	
 	public override void OnStateExit()
+	{
+	}
+
+	// Explicit cancellation only. Release resources here without applying completion effects.
+	// Disabling a legacy machine is suspension, not cancellation.
+	public override void OnInterrupted(StateExitReason reason)
 	{
 	}
 }

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: GasMaskLV1
   m_EditorClassIdentifier: 
   _guid: c1a00000000000000000000000000001
+  _usageLevelOverride: 1
   _name:
     m_TableReference:
       m_TableCollectionName: 
@@ -41,10 +42,11 @@ MonoBehaviour:
   _displayName: Normal Gas Mask
   _tier: 0
   _gasInfectionMultiplier: 0.65
+  _gasDefenseLevel: 1
   _maxFilterDurability: 100
   _filterDurabilityLossPerRawInfection: 0.35
   _repairPermanentLossRatio: 0.1
-  _equippedVisualPrefab: {fileID: 100100000, guid: 6241e094365f1f948bf8c6a981cdda68, type: 3}
+  _equippedVisualPrefab: {fileID: 6244533929590124771, guid: 3c29b46e537c8e940a0bf8f500eca42a, type: 3}
   _equippedVisualSocket: 7
   _visualCoverage: 4
   _equippedVisualTransform:

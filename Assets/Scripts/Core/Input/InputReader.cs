@@ -39,6 +39,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction MoveSelectionEvent = delegate { };
 	// Menus
 	public event UnityAction MapEvent = delegate { };
+	public event UnityAction MissionsEvent = delegate { };
 
 	public event UnityAction Slot1Event = delegate { };
 	public event UnityAction Slot2Event = delegate { };
@@ -46,10 +47,14 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	public event UnityAction Slot4Event = delegate { };
 	public event UnityAction Slot5Event = delegate { };
 	public event UnityAction CycleAmmoEvent = delegate { };
+	public event UnityAction WeaponFunctionCheckEvent = delegate { };
 	public event UnityAction DropBackpackEvent = delegate { };
 
 	private InputAction _cycleAmmoAction;
 	private InputAction _dropBackpackAction;
+	private InputAction _sprintAction;
+	public bool SprintInputHeld => _gameInput != null && _gameInput.Gameplay.Move.enabled &&
+		_sprintAction != null && _sprintAction.enabled && _sprintAction.IsPressed();
 	private InputActionMap _auxiliaryGameplayActions;
 
 	/// <summary>
@@ -135,6 +140,16 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 
 		_cycleAmmoAction = FindOrAddAuxiliaryButton("CycleAmmo", "<Keyboard>/t");
 		_dropBackpackAction = FindOrAddAuxiliaryButton("DropBackpack", "<Keyboard>/x");
+		// Fixed map/action/binding IDs let the normal override save survive a new input instance.
+		var sprintMap = _gameInput.asset.FindActionMap("GameplayLocomotion", false);
+		if (sprintMap == null)
+		{
+			sprintMap = InputActionMap.FromJson(@"{""maps"":[{""name"":""GameplayLocomotion"",""id"":""f07cdb52-e68e-43b3-960c-1c9f2955de55"",""actions"":[{""name"":""Sprint"",""type"":""Button"",""id"":""0c309ac4-d59b-45a4-9e87-9564ff86c885"",""expectedControlType"":""Button""}],""bindings"":[{""id"":""de5adcbc-5019-4cb8-a359-335f15c976af"",""path"":""<Keyboard>/leftShift"",""action"":""Sprint"",""groups"":""Keyboard&Mouse""}]}]}")[0];
+			_gameInput.asset.AddActionMap(sprintMap);
+		}
+		_sprintAction = sprintMap.FindAction("Sprint", true);
+		// Poll-only action: gameplay Move.enabled is the authoritative gate, including menu-only input mode.
+		sprintMap.Enable();
 
 		_cycleAmmoAction.performed -= HandleCycleAmmoPerformed;
 		_cycleAmmoAction.performed += HandleCycleAmmoPerformed;
@@ -207,6 +222,13 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 
 		if (!string.IsNullOrWhiteSpace(json))
 			_gameInput.asset.LoadBindingOverridesFromJson(json);
+		// Preserve a saved Shift dash binding. Only the NEW, not explicitly rebound Sprint gets a safe fallback.
+		if (_sprintAction != null && _sprintAction.bindings.Count > 0 && _sprintAction.bindings[0].overridePath == null)
+		{
+			foreach (var binding in _gameInput.Gameplay.Dash.bindings)
+				if (string.Equals(binding.effectivePath, "<Keyboard>/leftShift", System.StringComparison.OrdinalIgnoreCase))
+				{ _sprintAction.ApplyBindingOverride(0, "<Keyboard>/leftCtrl"); break; }
+		}
 	}
 
 	/// <summary>
@@ -290,6 +312,7 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		_allowPlayerMenuWhileGameplayDisabled = true;
 		_gameInput.Gameplay.PlayerMenu.Enable();
 		_gameInput.Gameplay.Map.Enable();
+		_gameInput.Gameplay.Missions.Enable();
 	}
 
 	// Purpose: Releases the owned gameplay input state resource.
@@ -436,6 +459,11 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 	// Purpose: Handles the incoming cycle ammo performed request or event.
 	private void HandleCycleAmmoPerformed(InputAction.CallbackContext context)
 	{
+		if (context.phase == InputActionPhase.Performed && PlayerAimController.HasActiveWeaponMalfunction)
+		{
+			WeaponFunctionCheckEvent.Invoke();
+			return;
+		}
 		if (context.phase == InputActionPhase.Performed)
 			CycleAmmoEvent.Invoke();
 	}
@@ -446,6 +474,12 @@ public class InputReader : ScriptableObject, GameInput.IGameplayActions, GameInp
 		if (context.phase == InputActionPhase.Performed)
 			DropBackpackEvent.Invoke();
 	}
+	public void OnMissions(InputAction.CallbackContext context)
+	{
+		if (context.phase == InputActionPhase.Performed)
+			MissionsEvent.Invoke();
+	}
+
 	// Purpose: Responds to the map callback.
 	public void OnMap(InputAction.CallbackContext context)
 	{

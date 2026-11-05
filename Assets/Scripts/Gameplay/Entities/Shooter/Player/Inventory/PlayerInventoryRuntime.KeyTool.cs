@@ -315,6 +315,23 @@ public partial class PlayerInventoryRuntime
         return Fail($"No usable {tier} Key is stored in {KeyTool.DisplayName}.", out message);
     }
 
+    // Confirmation consumes the exact physical key dragged from the Key Tool,
+    // not an arbitrary first key of the same tier.
+    public bool TryConsumeKeyToolSlotUse(int slotIndex, LootKeyTier tier, KeyItemSO expectedKey, out string message)
+    {
+        NormalizeKeyToolStorage();
+        if (!HasKeyTool || slotIndex < 0 || slotIndex >= _keyToolSlots.Count)
+            return Fail("제출한 열쇠 위치가 더 이상 유효하지 않습니다.", out message);
+        PlayerKeyToolSlotState state = _keyToolSlots[slotIndex];
+        if (state == null || !state.HasKey || state.Key != expectedKey || state.Key.Tier != tier)
+            return Fail("제출한 열쇠가 변경되었거나 필요한 등급과 다릅니다. 다시 제출하세요.", out message);
+        state.TryConsumeUse();
+        if (!state.HasKey) _keyToolSlots.RemoveAt(slotIndex);
+        message = "열쇠 사용 횟수 1회를 소모했습니다.";
+        NotifyKeyToolChanged();
+        return true;
+    }
+
     // Purpose: Stores the purchased Key Tool in an ordinary inventory slot, then imports carried keys if room exists.
     private bool TryPickupKeyTool(KeyToolItemSO keyTool, out string message)
     {

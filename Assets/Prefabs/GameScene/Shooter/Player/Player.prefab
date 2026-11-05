@@ -424,10 +424,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c5a8c6ad6c6483d8dbbfebbc783d3c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _inventoryCapacity: 10
   _pocketCapacity: 2
-  _equippedBackpack: {fileID: 11400000, guid: 59d36ae99b6e4d539f72ccff0dc92d7e, type: 2}
-  _useLegacyBackpackCapacityFallback: 0
+  _equippedBackpack: {fileID: 11400000, guid: de6fd49224173634d9fab2ad9003f429, type: 2}
   _keyToolSlots: []
   _bulletLoadout: {fileID: 3306513096728712540}
   _equipmentController: {fileID: 5694435422209653162}
@@ -1517,7 +1515,8 @@ MonoBehaviour:
   _equipmentController: {fileID: 5694435422209653162}
   _audio: {fileID: 902943828256929384}
   _hitZone: {fileID: 4419077605569317572}
-  _unarmedProfile: {fileID: 11400000, guid: 6db51e0b73d649fdbec695da0c453a97, type: 2}
+  _playerCombatKnife: {fileID: 11400000, guid: 4885aaa891b315943ae27e29c025b69b, type: 2}
+  _unarmedProfile: {fileID: 0}
   _runtimeSourceWeapon: {fileID: 0}
   _runtimeRange: 5
   _runtimeHitRadius: 1.5
@@ -1580,9 +1579,7 @@ GameObject:
   - component: {fileID: 3725409875933228798}
   - component: {fileID: 6986756209375199965}
   - component: {fileID: 2096197016530632128}
-  - component: {fileID: 723617969344722977}
   - component: {fileID: 4537753811123894838}
-  - component: {fileID: 8017175232211933994}
   - component: {fileID: 7683861469152231654}
   - component: {fileID: 69354217320293197}
   - component: {fileID: 3418356392918273818}
@@ -1750,27 +1747,6 @@ MonoBehaviour:
   _difficultyRules: {fileID: 11400000, guid: b3062c3ca54a07c499c92c9e2152d48f, type: 2}
   _playerHealthChanged: {fileID: 11400000, guid: c52ec27763e26ec4c89491ceccae6fbc, type: 2}
   _playerInfectionReadyChannel: {fileID: 11400000, guid: a72fde196ac2ba442adf03fc32ccfc1c, type: 2}
---- !u!114 &723617969344722977
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6915450752968060550}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 71b601e08d84d324fbc1dff9f84f20c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _transitionTableSO: {fileID: 11400000, guid: 7d0d5da602d641fd9cbb2680009dbc4c, type: 2}
-  _logStateChanges: 0
-  _debugOwnerLabel: 
-  _logInitialState: 0
-  _debugger:
-    debugTransitions: 1
-    appendConditionsInfo: 1
-    appendActionsInfo: 1
-    currentState: 
 --- !u!114 &4537753811123894838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1780,9 +1756,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 6915450752968060550}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 60a6b2c19999f504da354acd124867d5, type: 3}
+  m_Script: {fileID: 11500000, guid: d26f1002000000000000000000000004, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _definition: {fileID: 11400000, guid: d26f100200000000000000000000000f, type: 2}
   _transitionTableSO: {fileID: 11400000, guid: 207d84408ef242988f05c0939ab3a3f5, type: 2}
   _logStateChanges: 0
   _debugOwnerLabel: 
@@ -1791,32 +1768,7 @@ MonoBehaviour:
     debugTransitions: 1
     appendConditionsInfo: 1
     appendActionsInfo: 1
-    currentState: 
---- !u!114 &8017175232211933994
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6915450752968060550}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ecd6d1a63112ede4bac9a904854e4205, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _parentStateMachine: {fileID: 4537753811123894838}
-  _childStateMachine: {fileID: 723617969344722977}
-  _forceDisableChildOnAwake: 1
-  _defaultChildEnabled: 0
-  _refreshEveryFrame: 1
-  _parentStateRules:
-  - parentState: {fileID: 11400000, guid: 063d341699104aa9a76b5e6714c9739b, type: 2}
-    enableChildStateMachine: 1
-  - parentState: {fileID: 11400000, guid: e79f00dc718e41c79d2fb8c262b12186, type: 2}
-    enableChildStateMachine: 0
-  _currentParentState: {fileID: 0}
-  _resolvedChildEnabled: 0
-  _childStateMachineEnabled: 0
+    currentState:
 --- !u!114 &7683861469152231654
 MonoBehaviour:
   m_ObjectHideFlags: 0

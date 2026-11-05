@@ -91,6 +91,9 @@ public class SaveSystem : ScriptableObject
     /// </summary>
     public bool LoadSaveDataFromDisk()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (_hasLoadedSaveData)
             return _loadedProfileFromDisk;
 
@@ -197,6 +200,9 @@ public class SaveSystem : ScriptableObject
     /// </summary>
     public void SaveDataToDisk()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return;
+#endif
         Active = this;
         WriteAllPartitions(captureRunState: true);
     }
@@ -204,6 +210,9 @@ public class SaveSystem : ScriptableObject
     // A raid checkpoint writes its player inventory and map state in the SAME atomic run partition.
     public bool TrySaveRunDataToDisk()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         Active = this;
         RunLifecycleCoordinator.CaptureRunStateForExternalSave(this);
         RunData.EnsureDefaults();
@@ -285,6 +294,9 @@ public class SaveSystem : ScriptableObject
     /// </summary>
     public void WriteEmptySaveFile()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return;
+#endif
         saveData = new Save();
         _runData = new RunSaveData();
         _hasLoadedSaveData = true;
@@ -511,6 +523,7 @@ public class SaveSystem : ScriptableObject
 
     private bool WriteProfilePartition()
     {
+        PassiveInstanceRuntime.SynchronizeSnapshots(Profile, RunData);
         Profile.schemaVersion = Save.CurrentSchemaVersion;
         return WriteJsonAtomically(
             ProfileSaveKey,
@@ -521,6 +534,7 @@ public class SaveSystem : ScriptableObject
 
     private bool WriteRunPartition()
     {
+        PassiveInstanceRuntime.SynchronizeSnapshots(Profile, RunData);
         RunData.schemaVersion = RunSaveData.CurrentSchemaVersion;
         return WriteJsonAtomically(
             RunSaveKey,
@@ -541,6 +555,10 @@ public class SaveSystem : ScriptableObject
 
     private bool WriteJsonAtomically(string key, string filename, string json, Func<string, bool> validateJson)
     {
+#if UNITY_EDITOR
+        // SO references can load SaveSystem even in a room-only sandbox. Never touch real partitions/backups.
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         string temporaryFilename = filename + ".tmp";
 
         try

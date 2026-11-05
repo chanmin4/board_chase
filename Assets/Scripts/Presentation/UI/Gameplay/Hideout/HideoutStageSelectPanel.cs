@@ -26,6 +26,18 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
     private TextMeshProUGUI[] _stageButtonLabels;
     private bool _isOpen;
     private float _openedAt;
+    private int[] _hatchChoices;
+    private System.Func<int, bool> _onHatchChoice;
+
+    public static bool TryOpenHatchChoice(int[] choices, System.Func<int, bool> select)
+    {
+        EnsureInstance();
+        if (_instance == null || choices == null || choices.Length == 0 || select == null) return false;
+        _instance._hatchChoices = choices;
+        _instance._onHatchChoice = select;
+        _instance.Open();
+        return _instance._isOpen;
+    }
 
     // Purpose: Ensures instance is ready before the workflow continues.
     public static void EnsureInstance()
@@ -84,6 +96,7 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
     private void OnEnable()
     {
+        RegisterEscapeHandler();
         HideoutStageSelectStation.Requested += HandleStageSelectRequested;
         SubscribeInputReader();
     }
@@ -91,6 +104,7 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        UIEscapeRouter.Unregister(this);
         HideoutStageSelectStation.Requested -= HandleStageSelectRequested;
         UnsubscribeInputReader();
     }
@@ -109,13 +123,14 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
             return;
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
-            Close();
+            UIEscapeRouter.TryCloseTopPopup();
     }
 
     // Purpose: Responds to the overlay shown callback.
     public void OnOverlayShown()
     {
         _isOpen = true;
+        RegisterEscapeHandler();
         _openedAt = Time.unscaledTime;
         RefreshStageButtons();
     }
@@ -124,7 +139,12 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
     public void OnOverlayHidden()
     {
         _isOpen = false;
+        _hatchChoices = null;
+        _onHatchChoice = null;
     }
+
+    private void RegisterEscapeHandler() => UIEscapeRouter.Register(this,
+        () => _isOpen && (_overlayManager == null || !_overlayManager.isActiveAndEnabled), Close, 100);
 
     // Purpose: Handles the incoming stage select requested request or event.
     private void HandleStageSelectRequested(HideoutStageSelectOpenRequest request)
@@ -163,7 +183,7 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
         if (!_isOpen)
             return;
 
-        if (_overlayManager != null)
+        if (_overlayManager != null && _overlayManager.isActiveAndEnabled)
         {
             _overlayManager.Close(UIOverlayId.StageSelect);
             return;
@@ -175,6 +195,12 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
     // Purpose: Attempts to enter stage and reports whether the request succeeded.
     private void TryEnterStage(int stageIndex)
     {
+        if (_hatchChoices != null)
+        {
+            if (System.Array.IndexOf(_hatchChoices, stageIndex) >= 0 && _onHatchChoice?.Invoke(stageIndex) == true)
+                Close();
+            return;
+        }
         ResolveRuntimeReferences();
 
         if (_stageProgressionManager == null)
@@ -233,12 +259,14 @@ public sealed class HideoutStageSelectPanel : MonoBehaviour, IUIOverlayLifecycle
         for (int i = 0; i < StageCount; i++)
         {
             int stageIndex = i + 1;
-            bool unlocked = _stageProgressionManager != null &&
-                            _stageProgressionManager.IsStageUnlocked(stageIndex);
+            bool isHatchChoice = _hatchChoices != null;
+            bool unlocked = isHatchChoice ? System.Array.IndexOf(_hatchChoices, stageIndex) >= 0 :
+                _stageProgressionManager != null && _stageProgressionManager.IsStageUnlocked(stageIndex);
 
             if (_stageButtons != null && _stageButtons[i] != null)
             {
                 _stageButtons[i].interactable = unlocked;
+                _stageButtons[i].gameObject.SetActive(!isHatchChoice || unlocked);
 
                 Image image = _stageButtons[i].GetComponent<Image>();
                 if (image != null)

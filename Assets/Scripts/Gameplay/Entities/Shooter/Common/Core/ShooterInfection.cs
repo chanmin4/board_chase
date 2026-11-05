@@ -19,7 +19,6 @@ public abstract class ShooterInfection : MonoBehaviour
     }
 
     private const float DefaultZoneTickInterval = 0.2f;
-    private const float LethalThresholdEpsilon = 0.001f;
 
     [Header("Refs")]
     [SerializeField] private Damageable _damageable;
@@ -52,7 +51,7 @@ public abstract class ShooterInfection : MonoBehaviour
     public Damageable Damageable => _damageable;
     public float MaxHealth => _damageable != null ? _damageable.MaxHealth : 0f;
     public float CurrentHealth => _damageable != null ? _damageable.CurrentHealth : 0f;
-    public float InfectionLimit => Mathf.Max(0f, CurrentHealth);
+    public float InfectionLimit => _damageable != null ? Mathf.Max(0f, _damageable.UninfectedMaxHealth) : 0f;
     public EntityStatusEffectRuntime StatusEffects => _statusEffects;
     public float InfectionRecoveryMultiplier =>
         Mathf.Max(0f, InfectionRecoverMultiplier) *
@@ -135,9 +134,7 @@ public abstract class ShooterInfection : MonoBehaviour
     {
         _infectionRecoveryWaitRemaining = InfectionRecoveryWaitRemaining;
 
-        // Damage, loadout initialization, and UI binding can be published in
-        // different orders. Re-check the shared lethal rule before natural
-        // recovery so an entity can never recover out of Infection >= HP.
+        // Synchronize normal death before processing natural recovery or contact effects.
         CheckDeathState();
 
         if (_isDead)
@@ -152,21 +149,26 @@ public abstract class ShooterInfection : MonoBehaviour
         _maskRenderManager = manager;
     }
     // Purpose: Adds the requested infection to this component.
-    public void AddInfection(float amount)
+    public virtual void AddInfection(float amount)
+        => ReceiveStatusInfectionDamage(amount);
+
+    /// <summary>Applies the Infection resource directly without re-entering exposure accumulation.</summary>
+    public void ReceiveStatusInfectionDamage(float amount, bool exactHealthLoss = false)
     {
-        if (_isDead || amount <= 0f)
+        if (_isDead || amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount))
             return;
 
         StartRecoveryWait();
         float before = _currentInfection;
-        _currentInfection += amount * Mathf.Max(0f, InfectionGainMultiplier);
+        _currentInfection += amount * (exactHealthLoss ? 1f : Mathf.Max(0f, InfectionGainMultiplier));
+        _currentInfection = Mathf.Min(_currentInfection, InfectionLimit);
+        _damageable?.SetInfectionMaxHealthLoss(_currentInfection);
 
         LogInfectionLifecycle(
             "AddInfection",
             $"requested={amount:0.###}, before={before:0.###}, afterRaw={_currentInfection:0.###}");
 
-        // Resolve the lethal threshold before clamping. Both Player and Enemy
-        // shooters die on the exact frame Infection reaches their remaining HP.
+        // The health ceiling owns lethal erosion; current HP is not an infection threshold.
         CheckDeathState();
 
         if (_isDead)
@@ -179,11 +181,12 @@ public abstract class ShooterInfection : MonoBehaviour
     // Purpose: Performs the reduce infection workflow for this component.
     public void ReduceInfection(float amount)
     {
-        if (_isDead || amount <= 0f)
+        if (_isDead || amount <= 0f || float.IsNaN(amount) || float.IsInfinity(amount))
             return;
 
         _currentInfection -= amount;
         ClampInfectionToCurrentHealth();
+        _damageable?.SetInfectionMaxHealthLoss(_currentInfection);
 
         PublishCurrentSnapshot();
     }
@@ -192,20 +195,21 @@ public abstract class ShooterInfection : MonoBehaviour
     public void ClearInfection()
     {
         _currentInfection = 0f;
+        _damageable?.SetInfectionMaxHealthLoss(0f);
         PublishCurrentSnapshot();
     }
 
     /// <summary>
-    /// Restores a previously saved alive player's Infection after health has
-    /// been restored. This deliberately bypasses natural-recovery timing but
-    /// still uses the normal lethal threshold and UI notification path.
+    /// Restores saved ceiling erosion before restoring current health.
     /// </summary>
     public void RestoreCurrentInfection(float infection)
     {
         if (_isDead)
             return;
 
-        _currentInfection = Mathf.Clamp(Mathf.Max(0f, infection), 0f, Mathf.Max(0f, CurrentHealth));
+        if (float.IsNaN(infection) || float.IsInfinity(infection)) return;
+        _currentInfection = Mathf.Clamp(Mathf.Max(0f, infection), 0f, InfectionLimit);
+        _damageable?.SetInfectionMaxHealthLoss(_currentInfection);
         CheckDeathState();
 
         if (!_isDead)
@@ -265,8 +269,7 @@ public abstract class ShooterInfection : MonoBehaviour
     // Purpose: Handles the incoming damageable health changed request or event.
     private void HandleDamageableHealthChanged(Damageable damageable)
     {
-        // Health damage can lower the lethal threshold below existing Infection.
-        // Evaluate death first so clamping never hides that crossing.
+        // Ordinary wounds never turn existing erosion into a separate death threshold.
         CheckDeathState();
 
         if (_isDead)
@@ -288,7 +291,8 @@ public abstract class ShooterInfection : MonoBehaviour
             return;
 
         ResolveRefs();
-        _currentInfection = Mathf.Max(0f, MaxHealth);
+        _currentInfection = InfectionLimit;
+        _damageable?.SetInfectionMaxHealthLoss(_currentInfection);
         CheckDeathState();
 
         if (!_isDead)
@@ -540,15 +544,7 @@ public abstract class ShooterInfection : MonoBehaviour
             return;
         }
 
-        // Infection is lethal when it catches the entity's remaining HP.
-        // UI values are rounded for readability. Treat values within a tiny
-        // float tolerance as equal so a visually full Infection bar cannot
-        // leave the entity alive because of sub-millipoint precision.
-        if (_currentInfection + LethalThresholdEpsilon < CurrentHealth)
-            return;
-
-        LogInfectionLifecycle("LethalThresholdReached", "calling Damageable.Kill");
-        _damageable.Kill(EntityDeathCause.InfectionOvertake);
+        // No Infection >= current HP rule. Erosion is lethal only when the health cap reaches zero.
     }
 
     // Purpose: Performs the mark dead workflow for this component.

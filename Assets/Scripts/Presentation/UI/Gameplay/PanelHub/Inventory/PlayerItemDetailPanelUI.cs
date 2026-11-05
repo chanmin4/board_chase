@@ -37,6 +37,8 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
     private LocalizedString _boundDescription;
     private string _localizedDescription;
     private ItemDetailSelection _selection;
+    private PlayerStatsRuntime _equippedStats;
+    private float _nextWeaponRefreshTime;
     private RectTransformLayout _authoredLayout;
     private bool _hasAuthoredLayout;
     private Transform _authoredHubParent;
@@ -89,6 +91,24 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
     {
         ItemDetailSelectionBus.SelectionChanged -= HandleSelectionChanged;
         UnbindLocalizedStrings();
+        _equippedStats = null;
+    }
+
+    // Only the selected player's equipment is sampled. No scene searches or SO-only matching.
+    // Unscaled time keeps condition/status changes visible while inventory input is locked.
+    private void LateUpdate()
+    {
+        if (_equippedStats == null || !_selection.HasItem || Time.unscaledTime < _nextWeaponRefreshTime)
+            return;
+
+        _nextWeaponRefreshTime = Time.unscaledTime + 0.2f;
+        if (_selection.playerEquipmentOwner == null ||
+            _selection.playerEquipmentOwner.GetEquippedWeapon(_selection.playerWeaponSlotIndex) != _selection.item)
+        {
+            ShowEmpty();
+            return;
+        }
+        RefreshText();
     }
 
     // Purpose: Handles the incoming selection changed request or event.
@@ -104,12 +124,16 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
         SetVisible(true);
         UnbindLocalizedStrings();
         _selection = selection;
+        _equippedStats = selection.playerEquipmentOwner != null
+            ? EntityComponentResolver.Resolve<PlayerStatsRuntime>(selection.playerEquipmentOwner) : null;
+        _nextWeaponRefreshTime = 0f;
         _localizedDescription = string.Empty;
 
         if (_icon != null)
         {
             _icon.sprite = selection.item.PreviewImage;
             _icon.enabled = _icon.sprite != null;
+            ModuleRuneView.Bind(_icon, selection.item);
         }
 
         if (_nameText != null)
@@ -125,6 +149,7 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
         BuildView();
         UnbindLocalizedStrings();
         _selection = default;
+        _equippedStats = null;
         SetVisible(false);
 
         if (_icon != null)
@@ -190,6 +215,7 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
     {
         string amount = selection.amount > 1 ? $"  x{selection.amount}" : string.Empty;
         string summary = $"{selection.item.Kind}{amount}";
+        if (selection.item is ValuableItemSO valuable) summary += "\n물품 분류 · " + valuable.ValuableCategoryLabel;
 
         if (selection.item is RangedWeaponSO weapon)
         {
@@ -224,10 +250,25 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
     }
 
     // Purpose: Performs the append gameplay details workflow for this component.
-    private static void AppendGameplayDetails(StringBuilder builder, ItemDetailSelection selection)
+    private void AppendGameplayDetails(StringBuilder builder, ItemDetailSelection selection)
     {
+        if (selection.item != null && selection.item is not PassiveItemSO)
+            builder.AppendLine($"무게: {selection.item.WeightKg:0.###} kg / 개");
         switch (selection.item)
         {
+            case PassiveItemSO passive:
+                builder.AppendLine($"{(passive.Category == PassiveCategory.Combat ? "전투" : "생존")} 패시브 · 원정 한정 효과");
+                builder.AppendLine("장착·해제·교체·리롤은 HOME에서만 가능합니다.");
+                builder.AppendLine(passive.DisabledForRaid ? "비활성 · 재장착/분해 불가 · 귀환 시 소멸" :
+                    passive.EverEquipped ? "귀속 · 해제하면 재장착/분해 불가 · 귀환 시 소멸" : "미장착 · 시간제 분해 가능 · 장착 시 귀속");
+                if (passive.StatModifiers != null)
+                    foreach (var modifier in passive.StatModifiers)
+                    {
+                        var applied = PassiveModuleRulesSO.Active != null ? PassiveModuleRulesSO.Active.ApplyStrength(passive, modifier) : modifier;
+                        builder.AppendLine(applied.stat == PlayerStatId.ExperienceGainBonus ? $"획득 경험치: +{applied.value*100:0.#}% (획득 순간 적용)" : $"{modifier.stat}: {applied.value:+0.###;-0.###;0} ({modifier.type})");
+                    }
+                if (passive.IsRolledInstance) builder.AppendLine($"개체 ID: {passive.Guid}");
+                break;
             case RangedWeaponSO weapon:
             {
                 float maximum = ResolveWeaponMaximum(selection, weapon);
@@ -237,15 +278,19 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
 
                 builder.AppendLine($"총기 종류: {weapon.WeaponType}");
                 builder.AppendLine($"사용 탄약: {weapon.RequiredBulletFamily}");
+                AppendWeaponStats(builder, selection, weapon);
                 builder.AppendLine($"발사당 내구도 감소: {weapon.DurabilityLossPerFire:0.##}");
                 builder.AppendLine($"현재 공격력·정확도 계수: x{performance:0.##}");
-                builder.Append($"다음 수리 후 최대 내구도: {ResolveRepairedMaximum(current, maximum, weapon):0.#}");
+                builder.Append(EquipmentRepairPolicy.Enabled
+                    ? $"다음 수리 후 최대 내구도: {ResolveRepairedMaximum(current, maximum, weapon):0.#}"
+                    : EquipmentRepairPolicy.DisabledLabel);
                 break;
             }
 
             case ArmorItemSO armor:
                 builder.AppendLine($"방어구 클래스: {armor.ArmorClass}");
                 builder.Append("피격 시 흡수한 피해만큼 내구도가 감소합니다.");
+                if (!EquipmentRepairPolicy.Enabled) builder.Append("\n" + EquipmentRepairPolicy.DisabledLabel);
                 break;
 
             case GasMaskItemSO gasMask:
@@ -257,31 +302,108 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
                     ? Mathf.Clamp(selection.gasMaskFilterDurability, 0f, maximum)
                     : maximum;
                 float nextMaximum = ResolveRepairedMaximum(current, maximum, gasMask.RepairPermanentLossRatio);
-                builder.AppendLine($"가스 감염 배율: x{gasMask.GasInfectionMultiplier:0.##}");
+                builder.AppendLine($"가스방어력: {gasMask.GasDefenseLevel} (필터 소진 시 0)");
                 builder.AppendLine($"필터 소모율: {gasMask.FilterDurabilityLossPerRawInfection:0.##}");
-                builder.Append($"다음 수리 후 최대 필터 내구도: {nextMaximum:0.#}");
+                builder.Append(EquipmentRepairPolicy.Enabled
+                    ? $"다음 수리 후 최대 필터 내구도: {nextMaximum:0.#}"
+                    : EquipmentRepairPolicy.DisabledLabel);
                 break;
             }
 
             case BulletSO bullet:
                 builder.AppendLine($"탄종: {bullet.Family}");
-                builder.AppendLine($"티어: {(int)bullet.Tier}");
-                builder.AppendLine($"관통 클래스: {bullet.PenetrationClass}");
+                if (bullet.InfectionExposureOnHit > 0f)
+                    builder.AppendLine($"AR 전용 · 감염치 +{bullet.InfectionExposureOnHit:0.#}");
+                else
+                    builder.AppendLine($"티어: {(int)bullet.Tier}");
+                builder.AppendLine($"관통 클래스: {bullet.PenetrationClass:0.###}");
                 builder.AppendLine($"HP 피해: {bullet.HealthDamage:0.##}");
                 builder.AppendLine($"Infection 피해: {bullet.InfectionDamage:0.##}");
-                builder.Append($"Mark: {bullet.MarkAmount:0.##}");
                 break;
 
             case ConsumableItemSO consumable:
+                if (consumable is InfectionCureItemSO ampoule)
+                {
+                    if (ampoule.IsSyringe)
+                        builder.AppendLine($"최대 HP 잠식 회복: {ampoule.InfectionRecoveryAmount:0.##}. 현재 HP는 별도 치료. 레이드 루팅 전용, 상점 판매 없음.");
+                    else
+                    {
+                        builder.AppendLine($"감염 유입 ×{ampoule.ExposureGainMultiplier:0.##}, 게이지 회복 +{ampoule.InfectionRecoveryPerSecond:0.##}/초, {ampoule.InfectionRecoveryDurationSeconds:0.##}초간.");
+                        builder.AppendLine("새 노출 없이 회복 대기가 지난 미완성 게이지만 회복. 최대 HP 잠식 회복 불가. 중첩 불가.");
+                    }
+                }
+                if (consumable.InfectionSuppressionSeconds > 0f)
+                    builder.AppendLine($"억제 시간: {consumable.InfectionSuppressionSeconds:0}초. 감염 수치 자체는 낮추지 않습니다.");
+                if (consumable is InfectionCureItemSO || consumable.InfectionSuppressionSeconds > 0f)
+                {
+                    var raid = RaidRuntime.Active;
+                    int dose = consumable is InfectionCureItemSO ? 1 : raid != null && raid.IsPlayerInRaid && raid.Definition != null
+                        ? raid.Definition.RaidRuntime.MedicalDose(raid.Definition.StageIndex) : 1;
+                    builder.AppendLine($"이번 사용 분량: {dose}개 (1 / 2 / 3 스테이지: 1 / 3 / 5개)");
+                }
                 builder.AppendLine($"체력 회복: {consumable.HealAmount:0.##}");
                 builder.Append($"사용 시간: {consumable.UseDurationSeconds:0.##}초");
                 break;
         }
     }
 
+    private void AppendWeaponStats(StringBuilder builder, ItemDetailSelection selection, RangedWeaponSO weapon)
+    {
+        bool active = _equippedStats != null && _equippedStats.IsActiveWeaponSlot(
+            selection.playerEquipmentOwner, selection.playerWeaponSlotIndex, weapon);
+        if (!active)
+        {
+            builder.AppendLine("<b>무기 기본 성능 · 패시브 미적용</b>");
+            builder.AppendLine($"사거리 {weapon.MaxRange:0.###} / 연사 {weapon.ShotsPerSecond:0.###}/초 / 탄창 {weapon.MagazineSize}");
+            builder.AppendLine($"재장전 {weapon.ReloadDurationSeconds:0.###}초 / 조준속도 {weapon.AimSpeed:0.###}");
+            builder.AppendLine($"탄퍼짐: 비조준 {weapon.HipFireSpreadAngleDeg:0.###}° / 정조준 {weapon.AimSpreadAngleDeg:0.###}°");
+            builder.AppendLine($"발사 반동 {weapon.ShotKickDistance:0.###} / 상한 {weapon.MaximumShotKickDistance:0.###} / 복구 {weapon.ShotKickRecoveryPerSecond:0.###}/초");
+            return;
+        }
+
+        builder.AppendLine("<b>장착 무기 · 최종 성능</b>");
+        builder.AppendLine("<size=80%>무기(무기 보정 포함) + 패시브 [+ 기타] = 최종값</size>");
+        AppendWeaponStat(builder, "발사 반동", PlayerStatId.ShotKickDistance, false);
+        AppendWeaponStat(builder, "반동 상한", PlayerStatId.MaximumShotKickDistance, false);
+        AppendWeaponStat(builder, "반동 복구", PlayerStatId.ShotKickRecoveryPerSecond, true, "/초");
+        AppendWeaponStat(builder, "조준속도", PlayerStatId.AimSpeed, true);
+        AppendWeaponStat(builder, "연사속도", PlayerStatId.ShotsPerSecond, true, "/초");
+        AppendWeaponStat(builder, "재장전", PlayerStatId.ReloadDurationSeconds, false, "초");
+        AppendWeaponStat(builder, "비조준 탄퍼짐", PlayerStatId.HipFireSpreadAngleDeg, false, "°");
+        AppendWeaponStat(builder, "정조준 탄퍼짐", PlayerStatId.AimSpreadAngleDeg, false, "°");
+        AppendWeaponStat(builder, "사거리", PlayerStatId.MaxRange, true);
+        AppendWeaponStat(builder, "관통 보정", PlayerStatId.PenetrationClass, true);
+        AppendWeaponStat(builder, "총성 반경", PlayerStatId.GunshotSoundRadius, false);
+        builder.AppendLine($"탄창  <b>{weapon.MagazineSize}</b>");
+        builder.AppendLine("<size=80%>기타: 퀘스트·장비·탄약·내구도·상태 효과. 관통 보정은 탄약 자체 관통을 제외한 값.</size>");
+    }
+
+    private void AppendWeaponStat(StringBuilder builder, string label, PlayerStatId stat, bool higherIsBetter, string unit = "")
+    {
+        if (!_equippedStats.TryGetWeaponStatBreakdown(stat, out var row)) return;
+        builder.Append(label).Append("  ").Append(row.weaponValue.ToString("0.###"));
+        AppendStatDelta(builder, row.passiveDelta, higherIsBetter, "패시브");
+        if (Mathf.Abs(row.otherDelta) >= 0.0005f)
+            AppendStatDelta(builder, row.otherDelta, higherIsBetter, "기타");
+        builder.Append(" = <b>").Append(row.finalValue.ToString("0.###")).Append(unit).AppendLine("</b>");
+    }
+
+    private static void AppendStatDelta(StringBuilder builder, float delta, bool higherIsBetter, string source)
+    {
+        bool neutral = Mathf.Abs(delta) < 0.0005f;
+        bool beneficial = higherIsBetter ? delta > 0f : delta < 0f;
+        string color = neutral ? "#A6BFC4" : beneficial ? "#72E69B" : "#FF8B7A";
+        builder.Append(" <color=").Append(color).Append('>')
+            .Append(delta < -0.0005f ? "- " : "+ ").Append(Mathf.Abs(delta).ToString("0.###"))
+            .Append('(').Append(source).Append(")</color>");
+    }
+
     // Purpose: Resolves the weapon maximum needed by this component.
     private static float ResolveWeaponMaximum(ItemDetailSelection selection, RangedWeaponSO weapon)
     {
+        if (selection.playerEquipmentOwner != null &&
+            selection.playerEquipmentOwner.GetEquippedWeapon(selection.playerWeaponSlotIndex) == weapon)
+            return selection.playerEquipmentOwner.GetEquippedWeaponMaxDurability(selection.playerWeaponSlotIndex);
         return selection.weaponMaxDurability > 0f
             ? selection.weaponMaxDurability
             : weapon.MaxDurability;
@@ -290,6 +412,9 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
     // Purpose: Resolves the weapon current needed by this component.
     private static float ResolveWeaponCurrent(ItemDetailSelection selection, float maximum)
     {
+        if (selection.playerEquipmentOwner != null &&
+            selection.playerEquipmentOwner.GetEquippedWeapon(selection.playerWeaponSlotIndex) == selection.item)
+            return Mathf.Clamp(selection.playerEquipmentOwner.GetEquippedWeaponCurrentDurability(selection.playerWeaponSlotIndex), 0f, maximum);
         return selection.weaponCurrentDurability >= 0f
             ? Mathf.Clamp(selection.weaponCurrentDurability, 0f, maximum)
             : maximum;
@@ -553,8 +678,8 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
             _panelRoot.anchorMin = new Vector2(0.5f, 0.5f);
             _panelRoot.anchorMax = new Vector2(0.5f, 0.5f);
             _panelRoot.pivot = new Vector2(0.5f, 0.5f);
-            _panelRoot.anchoredPosition = Vector2.zero;
-            _panelRoot.sizeDelta = new Vector2(360f, 840f);
+            _panelRoot.anchoredPosition = new Vector2(0f, 200f);
+            _panelRoot.sizeDelta = new Vector2(420f, 250f);
             _panelRoot.localScale = Vector3.one;
 
             if (_descriptionHubCanvasGroup != null)

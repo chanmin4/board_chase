@@ -20,8 +20,12 @@ public class ShooterMeleeAttack : MonoBehaviour
     [Tooltip("Shooter-owned melee box. The attack pose is locked when input is accepted and cannot follow later aim rotation.")]
     [SerializeField] private ShooterMeleeHitZone _hitZone;
 
-    [Header("Unarmed Fallback")]
-    [Tooltip("Non-item swing shape/timing. Players reuse it for fists and guns with no fireable ammunition; enemies retain their original unarmed fallback.")]
+    [Header("Player · Fixed Combat Knife")]
+    [Tooltip("플레이어 V키 전용 고정 나이프입니다. 총 슬롯/탄약/퀵슬롯과 무관하게 사용합니다. 적에게는 지정하지 않습니다.")]
+    [SerializeField] private MeleeWeaponSO _playerCombatKnife;
+
+    [Header("Enemy Unarmed Fallback / Player Fists WIP")]
+    [Tooltip("적의 기존 비무장 프로필입니다. 플레이어 주먹/총 휘두르기 경로는 WIP로 분리해 실행하지 않습니다.")]
     [SerializeField] private UnarmedAttackProfileSO _unarmedProfile;
 
     [Header("Runtime Melee Shape")]
@@ -94,8 +98,6 @@ public class ShooterMeleeAttack : MonoBehaviour
     private readonly Collider[] _hits = new Collider[MaxHits];
     private readonly HashSet<Damageable> _damagedThisSwing = new();
     private Coroutine _attackRoutine;
-    private PlayerStatsRuntime _playerStats;
-    private PlayerBulletLoadoutRuntime _playerAmmo;
     private float _nextAttackTime;
     private int _attackSequence;
     private int _candidateSamples;
@@ -120,6 +122,7 @@ public class ShooterMeleeAttack : MonoBehaviour
     public ShooterMeleeHitZone HitZone => _hitZone;
     public Transform ParticleContainerRoot => _particleContainerRoot;
     public MeleeWeaponSO RuntimeSourceWeapon => _runtimeSourceWeapon;
+    public MeleeWeaponSO PlayerCombatKnife => _playerCombatKnife;
     public float RuntimeRange => Mathf.Max(0.01f, _runtimeRange);
     public float RuntimeHitRadius => Mathf.Max(0.01f, _runtimeHitRadius);
     public float RuntimeArcAngle => Mathf.Clamp(_runtimeArcAngle, 1f, 180f);
@@ -128,14 +131,14 @@ public class ShooterMeleeAttack : MonoBehaviour
         get
         {
             WeaponSO current = _equipmentController != null ? _equipmentController.CurrentWeapon : null;
-            return current is MeleeWeaponSO || current == null && _unarmedProfile != null;
+            return _playerCombatKnife != null || current is MeleeWeaponSO || current == null && _unarmedProfile != null;
         }
     }
     public float CurrentAttackRange
     {
         get
         {
-            MeleeWeaponSO weapon = _equipmentController != null
+            MeleeWeaponSO weapon = _playerCombatKnife != null ? _playerCombatKnife : _equipmentController != null
                 ? _equipmentController.CurrentWeapon as MeleeWeaponSO
                 : null;
             return weapon != null
@@ -216,6 +219,7 @@ public class ShooterMeleeAttack : MonoBehaviour
         }
 
         _hitZone?.SetHitWindowActive(false);
+        _equipmentController?.EndFixedMeleeVisual();
         _damagedThisSwing.Clear();
     }
 
@@ -238,7 +242,7 @@ public class ShooterMeleeAttack : MonoBehaviour
     {
         ResolveRefs();
 
-        MeleeWeaponSO equippedWeapon = _equipmentController != null
+        MeleeWeaponSO equippedWeapon = _playerCombatKnife != null ? _playerCombatKnife : _equipmentController != null
             ? _equipmentController.CurrentWeapon as MeleeWeaponSO
             : null;
 
@@ -248,7 +252,7 @@ public class ShooterMeleeAttack : MonoBehaviour
     // Purpose: Refreshes the displayed or cached runtime shape if weapon changed.
     private void RefreshRuntimeShapeIfWeaponChanged()
     {
-        MeleeWeaponSO equippedWeapon = _equipmentController != null
+        MeleeWeaponSO equippedWeapon = _playerCombatKnife != null ? _playerCombatKnife : _equipmentController != null
             ? _equipmentController.CurrentWeapon as MeleeWeaponSO
             : null;
 
@@ -266,7 +270,7 @@ public class ShooterMeleeAttack : MonoBehaviour
         bool usesUnarmedProfile =
             (profile as UnityEngine.Object) == _unarmedProfile;
 
-        if (weapon != _runtimeSourceWeapon || usesUnarmedProfile || profile is PlayerEmergencyMeleeProfile)
+        if (weapon != _runtimeSourceWeapon || usesUnarmedProfile)
             SetRuntimeShapeSource(profile);
     }
 
@@ -325,14 +329,9 @@ public class ShooterMeleeAttack : MonoBehaviour
 
         if (faction == ShooterFaction.Player)
         {
-            if (_playerStats == null) _playerStats = EntityComponentResolver.Resolve<PlayerStatsRuntime>(this);
-            if (_playerAmmo == null) _playerAmmo = EntityComponentResolver.Resolve<PlayerBulletLoadoutRuntime>(this);
-            if (_equipmentController == null || _unarmedProfile == null ||
-                !PlayerEmergencyMeleeProfile.IsAvailable(_equipmentController.CurrentWeapon,
-                    _playerAmmo != null && _playerAmmo.HasNoFireableAmmunition))
-                return Reject("player emergency melee requires an empty slot or a gun with no fireable ammunition");
-            return TryAttackProfile(new PlayerEmergencyMeleeProfile(_unarmedProfile,
-                _playerStats != null ? _playerStats.MeleeDamage : 5f), faction, origin, direction);
+            if (_playerCombatKnife == null)
+                return Reject("player fixed Combat Knife is missing; fists and gun bash are WIP");
+            return TryAttackProfile(_playerCombatKnife, faction, origin, direction);
         }
 
         MeleeWeaponSO weapon = _equipmentController != null
@@ -358,8 +357,10 @@ public class ShooterMeleeAttack : MonoBehaviour
         Vector3 origin,
         Vector3 direction)
     {
-        // Dedicated player melee weapons are retained as WIP; enemy behavior is unchanged.
-        return faction != ShooterFaction.Player && TryAttackProfile(weapon, faction, origin, direction);
+        // 플레이어는 임의의 장착 무기가 아니라 고정 나이프만 사용합니다.
+        return faction == ShooterFaction.Player
+            ? TryAttackCurrentWeapon(faction, origin, direction)
+            : TryAttackProfile(weapon, faction, origin, direction);
     }
 
     // Purpose: Attempts to attack profile and reports whether the request succeeded.
@@ -370,6 +371,8 @@ public class ShooterMeleeAttack : MonoBehaviour
         Vector3 direction)
     {
         ResolveRefs();
+        var stamina = EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (stamina != null && stamina.IsSprinting) return Reject("cannot melee while sprinting");
 
         if (profile == null)
             return Reject("neither a melee weapon nor an unarmed profile is available");
@@ -421,6 +424,9 @@ public class ShooterMeleeAttack : MonoBehaviour
             shape.ArcAngle,
             shape.VerticalOffset,
             shape.VerticalSize);
+
+        if (faction == ShooterFaction.Player)
+            _equipmentController?.BeginFixedMeleeVisual(_playerCombatKnife);
 
         Transform particleFollowTarget = ResolveParticleFollowTarget();
 
@@ -527,6 +533,8 @@ public class ShooterMeleeAttack : MonoBehaviour
         while (Time.time < finishTime);
 
         _hitZone.SetHitWindowActive(false);
+        if (faction == ShooterFaction.Player)
+            _equipmentController?.EndFixedMeleeVisual();
         _attackRoutine = null;
 
         if (_debugLogs)
@@ -618,11 +626,9 @@ public class ShooterMeleeAttack : MonoBehaviour
 
             _damagedThisSwing.Add(damageable);
 
-            if (profile is PlayerEmergencyMeleeProfile)
-                damageable.ReceiveFixedMeleeAttack(profile.Damage, ResolveOwnerEntityGameObject());
-            else
-                damageable.ReceiveAnAttack(
-                    profile.Damage,
+            damageable.ReceiveAnAttack(
+                    profile.Damage * (faction != ShooterFaction.Player
+                        ? SectorEnemyTraitModifier.NonFirearmAnomalyMultiplier(this) : 1f),
                     ResolveOwnerEntityGameObject(),
                     profile.PenetrationClass,
                     profile.ArmorHealthDurabilityLossMultiplier);

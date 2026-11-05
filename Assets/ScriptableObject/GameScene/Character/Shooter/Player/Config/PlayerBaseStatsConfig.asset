@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _initialHealth: 9999
   _moveSpeed: 25
+  _carryCapacityKg: 70
   _baseArmorClass: 0
   _paintMark:
-    _usePaintMark: 1
+    _usePaintMark: 0
     _markAmountPerStack: 100
     _maxVaccineMarkStacks: 3
     _maxVirusMarkStacks: 3
@@ -36,9 +37,12 @@ MonoBehaviour:
     _eyeHeight: 1
     _targetHeight: 1
     _useForwardArc: 1
-    _baseArcAngle: 45
+    _baseArcAngle: 60
     _aimArcAngleMultiplier: 0.3333333
+    _nearForwardArcExtraAngle: 60
+    _nearForwardBlendDistance: 22.5
   _infection:
+    _infectionDamageOverTimeMultiplier: 1
     _zoneTickInterval: 0.1
     _naturalDecayInterval: 0.1
     _naturalDecayAmountPerTick: 0.5
@@ -46,6 +50,8 @@ MonoBehaviour:
   _armor:
     _healthDurabilityLossMultiplier: 1
     _infectionDurabilityLossMultiplier: 0.5
+  _commonRules: {fileID: 11400000, guid: 972d770ca5ce41c382dfaf8a5f9f1023, type: 2}
+  _maximumStamina: 200
   _shooter:
     _healthDamageCoefficient: 1
     _infectionDamageCoefficient: 1
@@ -73,9 +79,51 @@ MonoBehaviour:
     _footstepSoundRadius: 125
     _footstepSoundInterval: 0.35
     _inventoryCapacity: 12
+  _overrideCommonLocomotion: 0
+  _overrideCommonLocomotionInitialized: 1
+  _locomotion:
+    enabled: 1
+    maximumStamina: 200
+    enemyPoolMultiplier: 2
+    walkSpeedMultiplier: 1
+    sprintSpeedMultiplier: 1.5
+    sprintCostPerSecond: 15
+    dashCost: 40
+    recoveryPerSecond: 15
+    recoveryDelay: 0.75
+    exhaustionThreshold: 0.1
+    enemyCanSprint: 1
+    enemySprintStartDistance: 12
+    enemySprintStopDistance: 8
+  _overrideCommonAimFeedback: 0
+  _overrideCommonAimFeedbackInitialized: 0
+  _aimFeedback:
+    maximumHitKickDistance: 2
+    hitKickRecoveryPerSecond: 2.5
+    shotKickDistance: 0.35
+    hitKickDistance: 0.65
+    maximumKickDistance: 2
+    recoveryPerSecond: 2.5
+    enemyHitInaccuracySeconds: 0.35
+    enemyHitExtraSpreadDegrees: 8
+  _inventory:
+    _pocketCapacity: 6
+    _baseInventoryCapacity: 4
+  _dash:
+    useMoveSpeedBasedDash: 1
+    speedMultiplier: 1.8
+    fixedSpeed: 20
+    durationSeconds: 0.3
+    cooldownSeconds: 10
+    distanceMultiplier: 1.3
+    useForwardWhenNoMovementInput: 1
+    rotateTowardDashDirection: 1
+    useVisualLean: 1
+    visualLeanEuler: {x: 18, y: 0, z: 0}
+    visualLeanInSpeed: 18
+    visualLeanOutSpeed: 12
   _loadoutTable: {fileID: 11400000, guid: 61c7f9563918a994aa4c37b5b0223a2d, type: 2}
-  startingRunCurrency: 0
-  startingRoguelikeCurrencyForNewSave: 0
+  _wipLegacyStartingRunCurrency: 0
   dashCooldownSeconds: 3
   dodgeChance: 0
   _meleeDamage: 5

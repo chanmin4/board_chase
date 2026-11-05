@@ -8,7 +8,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _questId: run_main_02_stage2_boss
   _displayName: Run Main 02 - Defeat Stage 2 Boss
-  _description: Run objective. Defeat the Stage 2 unique sniper boss to open the route to Stage 3 for this run.
+  _description: Defeat the Stage 2 unique sniper boss to unlock the route to Stage 4.
   _branch: 0
   _prerequisites:
   - {fileID: 11400000, guid: a100c8d1e0cf4ae69e14d0e7a4b12c01, type: 2}
@@ -48,5 +48,7 @@ MonoBehaviour:
     _shopConfig: {fileID: 11400000, guid: dcc637a49b254b1aa32ef08c66d9e511, type: 2}
     _shopUnlockNodeId: gas_stage_3_preparation
     _stageToUnlock: {fileID: 0}
-  _persistentRewardSummary: Unlock Stage 3, Rare Key Permit, and Gas Preparation.
+  - _rewardType: 3
+    _stageToUnlock: {fileID: 11400000, guid: d16f7a0e1f3b4b93a92f3c6e9a110004, type: 2}
+  _persistentRewardSummary: Unlock Stage 4, Rare Key Permit, and Gas Preparation.
   _completionAudioCue: {fileID: 0}

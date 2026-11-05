@@ -27,6 +27,7 @@ public class ThrowableProjectile : MonoBehaviour
     private EntityShooterCharacterAudio _audio;
     private SoundStimulusEventChannelSO _soundStimulusEvent;
     private GameObject _source;
+    private float _healthDamageMultiplier = 1f;
     private float _explodeTime;
     private float _nextImpactSoundTime;
     private bool _exploded;
@@ -89,7 +90,7 @@ public class ThrowableProjectile : MonoBehaviour
 
         if (_weapon.ExplodeOnImpact)
         {
-            Explode();
+            Explode(_weapon.InfectionExposureOnImpact > 0f ? impactPoint : (Vector3?)null);
             return;
         }
 
@@ -174,6 +175,9 @@ public class ThrowableProjectile : MonoBehaviour
         _weapon = weapon;
         _source = source;
         _faction = faction;
+        // Snapshot at launch: the source may die before this grenade explodes.
+        _healthDamageMultiplier = faction != ShooterFaction.Player && source != null
+            ? SectorEnemyTraitModifier.NonFirearmAnomalyMultiplier(source.transform) : 1f;
         _maskRenderManager = maskRenderManager;
         _audio = audio;
         _soundStimulusEvent = soundStimulusEvent;
@@ -259,7 +263,7 @@ public class ThrowableProjectile : MonoBehaviour
     }
 
     // Purpose: Executes the explode explosion behavior.
-    private void Explode()
+    private void Explode(Vector3? exactImpactPoint = null)
     {
         if (_exploded)
             return;
@@ -267,7 +271,7 @@ public class ThrowableProjectile : MonoBehaviour
         _exploded = true;
         UnregisterActiveProjectile();
         Vector3 physicsPoint = transform.position;
-        Vector3 point = new Vector3(
+        Vector3 point = exactImpactPoint ?? new Vector3(
             physicsPoint.x,
             _intendedImpactPoint.y,
             physicsPoint.z);
@@ -684,7 +688,11 @@ public class ThrowableProjectile : MonoBehaviour
         if (_weapon == null)
             return;
 
-        LayerMask targetMask = _weapon.ResolveDamageTargetMask(_faction);
+        float exposure = _weapon.InfectionExposureOnImpact;
+        LayerMask targetMask = exposure > 0f
+            ? _weapon.ResolveDamageTargetMask(ShooterFaction.Player).value |
+              _weapon.ResolveDamageTargetMask(ShooterFaction.Scraper).value
+            : _weapon.ResolveDamageTargetMask(_faction).value;
 
         if (targetMask == 0)
             return;
@@ -710,21 +718,23 @@ public class ThrowableProjectile : MonoBehaviour
                 hit.GetComponentInParent<Damageable>();
 
             if (damageable == null ||
-                !damageable.CanReceiveDamage ||
+                (exposure > 0f ? damageable.IsDead : !damageable.CanReceiveDamage) ||
                 _damaged.Contains(damageable) ||
-                IsSourceDamageable(damageable))
+                (exposure <= 0f && IsSourceDamageable(damageable)))
             {
                 continue;
             }
 
             _damaged.Add(damageable);
+            if (exposure > 0f)
+                damageable.AddInfectionExposure(exposure);
 
             ApplyImpactStatusEffect(damageable);
 
             if (_weapon.HealthDamage > 0f)
             {
                 damageable.ReceiveAnAttack(
-                    _weapon.HealthDamage,
+                    _weapon.HealthDamage * _healthDamageMultiplier,
                     _source,
                     _weapon.PenetrationClass,
                     _weapon.ArmorHealthDurabilityLossMultiplier);

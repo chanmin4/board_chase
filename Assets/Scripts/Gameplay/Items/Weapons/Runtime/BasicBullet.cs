@@ -11,6 +11,11 @@ using UnityEngine;
 public class BasicBullet : MonoBehaviour
 {
     private static readonly List<BasicBullet> ActiveProjectiles = new();
+    public static void ClearForStageTransition()
+    {
+        foreach (var bullet in ActiveProjectiles.ToArray())
+            if (bullet != null) { bullet.gameObject.SetActive(false); Destroy(bullet.gameObject); }
+    }
 
     [SerializeField] private bool _debugHit;
 
@@ -26,11 +31,23 @@ public class BasicBullet : MonoBehaviour
     private float _maxDistance;
     private float _maxLifetime;
     private float _damage;
-    private int _penetrationClass;
+    private Damageable _headshotCandidate;
+    private float _headshotDamageMultiplier = 1f;
+    public static event System.Action<GameObject, Damageable, bool> HeadshotConfirmed;
+    private WeaponSO _shotWeapon;
+    public void ConfigureHeadshot(Damageable target, float multiplier, WeaponSO shotWeapon = null)
+    {
+        _headshotCandidate = target;
+        _shotWeapon = shotWeapon;
+        _headshotDamageMultiplier = Mathf.Max(1f, multiplier);
+    }
+    private float _penetrationClass;
+    private readonly HashSet<SectorDestructibleCover> _penetratedCovers=new();
     private float _vaccineMarkAmountOnHit;
     private float _virusMarkAmountOnHit;
     private float _infectionDamageOnHit;
     private float _infectionInjectionDamagePerSecond;
+    private float _authoredInfectionExposure;
     private float _infectionInjectionDurationSeconds;
     private float _infectionInjectionTickInterval;
     private StatusEffectDefinitionSO _infectionInjectionStatusEffect;
@@ -61,7 +78,7 @@ public class BasicBullet : MonoBehaviour
         float castRadius,
         float maxLifetime,
         float damage,
-        int penetrationClass,
+        float penetrationClass,
         float vaccineMarkAmountOnHit,
         float virusMarkAmountOnHit,
         float infectionDamageOnHit,
@@ -97,11 +114,14 @@ public class BasicBullet : MonoBehaviour
         _castRadius = Mathf.Max(0.001f, castRadius);
         _maxLifetime = Mathf.Max(0.01f, maxLifetime);
         _damage = Mathf.Max(0f, damage);
+        _headshotCandidate = null;
+        _headshotDamageMultiplier = 1f;
         _penetrationClass = Mathf.Max(0, penetrationClass);
         _vaccineMarkAmountOnHit = Mathf.Max(0f, vaccineMarkAmountOnHit);
         _virusMarkAmountOnHit = Mathf.Max(0f, virusMarkAmountOnHit);
         _infectionDamageOnHit = Mathf.Max(0f, infectionDamageOnHit);
         _infectionInjectionDamagePerSecond = 0f;
+        _authoredInfectionExposure = bulletConfig?.InfectionExposureOnHit ?? 0f;
         _infectionInjectionDurationSeconds = 0f;
         _infectionInjectionTickInterval = 0f;
         _infectionInjectionStatusEffect = null;
@@ -194,10 +214,15 @@ public class BasicBullet : MonoBehaviour
         if (travelDistance <= 0f)
             return;
 
-        if (TryGetClosestHit(
+        bool didHit = TryGetClosestHit(
                 travelDistance,
                 out RaycastHit hit,
-                out bool isDamageHit))
+                out bool isDamageHit);
+#if UNITY_EDITOR
+        CombatPhysicsTrace.Record(this, _source, _gameplayPosition, _direction,
+            _castRadius, travelDistance, didHit, hit, isDamageHit);
+#endif
+        if (didHit)
         {
             Vector3 segmentStart = _gameplayPosition;
             float travelledToHit = _travelledDistance + hit.distance;
@@ -212,6 +237,16 @@ public class BasicBullet : MonoBehaviour
             // Resolve surface audio at the actual contact point, before damage can
             // disable a destructible target. AI hearing remains a separate event.
             BulletImpactAudio.TryPlay(_bulletConfig, hit.collider, hit.point);
+            var cover = hit.collider != null ? hit.collider.GetComponentInParent<SectorDestructibleCover>() : null;
+            if (cover != null)
+            {
+                float multiplier=cover.IsDestructible?cover.ReceiveProjectileDamage(_damage,_penetrationClass):1f;
+                if(cover.AllowsBulletPass)
+                {
+                    _penetratedCovers.Add(cover);_damage*=multiplier;
+                    return; // Continue from this contact on the next physics segment; never bypass other walls/targets.
+                }
+            }
 
             if (isDamageHit)
                 TryApplyDamage(hit);
@@ -374,16 +409,7 @@ public class BasicBullet : MonoBehaviour
             return false;
         }
 
-        bool sourceIsPlayer =
-            _sourceEntityRoot.GetComponent<PlayerCharacter>() != null ||
-            _sourceEntityRoot.GetComponentInChildren<PlayerCharacter>(true) != null;
-        bool sourceIsEnemy =
-            _sourceEntityRoot.GetComponent<Enemy>() != null ||
-            _sourceEntityRoot.GetComponentInChildren<Enemy>(true) != null;
-
-        return subjectFaction == ShooterFaction.Enemy
-            ? sourceIsPlayer
-            : sourceIsEnemy;
+        return ShooterFactionUtility.AreHostile(ShooterFactionUtility.Resolve(_sourceEntityRoot), subjectFaction);
     }
 
     // Purpose: Performs the will hit subject within workflow for this component.
@@ -477,6 +503,9 @@ public class BasicBullet : MonoBehaviour
             if (collider == null)
                 continue;
 
+            var passedCover=collider.GetComponentInParent<SectorDestructibleCover>();
+            if(passedCover!=null&&_penetratedCovers.Contains(passedCover))continue;
+
             if (IsSourceEntityCollider(collider))
             {
                 continue;
@@ -544,6 +573,9 @@ public class BasicBullet : MonoBehaviour
             return;
         }
 
+        var infectionMarker=_source!=null?EntityComponentResolver.Resolve<InfectedEnemyMarker>(_source.transform):null;
+        if(infectionMarker!=null)EntityComponentResolver.Resolve<PlayerShooterInfection>(damageable)?.AddExposure(infectionMarker.BulletExposure);
+
         if (_debugHit)
         {
             Debug.Log(
@@ -558,12 +590,19 @@ public class BasicBullet : MonoBehaviour
 
         if (_damage > 0f)
         {
+            bool headshot = damageable == _headshotCandidate && _headshotCandidate != null;
+            float previousHealth = damageable.CurrentHealth;
             damageable.ReceiveAnAttack(
-                _damage,
+                _damage * (headshot ? _headshotDamageMultiplier : 1f),
                 _source,
                 _penetrationClass,
                 _armorHealthDurabilityLossMultiplier);
             appliedAny = true;
+            if (headshot && damageable.CurrentHealth < previousHealth)
+            {
+                QuestRuntime.ReportHeadshot(_source, damageable, damageable.IsDead, _shotWeapon);
+                HeadshotConfirmed?.Invoke(_source, damageable, damageable.IsDead);
+            }
         }
 
         if (TryApplyPaintMark(damageable))
@@ -575,6 +614,12 @@ public class BasicBullet : MonoBehaviour
         if (TryApplyInfectionInjection(damageable))
             appliedAny = true;
 
+        if (_authoredInfectionExposure > 0f && !damageable.IsDead)
+        {
+            damageable.AddInfectionExposure(_authoredInfectionExposure);
+            appliedAny = true;
+        }
+
         if (appliedAny)
         {
             TryApplyEnemyBulletInjuries(damageable);
@@ -585,28 +630,8 @@ public class BasicBullet : MonoBehaviour
     // Purpose: Attempts to apply paint mark and reports whether the request succeeded.
     private bool TryApplyPaintMark(Damageable damageable)
     {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletMark ||
-            damageable == null ||
-            (_vaccineMarkAmountOnHit <= 0f && _virusMarkAmountOnHit <= 0f))
-        {
-            return false;
-        }
-
-        EntityPaintMarkController mark =
-            EntityComponentResolver.Resolve<EntityPaintMarkController>(damageable);
-
-        // Mark is the equipment-gap recovery route. It must not be reduced by
-        // the armor it is intended to break, and becomes irrelevant at AC 0.
-        if (mark == null || damageable.EffectiveArmorClass <= 0)
-            return false;
-
-        if (_vaccineMarkAmountOnHit > 0f)
-            mark.AddMark(PaintMarkFaction.Vaccine, _vaccineMarkAmountOnHit);
-
-        if (_virusMarkAmountOnHit > 0f)
-            mark.AddMark(PaintMarkFaction.Virus, _virusMarkAmountOnHit);
-
-        return true;
+        // WIP: original hit-to-mark integration is archived outside Assets.
+        return false;
     }
 
     // Purpose: Attempts to apply infection damage and reports whether the request succeeded.

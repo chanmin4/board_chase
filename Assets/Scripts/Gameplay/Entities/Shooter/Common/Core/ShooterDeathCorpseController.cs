@@ -106,6 +106,13 @@ public class ShooterDeathCorpseController : MonoBehaviour
         SetCollidersEnabled(_disableOnDeathColliders, false);
         SetCollidersEnabled(_enableOnDeathColliders, true);
         SetCollidersEnabled(_corpseInteractionColliders, true);
+        if (Application.isPlaying)
+        {
+            if (_corpseInteractionColliders != null)
+                foreach (var collider in _corpseInteractionColliders)
+                    if (collider != null) collider.isTrigger = true;
+            ShooterBodyCollisionMotor.MakeCorpsePassThrough(this);
+        }
 
         VisionVisibilityTarget visibilityTarget =
             EntityComponentResolver.Resolve<VisionVisibilityTarget>(this);

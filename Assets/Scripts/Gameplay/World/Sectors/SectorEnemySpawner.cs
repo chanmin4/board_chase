@@ -11,6 +11,7 @@ using UnityEngine.Events;
 [DisallowMultipleComponent]
 public class SectorEnemySpawner : MonoBehaviour
 {
+    private bool _extraEnemyQueued;
     [Header("Refs")]
     [SerializeField] private SectorRuntime _sectorRuntime;
 
@@ -336,6 +337,8 @@ private void TryRefreshResolvedSettings(string reason)
     // Purpose: Refreshes the displayed or cached resolved settings.
     private void RefreshResolvedSettings(StageRoomType roomType, string reason)
     {
+        // Free travel changes the active room, not this encounter's identity or HFSM instances.
+        if (_encounterStarted && _hasEncounterConfiguration) return;
         _resolvedMaxAlive = 0;
         _resolvedEncounterTotalSpawnCount = 0;
         _spawnedEncounterEnemyCount = 0;
@@ -609,7 +612,9 @@ private void TryRefreshResolvedSettings(string reason)
 
             float delay = wave != null ? Mathf.Max(0f, wave.delaySeconds) : 0f;
 
-            if (Time.time < _encounterStartTime + delay)
+            bool prewarmLockedRoom = _sectorRuntime != null && _sectorRuntime.InternalCombatArea != null &&
+                _sectorRuntime.InternalCombatArea.IsBound && _sectorRuntime.InternalCombatArea.IsLocked;
+            if (!prewarmLockedRoom && Time.time < _encounterStartTime + delay)
                 return;
 
             StageEnemyWavePresetSO enemyWavePreset =
@@ -636,9 +641,23 @@ private void TryRefreshResolvedSettings(string reason)
                 continue;
 
             int count = Mathf.Max(1, spawn.count);
+            var raid=RaidRuntime.Active;
+            if(!_extraEnemyQueued&&raid?.State?.layout!=null&&raid.State.layout.TryGetRoom(_sectorRuntime.Coord,out var room)&&room.extraEnemyCount>0)
+            {
+                count+=room.extraEnemyCount;_resolvedEncounterTotalSpawnCount+=room.extraEnemyCount;_extraEnemyQueued=true;
+            }
 
             for (int j = 0; j < count; j++)
-                _pendingEnemySpawnQueue.Enqueue(spawn.archetype);
+            {
+                var config=spawn.archetype;
+                var encounter=raid?.Definition?.EncounterRules;
+                if(encounter?.replacementEnemy!=null&&config.EnemyRole==EnemyShooterRole.StandardEnemy)
+                {
+                    int seed=StageDefinitionSO.BuildSectorSeed(raid?.State?.layout?.stageSeed??0,_sectorRuntime.Coord,26030+_pendingEnemySpawnQueue.Count);
+                    if(new System.Random(seed).NextDouble()<encounter.replacementChance)config=encounter.replacementEnemy;
+                }
+                _pendingEnemySpawnQueue.Enqueue(config);
+            }
         }
 
         _pendingEnemySpawnCount = _pendingEnemySpawnQueue.Count;
@@ -695,7 +714,9 @@ private void TryRefreshResolvedSettings(string reason)
         }
         _encounterCleared =
             _encounterSpawnFinished &&
-            _aliveEncounterTargets.Count == 0;
+            _aliveEncounterTargets.Count == 0 &&
+            (_sectorRuntime == null || _sectorRuntime.InternalCombatArea == null ||
+             !_sectorRuntime.InternalCombatArea.IsBound || _sectorRuntime.InternalCombatArea.CanCompleteEncounter);
     }
     // Purpose: Checks whether run encounter is currently permitted.
     private bool CanRunEncounter()
@@ -752,6 +773,13 @@ private void TryRefreshResolvedSettings(string reason)
     // Purpose: Performs the uses enemy encounter workflow for this component.
     private bool UsesEnemyEncounter(StageRoomType roomType)
     {
+        // Generated raid Hatch / Merchant rooms remain Normal but are already
+        // cleared. Restored cleared rooms and start sectors likewise need no
+        // encounter lookup, not just an early-out later in CanRunEncounter.
+        if (_sectorRuntime != null &&
+            (_sectorRuntime.IsStartSector || _sectorRuntime.IsCleared))
+            return false;
+
         if (roomType == StageRoomType.Boss)
             return true;
 
@@ -792,20 +820,12 @@ private void TryRefreshResolvedSettings(string reason)
             ? _spawnedEnemiesRoot
             : _sectorRuntime.transform;
 
-        Enemy enemyInstance = Instantiate(
-            enemyConfig.EnemyPrefab,
-            spawnPoint.position,
-            spawnPoint.rotation,
-            parent);
+        Enemy enemyInstance = SpawnConfiguredEnemy(enemyConfig, _sectorRuntime, _projectileRoot,
+            parent, spawnPoint.position, spawnPoint.rotation, _currentStageIndex,_spawnedEncounterEnemyCount);
 
         if (enemyInstance == null)
             return false;
 
-        enemyInstance.SetSpawnReady(false);
-        enemyInstance.SetCurrentSector(_sectorRuntime);
-        BindShooterEnemyConfig(enemyInstance, enemyConfig);
-        _sectorRuntime.GetComponent<SectorRoomTraitRuntime>()?.ApplyToSpawnedEnemy(enemyInstance);
-        BindProjectileRoot(enemyInstance);
         if (!TrackEnemy(enemyInstance))
         {
             _encounterConfigurationFailed = true;
@@ -818,10 +838,40 @@ private void TryRefreshResolvedSettings(string reason)
         return true;
     }
 
+    /// <summary>Shared production initialization; manual placement changes only the spawn transform.</summary>
+    public static Enemy SpawnConfiguredEnemy(EnemyShooterConfigSO config, SectorRuntime sector,
+        Transform projectileRoot, Transform parent, Vector3 position, Quaternion rotation, int stageIndex,int spawnOrdinal=-1)
+    {
+        if (config == null || config.EnemyPrefab == null || sector == null) return null;
+        var templateAgent = EntityComponentResolver.Resolve<UnityEngine.AI.NavMeshAgent>(config.EnemyPrefab);
+        if (templateAgent != null && !ShooterBodyCollisionMotor.CanSpawnAt(templateAgent, parent, position, rotation))
+            return null; // Keep queued production spawns pending instead of stacking bodies.
+        Enemy instance = Instantiate(config.EnemyPrefab, position, rotation, parent);
+        if (instance == null) return null;
+        ShooterBodyCollisionMotor.Ensure(EntityComponentResolver.Resolve<UnityEngine.AI.NavMeshAgent>(instance));
+        instance.SetSpawnReady(false);
+        instance.SetCurrentSector(sector);
+        BindShooterEnemyConfig(instance, config, stageIndex);
+        var layout=RaidRuntime.Active?.State?.layout;
+        if(spawnOrdinal>=0)
+            instance.gameObject.AddComponent<GameProgressionIdentity>().Configure($"stage:{stageIndex}:seed:{layout?.stageSeed??0}:sector:{sector.Coord}:enemy:{spawnOrdinal}");
+        if(layout!=null&&layout.TryGetRoom(sector.Coord,out var node)&&node.virusRoom&&InfectionAggravationStatusSO.Active!=null)
+        {
+            var infection=InfectionAggravationStatusSO.Active.Settings;
+            int seed=StageDefinitionSO.BuildSectorSeed(layout.stageSeed,sector.Coord,position.GetHashCode());
+            if(new System.Random(seed).NextDouble()<(RaidRuntime.Active?.Definition?.EncounterRules.infectedEnemyChance??0))
+                instance.gameObject.AddComponent<InfectedEnemyMarker>().Configure(infection.infectedBulletExposure);
+        }
+        sector.GetComponent<SectorRoomTraitRuntime>()?.ApplyToSpawnedEnemy(instance);
+        BindProjectileRoot(instance, projectileRoot);
+        return instance;
+    }
+
     // Purpose: Binds shooter enemy config to the active runtime or UI target.
     private static void BindShooterEnemyConfig(
         Enemy enemy,
-        EnemyShooterConfigSO enemyConfig)
+        EnemyShooterConfigSO enemyConfig,
+        int stageIndex)
     {
         if (enemy == null || enemyConfig == null)
             return;
@@ -839,13 +889,13 @@ private void TryRefreshResolvedSettings(string reason)
             uiAnchors[i].SetEnemyShooterConfig(enemyConfig);
 
         if (enemy is EnemyShooter shooter)
-            shooter.SetEnemyShooterConfig(enemyConfig);
+            shooter.SetEnemyShooterConfig(enemyConfig, stageIndex);
     }
 
     // Purpose: Binds projectile root to the active runtime or UI target.
-    private void BindProjectileRoot(Enemy enemy)
+    private static void BindProjectileRoot(Enemy enemy, Transform projectileRoot)
     {
-        if (enemy == null || _projectileRoot == null)
+        if (enemy == null || projectileRoot == null)
             return;
 
         EnemyAttackRig[] rigs = enemy.GetComponentsInChildren<EnemyAttackRig>(true);
@@ -853,7 +903,7 @@ private void TryRefreshResolvedSettings(string reason)
         for (int i = 0; i < rigs.Length; i++)
         {
             if (rigs[i] != null)
-                rigs[i].SetProjectileRoot(_projectileRoot);
+                rigs[i].SetProjectileRoot(projectileRoot);
         }
     }
     // Purpose: Attempts to get enemy spawn point and reports whether the request succeeded.
@@ -866,6 +916,10 @@ private void TryRefreshResolvedSettings(string reason)
             return false;
 
         _sectorRuntime.CollectEnemySpawnPoints(_spawnPointBuffer);
+
+        SectorLockedCombatArea lockedArea = _sectorRuntime.InternalCombatArea;
+        if (lockedArea != null && lockedArea.IsBound)
+            _spawnPointBuffer.RemoveAll(point => point == null || !lockedArea.ContainsSpawnPoint(point.position));
 
         if (_spawnPointBuffer.Count <= 0)
         {

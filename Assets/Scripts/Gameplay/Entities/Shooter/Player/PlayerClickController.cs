@@ -129,13 +129,6 @@ public class PlayerClickController : MonoBehaviour
 
         CancelThrowableAim();
 
-        if (CanUseEmergencyMelee())
-        {
-            SetRangeControlZonePreviewVisible(false);
-            if (_character.shootInput) TryStartMeleeAttack();
-            return;
-        }
-
         if (currentWeapon is MeleeWeaponSO)
         {
             SetRangeControlZonePreviewVisible(false);
@@ -189,12 +182,6 @@ public class PlayerClickController : MonoBehaviour
                     CancelThrowableAim();
             }
 
-            return;
-        }
-
-        if (CanUseEmergencyMelee())
-        {
-            TryStartMeleeAttack();
             return;
         }
 
@@ -298,14 +285,6 @@ public class PlayerClickController : MonoBehaviour
     {
         _isThrowableAimActive = false;
         SetThrowablePreviewVisible(false);
-    }
-
-    // Purpose: Checks whether melee weapon equipped is currently true.
-    private bool CanUseEmergencyMelee()
-    {
-        return _equipmentController != null &&
-               PlayerEmergencyMeleeProfile.IsAvailable(_equipmentController.CurrentWeapon,
-                   _bulletLoadout != null && _bulletLoadout.HasNoFireableAmmunition);
     }
 
     // Purpose: Checks whether use throwable is currently permitted.
@@ -449,10 +428,10 @@ public class PlayerClickController : MonoBehaviour
             Time.timeScale <= 0f ||
             GameplayActionInputBlocker.IsAttackBlocked ||
             (_dashController != null && _dashController.IsDashing) ||
-            (_aimAction != null && _aimAction.IsReloading) ||
+            (_aimAction != null && (_aimAction.IsReloading || _aimAction.IsFunctionChecking)) ||
             (_quickSlots != null && _quickSlots.ActiveUsableItem != null) ||
             _meleeAttack == null ||
-            !CanUseEmergencyMelee())
+            _meleeAttack.PlayerCombatKnife == null)
         {
             return false;
         }

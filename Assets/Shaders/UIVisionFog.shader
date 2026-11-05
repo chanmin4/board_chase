@@ -4,11 +4,14 @@ Shader "UI/VisionFog"
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _FogColor ("Fog Color", Color) = (0, 0, 0, 0.55)
+        _BorderColor ("Vision Border", Color) = (0.15, 0.65, 0.7, 0.25)
+        _BorderWidthWorld ("Border Width", Float) = 0.1
         _VisionOriginWorld ("Vision Origin World", Vector) = (0, 0, 0, 0)
         _ForwardWorld ("Forward World", Vector) = (0, 0, 1, 0)
         _CircleRadiusWorld ("Circle Radius World", Float) = 0
         _ConeRangeWorld ("Cone Range World", Float) = 0
         _ArcCos ("Arc Cos", Float) = 0
+        _NearArc ("Straight Cone Sides (slope, intercept, enabled)", Vector) = (0, 0, 0, 0)
         _UseForwardArc ("Use Forward Arc", Float) = 1
         _SoftnessWorld ("Softness World", Float) = 1
         _OcclusionSampleCount ("Occlusion Sample Count", Float) = 256
@@ -62,6 +65,8 @@ Shader "UI/VisionFog"
 
             sampler2D _MainTex;
             fixed4 _FogColor;
+            fixed4 _BorderColor;
+            float _BorderWidthWorld;
             float3 _VisionOriginWorld;
             float3 _ForwardWorld;
             float _CircleRadiusWorld;
@@ -72,6 +77,7 @@ Shader "UI/VisionFog"
             float3 _WorldCameraForward;
             float4 _CameraProjection;
             float _ArcCos;
+            float4 _NearArc;
             float _UseForwardArc;
             float _SoftnessWorld;
             float _OcclusionDistances[MAX_OCCLUSION_SAMPLES];
@@ -132,6 +138,14 @@ Shader "UI/VisionFog"
                 float2 dir = normalize(toPoint + float2(0.0001, 0.0001));
                 float2 forward = normalize(_ForwardWorld.xz + float2(0.0001, 0.0001));
                 float inArc = step(_ArcCos, dot(dir, forward));
+                if (_NearArc.z > 0.5)
+                {
+                    // Straight sides join the close circle to the original far arc.
+                    // No radial bulge, shifted LOS origin, or additional circle.
+                    float longitudinal = dot(toPoint, forward);
+                    float lateral = abs(toPoint.x * forward.y - toPoint.y * forward.x);
+                    inArc = step(0.0, longitudinal) * step(lateral, longitudinal * _NearArc.x + _NearArc.y);
+                }
                 float coneShape = lerp(1.0, inArc, saturate(_UseForwardArc));
                 float coneVisible = coneRangeVisible * coneShape;
                 float visible = saturate(max(circleVisible, coneVisible)) * validRay * inFront;
@@ -170,8 +184,23 @@ Shader "UI/VisionFog"
 
                 visible *= lerp(1.0, lineOfSightVisible, saturate(_UseOcclusion));
                 float alpha = _FogColor.a * (1.0 - visible);
-
-                return fixed4(_FogColor.rgb, alpha) * i.color;
+                // Signed distances use the SAME circle/cone and wall fan; presentation never expands LOS.
+                float along = dot(toPoint, forward);
+                float across = abs(toPoint.x * forward.y - toPoint.y * forward.x);
+                float sineHalf = sqrt(max(0.0, 1.0 - _ArcCos * _ArcCos));
+                float sideDistance = along * sineHalf - across * _ArcCos;
+                if (_NearArc.z > 0.5)
+                    sideDistance = min(along, (along * _NearArc.x + _NearArc.y - across) / sqrt(1.0 + _NearArc.x * _NearArc.x));
+                float coneDistance = _ConeRangeWorld - worldDistance;
+                if (_UseForwardArc > 0.5) coneDistance = min(coneDistance, sideDistance);
+                float shapeDistance = max(_CircleRadiusWorld - worldDistance, coneDistance);
+                if (_UseOcclusion > 0.5) shapeDistance = min(shapeDistance, openDistance - worldDistance);
+                float width = max(_BorderWidthWorld, fwidth(shapeDistance));
+                float rim = (1.0 - smoothstep(width * 0.5, width * 1.5, abs(shapeDistance))) * validRay * inFront;
+                float borderAlpha = saturate(_BorderColor.a * rim);
+                float combinedAlpha = alpha + borderAlpha * (1.0 - alpha);
+                float3 outputColor = lerp(_FogColor.rgb, _BorderColor.rgb, borderAlpha / max(combinedAlpha, 0.0001));
+                return fixed4(outputColor, combinedAlpha) * i.color;
             }
             ENDCG
         }

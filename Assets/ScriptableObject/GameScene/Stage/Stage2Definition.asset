@@ -11,21 +11,170 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ae080927fbef4ec880ed87871e2b57e0, type: 3}
   m_Name: Stage2Definition
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
+  _specialSectors:
+    enabled: 1
+    useRatio: 1
+    useAdvancedCountLimits: 0
+    minimumCount: 2
+    maximumCount: 3
+    allowRepeatedTypes: 0
+    avoidRepeatedVariants: 0
+    pools:
+    - disabled: 0
+      id: office
+      weight: 1
+      minimumCount: 0
+      maximumCount: 1
+      minimumStartDistance: 0
+      maximumStartDistance: 0
+      direction: 0
+      variants:
+      - id: office_01
+        preset: {fileID: 11400000, guid: c7d8411fe7704eb4b8854e710a100002, type: 2}
+        weight: 1
+      lockedCombatArea: 0
+      keyTier: 0
+      requiredByQuests: []
+    - disabled: 0
+      id: storage
+      weight: 1
+      minimumCount: 0
+      maximumCount: 1
+      minimumStartDistance: 0
+      maximumStartDistance: 0
+      direction: 0
+      variants:
+      - id: storage_01
+        preset: {fileID: 11400000, guid: c7d8411fe7704eb4b8854e710a200002, type: 2}
+        weight: 1
+      lockedCombatArea: 0
+      keyTier: 0
+      requiredByQuests: []
+    - disabled: 1
+      id: security
+      weight: 1
+      minimumCount: 0
+      maximumCount: 1
+      minimumStartDistance: 0
+      maximumStartDistance: 0
+      direction: 0
+      variants:
+      - id: security_01
+        preset: {fileID: 11400000, guid: dfb6f9a93489f592b686a1a520b2097a, type: 2}
+        weight: 1
+      lockedCombatArea: 0
+      keyTier: 0
+      requiredByQuests: []
+    - disabled: 0
+      id: medical
+      weight: 1
+      minimumCount: 0
+      maximumCount: 1
+      minimumStartDistance: 0
+      maximumStartDistance: 0
+      direction: 0
+      variants:
+      - id: medical_01
+        preset: {fileID: 11400000, guid: fbaa1ff2ac3d32ccc0c3bd68339ac405, type: 2}
+        weight: 1
+      lockedCombatArea: 0
+      keyTier: 0
+      requiredByQuests: []
+    - disabled: 1
+      id: vault
+      weight: 1
+      minimumCount: 0
+      maximumCount: 1
+      minimumStartDistance: 0
+      maximumStartDistance: 0
+      direction: 0
+      variants:
+      - id: vault_01
+        preset: {fileID: 11400000, guid: 647d3e770f1f194dbe46efa77e30a4ef, type: 2}
+        weight: 1
+      lockedCombatArea: 1
+      keyTier: 0
+      requiredByQuests: []
+    - disabled: 0
+      id: server
+      weight: 1
+      minimumCount: 0
+      maximumCount: 1
+      minimumStartDistance: 0
+      maximumStartDistance: 0
+      direction: 0
+      variants:
+      - id: server_01
+        preset: {fileID: 11400000, guid: c7d8411fe7704eb4b8854e710a300002, type: 2}
+        weight: 1
+      lockedCombatArea: 0
+      keyTier: 0
+      requiredByQuests: []
+  _roomComposition:
+    enabled: 1
+    themePercent: 50
+    specialPercent: 25
+    commonPercent: 25
+    themePresets:
+    - preset: {fileID: 11400000, guid: 429c2f35b0874076ab08b2aca14ee7c3, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 54eb1ab237f24036a1a36c0bfcd3706e, type: 2}
+      weight: 1
+    - preset: {fileID: 11400000, guid: 8ba732db22f34eb183d82ccda0949094, type: 2}
+      weight: 1
+    commonPresets: []
   _stageIndex: 2
+  _encounterRules:
+    infectedRoomCount: 2
+    infectionSpreadEnabled: 1
+    infectionSpreadIntervalSeconds: 60
+    maximumNewInfectedRoomsPerTick: 0
+    infectedRoomGasPressure: 3
+    infectedEnemyChance: 0.25
+    extraEnemyChance: 0.15
+    replacementEnemy: {fileID: 0}
+    replacementChance: 0
+  _developmentOnly: 0
   _displayName: 2_Stage
-  _mapPolicy: 1
+  _mapPolicy: 2
   _raidMap:
+    roomDensity: 0.32
+    braidPercent: 25
+    candidateCount: 4
+    extractionCount: 2
+    merchantRoomCount: 1
+    merchantSpawnPercent: 10
+    vaultNearCandidateChance: 0.25
     bossSpawnPercent: 65
-    minimumExtractionPathDistance: 9
+    preventBossBlockingExtraction: 1
+    minimumExtractionPathDistance: 3
+    customizeTopology: 0
+    topology:
+      targetRoomCount: 0
+      minimumRoomCount: 0
+      maximumRoomCount: 0
+      ringRadius: 0
+      ringRadiusRatio: 0.2
+      candidateSeparationWeight: 3
+      candidateDistanceWeight: 1
+      vaultCandidateDistance: 2
+      merchantMinimumDistance: 2
     normalWeight: 70
-    armoryWeight: 10
-    medicalWeight: 15
+    armoryWeight: 0
+    medicalWeight: 0
     vaultWeight: 5
   _raidRuntime:
-    durationSeconds: 1200
-    overtimeInfectionPerSecond: 6
-    generatorBattery: {fileID: 11400000, guid: 2a26d19e459447788d8bc8941260b528, type: 2}
+    hatchAdvancesStage: 1
+    hatchRequiredQuest: {fileID: 0}
+    suppressionDurationSeconds: 180
+    stage1MedicalDose: 1
+    stage2MedicalDose: 3
+    stage3MedicalDose: 5
+    infectionPerPressureSecond: 1
+    durationSeconds: 0
+    overtimeInfectionPerSecond: 0
+    generatorBattery: {fileID: 11400000, guid: 4d7ce837411843d3b81e28192bd8d29a, type: 2}
     batteryAmount: 1
     terminalPrefab: {fileID: 0}
     prototypeFont: {fileID: 11400000, guid: 971716747b9ba724291872bab3bf58df, type: 2}
@@ -44,7 +193,7 @@ MonoBehaviour:
         weight: 1
       encounter: {fileID: 0}
       content: {fileID: 0}
-      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e790, type: 2}
+      lootObject: {fileID: 11400000, guid: a2200000000000000000000000000002, type: 2}
     - role: 2
       sectorPreset: {fileID: 0}
       sectorVariants:
@@ -52,15 +201,15 @@ MonoBehaviour:
         weight: 1
       encounter: {fileID: 0}
       content: {fileID: 0}
-      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e791, type: 2}
+      lootObject: {fileID: 11400000, guid: a220000000000000000000000000001a, type: 2}
     - role: 4
       sectorPreset: {fileID: 0}
       sectorVariants:
       - preset: {fileID: 11400000, guid: 647d3e770f1f194dbe46efa77e30a4ef, type: 2}
         weight: 1
-      encounter: {fileID: 0}
+      encounter: {fileID: 11400000, guid: e201040070014ba39f5b6600fac10002, type: 2}
       content: {fileID: 0}
-      lootObject: {fileID: 11400000, guid: b173e2c5004b48aa89290cd63f60e792, type: 2}
+      lootObject: {fileID: 11400000, guid: a220000000000000000000000000000b, type: 2}
     - role: 6
       sectorPreset: {fileID: 0}
       sectorVariants:
@@ -77,16 +226,22 @@ MonoBehaviour:
       encounter: {fileID: 0}
       content: {fileID: 0}
       lootObject: {fileID: 0}
-    - role: 8
-      sectorPreset: {fileID: 0}
-      sectorVariants:
-      - preset: {fileID: 11400000, guid: 5dc05e27ef5b4a0c25663fad02da3089, type: 2}
-        weight: 1
-      encounter: {fileID: 0}
-      content: {fileID: 0}
-      lootObject: {fileID: 0}
+    merchantConfig: {fileID: 11400000, guid: c0f41d7310094ade8eca600400040001, type: 2}
+    merchantInitialMoney: 1000
+    merchantOpenChannel: {fileID: 11400000, guid: 293b940d4882d5144952cea9a94e9c32, type: 2}
+    merchantOverlayChannel: {fileID: 11400000, guid: 04fa04120420a7b4caadc06b33088982, type: 2}
+    vaultEntryKeyTier: 0
+    vaultUsesInternalCombatLock: 1
+    normalSupplyChance: 0.25
+    weaponSupplyShare: 0.5
+    normalWeaponSupply: {fileID: 11400000, guid: a220000000000000000000000000001a, type: 2}
+    normalMedicalSupply: {fileID: 11400000, guid: a2200000000000000000000000000002, type: 2}
+  _raidAnomalyTable: {fileID: 11400000, guid: b0eed10404004f00a000000000000002, type: 2}
+  _anomalyGasBaseline: 0
   _roomGridSize: 9
   _useStartSectorOnly: 0
+  _sectorTheme: {fileID: 11400000, guid: 8c3df88db2c2ceb4b99f5f3a6db06d24, type: 2}
+  _branchTopologies: []
   _startSectorPresets:
   - preset: {fileID: 11400000, guid: 181b3e86598d4b1683e8facd05398b2a, type: 2}
     weight: 1
@@ -101,7 +256,7 @@ MonoBehaviour:
     encounterPresets:
     - preset: {fileID: 11400000, guid: d2a4b6c8e0f14931a2b3c4d5e6f70035, type: 2}
       weight: 1
-    timerSeconds: 30
+    timerSeconds: 0
     resetTimerWhenRequirementLost: 0
   _roomTraitTable: {fileID: 11400000, guid: e0000000000000000000000000000021, type: 2}
   _enableBiochemicalGas: 1
@@ -124,17 +279,6 @@ MonoBehaviour:
     - preset: {fileID: 11400000, guid: bfb27cf577304361aedcfe29cc6d3950, type: 2}
       weight: 1
     dropTable: {fileID: 0}
-  _shop:
-    enabled: 0
-    minCount: 0
-    maxCount: 1
-    extraRoomChance: 0
-    excludeFirstRoom: 1
-    sectorPresets:
-    - preset: {fileID: 11400000, guid: e084352ad70049b4b15df14c2f4c2222, type: 2}
-      weight: 1
-    dropTable: {fileID: 0}
-    allowReroll: 1
   _bossBattles:
   - encounterPreset: {fileID: 11400000, guid: 4950049b5fbe4a3a9fc55ee81c14297e, type: 2}
     sectorPreset: {fileID: 11400000, guid: cdca93fb975c44a49d6906207a556f0d, type: 2}

@@ -358,10 +358,15 @@ public sealed class ShooterStuckRecovery : MonoBehaviour
         if (agent == null)
             agent = EntityComponentResolver.Resolve<NavMeshAgent>(entityRoot);
 
+        if (controller == null)
+            controller = EntityComponentResolver.Resolve<CharacterController>(entityRoot);
+
         if (agent != null && agent.enabled)
         {
             if (NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, 2f, agent.areaMask))
             {
+                if (!ShooterBodyCollisionMotor.CanPlaceControllerAt(controller, hit.position + Vector3.up * RecoveryLift))
+                    return;
                 if (agent.isOnNavMesh)
                 {
                     agent.ResetPath();
@@ -373,8 +378,8 @@ public sealed class ShooterStuckRecovery : MonoBehaviour
             }
         }
 
-        if (controller == null)
-            controller = EntityComponentResolver.Resolve<CharacterController>(entityRoot);
+        if (!ShooterBodyCollisionMotor.CanPlaceControllerAt(controller, worldPosition))
+            return;
 
         bool controllerWasEnabled = controller != null && controller.enabled;
         if (controllerWasEnabled)

@@ -150,7 +150,19 @@ public static class ContentPreflightValidator
                 }
             }
 
-            if (!stage.TryPickBossBattle(
+            if (stage.MapPolicy == StageMapPolicy.RadialBraidedRaid)
+            {
+                if (!stage.UseStartSectorOnly && stage.RoomGridSize > 1 && stage.RaidMap.bossSpawnPercent > 0)
+                {
+                    var bossCoord = new Vector2Int(2, 2);
+                    if (!stage.TryPickBossEncounter(ValidationSeed, bossCoord, out _))
+                        AddError(issues, "Stages", "No valid V3 Boss encounter can be selected.", stage);
+                    var bossRoom = new StageRoomNode(bossCoord, StageRoomType.Boss, StageRoomConnectionFlags.None) { combatPoolId = "theme" };
+                    if (!stage.RoomComposition.TryResolve(stage, new StageMapLayout { stageSeed = ValidationSeed }, bossRoom, out _))
+                        AddError(issues, "Stages", "V3 보스용 스테이지 전용맵 풀이 없습니다. Normal 전용맵 프리셋을 등록하세요.", stage);
+                }
+            }
+            else if (!stage.TryPickBossBattle(
                     ValidationSeed,
                     new Vector2Int(2, 2),
                     out _,

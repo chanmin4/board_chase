@@ -13,27 +13,32 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
     // distinct from the serialized equipment refs owned by derived runtimes.
     private EntityEquipmentRuntime _weaponConditionEquipmentRuntime;
     public abstract EntityStatConfigSO StatConfig { get; }
+    public ShooterFaction Faction => StatConfig is EnemyShooterConfigSO enemy ? enemy.Faction : ShooterFaction.Player;
+    public virtual float GasInfectionResistance => 0f;
+    public ShooterInventorySettings InventorySettings => (StatConfig as ShooterStatConfigSO)?.Inventory;
+    public ShooterDashSettings DashSettings => (StatConfig as ShooterStatConfigSO)?.Dash;
 
     public virtual WeaponSO CurrentWeapon => null;
     public virtual BulletSO CurrentBullet => null;
+    public RangedWeaponSO CurrentFirearm => CurrentWeapon as RangedWeaponSO;
 
     public virtual float AttackDamage => 0f;
-    public virtual float MaxRange => 0f;
-    public virtual float ShotsPerSecond => 0f;
-    public virtual float ReloadDurationSeconds => 0f;
-    public virtual int MagazineSize => 0;
+    public virtual float MaxRange => CurrentFirearm != null ? CurrentFirearm.MaxRange : 0f;
+    public virtual float ShotsPerSecond => CurrentFirearm != null ? CurrentFirearm.ShotsPerSecond : 0f;
+    public virtual float ReloadDurationSeconds => CurrentFirearm != null ? CurrentFirearm.ReloadDurationSeconds : 0f;
+    public virtual int MagazineSize => CurrentWeapon is RangedWeaponSO firearm ? firearm.MagazineSize : 1;
 
     public virtual float PaintMarkDamage => 0f;
     public virtual float InfectionDamage => 0f;
-    public virtual float HealthDamageCoefficient =>
-        StatConfig is ShooterStatConfigSO shooterConfig ? shooterConfig.HealthDamageCoefficient : 1f;
+    public virtual float HealthDamageCoefficient => 1f; // Bullet damage and weapon DamageMultiplier own the baseline.
     public virtual float InfectionDamageCoefficient =>
         StatConfig is ShooterStatConfigSO shooterConfig ? shooterConfig.InfectionDamageCoefficient : 1f;
     public virtual float MarkAmountCoefficient =>
         StatConfig is ShooterStatConfigSO shooterConfig ? shooterConfig.MarkAmountCoefficient : 1f;
-    public virtual int PenetrationClassBonus => 0;
+    public virtual float PenetrationClassBonus => CurrentFirearm != null ? CurrentFirearm.PenetrationClassBonus : 0f;
 
     public virtual float MoveSpeed => 0f;
+    public virtual float StaminaRecoveryMultiplier => 1f;
     public EntityStatusEffectRuntime StatusEffects
     {
         get
@@ -44,8 +49,9 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
             return _statusEffects;
         }
     }
-    public virtual float DashCooldownSeconds => 0f;
-    public virtual float DashDistanceMultiplier => 1f;
+    public virtual float DashCooldownSeconds => StatConfig is ShooterStatConfigSO shooter ? shooter.DashCooldownSeconds : 0f;
+    public virtual float AdditionalStat(PlayerStatId stat,float baseline=0)=>ResolveStatWithWeaponAndBulletModifiers(stat,baseline,0,CurrentBullet);
+    public virtual float DashDistanceMultiplier => StatConfig is ShooterStatConfigSO shooter ? shooter.Dash.distanceMultiplier : 1.3f;
     public virtual float MaxHealth => 0f;
     /// <summary>
     /// Final base armor class before equipped armor and temporary deltas.
@@ -67,20 +73,24 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
 
     public virtual float GunshotSoundRadius =>
         CurrentWeapon is RangedWeaponSO rangedWeapon
-            ? rangedWeapon.ResolveGunshotSoundRadius(0f)
+            ? rangedWeapon.GunshotSoundRadius
             : 0f;
     public virtual float SoundInvestigateDelaySeconds => 0f;
     public virtual float FootstepSoundRadius => 0f;
     public virtual float FootstepSoundInterval => 0.35f;
-    public virtual int InventoryCapacity => 0;
+    public virtual int InventoryCapacity => InventorySettings?.CapacityWithoutBackpack ?? 0;
 
-    public virtual float AimSpeed => 8f;
+    public virtual float AimSpeed => CurrentFirearm != null ? CurrentFirearm.AimSpeed : 3f;
+    public virtual float AimingMoveSpeedMultiplier => CurrentFirearm != null ? CurrentFirearm.AimingMoveSpeedMultiplier : 1f;
+    public virtual float ShotKickDistance => CurrentFirearm != null ? CurrentFirearm.ShotKickDistance : 0f;
+    public virtual float MaximumShotKickDistance => CurrentFirearm != null ? CurrentFirearm.MaximumShotKickDistance : 0f;
+    public virtual float ShotKickRecoveryPerSecond => CurrentFirearm != null ? CurrentFirearm.ShotKickRecoveryPerSecond : 0f;
     public virtual float AimRangeMultiplier => 1f;
     public virtual float AimMoveSpeedMultiplier => 1f;
-    public virtual float HipFireSpreadAngleDeg => 0f;
-    public virtual float AimSpreadAngleDeg => 0f;
+    public virtual float HipFireSpreadAngleDeg => CurrentFirearm != null ? CurrentFirearm.HipFireSpreadAngleDeg : 0f;
+    public virtual float AimSpreadAngleDeg => CurrentFirearm != null ? CurrentFirearm.AimSpreadAngleDeg : 0f;
     public virtual float RecoilAngleDeg => 0f;
-    public virtual float RecoilRecoverySpeedDegPerSecond => 20f;
+    public virtual float RecoilRecoverySpeedDegPerSecond => 0f;
     public virtual float RecoilForwardDistancePerShot => 0f;
     public virtual float RecoilSideDistancePerShot => 0f;
     public virtual float MaxRecoilDistance => 0f;
@@ -120,11 +130,7 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
     // Purpose: Applies the requested weapon archetype to shots per second change.
     protected float ApplyWeaponArchetypeToShotsPerSecond(float shotsPerSecond)
     {
-        float multiplier = CurrentWeapon is RangedWeaponSO rangedWeapon
-            ? rangedWeapon.ShotsPerSecondMultiplier
-            : 1f;
-
-        return Mathf.Max(0.01f, shotsPerSecond * multiplier);
+        return Mathf.Max(0.01f, shotsPerSecond); // Compatibility helper: rate is already absolute on the weapon.
     }
 
     // Purpose: Applies the requested weapon condition to spread change.
@@ -153,39 +159,15 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
     }
 
     // Purpose: Resolves the paint mark damage needed by this component.
-    public virtual float ResolvePaintMarkDamage(BulletSO bullet)
-    {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletMark)
-            return 0f;
-
-        float baseAmount = bullet != null ? bullet.MarkAmount : 0f;
-        return ResolveStatWithWeaponAndBulletModifiers(
-            PlayerStatId.PaintMarkDamage,
-            baseAmount * MarkAmountCoefficient,
-            0f,
-            bullet);
-    }
+    public virtual float ResolvePaintMarkDamage(BulletSO bullet) => 0f; // WIP basic-bullet compatibility only.
 
     // Purpose: Resolves the infection damage needed by this component.
-    public virtual float ResolveInfectionDamage(BulletSO bullet)
-    {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletInfectionDamage)
-            return 0f;
-
-        float baseDamage = bullet != null ? bullet.InfectionDamage : 0f;
-        return ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(
-            ResolveStatWithWeaponAndBulletModifiers(
-                PlayerStatId.InfectionDamage,
-                baseDamage * InfectionDamageCoefficient,
-                0f,
-                bullet),
-            bullet));
-    }
+    public virtual float ResolveInfectionDamage(BulletSO bullet) => 0f; // WIP basic-bullet compatibility only.
 
     // Purpose: Resolves the shots per second needed by this component.
     public virtual float ResolveShotsPerSecond(BulletSO bullet)
     {
-        return ApplyWeaponArchetypeToShotsPerSecond(ShotsPerSecond);
+        return ShotsPerSecond;
     }
 
     // Purpose: Resolves the magazine size needed by this component.
@@ -195,9 +177,9 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
     }
 
     // Purpose: Resolves the penetration class needed by this component.
-    public virtual int ResolvePenetrationClass(BulletSO bullet)
+    public virtual float ResolvePenetrationClass(BulletSO bullet)
     {
-        int bulletPenetration = bullet != null ? bullet.PenetrationClass : 0;
+        float bulletPenetration = bullet != null ? bullet.PenetrationClass : 0;
         return Mathf.Max(0, bulletPenetration + PenetrationClassBonus);
     }
 
@@ -251,7 +233,7 @@ public abstract class ShooterStatsRuntime : MonoBehaviour
         PlayerStatId stat,
         PlayerStatModifier[] modifiers)
     {
-        if (modifiers == null)
+        if (modifiers == null || !ShooterStatPolicy.IsCharacterStat(stat))
             return;
 
         for (int i = 0; i < modifiers.Length; i++)

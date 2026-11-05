@@ -97,6 +97,7 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         out string message)
     {
         ResolveRefs();
+        if(!GameProgressionRuntime.CanUse(item,out message))return false;
 
         if (_useRoutine != null)
         {
@@ -141,6 +142,7 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         }
 
         _consumeFromQuickSlot = false;
+        if (!HasMedicalSupply(item, out message)) return false;
         _activeQuickSlotIndex = -1;
         _activeSlotIndex = inventorySlotIndex;
         _activeItem = item;
@@ -176,6 +178,7 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         out string message)
     {
         ResolveRefs();
+        if(!GameProgressionRuntime.CanUse(item,out message))return false;
 
         if (_useRoutine != null)
         {
@@ -220,6 +223,7 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         }
 
         _consumeFromQuickSlot = true;
+        if (!HasMedicalSupply(item, out message)) return false;
         _activeQuickSlotIndex = quickSlotIndex;
         _activeSlotIndex = -1;
         _activeItem = item;
@@ -277,7 +281,18 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
 
         bool consumed;
 
-        if (_consumeFromQuickSlot)
+        if (IsInfectionMedicine(item))
+        {
+            consumed = TryConsumeMedicalDose(item);
+        }
+        else if (item.UsesDurability)
+        {
+            consumed = _consumeFromQuickSlot
+                ? _quickSlotRuntime != null && _quickSlotRuntime.TrySpendConsumableDurability(item, out _)
+                : _inventoryRuntime != null && _inventoryRuntime.TrySpendConsumableDurability(slotIndex, item, out _);
+        }
+
+        else if (_consumeFromQuickSlot)
         {
             consumed =
                 _quickSlotRuntime != null &&
@@ -314,16 +329,21 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         int injuriesCured = _playerStats != null
             ? _playerStats.ApplyConsumableStatusEffect(item)
             : 0;
-        float infectionReduced = 0f;
-
         if (item is InfectionCureItemSO infectionCure && _playerInfection != null)
         {
-            float beforeInfection = _playerInfection.CurrentInfection;
-            _playerInfection.ReduceInfection(infectionCure.InfectionRecoveryAmount);
-            infectionReduced = Mathf.Max(0f, beforeInfection - _playerInfection.CurrentInfection);
+            if (infectionCure.IsSyringe) _playerInfection.TryUseInfectionSyringe(infectionCure.InfectionRecoveryAmount);
+            else _playerInfection.TryStartAmpoule(infectionCure.InfectionRecoveryPerSecond,
+                infectionCure.InfectionRecoveryDurationSeconds, infectionCure.ExposureGainMultiplier);
         }
+        if (item.InfectionSuppressionSeconds > 0f && _playerInfection != null)
+            _playerInfection.ApplySuppression(item.InfectionSuppressionSeconds);
 
         string result = $"{ResolveItemName(item)} used.";
+        if (item is InfectionCureItemSO ampoule)
+            result = ampoule.IsSyringe ? $"최대 체력 잠식 {ampoule.InfectionRecoveryAmount:0.#} 회복 (현재 HP는 별도 치료)." :
+                $"앰플: 감염 유입 ×{ampoule.ExposureGainMultiplier:0.##}, 대기 후 게이지 회복 +{ampoule.InfectionRecoveryPerSecond:0.#}/초, {ampoule.InfectionRecoveryDurationSeconds:0.#}초간.";
+        else if (item.InfectionSuppressionSeconds > 0f)
+            result = $"억제제 투여 완료: {item.InfectionSuppressionSeconds:0}초간 억제 유지.";
 
         if (healed > 0.001f)
             result += $" HP +{healed:0.#}.";
@@ -334,8 +354,11 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         if (injuriesCured > 0)
             result += $" Injuries cured x{injuriesCured}.";
 
-        if (infectionReduced > 0.001f)
-            result += $" Infection -{infectionReduced:0.#}.";
+        if (IsInfectionMedicine(item))
+        {
+            _quickSlotRuntime?.PublishMedicalItemChange();
+            _inventoryRuntime?.PublishMedicalItemChange();
+        }
 
         UseCompleted?.Invoke(item);
         FinishRoutine(result, true);
@@ -366,8 +389,34 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
             return false;
         }
 
+        return HasMedicalSupply(item, out message);
+    }
+
+    private static bool IsInfectionMedicine(ConsumableItemSO item) =>
+        item is InfectionCureItemSO || (item != null && item.InfectionSuppressionSeconds > 0f);
+
+    private bool HasMedicalSupply(ConsumableItemSO item, out string message)
+    {
         message = null;
-        return true;
+        if (!IsInfectionMedicine(item)) return true;
+        int required = item is InfectionCureItemSO ? 1 : _playerInfection != null ? _playerInfection.MedicalDose : 1;
+        int available = (_inventoryRuntime != null ? _inventoryRuntime.GetInventoryItemAmount(item) : 0) +
+            (_quickSlotRuntime != null ? _quickSlotRuntime.GetUsableItemAmount(item) : 0);
+        message = available < required
+            ? $"약물 수량이 부족합니다. 이번 스테이지에서 {required}개가 필요합니다. (보유 {available}개)" : null;
+        return message == null;
+    }
+
+    private bool TryConsumeMedicalDose(ConsumableItemSO item)
+    {
+        if (!HasMedicalSupply(item, out _)) return false;
+        int required = item is InfectionCureItemSO ? 1 : _playerInfection != null ? _playerInfection.MedicalDose : 1;
+        int quickAmount = _quickSlotRuntime != null ? _quickSlotRuntime.GetUsableItemAmount(item) : 0;
+        int inventoryAmount = _inventoryRuntime != null ? _inventoryRuntime.GetInventoryItemAmount(item) : 0;
+        int fromQuick = _consumeFromQuickSlot ? Mathf.Min(required, quickAmount) : Mathf.Max(0, required - inventoryAmount);
+        int fromInventory = required - fromQuick;
+        if (fromInventory > 0 && !_inventoryRuntime.TryConsumeMedicalItemAmount(item, fromInventory)) return false;
+        return fromQuick == 0 || _quickSlotRuntime.TryConsumeUsableItemAmount(item, fromQuick, out _, notify: false);
     }
 
     // Purpose: Checks whether this component has expected stack.
@@ -416,6 +465,7 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
     // Purpose: Handles the incoming damaged request or event.
     private void HandleDamaged(Damageable _, float __)
     {
+        if (_ != null && _.IsPeriodicStatusDamage) return;
         CancelActiveUse("Item use was interrupted by damage.", true);
     }
 
@@ -532,6 +582,12 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
     {
         if (item == null)
             return false;
+        if (item is InfectionCureItemSO medicine)
+            return _playerInfection != null && !_playerInfection.IsDead &&
+                (medicine.IsSyringe ? _playerInfection.CurrentInfection > .001f :
+                    GameProgressionRuntime.InRaid && !_playerInfection.IsAmpouleActive);
+        if (item.InfectionSuppressionSeconds > 0f)
+            return _playerInfection != null && GameProgressionRuntime.InRaid;
 
         bool canHeal =
             item.HealAmount > 0f &&
@@ -553,12 +609,15 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
                                   _playerInfection != null &&
                                   _playerInfection.CurrentInfection > 0.001f;
 
-        return canHeal || canReduceMark || canApplyStatus || canCureInjuries || canReduceInfection;
+        bool canTreatBleeding = item.BleedingStacksRemoved > 0 && _playerStats?.StatusEffects?.BleedingStacks > 0;
+        return canHeal || canReduceMark || canApplyStatus || canCureInjuries || canReduceInfection || canTreatBleeding;
     }
 
     // Purpose: Checks whether action blocked is currently true.
     private bool IsActionBlocked()
     {
+        var stamina = EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (stamina != null && stamina.IsSprinting) return true;
         return _playerStats != null &&
                _playerStats.StatusEffects != null &&
                _playerStats.StatusEffects.BlocksActions;
@@ -576,8 +635,11 @@ public class PlayerConsumableUseRuntime : MonoBehaviour
         if (restoresMark)
             return "Mark is already fully recovered.";
 
-        if (item is InfectionCureItemSO)
-            return "Infection is already clear.";
+        if (item is InfectionCureItemSO medicine)
+            return medicine.IsSyringe ? "회복할 최대 체력 잠식이 없습니다." :
+                !GameProgressionRuntime.InRaid ? "앰플은 레이드에서 사용합니다." : "이미 감염 방호 앰플이 작용 중입니다.";
+        if (item != null && item.InfectionSuppressionSeconds > 0f)
+            return "안전가옥에서는 투여 장치가 억제 상태를 유지합니다.";
 
         return "Health is already full.";
     }

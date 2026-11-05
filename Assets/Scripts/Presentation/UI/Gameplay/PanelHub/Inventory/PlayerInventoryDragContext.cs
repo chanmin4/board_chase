@@ -15,7 +15,8 @@ public enum InventoryDragSourceKind
     Equipment = 2,
     EnemyInventory = 3,
     EquipmentAmmo = 4,
-    QuickSlot = 5
+    QuickSlot = 5,
+    KeyTool = 6
 }
 
 public static class InventoryDragContext
@@ -28,6 +29,16 @@ public static class InventoryDragContext
     public static int EnemyInventorySlotIndex { get; private set; } = -1;
     public static int EquipmentAmmoSlotIndex { get; private set; } = -1;
     public static int QuickSlotIndex { get; private set; } = -1;
+    public static PlayerInventoryRuntime KeyToolInventoryOwner { get; private set; }
+    public static int KeyToolSlotIndex { get; private set; } = -1;
+
+    public static void BeginKeyToolDrag(PlayerInventoryRuntime owner, int index)
+    {
+        Clear();
+        SourceKind = InventoryDragSourceKind.KeyTool;
+        KeyToolInventoryOwner = owner;
+        KeyToolSlotIndex = index;
+    }
 
     public static bool HasPayload => SourceKind != InventoryDragSourceKind.None;
 
@@ -105,6 +116,8 @@ public static class InventoryDragContext
     // Purpose: Clears the current clear state.
     public static void Clear()
     {
+        KeyToolInventoryOwner = null;
+        KeyToolSlotIndex = -1;
         InventoryDragGhostUI.Hide();
         SourceKind = InventoryDragSourceKind.None;
         InventoryIndex = -1;

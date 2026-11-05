@@ -17,6 +17,13 @@ public sealed class StageDefinitionSO : ScriptableObject
     private const int SectorPresetPickSalt = 809;
     private const int NormalEncounterPickSalt = 103;
     private const int BossBattlePickSalt = 211;
+    [Header("특별 섹터 · 종류별 풀 (선택 사용)")]
+    [SerializeField] private StageSpecialSectorSettings _specialSectors = new();
+    public StageSpecialSectorSettings SpecialSectors => _specialSectors ?? new StageSpecialSectorSettings();
+    [SerializeField] private StageRoomCompositionSettings _roomComposition = new();
+    public StageRoomCompositionSettings RoomComposition => _roomComposition ?? new StageRoomCompositionSettings();
+    [SerializeField] private StageEncounterRules _encounterRules = new();
+    public StageEncounterRules EncounterRules => _encounterRules ?? new StageEncounterRules();
 
     [Serializable]
     public sealed class WeightedSectorPreset
@@ -45,10 +52,10 @@ public sealed class StageDefinitionSO : ScriptableObject
         [Tooltip("Encounter containing exactly one Boss and any Boss Guards required for room clear.")]
         public StageBattleEncounterPresetSO encounterPreset;
 
-        [Tooltip("Exact authored Boss sector paired with this encounter. The pair is selected atomically.")]
+        [Tooltip("구버전 보스 섹터 쌍. V3 신규 맵은 이 값 대신 스테이지 전용맵 풀을 사용합니다.")]
         public SectorBossBattlePresetSO sectorPreset;
 
-        [Tooltip("Relative selection weight for this complete Boss battle pair. Zero disables it.")]
+        [Tooltip("보스 Encounter 추첨 가중치. 0이면 제외합니다.")]
         [Min(0)] public int weight = 1;
     }
 
@@ -137,6 +144,8 @@ public sealed class StageDefinitionSO : ScriptableObject
     [Header("Identity")]
     [Tooltip("Stable stage index used by runtime snapshots and deterministic generation.")]
     [SerializeField] private int _stageIndex = 1;
+    [Tooltip("Authoring-only stage frame. Cannot enter, resume, unlock or advance to it.")]
+    [SerializeField] private bool _developmentOnly;
 
     [Tooltip("HUD and run-result display name. The asset name is used when empty.")]
     [SerializeField] private string _displayName;
@@ -145,11 +154,20 @@ public sealed class StageDefinitionSO : ScriptableObject
     [SerializeField] private StageMapPolicy _mapPolicy;
     [SerializeField] private RaidMapSettings _raidMap = new();
     [SerializeField] private RaidRuntimeSettings _raidRuntime = new();
+    [SerializeField] private SectorRoomTraitTableSO _raidAnomalyTable;
+    [Tooltip("Next gas level for GasBoost anomaly. Stage 5 is capped at its own baseline. Test tuning.")]
+    [SerializeField, Min(0)] private float _anomalyGasBaseline;
+    public SectorRoomTraitTableSO RaidAnomalyTable => _raidAnomalyTable;
+    public float AnomalyGasBaseline => Mathf.Max(0f, _anomalyGasBaseline);
     [Tooltip("Generated square room-grid size. Zero is valid only for Start Sector-only stages.")]
     [Min(0)] [SerializeField] private int _roomGridSize = 1;
 
     [Tooltip("If enabled, this stage contains only its Start Sector and no generated room grid.")]
     [SerializeField] private bool _useStartSectorOnly;
+
+    [Header("Sector Appearance")]
+    [Tooltip("Optional stage-wide floor/wall appearance. A room's SectorAppearance theme overrides non-empty fields. Does not change gameplay geometry or props.")]
+    [SerializeField] private SectorThemeSO _sectorTheme;
 
     [Header("Optional Branch Topology")]
     [Tooltip("When one or more valid entries have positive weight, this stage uses a deterministically selected authored branch-and-merge topology instead of Room Grid Size. Leave empty to preserve the full-grid map.")]
@@ -177,7 +195,7 @@ public sealed class StageDefinitionSO : ScriptableObject
     [SerializeField] private TreasureSettings _treasure = new();
 
     [Header("Boss Goal Room")]
-    [Tooltip("Complete Boss encounter-and-sector pairs. Every generated stage uses a Boss goal room.")]
+    [Tooltip("V3 신규 맵은 Encounter/Weight만 사용하며 보스 맵은 스테이지 전용맵 풀에서 추첨합니다. Sector Preset은 구버전 저장 호환용입니다.")]
     [SerializeField] private List<BossBattleEntry> _bossBattles = new();
 
     [Header("Completion")]
@@ -188,6 +206,8 @@ public sealed class StageDefinitionSO : ScriptableObject
     [HideInInspector] [Min(0f)] [SerializeField] private float _infectionControlRecoverOnComplete;
 
     public int StageIndex => _stageIndex;
+    public SectorThemeSO SectorTheme => _sectorTheme;
+    public bool CanEnter => !_developmentOnly;
     public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? name : _displayName;
     public int RoomGridSize => _roomGridSize;
     public StageMapPolicy MapPolicy => _mapPolicy;
@@ -483,6 +503,27 @@ public sealed class StageDefinitionSO : ScriptableObject
 
         return false;
     }
+
+    // New V3 bosses use the stage theme pool, not the legacy encounter/sector pair.
+    public bool TryPickBossEncounter(int stageSeed, Vector2Int sectorCoord, out StageBattleEncounterPresetSO encounter)
+    {
+        encounter = null;
+        if (_bossBattles == null) return false;
+        double total = 0;
+        foreach (var entry in _bossBattles) if (IsBossEncounterValid(entry)) total += entry.weight;
+        if (total <= 0) return false;
+        double roll = new System.Random(BuildSectorSeed(stageSeed, sectorCoord, BossBattlePickSalt)).NextDouble() * total;
+        foreach (var entry in _bossBattles)
+        {
+            if (!IsBossEncounterValid(entry)) continue;
+            roll -= entry.weight;
+            if (roll < 0) { encounter = entry.encounterPreset; return true; }
+        }
+        return false;
+    }
+
+    private static bool IsBossEncounterValid(BossBattleEntry entry) => entry != null && entry.weight > 0 &&
+        entry.encounterPreset != null && entry.encounterPreset.IsValid;
 
     // Purpose: Builds the sector seed from the current authored data.
     public static int BuildSectorSeed(int stageSeed, Vector2Int sectorCoord, int salt)
@@ -847,12 +888,12 @@ public sealed class StageDefinitionSO : ScriptableObject
             if (entry != null && entry.weight == 0)
                 continue;
 
-            if (!IsBossBattleValid(entry))
+            if (_mapPolicy == StageMapPolicy.RadialBraidedRaid ? !IsBossEncounterValid(entry) : !IsBossBattleValid(entry))
             {
-                Debug.LogError(
-                    $"[StageDefinitionSO] Invalid Boss battle pair. index={i}. " +
-                    DescribeBossBattleInvalidReason(entry),
-                    this);
+                string reason = _mapPolicy == StageMapPolicy.RadialBraidedRaid
+                    ? "보스 Encounter/Weight가 유효하지 않습니다. V3는 보스 Sector Preset을 요구하지 않습니다."
+                    : DescribeBossBattleInvalidReason(entry);
+                Debug.LogError($"[StageDefinitionSO] Invalid Boss encounter. index={i}. {reason}", this);
             }
         }
     }

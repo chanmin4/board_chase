@@ -34,6 +34,8 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     [Header("Enemy Bullet Injuries")]
     [Tooltip("Each configured injury is rolled independently after an enemy basic bullet damages this player. Painkiller effects temporarily suppress these rolls.")]
     [SerializeField, Range(0f, 1f)] private float _enemyBulletInjuryChance = 0.02f;
+    [Tooltip("Test balance: persistent bleeding roll after a damaging enemy basic bullet. Separate from temporary injuries and painkiller suppression.")]
+    [SerializeField, Range(0f, 1f)] private float _enemyBulletBleedingChance = 0.1f;
     [SerializeField] private StatusEffectDefinitionSO _visionBlurInjury;
     [SerializeField] private StatusEffectDefinitionSO _brokenLegInjury;
     [SerializeField] private StatusEffectDefinitionSO _brokenArmInjury;
@@ -49,8 +51,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     [Header("Fallback Movement")]
     [SerializeField] private HorizontalMoveActionSO _horizontalMoveAction;
 
-    [Header("Fallback Dash ")]
-    [SerializeField] private DashConfigSO _dashConfig;
+    [SerializeField, HideInInspector] private DashConfigSO _dashConfig; // Serialized WIP compatibility only.
 
 
     [Header("Broadcasting")]
@@ -62,7 +63,11 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     [SerializeField] private PlayerStatsSnapshot _current;
 
     private readonly Dictionary<PlayerStatId, StatAccumulator> _accumulators = new();
+    private StatAccumulator _passiveAttackDamage;
+    private readonly Dictionary<PlayerStatId, StatAccumulator> _withoutPassiveAccumulators = new();
+    private readonly Dictionary<PlayerStatId, StatAccumulator> _weaponAccumulators = new();
     private bool _healthAppliedOnce;
+    private ShooterMeleeAttack _fixedKnifeAttack;
 
     public PlayerStatsSnapshot Current => _current;
     public PlayerWeaponStats Weapon => _current.weapon;
@@ -73,6 +78,62 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     public PlayerAimStats Aim => _current.aim;
     public PlayerSoundStats Sound => _current.sound;
     public PlayerFeatureFlags Features => _current.features;
+
+    public readonly struct WeaponStatBreakdown
+    {
+        public readonly float weaponValue, passiveDelta, otherDelta, finalValue;
+
+        public WeaponStatBreakdown(float weaponValue, float passiveDelta, float otherDelta, float finalValue)
+        {
+            this.weaponValue = weaponValue;
+            this.passiveDelta = passiveDelta;
+            this.otherDelta = otherDelta;
+            this.finalValue = finalValue;
+        }
+    }
+
+    // A shared weapon SO is not an equipped-item identity: verify both owner and active slot.
+    public bool IsActiveWeaponSlot(PlayerInventoryRuntime owner, int slotIndex, WeaponSO weapon)
+    {
+        return owner != null && owner == _inventoryRuntime && _equipmentController != null &&
+               slotIndex == _equipmentController.ActiveWeaponSlotIndex &&
+               owner.GetEquippedWeapon(slotIndex) == weapon && CurrentWeapon == weapon;
+    }
+
+    /// <summary>
+    /// Uses the same accumulators and effective getters as combat. Passive is its marginal
+    /// contribution with other persistent sources held fixed; the remainder includes quests,
+    /// armor, ammunition, condition and status, never mislabeled as a passive bonus.
+    /// </summary>
+    public bool TryGetWeaponStatBreakdown(PlayerStatId stat, out WeaponStatBreakdown breakdown)
+    {
+        breakdown = default;
+        if (CurrentWeapon is not RangedWeaponSO weapon) return false;
+
+        float baseline, minimum = 0f, effective;
+        switch (stat)
+        {
+            case PlayerStatId.MaxRange: baseline = weapon.MaxRange; minimum = 0.1f; effective = MaxRange; break;
+            case PlayerStatId.ShotsPerSecond: baseline = weapon.ShotsPerSecond; minimum = 0.01f; effective = ResolveShotsPerSecond(CurrentBullet); break;
+            case PlayerStatId.ReloadDurationSeconds: baseline = weapon.ReloadDurationSeconds; minimum = 0.01f; effective = ReloadDurationSeconds; break;
+            case PlayerStatId.AimSpeed: baseline = weapon.AimSpeed; minimum = 0.01f; effective = AimSpeed; break;
+            case PlayerStatId.HipFireSpreadAngleDeg: baseline = weapon.HipFireSpreadAngleDeg; effective = HipFireSpreadAngleDeg; break;
+            case PlayerStatId.AimSpreadAngleDeg: baseline = weapon.AimSpreadAngleDeg; effective = AimSpreadAngleDeg; break;
+            case PlayerStatId.ShotKickDistance: baseline = weapon.ShotKickDistance; effective = ShotKickDistance; break;
+            case PlayerStatId.MaximumShotKickDistance: baseline = weapon.MaximumShotKickDistance; effective = MaximumShotKickDistance; break;
+            case PlayerStatId.ShotKickRecoveryPerSecond: baseline = weapon.ShotKickRecoveryPerSecond; effective = ShotKickRecoveryPerSecond; break;
+            case PlayerStatId.PenetrationClass: baseline = weapon.PenetrationClassBonus; effective = PenetrationClassBonus; break;
+            case PlayerStatId.GunshotSoundRadius: baseline = weapon.GunshotSoundRadius; effective = GunshotSoundRadius; break;
+            default: return false;
+        }
+
+        float weaponValue = ResolveFrom(_weaponAccumulators, stat, baseline, minimum);
+        float passiveDelta = Resolve(stat, baseline, minimum) -
+                             ResolveFrom(_withoutPassiveAccumulators, stat, baseline, minimum);
+        breakdown = new WeaponStatBreakdown(weaponValue, passiveDelta,
+            effective - weaponValue - passiveDelta, effective);
+        return true;
+    }
 
     /// <summary>
     /// Returns the total flat-add contribution granted by completed quests for
@@ -117,17 +178,56 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     }
 
     public override float AttackDamage => _current.weapon.attackDamage;
-    public float MeleeDamage => Mathf.Max(0f, _current.weapon.meleeDamage);
+    public float InfectionDefense=>Resolve(PlayerStatId.InfectionDefense,0,0);
+    public override float AdditionalStat(PlayerStatId stat,float baseline=0)=>Resolve(stat,baseline,0);
+    public override float GasInfectionResistance => Mathf.Clamp(Resolve(PlayerStatId.GasInfectionResistance, 0f, 0f), 0f, 0.9f);
+    public float MeleeDamage => ResolveCombatKnifeDamage();
+
+    private float ResolveCombatKnifeDamage()
+    {
+        if (_fixedKnifeAttack == null)
+            _fixedKnifeAttack = EntityComponentResolver.Resolve<ShooterMeleeAttack>(this);
+        return _fixedKnifeAttack != null && _fixedKnifeAttack.PlayerCombatKnife != null
+            ? _fixedKnifeAttack.PlayerCombatKnife.Damage : 0f;
+    }
     public override float MaxRange => _current.weapon.maxRange;
     public override float ShotsPerSecond => _current.weapon.shotsPerSecond;
     public override float ReloadDurationSeconds => _current.weapon.reloadDurationSeconds;
-    public override int MagazineSize => _current.weapon.magazineSize;
+    public override int MagazineSize => base.MagazineSize;
     public override float PaintMarkDamage => _current.weapon.paintMarkDamage;
     public override float InfectionDamage => _current.weapon.infectionDamage;
-    public override int PenetrationClassBonus => _current.weapon.penetrationClass;
+    public override float PenetrationClassBonus => _current.weapon.penetrationClass;
     public override float MoveSpeed =>
         ApplyStatusMoveSpeed(_current.movement.moveSpeed) *
-        (_inventoryRuntime != null ? _inventoryRuntime.BackpackMoveSpeedMultiplier : 1f);
+        (_inventoryRuntime != null
+            ? _inventoryRuntime.BackpackMoveSpeedMultiplier * _inventoryRuntime.CarryLoad.MoveSpeedMultiplier
+            : 1f);
+
+    private CharacterController _carryMotionController;
+    private PlayerCharacter _carryPlayer;
+
+    public override float StaminaRecoveryMultiplier
+    {
+        get
+        {
+            if (_inventoryRuntime == null) return 1f;
+            PlayerCarryLoad load = _inventoryRuntime.CarryLoad;
+            if (!load.RequiresStandingForRecovery) return load.RecoveryMultiplier(false);
+
+            if (_carryMotionController == null)
+                _carryMotionController = EntityComponentResolver.Resolve<CharacterController>(this);
+            if (_carryPlayer == null)
+                _carryPlayer = EntityComponentResolver.Resolve<PlayerCharacter>(this);
+
+            Vector3 velocity = _carryMotionController != null ? _carryMotionController.velocity : Vector3.zero;
+            Vector3 input = _carryPlayer != null && !GameplayActionInputBlocker.IsMovementBlocked
+                ? _carryPlayer.movementInput : Vector3.zero;
+            bool moving = velocity.x * velocity.x + velocity.z * velocity.z > .0025f ||
+                input.x * input.x + input.z * input.z > .0025f;
+            return load.RecoveryMultiplier(moving);
+        }
+    }
+
     public override float DashCooldownSeconds => _current.movement.dashCooldownSeconds;
     public override float DashDistanceMultiplier => _current.movement.dashDistanceMultiplier;
     public override float MaxHealth => _current.survival.maxHealth;
@@ -137,23 +237,14 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     public override float DodgeChance => _current.survival.dodgeChance;
     public override float VisionRange => _current.vision.visionRange;
     public override float AimSpeed => _current.aim.aimSpeed;
-    public override float AimRangeMultiplier => _current.aim.aimRangeMultiplier;
-    public override float AimMoveSpeedMultiplier => _current.aim.aimMoveSpeedMultiplier;
+    public override float AimingMoveSpeedMultiplier => _current.aim.aimingMoveSpeedMultiplier;
+    public override float ShotKickDistance => _current.aim.shotKickDistance;
+    public override float MaximumShotKickDistance => _current.aim.maximumShotKickDistance;
+    public override float ShotKickRecoveryPerSecond => _current.aim.shotKickRecoveryPerSecond;
     public override float HipFireSpreadAngleDeg => ApplyWeaponConditionToSpread(ApplyStatusSpread(_current.aim.hipFireSpreadAngleDeg));
     public override float AimSpreadAngleDeg => ApplyWeaponConditionToSpread(ApplyStatusSpread(_current.aim.aimSpreadAngleDeg));
-    public override float RecoilAngleDeg => _current.aim.recoilAngleDeg;
-    public override float RecoilRecoverySpeedDegPerSecond => _current.aim.recoilRecoverySpeedDegPerSecond;
-    public override float RecoilForwardDistancePerShot => _current.aim.recoilForwardDistancePerShot;
-    public override float RecoilSideDistancePerShot => _current.aim.recoilSideDistancePerShot;
-    public override float MaxRecoilDistance => _current.aim.maxRecoilDistance;
-    public override float RecoilDistanceRecoveryPerSecond => _current.aim.recoilDistanceRecoveryPerSecond;
-    public override float HipFireSpreadRadius => ApplyWeaponConditionToSpread(ApplyStatusSpread(_current.aim.hipFireSpreadRadius));
-    public override float AimSpreadRadius => ApplyWeaponConditionToSpread(ApplyStatusSpread(_current.aim.aimSpreadRadius));
 
-    public override float GunshotSoundRadius =>
-        CurrentWeapon is RangedWeaponSO rangedWeapon
-            ? rangedWeapon.ResolveGunshotSoundRadius(_current.sound.gunshotSoundRadius)
-            : _current.sound.gunshotSoundRadius;
+    public override float GunshotSoundRadius => _current.sound.gunshotSoundRadius;
 
     public override float SoundInvestigateDelaySeconds => _current.sound.soundInvestigateDelaySeconds;
     public override float FootstepSoundRadius => _current.sound.footstepSoundRadius;
@@ -280,42 +371,37 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     private void Rebuild()
     {
         _accumulators.Clear();
+        _passiveAttackDamage = default;
+        _withoutPassiveAccumulators.Clear();
+        _weaponAccumulators.Clear();
+        _current = default; // Never retain obsolete fields from a serialized debug snapshot.
 
         PlayerFeatureFlags flags = default;
 
         ApplyQuestRewardEffects();
+        ExperienceRulesSO.Active?.experience.ApplyRewards(_saveSystem?.Profile.experience?.total ?? 0, modifier => ApplyModifier(modifier));
         ApplyPassiveItemEffects(ref flags);
         ApplyEquipmentEffects();
 
         WeaponSO weapon = CurrentWeapon;
         PlayerStatsConfigSO config = _playerStatsConfig;
 
-        float baseRange = config != null ? config.MaxRange : 12f;
-        float baseShotsPerSecond = config != null ? config.ShotsPerSecond : 2f;
-        float baseReloadDuration = config != null ? config.ReloadDurationSeconds : 1.2f;
-        int baseMagazineSize = config != null ? config.MagazineSize : 6;
+        float baseRange = base.MaxRange;
+        float baseShotsPerSecond = base.ShotsPerSecond;
+        float baseReloadDuration = base.ReloadDurationSeconds;
 
-        // Resolve the player-owned fallback before gun/bullet modifiers are applied.
-        _current.weapon.meleeDamage = Resolve(PlayerStatId.MeleeDamage, config != null ? config.MeleeDamage : 5f, 0f);
-        ApplyModifiers(weapon != null ? weapon.StatModifiers : null);
+        // 현재 근접 피해 표시는 고정 나이프 SO에 맞춥니다. 이전 주먹/총 휘두르기 스탯은 WIP입니다.
+        _current.weapon.meleeDamage = ResolveCombatKnifeDamage();
+        ApplyModifiers(weapon != null ? weapon.StatModifiers : null, weaponSource: true);
 
         BulletSO selectedBullet = CurrentBullet;
         _current.weapon.attackDamage = ResolveAttackDamage(selectedBullet);
         _current.weapon.maxRange = Resolve(PlayerStatId.MaxRange, baseRange, 0.1f);
-        _current.weapon.shotsPerSecond = ApplyWeaponArchetypeToShotsPerSecond(
-            Resolve(PlayerStatId.ShotsPerSecond, baseShotsPerSecond, 0.01f));
+        _current.weapon.shotsPerSecond = Resolve(PlayerStatId.ShotsPerSecond, baseShotsPerSecond, 0.01f);
         _current.weapon.reloadDurationSeconds = Resolve(PlayerStatId.ReloadDurationSeconds, baseReloadDuration, 0.01f);
-        _current.weapon.paintMarkDamage = ResolvePaintMarkDamage(selectedBullet);
-        _current.weapon.infectionDamage = ResolveInfectionDamage(selectedBullet);
-        _current.weapon.penetrationClass = Mathf.Max(
-            0,
-            Mathf.RoundToInt(Resolve(
-                PlayerStatId.PenetrationClass,
-                config != null ? config.PenetrationClassBonus : 0,
-                0f)));
-        _current.weapon.magazineSize = Mathf.Max(
-            1,
-            Mathf.RoundToInt(Resolve(PlayerStatId.MagazineSize, baseMagazineSize, 1f)));
+        _current.weapon.penetrationClass = Resolve(
+            PlayerStatId.PenetrationClass, base.PenetrationClassBonus, float.NegativeInfinity);
+        _current.weapon.magazineSize = MagazineSize;
 
         float baseMoveSpeed = config != null
             ? config.MoveSpeed
@@ -328,75 +414,30 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
 
         _current.aim.aimSpeed = Resolve(
             PlayerStatId.AimSpeed,
-            config != null ? config.AimSpeed : 8f,
+            base.AimSpeed,
             0.01f);
+        _current.aim.aimingMoveSpeedMultiplier = Mathf.Clamp01(Resolve(
+            PlayerStatId.AimingMoveSpeedMultiplier, base.AimingMoveSpeedMultiplier, 0f));
+        _current.aim.shotKickDistance = Resolve(PlayerStatId.ShotKickDistance, base.ShotKickDistance, 0f);
+        _current.aim.maximumShotKickDistance = Resolve(PlayerStatId.MaximumShotKickDistance, base.MaximumShotKickDistance, 0f);
+        _current.aim.shotKickRecoveryPerSecond = Resolve(PlayerStatId.ShotKickRecoveryPerSecond, base.ShotKickRecoveryPerSecond, 0f);
 
-        _current.aim.aimRangeMultiplier = Resolve(
-            PlayerStatId.AimRangeMultiplier,
-            config != null ? config.AimRangeMultiplier : 1f,
-            0.1f);
-
-        _current.aim.aimMoveSpeedMultiplier = Mathf.Clamp(
-            Resolve(
-                PlayerStatId.AimMoveSpeedMultiplier,
-                config != null ? config.AimMoveSpeedMultiplier : 1f,
-                0.05f),
-            0.05f,
-            1f);
+        _current.aim.aimRangeMultiplier = 1f; // Compatibility snapshots only.
+        _current.aim.aimMoveSpeedMultiplier = 1f;
 
         _current.aim.hipFireSpreadAngleDeg = Resolve(
             PlayerStatId.HipFireSpreadAngleDeg,
-            config != null ? config.HipFireSpreadAngleDeg : 0f,
+            base.HipFireSpreadAngleDeg,
             0f);
 
         _current.aim.aimSpreadAngleDeg = Resolve(
             PlayerStatId.AimSpreadAngleDeg,
-            config != null ? config.AimSpreadAngleDeg : 0f,
-            0f);
-
-        _current.aim.recoilAngleDeg = Resolve(
-            PlayerStatId.RecoilAngleDeg,
-            config != null ? config.RecoilAngleDeg : 0f,
-            0f);
-
-        _current.aim.recoilRecoverySpeedDegPerSecond = Resolve(
-            PlayerStatId.RecoilRecoverySpeedDegPerSecond,
-            config != null ? config.RecoilRecoverySpeedDegPerSecond : 20f,
-            0f);
-
-        _current.aim.recoilForwardDistancePerShot = Resolve(
-            PlayerStatId.RecoilForwardDistancePerShot,
-            config != null ? config.RecoilForwardDistancePerShot : 0f,
-            0f);
-
-        _current.aim.recoilSideDistancePerShot = Resolve(
-            PlayerStatId.RecoilSideDistancePerShot,
-            config != null ? config.RecoilSideDistancePerShot : 0f,
-            0f);
-
-        _current.aim.maxRecoilDistance = Resolve(
-            PlayerStatId.MaxRecoilDistance,
-            config != null ? config.MaxRecoilDistance : 0f,
-            0f);
-
-        _current.aim.recoilDistanceRecoveryPerSecond = Resolve(
-            PlayerStatId.RecoilDistanceRecoveryPerSecond,
-            config != null ? config.RecoilDistanceRecoveryPerSecond : 0f,
-            0f);
-
-        _current.aim.hipFireSpreadRadius = Resolve(
-            PlayerStatId.HipFireSpreadRadius,
-            config != null ? config.HipFireSpreadRadius : 0f,
-            0f);
-
-        _current.aim.aimSpreadRadius = Resolve(
-            PlayerStatId.AimSpreadRadius,
-            config != null ? config.AimSpreadRadius : 0f,
+            base.AimSpreadAngleDeg,
             0f);
 
         _current.sound.gunshotSoundRadius = Resolve(
             PlayerStatId.GunshotSoundRadius,
-            config != null ? config.GunshotSoundRadius : 0f,
+            base.GunshotSoundRadius,
             0f);
 
         _current.sound.soundInvestigateDelaySeconds = Resolve(
@@ -440,7 +481,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
                 0f));
         float baseDashCooldown = config != null
             ? config.DashCooldownSeconds
-            : _dashConfig != null ? _dashConfig.CooldownSeconds : 0f;
+            : 3f;
 
         _current.movement.dashCooldownSeconds = Resolve(
             PlayerStatId.DashCooldownSeconds,
@@ -449,7 +490,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
 
         _current.movement.dashDistanceMultiplier = Resolve(
             PlayerStatId.DashDistance,
-            1f,
+            config != null ? config.Dash.distanceMultiplier : 1.3f,
             0f);
 
         _current.features = flags;
@@ -482,6 +523,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     // Purpose: Sums one persistent quest modifier type without mixing in runtime gear or status effects.
     private float GetPersistentQuestModifierTotal(PlayerStatId stat, StatModifierType modifierType)
     {
+        if (!ShooterStatPolicy.IsCharacterStat(stat)) return 0f;
         if (_saveSystem == null || _saveSystem.saveData == null)
             return 0f;
 
@@ -516,7 +558,9 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
             if (item == null)
                 continue;
 
-            ApplyModifiers(item.StatModifiers);
+            if (item.StatModifiers != null)
+                foreach (var modifier in item.StatModifiers)
+                    if (ShooterStatPolicy.IsPassiveStat(modifier.stat)) ApplyModifier(PassiveModuleRulesSO.Active != null ? PassiveModuleRulesSO.Active.ApplyStrength(item, modifier) : modifier, passiveSource: true);
             ApplyFeatureFlags(item.FeatureFlags, ref flags);
         }
     }
@@ -531,21 +575,30 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     }
 
     // Purpose: Applies the requested modifiers change.
-    private void ApplyModifiers(PlayerStatModifier[] modifiers)
+    private void ApplyModifiers(PlayerStatModifier[] modifiers, bool weaponSource = false)
     {
         if (modifiers == null)
             return;
 
         for (int i = 0; i < modifiers.Length; i++)
-            ApplyModifier(modifiers[i]);
+            ApplyModifier(modifiers[i], weaponSource: weaponSource);
     }
 
     // Purpose: Applies the requested modifier change.
-    private void ApplyModifier(PlayerStatModifier modifier)
+    private void ApplyModifier(PlayerStatModifier modifier, bool passiveSource = false, bool weaponSource = false)
     {
-        _accumulators.TryGetValue(modifier.stat, out StatAccumulator accumulator);
+        if (!ShooterStatPolicy.IsCharacterStat(modifier.stat)) return;
+        Accumulate(_accumulators, modifier);
+        if (passiveSource && modifier.stat == PlayerStatId.AttackDamage) _passiveAttackDamage.Apply(modifier);
+        if (!passiveSource) Accumulate(_withoutPassiveAccumulators, modifier);
+        if (weaponSource) Accumulate(_weaponAccumulators, modifier);
+    }
+
+    private static void Accumulate(Dictionary<PlayerStatId, StatAccumulator> target, PlayerStatModifier modifier)
+    {
+        target.TryGetValue(modifier.stat, out StatAccumulator accumulator);
         accumulator.Apply(modifier);
-        _accumulators[modifier.stat] = accumulator;
+        target[modifier.stat] = accumulator;
     }
 
     // Purpose: Applies the requested feature flags change.
@@ -576,7 +629,13 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     // Purpose: Resolves the resolve needed by this component.
     private float Resolve(PlayerStatId stat, float baseValue, float minValue)
     {
-        if (!_accumulators.TryGetValue(stat, out StatAccumulator accumulator))
+        return ResolveFrom(_accumulators, stat, baseValue, minValue);
+    }
+
+    private static float ResolveFrom(Dictionary<PlayerStatId, StatAccumulator> source,
+        PlayerStatId stat, float baseValue, float minValue)
+    {
+        if (!source.TryGetValue(stat, out StatAccumulator accumulator))
             return Mathf.Max(minValue, baseValue);
 
         return Mathf.Max(minValue, accumulator.Resolve(baseValue));
@@ -597,54 +656,19 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     // Purpose: Resolves the attack damage needed by this component.
     public override float ResolveAttackDamage(BulletSO bullet)
     {
-        float baseDamage = bullet != null
-            ? bullet.HealthDamage * (_playerStatsConfig != null ? _playerStatsConfig.HealthDamageCoefficient : 1f)
-            : 0f;
-
-        return ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(
-            ResolveWithExtraModifiers(
-                PlayerStatId.AttackDamage,
-                Resolve(PlayerStatId.AttackDamage, baseDamage, 0f),
-                0f,
-                bullet != null ? bullet.StatModifiers : null),
-            bullet));
+        if (bullet == null) return 0f;
+        float baseDamage = (_playerStatsConfig?.BaseRangedAttackDamage ?? 10f) + bullet.HealthDamage;
+        float playerAndWeapon = ResolveFrom(_withoutPassiveAccumulators, PlayerStatId.AttackDamage, baseDamage, 0f);
+        float withAmmo = ResolveWithExtraModifiers(PlayerStatId.AttackDamage, playerAndWeapon, 0f, bullet.StatModifiers);
+        float shot = ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(withAmmo, bullet));
+        return Mathf.Max(0f, _passiveAttackDamage.Resolve(shot));
     }
 
     // Purpose: Resolves the paint mark damage needed by this component.
-    public override float ResolvePaintMarkDamage(BulletSO bullet)
-    {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletMark)
-            return 0f;
-
-        float baseAmount = bullet != null
-            ? bullet.MarkAmount * (_playerStatsConfig != null ? _playerStatsConfig.MarkAmountCoefficient : 1f)
-            : 0f;
-
-        return ResolveWithExtraModifiers(
-            PlayerStatId.PaintMarkDamage,
-            Resolve(PlayerStatId.PaintMarkDamage, baseAmount, 0f),
-            0f,
-            bullet != null ? bullet.StatModifiers : null);
-    }
+    public override float ResolvePaintMarkDamage(BulletSO bullet) => 0f; // WIP basic-bullet compatibility only.
 
     // Purpose: Resolves the infection damage needed by this component.
-    public override float ResolveInfectionDamage(BulletSO bullet)
-    {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletInfectionDamage)
-            return 0f;
-
-        float baseDamage = bullet != null
-            ? bullet.InfectionDamage * (_playerStatsConfig != null ? _playerStatsConfig.InfectionDamageCoefficient : 1f)
-            : 0f;
-
-        return ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(
-            ResolveWithExtraModifiers(
-                PlayerStatId.InfectionDamage,
-                Resolve(PlayerStatId.InfectionDamage, baseDamage, 0f),
-                0f,
-                bullet != null ? bullet.StatModifiers : null),
-            bullet));
-    }
+    public override float ResolveInfectionDamage(BulletSO bullet) => 0f; // WIP basic-bullet compatibility only.
 
     // Purpose: Resolves the shots per second needed by this component.
     public override float ResolveShotsPerSecond(BulletSO bullet)
@@ -659,17 +683,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     // Purpose: Resolves the magazine size needed by this component.
     public override int ResolveMagazineSize(BulletSO bullet)
     {
-        float weaponMagazineSize = CurrentWeapon is RangedWeaponSO rangedWeapon
-            ? rangedWeapon.MagazineSize
-            : _current.weapon.magazineSize;
-
-        float resolved = ResolveWithExtraModifiers(
-            PlayerStatId.MagazineSize,
-            weaponMagazineSize,
-            1f,
-            bullet != null ? bullet.StatModifiers : null);
-
-        return Mathf.Max(1, Mathf.RoundToInt(resolved));
+        return MagazineSize;
     }
 
     // Purpose: Resolves the armor health durability loss multiplier needed by this component.
@@ -721,6 +735,13 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     {
         EntityStatusEffectRuntime effects = StatusEffects;
 
+        // Bleeding is a separate treatment-only condition; painkillers do not suppress it.
+        if (effects != null && Random.value < Mathf.Clamp01(_enemyBulletBleedingChance * SectorRoomTraitRuntime.CurrentPlayerInjuryChanceMultiplier))
+        {
+            var bleeding = Resources.Load<StatusEffectDefinitionSO>("Bleeding");
+            if (bleeding != null) effects.Apply(bleeding);
+        }
+
         if (effects == null || effects.SuppressesInjuryApplications)
             return;
 
@@ -748,7 +769,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
         if (item.AppliedStatusEffect != null)
             StatusEffects.Apply(item.AppliedStatusEffect);
 
-        return removedInjuries;
+        return removedInjuries + StatusEffects.TreatBleeding(item.BleedingStacksRemoved);
     }
 
     // Purpose: Attempts to apply enemy bullet injury and reports whether the request succeeded.

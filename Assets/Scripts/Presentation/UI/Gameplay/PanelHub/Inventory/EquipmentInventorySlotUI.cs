@@ -148,6 +148,7 @@ public class EquipmentInventorySlotUI : MonoBehaviour,
         {
             _iconImage.sprite = item != null ? item.PreviewImage : null;
             _iconImage.enabled = item != null && _iconImage.sprite != null;
+            ModuleRuneView.Bind(_iconImage, item);
         }
 
         BindDisplayName(item);

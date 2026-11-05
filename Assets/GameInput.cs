@@ -201,6 +201,15 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""Missions"",
+                    ""type"": ""Button"",
+                    ""id"": ""029f83ab-c2e7-4a9b-b02d-8956c072fa45"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""MeleeAttack"",
                     ""type"": ""Button"",
                     ""id"": ""12a69bea-e68c-49ad-b442-368d55c655ec"",
@@ -472,6 +481,17 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Map"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b61e7722-9cf8-4f39-b3f8-cc7be6c1d2bf"",
+                    ""path"": ""<Keyboard>/j"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Missions"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -866,6 +886,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         m_Gameplay_Slot4 = m_Gameplay.FindAction("Slot4", throwIfNotFound: true);
         m_Gameplay_Slot5 = m_Gameplay.FindAction("Slot5", throwIfNotFound: true);
         m_Gameplay_Map = m_Gameplay.FindAction("Map", throwIfNotFound: true);
+        m_Gameplay_Missions = m_Gameplay.FindAction("Missions", throwIfNotFound: true);
         m_Gameplay_MeleeAttack = m_Gameplay.FindAction("MeleeAttack", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
@@ -970,6 +991,7 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_Slot4;
     private readonly InputAction m_Gameplay_Slot5;
     private readonly InputAction m_Gameplay_Map;
+    private readonly InputAction m_Gameplay_Missions;
     private readonly InputAction m_Gameplay_MeleeAttack;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
@@ -1030,6 +1052,10 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/Map".
         /// </summary>
         public InputAction @Map => m_Wrapper.m_Gameplay_Map;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Missions".
+        /// </summary>
+        public InputAction @Missions => m_Wrapper.m_Gameplay_Missions;
         /// <summary>
         /// Provides access to the underlying input action "Gameplay/MeleeAttack".
         /// </summary>
@@ -1096,6 +1122,9 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
             @Map.started += instance.OnMap;
             @Map.performed += instance.OnMap;
             @Map.canceled += instance.OnMap;
+            @Missions.started += instance.OnMissions;
+            @Missions.performed += instance.OnMissions;
+            @Missions.canceled += instance.OnMissions;
             @MeleeAttack.started += instance.OnMeleeAttack;
             @MeleeAttack.performed += instance.OnMeleeAttack;
             @MeleeAttack.canceled += instance.OnMeleeAttack;
@@ -1146,6 +1175,9 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
             @Map.started -= instance.OnMap;
             @Map.performed -= instance.OnMap;
             @Map.canceled -= instance.OnMap;
+            @Missions.started -= instance.OnMissions;
+            @Missions.performed -= instance.OnMissions;
+            @Missions.canceled -= instance.OnMissions;
             @MeleeAttack.started -= instance.OnMeleeAttack;
             @MeleeAttack.performed -= instance.OnMeleeAttack;
             @MeleeAttack.canceled -= instance.OnMeleeAttack;
@@ -1511,6 +1543,13 @@ public partial class @GameInput: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnMap(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Missions" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnMissions(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "MeleeAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

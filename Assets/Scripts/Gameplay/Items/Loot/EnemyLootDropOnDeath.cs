@@ -73,6 +73,7 @@ public sealed class EnemyLootDropOnDeath : MonoBehaviour
             return;
 
         int seed = ResolveRollSeed(enemyConfig);
+        var conditionRandom = new System.Random(unchecked(seed ^ 0x3A5417));
 
         if (!config.TryRollEnemy(
                 enemyConfig,
@@ -88,13 +89,15 @@ public sealed class EnemyLootDropOnDeath : MonoBehaviour
             LootRollResult result = _rollResults[i];
             if (result.Item == null)
                 continue;
+            float armorCondition = result.Item is ArmorItemSO rolledArmor
+                ? enemyConfig.ResolveDroppedArmorDurability(rolledArmor, rolledArmor.MaxDurability, conditionRandom) : -1f;
 
             string message = "Corpse LootHub is missing.";
             bool stored = _lootInventory != null &&
                           _lootInventory.TryAddItemStack(
                               result.Item,
                               result.Amount,
-                              out message);
+                              out message, armorCondition);
 
             if (stored)
             {
@@ -116,7 +119,7 @@ public sealed class EnemyLootDropOnDeath : MonoBehaviour
                 result.Amount,
                 result.Item is BulletSO ? result.Amount : 1,
                 0f,
-                result.Item is ArmorItemSO armor ? armor.MaxDurability : -1f,
+                armorCondition,
                 position,
                 Quaternion.identity,
                 out _);

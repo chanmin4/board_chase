@@ -10,7 +10,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public class ShooterEquipmentController : MonoBehaviour
+public partial class ShooterEquipmentController : MonoBehaviour
 {
     [Header("Weapon Runtime")]
     [SerializeField] private WeaponSO _currentWeapon;
@@ -46,6 +46,9 @@ public class ShooterEquipmentController : MonoBehaviour
     [SerializeField] private bool _logMissingRefs = true;
 
     private WeaponView _currentWeaponView;
+    private WeaponView _fixedMeleeView;
+    private MeleeWeaponSO _fixedMeleeVisualSource;
+    private bool _fixedMeleeVisualActive;
     private GameObject _heldItemVisual;
     private GameObject _armorVisualInstance;
     private GameObject _gasMaskVisualInstance;
@@ -78,7 +81,9 @@ public class ShooterEquipmentController : MonoBehaviour
     public Transform WeaponRoot => _weaponRoot;
     public Transform HandSocket => ResolveWeaponVisualRoot();
     public Transform CurrentMeleeSwingEffectOrigin =>
-        _currentWeaponView is MeleeWeaponView meleeView
+        _fixedMeleeVisualActive && _fixedMeleeView is MeleeWeaponView fixedView
+            ? fixedView.SwingEffectOrigin
+            : _currentWeaponView is MeleeWeaponView meleeView
             ? meleeView.SwingEffectOrigin
             : null;
 
@@ -105,6 +110,7 @@ public class ShooterEquipmentController : MonoBehaviour
 
         SyncArmorVisual();
         SyncGasMaskVisual();
+        SyncBackpackVisual();
     }
 
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
@@ -119,11 +125,15 @@ public class ShooterEquipmentController : MonoBehaviour
         }
 
         if (_playerInventory != null)
+        {
             _playerInventory.GasMaskChanged += HandleGasMaskChanged;
+            _playerInventory.BackpackChanged += HandleBackpackChanged;
+        }
 
         SyncWeaponView();
         SyncArmorVisual();
         SyncGasMaskVisual();
+        SyncBackpackVisual();
         RefreshVisionRendererRegistration();
     }
 
@@ -133,11 +143,13 @@ public class ShooterEquipmentController : MonoBehaviour
         SyncWeaponView();
         SyncArmorVisual();
         SyncGasMaskVisual();
+        SyncBackpackVisual();
     }
 
     // Purpose: Releases active subscriptions and transient state while disabled.
     protected virtual void OnDisable()
     {
+        EndFixedMeleeVisual();
         if (_equipmentRuntime != null)
         {
             _equipmentRuntime.OnWeaponChanged -= HandleWeaponChanged;
@@ -145,7 +157,10 @@ public class ShooterEquipmentController : MonoBehaviour
         }
 
         if (_playerInventory != null)
+        {
             _playerInventory.GasMaskChanged -= HandleGasMaskChanged;
+            _playerInventory.BackpackChanged -= HandleBackpackChanged;
+        }
     }
 
     // Purpose: Releases this controller's visual occupancy claims when its shooter is removed.
@@ -168,6 +183,7 @@ public class ShooterEquipmentController : MonoBehaviour
 
         RefreshWeaponViewVisibility();
         RefreshGasMaskVisualVisibility();
+        RefreshBackpackVisualVisibility();
         if (_heldItemVisual != null)
             _heldItemVisual.SetActive(_visible);
     }
@@ -187,6 +203,33 @@ public class ShooterEquipmentController : MonoBehaviour
     public void SetWeaponViewSuppressed(bool suppressed)
     {
         _weaponViewSuppressed = suppressed;
+        RefreshWeaponViewVisibility();
+    }
+
+    /// <summary>장비/탄창 데이터는 그대로 두고 공격 중 손의 총만 고정 나이프 외형으로 바꿉니다.</summary>
+    public void BeginFixedMeleeVisual(MeleeWeaponSO knife)
+    {
+        if (knife == null || knife.WeaponViewPrefab == null) return;
+        if (_fixedMeleeView == null || _fixedMeleeVisualSource != knife)
+        {
+            if (_fixedMeleeView != null)
+            {
+                _fixedMeleeView.gameObject.SetActive(false);
+                Destroy(_fixedMeleeView.gameObject);
+            }
+            _fixedMeleeView = Instantiate(knife.WeaponViewPrefab, HandSocket);
+            knife.ApplyWeaponViewTransform(_fixedMeleeView.transform);
+            _fixedMeleeVisualSource = knife;
+            RegisterRuntimeVisualWithVision(_fixedMeleeView.transform);
+        }
+        _fixedMeleeVisualActive = true;
+        RefreshWeaponViewVisibility();
+    }
+
+    public void EndFixedMeleeVisual()
+    {
+        if (!_fixedMeleeVisualActive) return;
+        _fixedMeleeVisualActive = false;
         RefreshWeaponViewVisibility();
     }
 
@@ -852,8 +895,14 @@ public class ShooterEquipmentController : MonoBehaviour
         string sourceId = GetVisualOccupancySourceId();
         visualRig.SetEquipmentOccupancy(
             sourceId,
-            _armorVisualOccupancy | _gasMaskVisualOccupancy);
+            _armorVisualOccupancy | _gasMaskVisualOccupancy | _backpackVisualOccupancy);
         visualRig.SetEquipmentFaceSlotOccupied(sourceId, _gasMaskUsesFaceSlot);
+        // Cosmetic-only conditions. Never modify item stats or the equipped inventory.
+        visualRig.SetEquipmentKinds(sourceId,
+            (_currentWeaponView != null ? ShooterVisualEquipmentKind.Weapon : ShooterVisualEquipmentKind.None) |
+            (_armorVisualInstance != null ? ShooterVisualEquipmentKind.Armor : ShooterVisualEquipmentKind.None) |
+            (_gasMaskVisualInstance != null ? ShooterVisualEquipmentKind.GasMask : ShooterVisualEquipmentKind.None) |
+            (_backpackVisualInstance != null ? ShooterVisualEquipmentKind.Backpack : ShooterVisualEquipmentKind.None));
     }
 
     // Purpose: Builds one stable per-controller key for visual occupancy registration.
@@ -881,6 +930,7 @@ public class ShooterEquipmentController : MonoBehaviour
             Destroy(_currentWeaponView.gameObject);
 
         _currentWeaponView = null;
+        SyncVisualOccupancy();
         RefreshVisionRendererRegistration();
     }
 
@@ -888,7 +938,10 @@ public class ShooterEquipmentController : MonoBehaviour
     private void RefreshWeaponViewVisibility()
     {
         if (_currentWeaponView != null)
-            _currentWeaponView.gameObject.SetActive(_visible && !_weaponViewSuppressed);
+            _currentWeaponView.gameObject.SetActive(_visible && !_weaponViewSuppressed && !_fixedMeleeVisualActive);
+        if (_fixedMeleeView != null)
+            _fixedMeleeView.gameObject.SetActive(_visible && _fixedMeleeVisualActive);
+        SyncVisualOccupancy();
     }
 
     // Purpose: Clears the current armor visual state.

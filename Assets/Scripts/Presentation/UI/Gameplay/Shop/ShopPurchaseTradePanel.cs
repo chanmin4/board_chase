@@ -44,6 +44,79 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
     private Transform _rowRoot;
     private Button _confirmButton;
     private bool _isOpen;
+    public delegate bool KeySubmissionCommit(int slotIndex, KeyItemSO expectedKey, out string message);
+    private bool _isKeySubmission;
+    private UnityEngine.Object _keyOwner;
+    private PlayerPanelHub _keyHub;
+    private LootKeyTier _requiredKeyTier;
+    private KeySubmissionCommit _keyCommit;
+    private System.Func<bool> _keyRequestValid;
+    private int _submittedKeySlot = -1;
+    private KeyItemSO _submittedKey;
+    private TextMeshProUGUI _instructionText;
+    private TextMeshProUGUI _confirmText;
+    private string _keyConfirmationLabel;
+    private string _keyTitle;
+    private string _keyDescription;
+    public static bool IsKeySubmissionOpen => _instance != null && _instance._isOpen && _instance._isKeySubmission;
+    public static bool IsKeySubmissionOwnedBy(UnityEngine.Object owner) => IsKeySubmissionOpen && _instance._keyOwner == owner;
+
+    public static bool TryOpenKeySubmission(UnityEngine.Object owner, LootKeyTier tier,
+        PlayerInventoryRuntime inventory, KeySubmissionCommit commit, System.Func<bool> stillValid,
+        string confirmationLabel = "입장 확정", string title = "금고방 · 열쇠 확인", string description = null)
+    {
+        if (owner == null || inventory == null || commit == null) return false;
+        EnsureInstance();
+        if (_instance == null) return false;
+        _instance.Close();
+        PlayerPanelHub hub = FindFirstObjectByType<PlayerPanelHub>(FindObjectsInactive.Include);
+        if (hub == null || !hub.OpenKeySubmissionInventory()) return false;
+        var panel = _instance;
+        panel._isKeySubmission = true;
+        panel._keyOwner = owner;
+        panel._keyHub = hub;
+        panel._requiredKeyTier = tier;
+        panel._keyCommit = commit;
+        panel._keyRequestValid = stillValid;
+        panel._keyConfirmationLabel = confirmationLabel;
+        panel._keyTitle = title;
+        panel._keyDescription = description ?? "확정: 열쇠 1회 사용 후 금고방 입장 · 취소: 소모 없음";
+        panel._submittedKeySlot = -1;
+        panel._submittedKey = null;
+        panel._inventory = inventory;
+        panel._inventoryUi = hub.PlayerInventoryPanel;
+        panel._isOpen = true;
+        panel.RebuildRequirementRows();
+        panel.gameObject.SetActive(true);
+        panel.RegisterEscapeHandler();
+        inventory.KeyToolChanged += panel.RefreshRows;
+        if (inventory.HasKeyTool) KeyToolContainerPanel.TryOpen(panel._inventoryUi, inventory, inventory.KeyTool);
+        panel.SetFeedback(inventory.HasKeyTool ? "열쇠를 제출한 후 입장 확정을 누르세요. 취소하면 소모하지 않습니다." :
+            "Key Tool이 없습니다. 도구와 필요한 열쇠를 준비하세요.", inventory.HasKeyTool);
+        panel.RefreshView();
+        return true;
+    }
+
+    public static bool TrySubmitContainedKey(PlayerInventoryRuntime inventory, int slotIndex)
+    {
+        if (!IsKeySubmissionOpen || _instance._inventory != inventory) return false;
+        _instance.SubmitContainedKey(slotIndex);
+        return true;
+    }
+
+    private void SubmitContainedKey(int slotIndex)
+    {
+        PlayerKeyToolSlotSnapshot key = _inventory.GetKeyToolSlotSnapshot(slotIndex);
+        if (!key.HasKey || key.Key.Tier != _requiredKeyTier)
+        {
+            SetFeedback("필요한 등급의 사용 가능한 열쇠를 제출하세요.", false);
+            return;
+        }
+        _submittedKeySlot = slotIndex;
+        _submittedKey = key.Key;
+        SetFeedback("열쇠 제출 완료. 확정해야 사용 횟수 1회를 소모합니다.", true);
+        RefreshRows();
+    }
 
     /// <summary>Creates the one reusable overlay before an offer requests it.</summary>
     private static void EnsureInstance()
@@ -107,15 +180,26 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
 
     private void OnDestroy()
     {
+        UIEscapeRouter.Unregister(this);
         if (_instance == this)
             _instance = null;
     }
 
     private void Update()
     {
-        if (_isOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (_isOpen && _isKeySubmission && (_keyOwner == null || _keyHub == null ||
+            !_keyHub.IsKeySubmissionInventoryVisible || _keyRequestValid != null && !_keyRequestValid()))
+        {
             Close();
+            return;
+        }
+        if (_isOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            UIEscapeRouter.TryCloseTopPopup();
     }
+
+    private void OnEnable() => RegisterEscapeHandler();
+    private void OnDisable() => UIEscapeRouter.Unregister(this);
+    private void RegisterEscapeHandler() => UIEscapeRouter.Register(this, () => _isOpen, Close, 100);
 
     /// <summary>Receives one inventory item selected by a double-click.</summary>
     private void HandleInventoryTradeRequested(int slotIndex, PlayerInventoryItemStack stack)
@@ -129,6 +213,14 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
     /// <summary>Receives one inventory drag dropped on an explicit payment row.</summary>
     public void HandleRequirementDrop(int rowIndex)
     {
+        if (_isOpen && _isKeySubmission)
+        {
+            if (InventoryDragContext.SourceKind == InventoryDragSourceKind.KeyTool &&
+                InventoryDragContext.KeyToolInventoryOwner == _inventory)
+                SubmitContainedKey(InventoryDragContext.KeyToolSlotIndex);
+            else SetFeedback("Key Tool 안의 열쇠를 이 칸으로 드래그하세요.", false);
+            return;
+        }
         if (!_isOpen || _inventory == null ||
             InventoryDragContext.SourceKind != InventoryDragSourceKind.Inventory)
         {
@@ -154,6 +246,8 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
             return;
 
         _rows[rowIndex].AssignedAmount = 0;
+        _submittedKeySlot = -1;
+        _submittedKey = null;
         SetFeedback("Payment slot cleared.", true);
         RefreshRows();
     }
@@ -175,6 +269,7 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
         _inventory = inventory;
         _inventoryUi = inventoryUi;
         _isOpen = true;
+        RegisterEscapeHandler();
 
         RebuildRequirementRows();
         gameObject.SetActive(true);
@@ -196,14 +291,26 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
         if (!_isOpen)
             return;
 
+        bool keySubmission = _isKeySubmission;
+        _isOpen = false;
+        if (keySubmission && _inventory != null) _inventory.KeyToolChanged -= RefreshRows;
         if (_inventoryUi != null)
         {
             _inventoryUi.OnInventoryTradeRequested -= HandleInventoryTradeRequested;
-            _inventoryUi.SetInteractionMode(PlayerInventoryInteractionMode.SellSelect);
+            _inventoryUi.SetInteractionMode(keySubmission ? PlayerInventoryInteractionMode.Normal : PlayerInventoryInteractionMode.SellSelect);
         }
 
         InventoryDragContext.Clear();
         _isOpen = false;
+        if (keySubmission && _keyHub != null) _keyHub.CloseKeySubmissionInventory();
+        _isKeySubmission = false;
+        _keyOwner = null;
+        _keyHub = null;
+        _keyCommit = null;
+        _keyRequestValid = null;
+        _submittedKeySlot = -1;
+        _submittedKey = null;
+        UIEscapeRouter.Unregister(this);
         _owner = null;
         _offer = null;
         _inventory = null;
@@ -213,6 +320,17 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
 
     private void HandleConfirmClicked()
     {
+        if (_isOpen && _isKeySubmission)
+        {
+            if (_submittedKeySlot < 0 || _submittedKey == null ||
+                _keyRequestValid != null && !_keyRequestValid())
+            { SetFeedback("열쇠 제출 또는 금고 입장 조건을 다시 확인하세요.", false); return; }
+            if (!_keyCommit(_submittedKeySlot, _submittedKey, out string keyMessage))
+            { SetFeedback(keyMessage, false); RefreshRows(); return; }
+            SetFeedback(keyMessage, true);
+            Close();
+            return;
+        }
         if (!_isOpen || _owner == null || _offer == null)
             return;
 
@@ -297,12 +415,13 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
             Destroy(_rowRoot.GetChild(index).gameObject);
 
         _rows.Clear();
-        IReadOnlyList<ShopTradeRequirement> requirements = _offer.TradeRequirements;
+        IReadOnlyList<ShopTradeRequirement> requirements = _offer != null ? _offer.TradeRequirements : null;
 
-        for (int index = 0; requirements != null && index < requirements.Count; index++)
+        int rowCount = _isKeySubmission ? 1 : requirements?.Count ?? 0;
+        for (int index = 0; index < rowCount; index++)
         {
-            ShopTradeRequirement requirement = requirements[index];
-            if (requirement == null)
+            ShopTradeRequirement requirement = _isKeySubmission ? null : requirements[index];
+            if (requirement == null && !_isKeySubmission)
                 continue;
 
             Image rowImage = CreateImage($"PaymentSlot_{index + 1}", _rowRoot, new Color(0.035f, 0.16f, 0.21f, 1f));
@@ -344,6 +463,18 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
 
     private void RefreshView()
     {
+        if (_instructionText != null) _instructionText.text = _isKeySubmission
+            ? "왼쪽 인벤토리의 Key Tool에서 열쇠를 드래그하거나 더블클릭하세요."
+            : "Double-click an inventory item or drag it into its matching payment slot.";
+        if (_confirmText != null) _confirmText.text = _isKeySubmission ? _keyConfirmationLabel : UIRuntimeLocalization.Get(
+            "UI_Inventory", "Inventory_ShopConfirmTrade", "Confirm Trade");
+        if (_isKeySubmission)
+        {
+            _titleText.text = _keyTitle;
+            _productText.text = _keyDescription;
+            RefreshRows();
+            return;
+        }
         if (_titleText != null)
             _titleText.text = UIRuntimeLocalization.Get(
                 "UI_Inventory",
@@ -364,6 +495,24 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
 
     private void RefreshRows()
     {
+        if (_isKeySubmission)
+        {
+            if (_rows.Count == 0 || _inventory == null) return;
+            var snapshot = _inventory.GetKeyToolSlotSnapshot(_submittedKeySlot);
+            bool filled = snapshot.HasKey && snapshot.Key == _submittedKey && snapshot.Key.Tier == _requiredKeyTier;
+            RequirementRow row = _rows[0];
+            row.Icon.sprite = filled ? snapshot.Key.PreviewImage : null;
+            row.Icon.enabled = row.Icon.sprite != null;
+            row.Label.text = "필요 열쇠: " + (_requiredKeyTier switch
+            {
+                LootKeyTier.Normal => "일반", LootKeyTier.Rare => "희귀",
+                LootKeyTier.Unique => "유니크", LootKeyTier.Legendary => "전설", _ => _requiredKeyTier.ToString()
+            });
+            row.Amount.text = filled ? $"제출 완료 · 남은 사용 횟수 {snapshot.RemainingUses}" : "열쇠를 여기에 제출하세요";
+            row.Background.color = filled ? new Color(.07f, .36f, .25f, 1f) : new Color(.035f, .16f, .21f, 1f);
+            _confirmButton.interactable = filled;
+            return;
+        }
         bool allFilled = _rows.Count > 0;
         for (int index = 0; index < _rows.Count; index++)
         {
@@ -437,6 +586,7 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
         SetAnchors(_productText.rectTransform, new Vector2(0.08f, 0.82f), new Vector2(0.92f, 0.88f));
 
         TextMeshProUGUI instruction = CreateText("Instruction", frame.transform, 16f, FontStyles.Normal, TextAlignmentOptions.Center);
+        _instructionText = instruction;
         instruction.text = UIRuntimeLocalization.Get(
             "UI_Inventory",
             "Inventory_ShopPaymentInstruction",
@@ -463,6 +613,7 @@ public sealed class ShopPurchaseTradePanel : MonoBehaviour
         RectTransform confirmRect = _confirmButton.GetComponent<RectTransform>();
         SetAnchors(confirmRect, new Vector2(0.12f, 0.055f), new Vector2(0.54f, 0.13f));
         TextMeshProUGUI confirmText = CreateText("Label", _confirmButton.transform, 19f, FontStyles.Bold, TextAlignmentOptions.Center);
+        _confirmText = confirmText;
         confirmText.text = UIRuntimeLocalization.Get(
             "UI_Inventory",
             "Inventory_ShopConfirmTrade",

@@ -11,7 +11,10 @@ public enum QuestObjectiveType
 {
     Kill = 0,
     Hit = 1,
-    CollectItem = 2
+    CollectItem = 2,
+    SubmitItem = 3,
+    HeadshotHit = 4,
+    HeadshotKill = 5
 }
 
 public enum QuestDistanceRule
@@ -27,7 +30,10 @@ public enum QuestRewardType
     Stat = 1,
     ShopUnlock = 2,
     StageUnlock = 3,
-    WarehouseSlots = 4
+    WarehouseSlots = 4,
+    PassiveSlots = 5,
+    PocketSlots = 6,
+    RecyclingSlots = 7
 }
 
 /// <summary>
@@ -58,6 +64,11 @@ public sealed class QuestRewardDefinition
     [SerializeField] private StageDefinitionSO _stageToUnlock;
     [Tooltip("Permanent Inheritance Warehouse capacity granted when this quest reward is claimed.")]
     [SerializeField, Min(1)] private int _warehouseSlotAmount = 1;
+    [SerializeField, Min(1)] private int _passiveSlotAmount = 1;
+    [SerializeField, Range(1, 4)] private int _pocketSlotAmount = 1;
+    [SerializeField,Min(1)] private int _recyclingSlotAmount=1;
+    public int RecyclingSlotAmount=>Mathf.Max(1,_recyclingSlotAmount);
+    public int PocketSlotAmount => Mathf.Clamp(_pocketSlotAmount, 1, 4);
 
     public QuestRewardType RewardType => _rewardType;
     public ItemSO Item => _item;
@@ -69,6 +80,7 @@ public sealed class QuestRewardDefinition
     public string ShopUnlockNodeId => _shopUnlockNodeId;
     public StageDefinitionSO StageToUnlock => _stageToUnlock;
     public int WarehouseSlotAmount => Mathf.Max(1, _warehouseSlotAmount);
+    public int PassiveSlotAmount => Mathf.Clamp(_passiveSlotAmount, 1, PlayerPassiveInventoryRuntime.MaximumSlotCount);
 
     // Purpose: Builds the summary from the current authored data.
     public string BuildSummary()
@@ -93,6 +105,10 @@ public sealed class QuestRewardDefinition
                 : "Unlock Stage";
         }
 
+        if (_rewardType == QuestRewardType.PassiveSlots)
+            return $"패시브 장착칸 +{PassiveSlotAmount}";
+        if (_rewardType == QuestRewardType.PocketSlots) return $"포켓 +{PocketSlotAmount}칸 (최대 10칸)";
+        if(_rewardType==QuestRewardType.RecyclingSlots)return $"분해기 +{RecyclingSlotAmount}칸";
         if (_rewardType == QuestRewardType.WarehouseSlots)
             return $"Inheritance Warehouse +{WarehouseSlotAmount} slots";
 
@@ -139,7 +155,7 @@ public sealed class QuestObjectiveDefinition
     // Purpose: Checks whether the current data matches matches.
     public bool Matches(Damageable target, float distanceMeters, WeaponSO usedWeapon)
     {
-        if (_objectiveType == QuestObjectiveType.CollectItem || target == null)
+        if (_objectiveType == QuestObjectiveType.CollectItem || _objectiveType == QuestObjectiveType.SubmitItem || target == null)
             return false;
 
         if (_targetConfig != null && target.StatConfig != _targetConfig)
@@ -159,13 +175,21 @@ public sealed class QuestObjectiveDefinition
     // Purpose: Builds the summary from the current authored data.
     public string BuildSummary()
     {
+        if (_objectiveType == QuestObjectiveType.SubmitItem)
+            return $"Submit {(_targetItem != null ? _targetItem.name : "Item")}";
         if (_objectiveType == QuestObjectiveType.CollectItem)
         {
             string itemName = _targetItem != null ? _targetItem.name : "Item";
             return $"Collect {itemName}";
         }
 
-        string action = _objectiveType == QuestObjectiveType.Kill ? "Kill" : "Hit";
+        string action = _objectiveType switch
+        {
+            QuestObjectiveType.HeadshotHit => "Headshot Hit",
+            QuestObjectiveType.HeadshotKill => "Headshot Kill",
+            QuestObjectiveType.Kill => "Kill",
+            _ => "Hit"
+        };
         string targetName = _targetConfig != null ? _targetConfig.name : "Enemy";
         string weaponSuffix = _requiredWeapon != null ? $" using {_requiredWeapon.DisplayName}" : string.Empty;
         string distanceSuffix = _distanceRule switch
@@ -182,6 +206,12 @@ public sealed class QuestObjectiveDefinition
 [CreateAssetMenu(fileName = "Quest", menuName = "VSplatter/Progression/Quest Definition")]
 public sealed class QuestDefinitionSO : ScriptableObject
 {
+    [Header("경험치 · -1이면 Game System Tool 기본값")]
+    [SerializeField, Min(-1)] private int _experienceReward = -1;
+    public int ExperienceReward => _experienceReward;
+    [Header("수락 시 인벤토리 지급 · 빈 공간 필수")]
+    [SerializeField] private ShopTradeRequirement[] _acceptanceItems=Array.Empty<ShopTradeRequirement>();
+    public ShopTradeRequirement[] AcceptanceItems=>_acceptanceItems??Array.Empty<ShopTradeRequirement>();
     [Header("Identity")]
     [Tooltip("Stable English identifier used by runtime save data. Do not change after shipping.")]
     [SerializeField] private string _questId = "quest_id";

@@ -26,13 +26,13 @@ public sealed class LockedLootProfileSO : ScriptableObject
     [Tooltip("Editor-facing name for this reward profile. The container may still use its own display name.")]
     [SerializeField] private string _displayName = "Normal Locked Loot";
 
-    [Header("Additional Source-Pool Rolls")]
-    [Tooltip("Extra rolls added after the source's normal min/max roll count. Global valuable rolls remain governed by LootProgressionConfigSO.")]
+    [Header("Legacy Roll-Based Rewards (not used by slot-based boxes)")]
+    [Tooltip("Legacy roll API only. Loot Maker's slot-based containers use their own Min/Max Filled Slots instead.")]
     [SerializeField, Min(0)] private int _minAdditionalRolls;
     [SerializeField, Min(0)] private int _maxAdditionalRolls;
 
-    [Header("Existing Rarity Tier Weight Multipliers")]
-    [Tooltip("A multiplier of 1 keeps the existing common loot pool chance unchanged. Values below 1 reduce that tier; values above 1 increase it. Empty tiers are never invented.")]
+    [Header("Legacy Rarity Multipliers (not used by slot-based boxes)")]
+    [Tooltip("Legacy roll API only. Slot-based containers use the per-box weights in Loot Maker without these multipliers.")]
     [SerializeField, Min(0f)] private float _normalWeightMultiplier = 1f;
     [SerializeField, Min(0f)] private float _rareWeightMultiplier = 1f;
     [SerializeField, Min(0f)] private float _uniqueWeightMultiplier = 1f;

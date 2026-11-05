@@ -26,6 +26,7 @@ public class PauseExceptionRouter : MonoBehaviour
         if (handleOnlyWhenPaused && !GamePause.IsPaused) return;
         Debug.Log($"[R] paused={GamePause.IsPaused} ts={Time.timeScale}");
         if (Input.GetKeyDown(tabKey)) onTab?.Invoke();
-        if (Input.GetKeyDown(escKey)) onEsc?.Invoke();
+        if (Input.GetKeyDown(escKey) && !UIEscapeRouter.IsConsumed &&
+            !UIEscapeRouter.TryCloseTopPopup() && UIEscapeRouter.TryConsume()) onEsc?.Invoke();
     }
 }

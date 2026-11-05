@@ -9,9 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Single authoring workspace for all physical ItemSO assets. This deliberately
@@ -19,7 +17,7 @@ using UnityEngine.SceneManagement;
 /// one place so authors do not have to jump between the Project browser,
 /// IconMaker, and Loot Maker for everyday content work.
 /// </summary>
-public sealed class ItemMakerWindow : EditorWindow
+public sealed partial class ItemMakerWindow : EditorWindow
 {
     private const string ItemRootFolder = "Assets/ScriptableObject/GameScene/GameItem";
     private const string DefaultIconOutputFolder = "Assets/Art/Texture/GeneratedIcons";
@@ -75,7 +73,7 @@ public sealed class ItemMakerWindow : EditorWindow
         ItemCatalogCategory.BulletShotgun, ItemCatalogCategory.BulletSniper, ItemCatalogCategory.BulletSpecial,
         ItemCatalogCategory.Consumable, ItemCatalogCategory.Medical, ItemCatalogCategory.Throwable,
         ItemCatalogCategory.Armor, ItemCatalogCategory.HeadEquipment, ItemCatalogCategory.Backpack,
-        ItemCatalogCategory.Key, ItemCatalogCategory.Passive, ItemCatalogCategory.Currency,
+        ItemCatalogCategory.Key, ItemCatalogCategory.Passive,
         ItemCatalogCategory.Valuable, ItemCatalogCategory.Other, ItemCatalogCategory.MeleeWip
     };
 
@@ -83,7 +81,8 @@ public sealed class ItemMakerWindow : EditorWindow
     {
         Details,
         PreviewImage,
-        LootLinks
+        LootLinks,
+        Module
     }
 
     private readonly struct ItemTemplate
@@ -131,15 +130,18 @@ public sealed class ItemMakerWindow : EditorWindow
         new("Backpack", typeof(BackpackItemSO), ItemCatalogCategory.Backpack, ItemRootFolder + "/Backpack"),
         new("Key", typeof(KeyItemSO), ItemCatalogCategory.Key, ItemRootFolder + "/Key"),
         new("Key Tool", typeof(KeyToolItemSO), ItemCatalogCategory.Key, ItemRootFolder + "/Key"),
-        new("Passive", typeof(PassiveItemSO), ItemCatalogCategory.Passive, ItemRootFolder + "/PassiveItem"),
-        new("Currency", typeof(CurrencyItemSO), ItemCatalogCategory.Currency, ItemRootFolder + "/Currency"),
-        new("Valuable", typeof(ValuableItemSO), ItemCatalogCategory.Valuable, ItemRootFolder + "/Valuable")
+        new("모듈", typeof(PassiveItemSO), ItemCatalogCategory.Passive, ItemRootFolder + "/Module"),
+        new("Valuable", typeof(ValuableItemSO), ItemCatalogCategory.Valuable, ItemRootFolder + "/Valuable"),
+        new("Valuable / 화폐", typeof(CurrencyItemSO), ItemCatalogCategory.Valuable, ItemRootFolder + "/Valuable"),
+        new("Medical / Infection Ampoule or Syringe", typeof(InfectionCureItemSO), ItemCatalogCategory.Medical, ItemRootFolder + "/Consumable/Medical")
     };
 
     private readonly List<ItemSO> _items = new();
     private readonly List<LootTableSO> _lootTables = new();
-    private readonly List<LootObjectTypeSO> _lootObjectTypes = new();
+    private readonly List<LootObjectSO> _lootContainers = new();
     private ItemCatalogCategory _category = ItemCatalogCategory.All;
+    private const string CategoryTreeScope = "ItemMaker";
+    private static readonly string[] CategoryTreeGroups = { "Weapon", "Bullet", "Consumable" };
     private WorkbenchTab _workbenchTab;
     private ItemSO _selectedItem;
     private readonly ItemMakerSelection _selection = new();
@@ -147,10 +149,19 @@ public sealed class ItemMakerWindow : EditorWindow
     private string _search = string.Empty;
     private string _newItemName = "New Item";
     private string _assetNameDraft = string.Empty;
+    private MakerSelectionUiState _itemNameUi;
+    private MakerSelectionUiState ItemNameUi => _itemNameUi ??= new MakerSelectionUiState();
     private int _templateIndex;
     private int _lootMinAmount = 1;
     private int _lootMaxAmount = 1;
     private Vector2 _categoryScroll;
+    private Vector2 _createItemScroll;
+    private float _createPanelHeight = DefaultCreatePanelHeight;
+    private bool _createPanelExpanded = true;
+    private int _categorySplitterControl;
+    private float _categorySplitStartY, _categorySplitStartHeight;
+    internal const float DefaultCreatePanelHeight = 184f;
+    internal static string SidebarPreferenceKey => "BoardChase.ItemMaker.Sidebar.v1." + Application.dataPath;
     private Vector2 _catalogScroll;
     private Vector2 _workbenchScroll;
     private ItemSO _dragCandidate;
@@ -168,12 +179,11 @@ public sealed class ItemMakerWindow : EditorWindow
     private Vector2 _previewDragLastPosition;
     private bool _transparentPreviewBackground = true;
     private Color _previewBackgroundColor = new(0.045f, 0.075f, 0.09f, 1f);
-    private Scene _previewScene;
-    private Camera _previewCamera;
-    private Light _keyLight;
-    private Light _fillLight;
-    private GameObject _previewInstance;
-    private RenderTexture _previewTexture;
+    // Window layouts/domain reload must not serialize DontSave preview resources.
+    [NonSerialized] private PreviewRenderUtility _previewUtility;
+    [NonSerialized] private Camera _previewCamera;
+    [NonSerialized] private GameObject _previewInstance;
+    [NonSerialized] private RenderTexture _previewTexture;
     private bool _previewDirty = true;
 
     [MenuItem("Tools/Authoring/Item Maker")]
@@ -190,6 +200,8 @@ public sealed class ItemMakerWindow : EditorWindow
     private void OnEnable()
     {
         ApplyCompactWindowLayoutOnce();
+        _createPanelHeight = EditorPrefs.GetFloat(SidebarPreferenceKey + ".CreateHeight", DefaultCreatePanelHeight);
+        _createPanelExpanded = EditorPrefs.GetBool(SidebarPreferenceKey + ".CreateExpanded", true);
         RefreshCatalogs();
         EnsurePreviewStudio();
         EnsurePreviewInstance();
@@ -214,7 +226,24 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Releases only temporary preview objects when the window closes.
     private void OnDisable()
     {
+        ReleaseCategorySplitter();
         DisposePreviewStudio();
+    }
+
+    private void OnLostFocus() => ReleaseCategorySplitter();
+
+    private void ReleaseCategorySplitter()
+    {
+        if (_categorySplitterControl == 0) return;
+        if (GUIUtility.hotControl == _categorySplitterControl) GUIUtility.hotControl = 0;
+        _categorySplitterControl = 0;
+        SaveSidebarLayout();
+    }
+
+    private void SaveSidebarLayout()
+    {
+        EditorPrefs.SetFloat(SidebarPreferenceKey + ".CreateHeight", _createPanelHeight);
+        EditorPrefs.SetBool(SidebarPreferenceKey + ".CreateExpanded", _createPanelExpanded);
     }
 
     // Purpose: Refreshes cached asset catalogues after Project-window asset changes.
@@ -233,12 +262,22 @@ public sealed class ItemMakerWindow : EditorWindow
             // Our own Project selection update must not collapse a multi-selection.
             if (selected.Length == _selection.Items.Count && selected.All(_selection.Contains)) return;
             _selection.Set(selected, item);
+            if (item is ValuableItemSO selectedValuable && _valuableCategoryFilter != null &&
+                selectedValuable.ValuableCategoryId != _valuableCategoryFilter) _valuableCategoryFilter = null;
+            if (!MakerRegistrationIndex.Current.For(item).Matches(_registrationFilter)) _registrationFilter = MakerRegistrationIndex.Filter.All;
             if (!MatchesCategory(item, _category) || !MatchesSearch(item, _search))
             {
                 _category = ItemCatalogCategory.All;
                 _search = string.Empty;
             }
             ApplyCatalogSelection(false);
+            ItemMakerCatalogView.SetExpanded(item.Rarity, true);
+            Repaint();
+        }
+        else if (Selection.activeObject is GameObject prefab && EditorUtility.IsPersistent(prefab))
+        {
+            _registrationPrefab = MakerRegistrationIndex.CanonicalPrefab(prefab);
+            _showPrefabRegistration = true;
             Repaint();
         }
     }
@@ -246,6 +285,7 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Draws the catalogue, card browser, and selected-item workbench.
     private void OnGUI()
     {
+        MakerCategoryTreeUi.BeginWindow(this);
         EnsurePreviewStudio();
         EnsurePreviewInstance();
         AuthoringWorkspaceUi.DrawHeader(
@@ -280,6 +320,8 @@ public sealed class ItemMakerWindow : EditorWindow
 
             if (GUILayout.Button("Open Loot Maker", EditorStyles.toolbarButton, GUILayout.Width(108f)))
                 LootProgressionEditorWindow.Open();
+            if (GUILayout.Button("물품 분류 관리", EditorStyles.toolbarButton, GUILayout.Width(105f)))
+                ValuableCategoryEditorWindow.Open();
 
             using (new EditorGUI.DisabledScope(!ItemCategoryMoveUtility.HasLastMove || EditorApplication.isPlayingOrWillChangePlaymode))
             {
@@ -299,64 +341,186 @@ public sealed class ItemMakerWindow : EditorWindow
         }
     }
 
-    // Purpose: Draws the category filters and the compact new-item palette.
+    // Use explicit viewports: flexible GUILayout scroll views can otherwise leave unused space below the palette.
     private void DrawCategoryPane(float height)
     {
-        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(244f), GUILayout.Height(height)))
+        Rect pane = GUILayoutUtility.GetRect(244f, height, GUILayout.Width(244f), GUILayout.Height(height));
+        // Layout supplies dummy rects. Never derive persisted dimensions from them.
+        pane.width = 244f;
+        pane.height = height;
+        GUI.Box(pane, GUIContent.none, EditorStyles.helpBox);
+        GUI.BeginGroup(pane);
+        try
         {
-            EditorGUILayout.LabelField("ITEM CATEGORIES", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Ctrl+click: toggle selection. Shift+click: select a range. Drag selected cards onto a category to move them together.", EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(3f);
+            MakerCategoryTreeUi.Observe("ItemMaker/SidebarViewport", new Rect(0, 0, pane.width, pane.height));
+            const float width = 234f;
+            var hint = new GUIContent("Ctrl+click: toggle selection. Shift+click: select a range. Drag selected cards onto a category to move them together.");
+            float hintHeight = EditorStyles.wordWrappedMiniLabel.CalcHeight(hint, width);
+            GUI.Label(new Rect(5, 5, width, 18), "ITEM CATEGORIES", EditorStyles.boldLabel);
+            GUI.Label(new Rect(5, 25, width, hintHeight), hint, EditorStyles.wordWrappedMiniLabel);
+            float toolbarY = 28 + hintHeight;
+            GUILayout.BeginArea(new Rect(5, toolbarY, width, 22));
+            try { MakerCategoryTreeUi.DrawToolbar(CategoryTreeScope, CategoryTreeGroups); }
+            finally { GUILayout.EndArea(); }
+            GUI.Label(new Rect(5, toolbarY + 24, width, 18), "Viewing: " + GetCategoryLabel(_category), EditorStyles.miniLabel);
 
-            _categoryScroll = EditorGUILayout.BeginScrollView(_categoryScroll, GUILayout.Height(Mathf.Max(200f, height - 257f)));
-            foreach (ItemCatalogCategory category in CategoryOrder)
-                DrawCategoryCard(category);
-            EditorGUILayout.EndScrollView();
+            SidebarLayout layout = CalculateSidebarLayout(height, toolbarY + 44, _createPanelHeight, _createPanelExpanded);
+            MakerCategoryTreeUi.Observe("ItemMaker/CategoryViewport", layout.Categories);
+            GUILayout.BeginArea(layout.Categories);
+            try
+            {
+                _categoryScroll = EditorGUILayout.BeginScrollView(_categoryScroll, GUILayout.Height(layout.Categories.height));
+                foreach (ItemCatalogCategory category in CategoryOrder)
+                {
+                    var parent = GetParentCategory(category);
+                    if (!parent.HasValue || MakerCategoryTreeUi.IsExpanded(CategoryTreeScope, parent.Value.ToString()))
+                        DrawCategoryCard(category);
+                    if (category == ItemCatalogCategory.Valuable) DrawValuableCategoryFilters();
+                }
+                EditorGUILayout.EndScrollView();
+            }
+            finally { GUILayout.EndArea(); }
 
-            EditorGUILayout.Space(5f);
-            DrawCreateItemPalette();
+            DrawCategorySplitter(layout, height, toolbarY + 44);
+            MakerCategoryTreeUi.Observe("ItemMaker/CreateFoldout", layout.CreateHeader);
+            bool expanded = EditorGUI.Foldout(layout.CreateHeader, _createPanelExpanded,
+                new GUIContent("CREATE ITEM", "Collapse to give categories all available height. Drag the divider above to resize."), true, EditorStyles.foldoutHeader);
+            if (expanded != _createPanelExpanded)
+            {
+                _createPanelExpanded = expanded;
+                SaveSidebarLayout();
+                Repaint();
+                GUIUtility.ExitGUI();
+            }
+            if (_createPanelExpanded)
+            {
+                MakerCategoryTreeUi.Observe("ItemMaker/CreateViewport", layout.CreateBody);
+                GUILayout.BeginArea(layout.CreateBody);
+                try
+                {
+                    _createItemScroll = EditorGUILayout.BeginScrollView(_createItemScroll, GUILayout.Height(layout.CreateBody.height));
+                    DrawCreateItemPalette();
+                    EditorGUILayout.EndScrollView();
+                }
+                finally { GUILayout.EndArea(); }
+            }
+        }
+        finally { GUI.EndGroup(); }
+    }
+
+    internal readonly struct SidebarLayout
+    {
+        internal readonly Rect Categories, Splitter, CreateHeader, CreateBody;
+        internal SidebarLayout(Rect categories, Rect splitter, Rect header, Rect body)
+        { Categories = categories; Splitter = splitter; CreateHeader = header; CreateBody = body; }
+    }
+
+    internal static SidebarLayout CalculateSidebarLayout(float height, float listTop, float requestedCreateHeight, bool expanded)
+    {
+        const float padding = 5f, width = 234f, divider = 8f, header = 22f;
+        float available = Mathf.Max(0, height - padding - listTop - divider - header);
+        float createHeight = 0;
+        if (expanded)
+        {
+            float max = Mathf.Max(0, available - 100f);
+            if (float.IsNaN(requestedCreateHeight) || float.IsInfinity(requestedCreateHeight)) requestedCreateHeight = DefaultCreatePanelHeight;
+            createHeight = Mathf.Clamp(requestedCreateHeight, Mathf.Min(100f, max), max);
+        }
+        var categories = new Rect(padding, listTop, width, available - createHeight);
+        var splitter = new Rect(padding, categories.yMax, width, divider);
+        var createHeader = new Rect(padding, splitter.yMax, width, header);
+        return new SidebarLayout(categories, splitter, createHeader, new Rect(padding, createHeader.yMax, width, createHeight));
+    }
+
+    private void DrawCategorySplitter(SidebarLayout layout, float height, float listTop)
+    {
+        Rect rect = layout.Splitter;
+        int id = GUIUtility.GetControlID(0x1A7E8, FocusType.Passive, rect);
+        MakerCategoryTreeUi.Observe("ItemMaker/CategorySplitter", rect);
+        bool active = GUIUtility.hotControl == id && _categorySplitterControl == id;
+        bool hovered = _createPanelExpanded && rect.Contains(Event.current.mousePosition);
+        if (_createPanelExpanded) EditorGUIUtility.AddCursorRect(rect, MouseCursor.ResizeVertical, id);
+        EditorGUI.DrawRect(new Rect(rect.x, rect.center.y - 1, rect.width, 2), active || hovered
+            ? new Color(0.25f, 0.7f, 0.8f) : new Color(0.35f, 0.35f, 0.35f));
+        GUI.Label(rect, new GUIContent("", "Drag up/down to resize categories. Double-click to reset."));
+        Event e = Event.current;
+        if (_createPanelExpanded && e.type == EventType.MouseDown && e.button == 0 && hovered)
+        {
+            if (e.clickCount == 2)
+            {
+                _createPanelHeight = DefaultCreatePanelHeight;
+                SaveSidebarLayout(); e.Use(); Repaint(); GUIUtility.ExitGUI();
+            }
+            _categorySplitStartY = e.mousePosition.y;
+            _categorySplitStartHeight = layout.CreateBody.height;
+            _categorySplitterControl = id;
+            GUIUtility.hotControl = id;
+            GUI.FocusControl(null);
+            e.Use();
+        }
+        else if (active && e.type == EventType.MouseDrag)
+        {
+            // Dragging down grants more height to categories; the create panel keeps its own scroll bar.
+            _createPanelHeight = CalculateSidebarLayout(height, listTop,
+                _categorySplitStartHeight - (e.mousePosition.y - _categorySplitStartY), true).CreateBody.height;
+            e.Use(); Repaint(); GUIUtility.ExitGUI();
+        }
+        else if (active && e.rawType == EventType.MouseUp)
+        {
+            ReleaseCategorySplitter(); e.Use(); Repaint();
         }
     }
 
     // Purpose: Draws one selectable category with its live number of matching ItemSO assets.
     private void DrawCategoryCard(ItemCatalogCategory category)
     {
-        bool selected = _category == category;
-        Color originalColor = GUI.backgroundColor;
-        if (selected)
-            GUI.backgroundColor = new Color(0.18f, 0.56f, 0.68f, 0.78f);
-
-        string label = $"{GetCategoryFilterLabel(category)}  ({CountItems(category)})";
-        if (GUILayout.Button(label, GUILayout.Height(25f)))
+        bool selected = _category == category || GetParentCategory(_category) == category;
+        string label = $"{GetCategoryLabel(category)}  ({CountItems(category)})";
+        Rect rect = GUILayoutUtility.GetRect(GUIContent.none, GUI.skin.button, GUILayout.Height(25f), GUILayout.ExpandWidth(true));
+        // The complete row remains a drop target, including the collapsed parent and disclosure arrow.
+        HandleCategoryDrop(rect, category);
+        if (MakerCategoryTreeUi.DrawRow(rect, CategoryTreeScope, category.ToString(),
+            new GUIContent(label, label + "\nArrow: expand / collapse. Name: filter. Drop: move items."),
+            selected, IsUmbrellaCategory(category), GetParentCategory(category).HasValue ? 18 : 0))
         {
             _category = category;
+            if (category == ItemCatalogCategory.Valuable) _valuableCategoryFilter = null;
             _catalogScroll = Vector2.zero;
             int matchingTemplate = Array.FindIndex(ItemTemplates, template => template.Category == category);
             if (matchingTemplate >= 0) _templateIndex = matchingTemplate;
         }
+    }
 
-        GUI.backgroundColor = originalColor;
-        HandleCategoryDrop(GUILayoutUtility.GetLastRect(), category);
+    private void RevealSelectedCategory()
+    {
+        var parent = GetParentCategory(_category);
+        if (parent.HasValue) MakerCategoryTreeUi.SetExpanded(CategoryTreeScope, parent.Value.ToString(), true);
     }
 
     // Purpose: Creates one new ItemSO in the canonical folder chosen by its template.
     private void DrawCreateItemPalette()
     {
-        using (new EditorGUILayout.VerticalScope(GUI.skin.box))
+        float previousLabelWidth = EditorGUIUtility.labelWidth;
+        EditorGUIUtility.labelWidth = 66f;
+        try
         {
-            EditorGUILayout.LabelField("CREATE ITEM", EditorStyles.boldLabel);
-            _newItemName = EditorGUILayout.TextField("Name", _newItemName);
-            _templateIndex = EditorGUILayout.Popup("Template", _templateIndex, GetTemplateLabels());
-            ItemTemplate template = ItemTemplates[Mathf.Clamp(_templateIndex, 0, ItemTemplates.Length - 1)];
-            EditorGUILayout.LabelField("Category", GetCategoryLabel(template.Category), EditorStyles.miniLabel);
-            EditorGUILayout.LabelField("Folder", template.Folder, EditorStyles.wordWrappedMiniLabel);
-
-            using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_newItemName)))
+            using (new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
-                if (GUILayout.Button("+ Create ItemSO", GUILayout.Height(26f)))
-                    CreateItem(template);
+                _newItemName = EditorGUILayout.TextField("Name", _newItemName);
+                _templateIndex = EditorGUILayout.Popup("Template", _templateIndex, GetTemplateLabels());
+                ItemTemplate template = ItemTemplates[Mathf.Clamp(_templateIndex, 0, ItemTemplates.Length - 1)];
+                EditorGUILayout.LabelField("Category", GetCategoryLabel(template.Category), EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("Folder", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(template.Folder, EditorStyles.wordWrappedMiniLabel);
+
+                using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_newItemName)))
+                {
+                    if (GUILayout.Button("+ Create ItemSO", GUILayout.Height(26f)))
+                        CreateItem(template);
+                }
             }
         }
+        finally { EditorGUIUtility.labelWidth = previousLabelWidth; }
     }
 
     // Purpose: Draws the searchable item thumbnail catalogue in Asset Store-style cards.
@@ -368,21 +532,42 @@ public sealed class ItemMakerWindow : EditorWindow
             using (new EditorGUILayout.HorizontalScope())
             {
                 _search = EditorGUILayout.TextField("Search", _search);
-                GUILayout.Label($"{GetFilteredItems().Count} shown / {_selection.Items.Count} selected", EditorStyles.miniLabel, GUILayout.Width(135f));
+                GUILayout.Label($"{GetFilteredItems().Count} items / {_selection.Items.Count} selected", EditorStyles.miniLabel, GUILayout.Width(135f));
             }
+            DrawRegistrationFilters();
 
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            {
+                GUILayout.Label(new GUIContent("Rarity > Name (A-Z)", "Normal > Rare > Unique > Legendary. Within each group: card/asset name, case-insensitive A-Z."), EditorStyles.miniLabel);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Expand All", EditorStyles.toolbarButton, GUILayout.Width(78)))
+                {
+                    ItemMakerCatalogView.SetAllExpanded(true, _items);
+                    Repaint();
+                    GUIUtility.ExitGUI();
+                }
+                MakerCategoryTreeUi.Observe("ItemMaker/Rarity/ExpandAll", GUILayoutUtility.GetLastRect());
+                if (GUILayout.Button("Collapse All", EditorStyles.toolbarButton, GUILayout.Width(82)))
+                {
+                    ItemMakerCatalogView.SetAllExpanded(false, _items);
+                    Repaint();
+                    GUIUtility.ExitGUI();
+                }
+                MakerCategoryTreeUi.Observe("ItemMaker/Rarity/CollapseAll", GUILayoutUtility.GetLastRect());
+            }
             EditorGUILayout.Space(3f);
-            _catalogScroll = EditorGUILayout.BeginScrollView(_catalogScroll);
-            List<ItemSO> visible = GetFilteredItems();
-            // Filter changes behave like changing a folder: never drag hidden selections.
-            if (_selection.Retain(visible)) ApplyCatalogSelection(true);
-            DrawItemCardGrid(visible);
-            EditorGUILayout.EndScrollView();
+            using (var scroll = new EditorGUILayout.ScrollViewScope(_catalogScroll))
+            {
+                _catalogScroll = scroll.scrollPosition;
+                List<ItemSO> filtered = GetFilteredItems();
+                // Changing the category/search prunes selection. Folding a rarity keeps the workbench intact.
+                if (_selection.Retain(filtered)) ApplyCatalogSelection(true);
+                DrawRarityGroups(filtered);
+            }
         }
     }
 
-    // Purpose: Builds a responsive grid from the current category and text search result.
-    private void DrawItemCardGrid(List<ItemSO> items)
+    private void DrawRarityGroups(List<ItemSO> items)
     {
         if (items.Count == 0)
         {
@@ -391,6 +576,33 @@ public sealed class ItemMakerWindow : EditorWindow
             return;
         }
 
+        foreach (var group in items.GroupBy(item => item.Rarity))
+        {
+            List<ItemSO> groupItems = group.ToList();
+            Rect header = GUILayoutUtility.GetRect(GUIContent.none, EditorStyles.foldoutHeader, GUILayout.Height(27), GUILayout.ExpandWidth(true));
+            Color color = ItemMakerCatalogView.RarityColor(group.Key);
+            EditorGUI.DrawRect(header, new Color(color.r, color.g, color.b, .18f));
+            EditorGUI.DrawRect(new Rect(header.x, header.y, 3, header.height), color);
+            Rect label = new Rect(header.x + 7, header.y + 3, Mathf.Max(0, header.width - 10), 21);
+            bool expanded = ItemMakerCatalogView.IsExpanded(group.Key);
+            bool next = EditorGUI.Foldout(label, expanded,
+                new GUIContent($"{group.Key}  ({groupItems.Count})", "Click to expand/collapse this rarity. Items are sorted by card name (A-Z)."),
+                true, EditorStyles.foldoutHeader);
+            MakerCategoryTreeUi.Observe("ItemMaker/Rarity/" + group.Key + "/toggle", label);
+            if (next != expanded)
+            {
+                ItemMakerCatalogView.SetExpanded(group.Key, next);
+                Repaint();
+                GUIUtility.ExitGUI();
+            }
+            if (expanded) DrawItemCardGrid(groupItems);
+            GUILayout.Space(6);
+        }
+    }
+
+    // Purpose: Builds a responsive card grid within a single rarity group.
+    private void DrawItemCardGrid(List<ItemSO> items)
+    {
         const float cardWidth = 154f;
         int columnCount = Mathf.Max(1, Mathf.FloorToInt(Mathf.Max(160f, position.width - 705f) / cardWidth));
         for (int rowStart = 0; rowStart < items.Count; rowStart += columnCount)
@@ -411,7 +623,12 @@ public sealed class ItemMakerWindow : EditorWindow
         if (item == null)
             return;
 
-        Rect cardRect = GUILayoutUtility.GetRect(cardWidth, 152f, GUILayout.Width(cardWidth), GUILayout.Height(152f));
+        var registration = MakerRegistrationIndex.Current.For(item);
+        string registrationText = (registration.NeedsCheck ? "확인 필요\n" : "") + registration.LootLabel;
+        float badgeHeight = Mathf.Max(51, MakerRegistrationUi.BadgeHeight(registrationText, cardWidth - 14));
+        float cardHeight = 143 + badgeHeight + 26;
+        Rect cardRect = GUILayoutUtility.GetRect(cardWidth, cardHeight, GUILayout.Width(cardWidth), GUILayout.Height(cardHeight));
+        MakerCategoryTreeUi.Observe("ItemMaker/Card/" + item.GetInstanceID(), cardRect);
         bool selected = _selection.Contains(item);
         Color fill = selected
             ? new Color(0.10f, 0.39f, 0.52f, 0.95f)
@@ -420,11 +637,14 @@ public sealed class ItemMakerWindow : EditorWindow
         GUI.Box(cardRect, GUIContent.none, EditorStyles.helpBox);
 
         Rect imageRect = new(cardRect.x + 7f, cardRect.y + 7f, cardRect.width - 14f, 76f);
-        GUI.DrawTexture(imageRect, GetItemPreview(item), ScaleMode.ScaleToFit, true);
+        DrawCatalogItemIcon(imageRect, item);
         Rect nameRect = new(cardRect.x + 7f, cardRect.y + 87f, cardRect.width - 14f, 34f);
         GUI.Label(nameRect, item.name, EditorStyles.wordWrappedMiniLabel);
-        Rect typeRect = new(cardRect.x + 7f, cardRect.yMax - 25f, cardRect.width - 14f, 18f);
-        GUI.Label(typeRect, $"{GetCategoryLabel(GetCategory(item))}  ·  {item.Rarity}", EditorStyles.centeredGreyMiniLabel);
+        Rect typeRect = new(cardRect.x + 7f, cardRect.y + 123f, cardRect.width - 14f, 18f);
+        GUI.Label(typeRect, $"{LootCategoryLabel(item)}  ·  {item.Rarity}", EditorStyles.centeredGreyMiniLabel);
+        MakerRegistrationUi.Badge(new Rect(cardRect.x + 7, cardRect.y + 143, cardRect.width - 14, badgeHeight), item, registrationText);
+        GUI.Label(new Rect(cardRect.x + 7, cardRect.y + 144 + badgeHeight, cardRect.width - 14, 18),
+            $"상점 {registration.ShopCount} · 퀘스트 {registration.QuestCount}", EditorStyles.miniLabel);
 
         HandleItemCardInput(cardRect, item);
     }
@@ -441,8 +661,12 @@ public sealed class ItemMakerWindow : EditorWindow
             GUIUtility.hotControl = control;
             GUI.FocusControl(null);
             bool toggle = evt.control || evt.command;
+            List<ItemSO> visible = ItemMakerCatalogView.ExpandedItems(GetFilteredItems());
+            // Keep collapsed selections in the workbench until another card is clicked,
+            // but never let invisible cards enter a range selection or drag payload.
+            _selection.Retain(visible);
             _collapseSelectionOnMouseUp = !toggle && !evt.shift && _selection.Contains(item) && _selection.Items.Count > 1;
-            _selection.Click(item, GetFilteredItems(), toggle, evt.shift, true);
+            _selection.Click(item, visible, toggle, evt.shift, true);
             ApplyCatalogSelection(true);
             evt.Use();
         }
@@ -570,6 +794,7 @@ public sealed class ItemMakerWindow : EditorWindow
         if (requests.Count == 0)
         {
             _category = dropCategory;
+            RevealSelectedCategory();
             ShowNotification(new GUIContent("Already in this category. Existing subtypes are preserved."));
             Repaint();
             return;
@@ -589,6 +814,7 @@ public sealed class ItemMakerWindow : EditorWindow
         {
             ItemCategoryMoveUtility.MoveBatch(requests, out _);
             _category = dropCategory;
+            RevealSelectedCategory();
             _search = string.Empty;
             _catalogScroll = Vector2.zero;
             RefreshCatalogs();
@@ -613,6 +839,7 @@ public sealed class ItemMakerWindow : EditorWindow
             ItemSO[] items = ItemCategoryMoveUtility.RestoreLastMoves();
             RefreshCatalogs();
             _category = items.Select(GetCategory).Distinct().Count() == 1 ? GetCategory(items[0]) : ItemCatalogCategory.All;
+            RevealSelectedCategory();
             _search = string.Empty;
             _selection.Set(items);
             ApplyCatalogSelection(true);
@@ -638,7 +865,12 @@ public sealed class ItemMakerWindow : EditorWindow
                 return;
             }
 
+            if (_selectedItem is PassiveItemSO && _workbenchTab == WorkbenchTab.LootLinks)
+                _workbenchTab = WorkbenchTab.Module;
+            else if (_selectedItem is not PassiveItemSO && _workbenchTab == WorkbenchTab.Module)
+                _workbenchTab = WorkbenchTab.Details;
             DrawSelectedItemHeader();
+            MakerRegistrationUi.ItemSummary(_selectedItem);
             DrawWorkbenchTabs();
             _workbenchScroll = EditorGUILayout.BeginScrollView(_workbenchScroll);
             switch (_workbenchTab)
@@ -652,6 +884,10 @@ public sealed class ItemMakerWindow : EditorWindow
                 case WorkbenchTab.LootLinks:
                     DrawLootLinks();
                     break;
+                case WorkbenchTab.Module:
+                    if (_selectedItem is PassiveItemSO module) DrawModuleWorkbench(module);
+                    else DrawItemDetails();
+                    break;
             }
 
             EditorGUILayout.EndScrollView();
@@ -663,11 +899,11 @@ public sealed class ItemMakerWindow : EditorWindow
     {
         using (new EditorGUILayout.HorizontalScope(GUI.skin.box, GUILayout.Height(74f)))
         {
-            GUILayout.Label(new GUIContent(GetItemPreview(_selectedItem)), GUILayout.Width(64f), GUILayout.Height(64f));
+            DrawCatalogItemIcon(GUILayoutUtility.GetRect(64f, 64f, GUILayout.Width(64f), GUILayout.Height(64f)), _selectedItem);
             using (new EditorGUILayout.VerticalScope())
             {
                 EditorGUILayout.LabelField(_selectedItem.name, EditorStyles.boldLabel);
-                EditorGUILayout.LabelField($"{GetCategoryLabel(GetCategory(_selectedItem))}  |  {GetFriendlyTypeName(_selectedItem.GetType())}", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField($"{LootCategoryLabel(_selectedItem)}  |  {GetFriendlyTypeName(_selectedItem.GetType())}", EditorStyles.miniLabel);
                 EditorGUILayout.LabelField($"Rarity: {_selectedItem.Rarity}  |  Stack: {_selectedItem.MaxStack}", EditorStyles.miniLabel);
             }
         }
@@ -680,7 +916,10 @@ public sealed class ItemMakerWindow : EditorWindow
         {
             DrawWorkbenchTabButton(WorkbenchTab.Details, "Item Data");
             DrawWorkbenchTabButton(WorkbenchTab.PreviewImage, "Preview Image");
-            DrawWorkbenchTabButton(WorkbenchTab.LootLinks, "Loot Links");
+            if (_selectedItem is PassiveItemSO)
+                DrawWorkbenchTabButton(WorkbenchTab.Module, "모듈 제작 · 룬");
+            else
+                DrawWorkbenchTabButton(WorkbenchTab.LootLinks, "Loot Links");
         }
     }
 
@@ -702,6 +941,7 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Renders every serialized field of the selected concrete ItemSO subtype without a custom data duplicate.
     private void DrawItemDetails()
     {
+        if (GUILayout.Button("공용 시스템 설정 · 랜덤 패시브 / 방탄 / 스태미나")) ProgressionFoundationWindow.OpenFor(_selectedItem);
         using (new EditorGUILayout.HorizontalScope())
         {
             if (GUILayout.Button("Select Asset"))
@@ -714,6 +954,7 @@ public sealed class ItemMakerWindow : EditorWindow
 
         using (new EditorGUILayout.HorizontalScope())
         {
+            _assetNameDraft = ItemNameUi.NameFor(_selectedItem, _assetNameDraft);
             _assetNameDraft = EditorGUILayout.TextField("Asset File Name", _assetNameDraft);
             using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_assetNameDraft) || _assetNameDraft == _selectedItem.name))
             {
@@ -728,6 +969,7 @@ public sealed class ItemMakerWindow : EditorWindow
         EditorGUILayout.LabelField("Asset Path", AssetDatabase.GetAssetPath(_selectedItem), EditorStyles.wordWrappedMiniLabel);
         EditorGUILayout.Space(5f);
         EditorGUILayout.LabelField("AUTHORED DATA", EditorStyles.boldLabel);
+        MakerRegistrationUi.PrefabSummary(_selectedItem.WorldVisualPrefab);
 
         if (_selectedItem is UsableItemSO usable)
         {
@@ -743,6 +985,12 @@ public sealed class ItemMakerWindow : EditorWindow
                 EditorGUILayout.HelpBox("No hand visual is assigned. Set World Visual Prefab (or the dedicated throwable override).", MessageType.Warning);
         }
 
+        if (_selectedItem is PassiveItemSO passiveItem)
+        {
+            EditorGUILayout.HelpBox("효과가 있는 장착품은 모듈입니다. 모듈 제작 · 룬 탭에서 외형과 효과를 편집합니다. 기존 귀중품은 장착 효과가 없습니다.", MessageType.Info);
+            if (GUILayout.Button("공용 분해 파츠 · 리롤 비용 · 적 패시브 풀 설정"))
+                Selection.activeObject = PassiveModuleRulesSO.Active;
+        }
         SerializedObject serialized = new(_selectedItem);
         serialized.Update();
         EditorGUI.BeginChangeCheck();
@@ -753,6 +1001,26 @@ public sealed class ItemMakerWindow : EditorWindow
             enterChildren = false;
             if (property.name == "m_Script")
                 continue;
+            if (property.name == "_weightKg")
+            {
+                if (_selectedItem is not PassiveItemSO)
+                {
+                    EditorGUILayout.PropertyField(property, new GUIContent("개당 무게 (kg)", property.tooltip));
+                    if (property.floatValue < 0f)
+                        EditorGUILayout.LabelField($"종류 기본값: {_selectedItem.WeightKg:0.###} kg", EditorStyles.miniLabel);
+                }
+                continue;
+            }
+            if (property.name == "_maxStack" && _selectedItem is not BulletSO)
+            {
+                EditorGUILayout.LabelField("최대 스택", _selectedItem.MaxStack.ToString("N0"));
+                continue;
+            }
+            if (property.name == "_valuableCategoryId")
+            {
+                ValuableCategoryEditorWindow.DrawAssignment(property);
+                continue;
+            }
             if (property.name == "_heldViewPrefab")
                 EditorGUILayout.PropertyField(property, new GUIContent("Hand View Override", property.tooltip), true);
             else if (property.name == "_heldViewLocalPosition")
@@ -761,6 +1029,28 @@ public sealed class ItemMakerWindow : EditorWindow
                 EditorGUILayout.PropertyField(property, new GUIContent("Hand Rotation Offset", property.tooltip), true);
             else if (property.name == "_heldViewLocalScale")
                 EditorGUILayout.PropertyField(property, new GUIContent("Hand Scale Multiplier", property.tooltip), true);
+            else if (property.name == "_category" && _selectedItem is PassiveItemSO)
+                property.enumValueIndex = EditorGUILayout.Popup("패시브 분류", property.enumValueIndex, new[] { "전투", "생존" });
+            else if (property.name == "_medicineKind")
+                EditorGUILayout.PropertyField(property, new GUIContent("감염 약품 종류 · 앰플 / 최대 HP 회복 주사기"));
+            else if (property.name == "_infectionRecoveryAmount" && _selectedItem is InfectionCureItemSO medicine)
+                EditorGUILayout.PropertyField(property, new GUIContent(medicine.IsSyringe ? "복구할 최대 HP 잠식량" : "지속시간 동안 게이지 추가 회복 총량"));
+            else if (property.name == "_infectionRecoveryDurationSeconds" && _selectedItem is InfectionCureItemSO durationMedicine)
+            {
+                if (!durationMedicine.IsSyringe) EditorGUILayout.PropertyField(property, new GUIContent("앰플 지속시간 (초)"));
+            }
+            else if (property.name == "_exposureGainMultiplier" && _selectedItem is InfectionCureItemSO gainMedicine)
+            {
+                if (!gainMedicine.IsSyringe) EditorGUILayout.PropertyField(property, new GUIContent("앰플 감염 유입 배율 · 0.5 = 절반"));
+            }
+            else if (property.name == "_usageLevelOverride")
+                EditorGUILayout.PropertyField(property, new GUIContent("사용 레벨 개별 지정 · 0=공통 규칙", property.tooltip));
+            else if (property.name == "_effectGroup")
+                EditorGUILayout.PropertyField(property, new GUIContent("중복 장착 금지 효과 그룹 ID", property.tooltip));
+            else if (property.name == "_randomStatsEnabled")
+                EditorGUILayout.PropertyField(property, new GUIContent("개체별 랜덤 스탯 사용"));
+            else if (property.name == "_rarityRolls")
+                EditorGUILayout.PropertyField(property, new GUIContent("레어리티별 스탯 범위 · 합연산"), true);
             else EditorGUILayout.PropertyField(property, true);
         }
 
@@ -808,6 +1098,7 @@ public sealed class ItemMakerWindow : EditorWindow
             _previewSourceFollowsItem = false;
             RebuildPreviewInstance();
         }
+        MakerRegistrationUi.PrefabSummary(_previewSourcePrefab);
 
         EditorGUI.BeginChangeCheck();
         _previewYaw = EditorGUILayout.Slider("Yaw", _previewYaw, -180f, 180f);
@@ -836,7 +1127,8 @@ public sealed class ItemMakerWindow : EditorWindow
         }
         else
         {
-            RenderPreview(PreviewResolution);
+            if (Event.current.type == EventType.Repaint)
+                RenderPreview(PreviewResolution);
             if (_previewTexture != null)
                 GUI.DrawTexture(previewRect, _previewTexture, ScaleMode.ScaleToFit, true);
         }
@@ -864,6 +1156,8 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Registers or removes this item from a selected world container's one fixed LootTableSO.
     private void DrawLootLinks()
     {
+        MakerRegistrationUi.UsageList(_selectedItem);
+        EditorGUILayout.Space(6);
         EditorGUILayout.HelpBox(
             "World containers own fixed pools. Add this ItemSO once and it is placed automatically in the tier defined by the item's own rarity.",
             MessageType.None);
@@ -885,12 +1179,20 @@ public sealed class ItemMakerWindow : EditorWindow
             return;
         }
 
+        var owners = _lootContainers.Where(box => box != null && box.LootTable == _selectedLootTable).ToArray();
+        if (owners.Length != 1 || owners[0].LootObjectType != null)
+        {
+            EditorGUILayout.HelpBox("Choose an independent box table. Legacy/shared or unused tables cannot be edited here. Open the box in Loot Maker and separate it first.", MessageType.Warning);
+            if (GUILayout.Button("Open Loot Maker")) LootProgressionEditorWindow.OpenAndFocusWorldTable(_selectedLootTable, _selectedItem);
+            return;
+        }
         _selectedLootTable.EnsurePool();
         EditorGUILayout.LabelField("Selected Pool", _selectedLootTable.name, EditorStyles.boldLabel);
         EditorGUILayout.LabelField("Item Rarity", _selectedItem.Rarity.ToString(), EditorStyles.miniLabel);
         _lootMinAmount = Mathf.Max(1, EditorGUILayout.IntField("Min Amount", _lootMinAmount));
         _lootMaxAmount = Mathf.Max(_lootMinAmount, EditorGUILayout.IntField("Max Amount", _lootMaxAmount));
         bool alreadyRegistered = ContainsItem(_selectedLootTable, _selectedItem);
+        EditorGUILayout.LabelField(alreadyRegistered ? "이 상자에 등록됨" : "이 상자에는 미등록", EditorStyles.boldLabel);
 
         using (new EditorGUILayout.HorizontalScope())
         {
@@ -919,7 +1221,7 @@ public sealed class ItemMakerWindow : EditorWindow
         EditorGUILayout.LabelField("CHOOSE A FIXED POOL", EditorStyles.boldLabel);
         if (_lootTables.Count == 0)
         {
-            EditorGUILayout.HelpBox("No LootTableSO assets found. Create a container type and fixed pool in Loot Maker first.", MessageType.Info);
+            EditorGUILayout.HelpBox("No box tables found. Register a container in Loot Maker first.", MessageType.Info);
             return;
         }
 
@@ -933,24 +1235,24 @@ public sealed class ItemMakerWindow : EditorWindow
         }
     }
 
-    // Purpose: Shows which reusable world-container families currently point at the selected fixed table.
+    // Purpose: Shows the actual box owner, not retired shared-family assets.
     private void DrawLootTableUsage(LootTableSO table)
     {
         EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("CONTAINER TYPES USING THIS POOL", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("BOX USING THIS TABLE", EditorStyles.boldLabel);
         int shown = 0;
-        for (int index = 0; index < _lootObjectTypes.Count; index++)
+        for (int index = 0; index < _lootContainers.Count; index++)
         {
-            LootObjectTypeSO type = _lootObjectTypes[index];
-            if (type == null || type.LootTable != table)
+            LootObjectSO box = _lootContainers[index];
+            if (box == null || box.LootTable != table)
                 continue;
             shown++;
-            if (GUILayout.Button(type.DisplayName, EditorStyles.miniButton))
-                Selection.activeObject = type;
+            if (GUILayout.Button(box.WorldPrefab != null ? box.WorldPrefab.name : box.name, EditorStyles.miniButton))
+                Selection.activeObject = box;
         }
 
         if (shown == 0)
-            EditorGUILayout.LabelField("No reusable LootObjectTypeSO currently references this table.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("No box uses this table.", EditorStyles.miniLabel);
     }
 
     // Purpose: Adds the selected item exactly once to its rarity tier in a fixed world pool.
@@ -983,6 +1285,7 @@ public sealed class ItemMakerWindow : EditorWindow
         });
         EditorUtility.SetDirty(_selectedLootTable);
         AssetDatabase.SaveAssets();
+        MakerRegistrationIndex.Invalidate();
         ShowNotification(new GUIContent($"Added {_selectedItem.name} to {_selectedItem.Rarity}."));
     }
 
@@ -1019,6 +1322,7 @@ public sealed class ItemMakerWindow : EditorWindow
         EditorUtility.SetDirty(_selectedLootTable);
         AssetDatabase.SaveAssets();
         ShowNotification(new GUIContent($"Removed {removedCount} pool entr{(removedCount == 1 ? "y" : "ies")}."));
+        MakerRegistrationIndex.Invalidate();
     }
 
     // Purpose: Creates one configured asset file, selects it, and immediately opens its data workbench.
@@ -1043,13 +1347,15 @@ public sealed class ItemMakerWindow : EditorWindow
         if (template.WeaponType.HasValue)
             ItemCategoryMoveUtility.ConfigureWeaponType(item, template.WeaponType.Value);
         AssetDatabase.CreateAsset(item, path);
+        if (item is PassiveItemSO) RegisterModuleForPersistence(item);
         AssetDatabase.SaveAssets();
         _category = template.Category;
+        RevealSelectedCategory();
         _search = string.Empty;
         _catalogScroll = Vector2.zero;
         RefreshCatalogs();
         SelectItem(item, true);
-        _workbenchTab = WorkbenchTab.Details;
+        _workbenchTab = item is PassiveItemSO ? WorkbenchTab.Module : WorkbenchTab.Details;
         ShowNotification(new GUIContent($"Created {item.name}."));
     }
 
@@ -1071,8 +1377,9 @@ public sealed class ItemMakerWindow : EditorWindow
             return;
         }
 
-        AssetDatabase.SaveAssets();
         ItemSO copy = AssetDatabase.LoadAssetAtPath<ItemSO>(copyPath);
+        if (copy is PassiveItemSO) RegisterModuleForPersistence(copy);
+        AssetDatabase.SaveAssets();
         RefreshCatalogs();
         SelectItem(copy, true);
         ShowNotification(new GUIContent($"Duplicated {copy.name}."));
@@ -1140,9 +1447,9 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Reloads the ItemSO, fixed-pool, and reusable-container catalogues from their authored asset folders.
     private void RefreshCatalogs()
     {
+        MakerRegistrationIndex.Invalidate();
         RefreshItems();
         RefreshLootTables();
-        RefreshLootObjectTypes();
     }
 
     // Purpose: Finds every ItemSO derived asset under the canonical GameItem root, including concrete subtype assets.
@@ -1150,7 +1457,7 @@ public sealed class ItemMakerWindow : EditorWindow
     {
         _items.Clear();
         string[] roots = AssetDatabase.IsValidFolder(ItemRootFolder)
-            ? new[] { ItemRootFolder }
+            ? (AssetDatabase.IsValidFolder("Assets/Resources/PassiveModules") ? new[] { ItemRootFolder, "Assets/Resources/PassiveModules" } : new[] { ItemRootFolder })
             : new[] { "Assets" };
         string[] guids = AssetDatabase.FindAssets("t:ScriptableObject", roots);
         for (int index = 0; index < guids.Length; index++)
@@ -1160,40 +1467,36 @@ public sealed class ItemMakerWindow : EditorWindow
                 _items.Add(item);
         }
 
-        _items.Sort((left, right) => string.Compare(left.name, right.name, StringComparison.OrdinalIgnoreCase));
+        _items.Sort(ItemMakerCatalogView.Compare);
         if (_selection.Retain(_items)) ApplyCatalogSelection(false);
     }
 
     // Purpose: Finds all fixed world LootTableSO assets for quick item registration.
     private void RefreshLootTables()
     {
+        RefreshLootContainers();
         _lootTables.Clear();
-        string[] guids = AssetDatabase.FindAssets("t:LootTableSO");
-        for (int index = 0; index < guids.Length; index++)
-        {
-            LootTableSO table = AssetDatabase.LoadAssetAtPath<LootTableSO>(AssetDatabase.GUIDToAssetPath(guids[index]));
-            if (table != null)
-                _lootTables.Add(table);
-        }
+        _lootTables.AddRange(_lootContainers.Where(box => box != null && box.LootTable != null)
+            .Select(box => box.LootTable).Distinct());
 
         _lootTables.Sort((left, right) => string.Compare(left.name, right.name, StringComparison.OrdinalIgnoreCase));
         if (_selectedLootTable != null && !_lootTables.Contains(_selectedLootTable))
             _selectedLootTable = null;
     }
 
-    // Purpose: Finds reusable container type records to explain where a fixed table is used.
-    private void RefreshLootObjectTypes()
+    // Purpose: Finds box records to show the actual owner of each independent table.
+    private void RefreshLootContainers()
     {
-        _lootObjectTypes.Clear();
-        string[] guids = AssetDatabase.FindAssets("t:LootObjectTypeSO");
+        _lootContainers.Clear();
+        string[] guids = AssetDatabase.FindAssets("t:LootObjectSO");
         for (int index = 0; index < guids.Length; index++)
         {
-            LootObjectTypeSO type = AssetDatabase.LoadAssetAtPath<LootObjectTypeSO>(AssetDatabase.GUIDToAssetPath(guids[index]));
-            if (type != null)
-                _lootObjectTypes.Add(type);
+            LootObjectSO box = AssetDatabase.LoadAssetAtPath<LootObjectSO>(AssetDatabase.GUIDToAssetPath(guids[index]));
+            if (box != null)
+                _lootContainers.Add(box);
         }
 
-        _lootObjectTypes.Sort((left, right) => string.Compare(left.DisplayName, right.DisplayName, StringComparison.OrdinalIgnoreCase));
+        _lootContainers.Sort((left, right) => string.Compare(left.name, right.name, StringComparison.OrdinalIgnoreCase));
     }
 
     // Purpose: Uses the active Project selection only when it is an ItemSO.
@@ -1210,17 +1513,21 @@ public sealed class ItemMakerWindow : EditorWindow
             return;
 
         _selection.Set(new[] { item });
+        ItemMakerCatalogView.SetExpanded(item.Rarity, true);
         ApplyCatalogSelection(selectProjectAsset);
     }
 
     private void SetSelectionFromGuids(IEnumerable<string> guids)
     {
         _selection.Set(guids.Select(guid => AssetDatabase.LoadAssetAtPath<ItemSO>(AssetDatabase.GUIDToAssetPath(guid))));
+        foreach (ItemSO item in _selection.Items) ItemMakerCatalogView.SetExpanded(item.Rarity, true);
         ApplyCatalogSelection(true);
     }
 
     private void ApplyCatalogSelection(bool selectProjectAssets)
     {
+        ItemNameUi.SelectionClicked();
+        _assetNameDraft = _selection.Active != null ? _selection.Active.name : string.Empty;
         if (_selectedItem != _selection.Active)
         {
             _selectedItem = _selection.Active;
@@ -1246,20 +1553,27 @@ public sealed class ItemMakerWindow : EditorWindow
         RebuildPreviewInstance();
     }
 
-    // Purpose: Resolves the visible cards from the active category and search expression.
+    // Purpose: Resolves matching items, even in collapsed groups; edits to rarity/name reorder immediately.
     private List<ItemSO> GetFilteredItems()
     {
         List<ItemSO> result = new();
         for (int index = 0; index < _items.Count; index++)
         {
             ItemSO item = _items[index];
-            if (item == null || !MatchesCategory(item, _category))
+            if (item == null || !MatchesCategory(item, _category) ||
+                (_category == ItemCatalogCategory.Valuable && _valuableCategoryFilter != null &&
+                 (item is not ValuableItemSO valuable || (_valuableCategoryFilter.Length == 0
+                    ? ValuableCategoryCatalogSO.Active?.Find(valuable.ValuableCategoryId) != null
+                    : valuable.ValuableCategoryId != _valuableCategoryFilter))))
                 continue;
             if (!MatchesSearch(item, _search))
+                continue;
+            if (!MakerRegistrationIndex.Current.For(item).Matches(_registrationFilter))
                 continue;
             result.Add(item);
         }
 
+        result.Sort(ItemMakerCatalogView.Compare);
         return result;
     }
 
@@ -1276,58 +1590,16 @@ public sealed class ItemMakerWindow : EditorWindow
         return count;
     }
 
+    // Shared read-only classification for Loot Maker; keeps category order/labels in one place.
+    internal static int LootCategoryOrder(ItemSO item) => Array.IndexOf(CategoryOrder, GetCategory(item));
+    internal static string LootCategoryLabel(ItemSO item) => item is ValuableItemSO valuable
+        ? "귀중품 / " + valuable.ValuableCategoryLabel : GetCategoryLabel(GetCategory(item));
+    internal static string LootCategoryKey(ItemSO item) => LootItemCategories.GetKey(item);
+
     // Purpose: Maps concrete ItemSO roles to author-friendly Item Maker categories.
-    private static ItemCatalogCategory GetCategory(ItemSO item)
-    {
-        if (item == null)
-            return ItemCatalogCategory.Other;
-        if (item is CurrencyItemSO)
-            return ItemCatalogCategory.Currency;
-        if (item is ValuableItemSO)
-            return ItemCatalogCategory.Valuable;
-        if (item is MeleeWeaponSO)
-            return ItemCatalogCategory.MeleeWip;
-        if (item is RangedWeaponSO firearm)
-            return firearm.WeaponType switch
-            {
-                RangedWeaponType.SubmachineGun => ItemCatalogCategory.WeaponSmg,
-                RangedWeaponType.AssaultRifle => ItemCatalogCategory.WeaponAr,
-                RangedWeaponType.LightMachineGun => ItemCatalogCategory.WeaponLmg,
-                RangedWeaponType.Pistol or RangedWeaponType.Revolver => ItemCatalogCategory.WeaponPistol,
-                RangedWeaponType.Shotgun => ItemCatalogCategory.WeaponShotgun,
-                RangedWeaponType.SniperRifle => ItemCatalogCategory.WeaponSniper,
-                _ => ItemCatalogCategory.WeaponSpecial
-            };
-        if (item is WeaponSO)
-            return ItemCatalogCategory.Weapon;
-        if (item is BulletSO bullet)
-            return bullet.Family switch
-            {
-                BulletFamily.Light => ItemCatalogCategory.BulletLight,
-                BulletFamily.Medium => ItemCatalogCategory.BulletMedium,
-                BulletFamily.Heavy => ItemCatalogCategory.BulletHeavy,
-                BulletFamily.ShotgunShell => ItemCatalogCategory.BulletShotgun,
-                BulletFamily.Sniper => ItemCatalogCategory.BulletSniper,
-                _ => ItemCatalogCategory.BulletSpecial
-            };
-        if (item is ThrowableUsableItemSO)
-            return ItemCatalogCategory.Throwable;
-        if (item is MedicalItemSO)
-            return ItemCatalogCategory.Medical;
-        if (item is ConsumableItemSO)
-            return ItemCatalogCategory.Consumable;
-        if (item is ArmorItemSO)
-            return ItemCatalogCategory.Armor;
-        if (item is GasMaskItemSO)
-            return ItemCatalogCategory.HeadEquipment;
-        if (item is BackpackItemSO)
-            return ItemCatalogCategory.Backpack;
-        if (item is KeyItemSO || item is KeyToolItemSO)
-            return ItemCatalogCategory.Key;
-        if (item is PassiveItemSO)
-            return ItemCatalogCategory.Passive;
-        return ItemCatalogCategory.Other;
-    }
+    private static ItemCatalogCategory GetCategory(ItemSO item) =>
+        item is ValuableItemSO ? ItemCatalogCategory.Valuable :
+        Enum.TryParse(LootItemCategories.GetKey(item), out ItemCatalogCategory category) ? category : ItemCatalogCategory.Other;
 
     private static bool IsUmbrellaCategory(ItemCatalogCategory category)
         => category is ItemCatalogCategory.Weapon or ItemCatalogCategory.Bullet or ItemCatalogCategory.Consumable;
@@ -1396,7 +1668,7 @@ public sealed class ItemMakerWindow : EditorWindow
             ItemCatalogCategory.HeadEquipment => "Head / Gas Mask",
             ItemCatalogCategory.Backpack => "Backpacks",
             ItemCatalogCategory.Key => "Keys / Key Tools",
-            ItemCatalogCategory.Passive => "Passives",
+            ItemCatalogCategory.Passive => "모듈",
             ItemCatalogCategory.Currency => "Currency",
             ItemCatalogCategory.Valuable => "Valuables",
             _ => "Other"
@@ -1442,6 +1714,7 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Formats concrete C# type names for authors without hiding which subtype owns the data.
     private static string GetFriendlyTypeName(Type type)
     {
+        if (type == typeof(PassiveItemSO)) return "모듈";
         string name = type != null ? type.Name : "ItemSO";
         return name.EndsWith("SO", StringComparison.Ordinal)
             ? name.Substring(0, name.Length - 2)
@@ -1502,16 +1775,15 @@ public sealed class ItemMakerWindow : EditorWindow
             return;
         }
 
-        _previewInstance = PrefabUtility.InstantiatePrefab(_previewSourcePrefab, _previewScene) as GameObject;
+        _previewInstance = _previewUtility.InstantiatePrefabInScene(_previewSourcePrefab);
         if (_previewInstance == null)
         {
             _previewInstance = UnityEngine.Object.Instantiate(_previewSourcePrefab);
-            SceneManager.MoveGameObjectToScene(_previewInstance, _previewScene);
+            _previewUtility.AddSingleGO(_previewInstance);
         }
 
         _previewInstance.name = "ItemMaker_TemporaryPreviewModel";
-        // Keep this clone renderable. The isolated preview scene is closed with the
-        // window, so it needs no HideAndDontSave flag of its own.
+        // The clone is owned only by the isolated preview scene, never by a layout or authored asset.
         _previewInstance.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
         _previewInstance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         _previewInstance.SetActive(true);
@@ -1528,19 +1800,15 @@ public sealed class ItemMakerWindow : EditorWindow
         RebuildPreviewInstance();
     }
 
-    // Purpose: Creates an unsaved additive scene instead of a Unity Preview Scene, because Camera.Render cannot draw ordinary objects from a Preview Scene.
+    // Purpose: Uses Unity's preview renderer, including SRP scene culling, without adding/saving a working scene.
     private void EnsurePreviewStudio()
     {
-        if (_previewScene.IsValid())
+        if (_previewUtility != null && _previewCamera != null)
             return;
 
-        _previewScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-        GameObject cameraObject = EditorUtility.CreateGameObjectWithHideFlags(
-            "ItemMaker_PreviewCamera",
-            HideFlags.HideAndDontSave,
-            typeof(Camera));
-        SceneManager.MoveGameObjectToScene(cameraObject, _previewScene);
-        _previewCamera = cameraObject.GetComponent<Camera>();
+        _previewUtility = new PreviewRenderUtility();
+        _previewUtility.ambientColor = new Color(.2f, .2f, .2f, 1f);
+        _previewCamera = _previewUtility.camera;
         _previewCamera.clearFlags = CameraClearFlags.SolidColor;
         _previewCamera.fieldOfView = 30f;
         _previewCamera.nearClipPlane = 0.01f;
@@ -1550,28 +1818,22 @@ public sealed class ItemMakerWindow : EditorWindow
         _previewCamera.allowHDR = false;
         _previewCamera.allowMSAA = true;
 
-        _keyLight = CreatePreviewLight("ItemMaker_KeyLight", new Vector3(38f, -32f, 0f), 1.15f);
-        _fillLight = CreatePreviewLight("ItemMaker_FillLight", new Vector3(42f, 142f, 0f), 0.5f);
+        ConfigurePreviewLight(_previewUtility.lights[0], new Vector3(38f, -32f, 0f), 1.15f);
+        ConfigurePreviewLight(_previewUtility.lights[1], new Vector3(42f, 142f, 0f), 0.5f);
     }
 
     // Purpose: Creates one temporary directional light in the isolated editor preview scene.
-    private Light CreatePreviewLight(string objectName, Vector3 rotation, float intensity)
+    private static void ConfigurePreviewLight(Light light, Vector3 rotation, float intensity)
     {
-        GameObject lightObject = EditorUtility.CreateGameObjectWithHideFlags(
-            objectName,
-            HideFlags.HideAndDontSave,
-            typeof(Light));
-        SceneManager.MoveGameObjectToScene(lightObject, _previewScene);
-        lightObject.transform.rotation = Quaternion.Euler(rotation);
-        Light light = lightObject.GetComponent<Light>();
+        light.transform.rotation = Quaternion.Euler(rotation);
         light.type = LightType.Directional;
         light.intensity = intensity;
+        light.color = Color.white;
         light.shadows = LightShadows.Soft;
         light.cullingMask = 1 << PreviewCaptureLayer;
-        return light;
     }
 
-    // Purpose: Renders the isolated additive-scene model into a reusable RenderTexture.
+    // Purpose: Renders isolated prefab contents with the project's SRP and restores preview lighting/targets.
     private void RenderPreview(int size)
     {
         EnsurePreviewInstance();
@@ -1580,11 +1842,11 @@ public sealed class ItemMakerWindow : EditorWindow
         if (_previewDirty)
             FramePreviewCamera();
 
-        EnsurePreviewTexture(size);
         _previewCamera.backgroundColor = _transparentPreviewBackground ? Color.clear : _previewBackgroundColor;
-        _previewCamera.targetTexture = _previewTexture;
-        _previewCamera.Render();
-        _previewCamera.targetTexture = null;
+        float points = size / EditorGUIUtility.pixelsPerPoint;
+        _previewUtility.BeginPreview(new Rect(0, 0, points, points), GUIStyle.none);
+        try { _previewUtility.Render(allowScriptableRenderPipeline: true, updatefov: false); }
+        finally { _previewTexture = _previewUtility.EndPreview() as RenderTexture; }
     }
 
     // Purpose: Isolates the capture model from every authored camera and editor scene object.
@@ -1720,24 +1982,6 @@ public sealed class ItemMakerWindow : EditorWindow
         return bounds;
     }
 
-    // Purpose: Reuses one square RenderTexture instead of allocating a new texture every editor repaint.
-    private void EnsurePreviewTexture(int size)
-    {
-        if (_previewTexture != null && _previewTexture.width == size && _previewTexture.height == size)
-            return;
-
-        if (_previewTexture != null)
-            _previewTexture.Release();
-
-        _previewTexture = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32)
-        {
-            name = "ItemMaker_PreviewRenderTexture",
-            hideFlags = HideFlags.HideAndDontSave,
-            antiAliasing = 4
-        };
-        _previewTexture.Create();
-    }
-
     // Purpose: Reads the isolated preview render into a PNG-ready CPU texture.
     private Texture2D CapturePreviewTexture(int resolution)
     {
@@ -1746,12 +1990,16 @@ public sealed class ItemMakerWindow : EditorWindow
             return null;
 
         RenderTexture previous = RenderTexture.active;
-        RenderTexture.active = _previewTexture;
-        Texture2D texture = new(resolution, resolution, TextureFormat.RGBA32, false);
-        texture.ReadPixels(new Rect(0f, 0f, resolution, resolution), 0, 0);
-        texture.Apply(false, false);
-        RenderTexture.active = previous;
-        return texture;
+        Texture2D texture = new(_previewTexture.width, _previewTexture.height, TextureFormat.RGBA32, false);
+        try
+        {
+            RenderTexture.active = _previewTexture;
+            texture.ReadPixels(new Rect(0f, 0f, texture.width, texture.height), 0, 0);
+            texture.Apply(false, false);
+            return texture;
+        }
+        catch { DestroyImmediate(texture); throw; }
+        finally { RenderTexture.active = previous; }
     }
 
     // Purpose: Generates one stable PNG file, imports it as a Sprite, and assigns it to ItemSO._previewImage.
@@ -1861,20 +2109,10 @@ public sealed class ItemMakerWindow : EditorWindow
     // Purpose: Releases all temporary thumbnail-preview resources without touching authored scenes or prefabs.
     private void DisposePreviewStudio()
     {
-        if (_previewTexture != null)
-        {
-            _previewTexture.Release();
-            DestroyImmediate(_previewTexture);
-            _previewTexture = null;
-        }
-
-        if (_previewScene.IsValid() && _previewScene.isLoaded)
-            EditorSceneManager.CloseScene(_previewScene, removeScene: true);
-
-        _previewScene = default;
+        _previewUtility?.Cleanup();
+        _previewUtility = null;
+        _previewTexture = null;
         _previewCamera = null;
-        _keyLight = null;
-        _fillLight = null;
         _previewInstance = null;
     }
 }

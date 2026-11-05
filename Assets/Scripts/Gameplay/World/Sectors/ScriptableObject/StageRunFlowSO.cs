@@ -17,6 +17,21 @@ public sealed class StageRunFlowSO : ScriptableObject
 
     public IReadOnlyList<StageDefinitionSO> Stages => _stages;
 
+    // The demo forks once and rejoins at 4. Later expedition routes are not enabled here.
+    public IEnumerable<StageDefinitionSO> GetHatchDestinations(StageDefinitionSO current)
+    {
+        if (current == null) yield break;
+        if (current.StageIndex == 1)
+        {
+            if (TryGetStage(2, out var second)) yield return second;
+            if (TryGetStage(3, out var third)) yield return third;
+        }
+        else if (current.StageIndex == 2 || current.StageIndex == 3)
+        {
+            if (TryGetStage(4, out var fourth)) yield return fourth;
+        }
+    }
+
     // Purpose: Attempts to get stage and reports whether the request succeeded.
     public bool TryGetStage(int stageIndex, out StageDefinitionSO stage)
     {
@@ -29,7 +44,7 @@ public sealed class StageRunFlowSO : ScriptableObject
         {
             StageDefinitionSO candidate = _stages[i];
 
-            if (candidate != null && candidate.StageIndex == stageIndex)
+            if (candidate != null && candidate.CanEnter && candidate.StageIndex == stageIndex)
             {
                 stage = candidate;
                 return true;
@@ -54,7 +69,7 @@ public sealed class StageRunFlowSO : ScriptableObject
 
             for (int j = i + 1; j < _stages.Count; j++)
             {
-                if (_stages[j] == null)
+                if (_stages[j] == null || !_stages[j].CanEnter)
                     continue;
 
                 next = _stages[j];
@@ -81,7 +96,7 @@ public sealed class StageRunFlowSO : ScriptableObject
 
         for (int i = _stages.Count - 1; i >= 0; i--)
         {
-            if (_stages[i] != null)
+            if (_stages[i] != null && _stages[i].CanEnter)
                 return _stages[i] == stage;
         }
 

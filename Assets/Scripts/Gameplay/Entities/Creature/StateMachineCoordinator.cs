@@ -12,7 +12,7 @@ using VSplatter.StateMachine.ScriptableObjects;
 
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(0)]
-public class StateMachineCoordinator : MonoBehaviour
+public class StateMachineCoordinator : MonoBehaviour, IStateMachineHierarchySource
 {
 	[Serializable]
 	private struct ParentChildRule
@@ -104,9 +104,16 @@ public class StateMachineCoordinator : MonoBehaviour
 	// Purpose: Applies the requested child state machine state change.
 	private void ApplyChildStateMachineState(bool shouldEnable)
 	{
-		if (_childStateMachine != null && _childStateMachine.enabled != shouldEnable)
-			_childStateMachine.enabled = shouldEnable;
+		StateMachineChildGate.Apply(_childStateMachine, shouldEnable);
 
 		_childStateMachineEnabled = _childStateMachine != null && _childStateMachine.enabled;
+	}
+
+	public void GetHierarchyBindings(System.Collections.Generic.List<StateMachineChildBinding> bindings)
+	{
+		if (_parentStateRules == null) return;
+		foreach (var rule in _parentStateRules)
+			bindings.Add(new StateMachineChildBinding(_parentStateMachine, rule.parentState, _childStateMachine,
+				rule.enableChildStateMachine, false, _defaultChildEnabled));
 	}
 }

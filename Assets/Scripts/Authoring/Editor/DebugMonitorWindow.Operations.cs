@@ -15,7 +15,9 @@ public sealed partial class DebugMonitorWindow
     {
         Characters,
         StageAndStartHub,
-        Quests
+        Quests,
+        CombatLab,
+        Colliders
     }
 
     private MonitorWorkspaceTab _monitorWorkspaceTab;
@@ -41,15 +43,25 @@ public sealed partial class DebugMonitorWindow
     private int _debugShopBundle = 1;
     private string _operationsStatus = string.Empty;
     private MessageType _operationsStatusType = MessageType.None;
+    private string _raidExtractionStatus = string.Empty;
+    private MessageType _raidExtractionStatusType = MessageType.None;
 
     // Purpose: Draws the monitor workspace authoring UI.
     private void DrawMonitorWorkspace()
     {
         _monitorWorkspaceTab = (MonitorWorkspaceTab)GUILayout.Toolbar(
             (int)_monitorWorkspaceTab,
-            new[] { "Characters", "Stage & Start Hub", "Quests" });
+            new[] { "캐릭터", "Stage & Start Hub", "Quests", "전투 실험실", "콜라이더" });
 
         EditorGUILayout.Space(4f);
+
+        if (_monitorWorkspaceTab == MonitorWorkspaceTab.CombatLab) { DrawCombatLab(); return; }
+        if (_monitorWorkspaceTab == MonitorWorkspaceTab.Colliders) { DrawColliderControls(); return; }
+        if (!EditorApplication.isPlaying)
+        {
+            EditorGUILayout.HelpBox("런타임 정보는 Play Mode에서 표시됩니다. 전투 실험실과 콜라이더는 여기서 바로 설정할 수 있습니다.", MessageType.Info);
+            return;
+        }
 
         switch (_monitorWorkspaceTab)
         {
@@ -283,6 +295,22 @@ public sealed partial class DebugMonitorWindow
                 ReturnDebugPlayerToStartHub(startSector);
         }
 
+        RaidRuntime raid = RaidRuntime.Active;
+        DrawProgressionFoundationControls(raid);
+        using (new EditorGUI.DisabledScope(!Application.isPlaying || CombatLabRuntime.IsIsolatedSession ||
+                   raid == null))
+        {
+            if (GUILayout.Button("레이드 종료 · 탈출 처리 (HOME 복귀)"))
+                ExtractDebugRaidToHome(raid);
+        }
+        if (!string.IsNullOrWhiteSpace(_raidExtractionStatus))
+            EditorGUILayout.HelpBox(_raidExtractionStatus, _raidExtractionStatusType);
+        if (!Application.isPlaying) EditorGUILayout.HelpBox("강제 탈출은 Play Mode에서만 가능합니다.", MessageType.Info);
+        else if (CombatLabRuntime.IsIsolatedSession) EditorGUILayout.HelpBox("전투 실험실에서는 강제 탈출할 수 없습니다.", MessageType.Info);
+        else if (raid == null) EditorGUILayout.HelpBox("현재 활성 레이드가 없습니다. 레이드 진입 후 사용하세요.", MessageType.Warning);
+        EditorGUILayout.LabelField("방 클리어·탈출 위치·전력 조건을 생략합니다. 실제 탈출처럼 소지품을 유지하고 HOME 복귀·레이드 종료·저장 처리합니다. 스테이지 클리어/해금은 지급하지 않습니다.",
+            EditorStyles.wordWrappedMiniLabel);
+
         EditorGUILayout.Space(8f);
         DrawStageMapDebug();
 
@@ -305,11 +333,10 @@ public sealed partial class DebugMonitorWindow
     // Purpose: Draws the current room trait debug controls authoring UI.
     private void DrawCurrentRoomTraitDebugControls()
     {
-        EditorGUILayout.LabelField("Current Room Trait (Runtime Debug)", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("현재 섹터 이상징후 — 실행 중에만 변경", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "Overrides only the current generated sector while Play Mode is running. " +
-            "It never edits the shared trait table, stage seed, or saved run. Armed immediately refreshes " +
-            "currently spawned enemies in this sector.",
+            "현재 섹터에만 시험 적용합니다. SO 기본값·스테이지 시드·저장된 레이드 배치는 변경하지 않습니다. " +
+            "적 강화 / 적 피해 증가는 현재 섹터에 생성된 적에도 즉시 반영됩니다.",
             MessageType.None);
 
         if (_sectorStateManager == null)
@@ -337,18 +364,25 @@ public sealed partial class DebugMonitorWindow
             _roomTraitDebugSelection = traits.SelectedRoomTrait;
         }
 
-        EditorGUILayout.ObjectField("Current Sector", sector, typeof(SectorRuntime), true);
-        EditorGUILayout.LabelField("Rolled Trait", traits.RolledRoomTrait.ToString());
-        EditorGUILayout.LabelField("Stage Gas", traits.HasBiochemicalGas ? "Enabled" : "Disabled");
-        EditorGUILayout.LabelField("Override", traits.HasDebugRoomTraitOverride ? "Active (runtime only)" : "None");
+        EditorGUILayout.ObjectField("현재 섹터", sector, typeof(SectorRuntime), true);
+        EditorGUILayout.LabelField("생성 시 이상징후: " + DebugRoomTraitName(traits.RolledRoomTrait), EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField("현재 적용 중: " + DebugRoomTraitName(traits.SelectedRoomTrait), EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField("디버그 변경", traits.HasDebugRoomTraitOverride ? "적용 중 — 실행 중에만" : "없음");
+        EditorGUILayout.LabelField(DebugRoomTraitDescription(traits), EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField("섹터 가스 감염", $"{traits.CurrentBiochemicalGasInfectionPerSecond:0.##} /초");
+        EditorGUILayout.LabelField("실패 가스 누적", $"{traits.TimerFailureLeakStacks}스택");
+        EditorGUILayout.LabelField("레이드 시간초과 감염", $"{RaidRuntime.CurrentOvertimeInfection:0.##} /초");
+        EditorGUILayout.LabelField("플레이어 합계 가스 감염", $"{SectorRoomTraitRuntime.CurrentPlayerBiochemicalGasInfectionPerSecond:0.##} /초");
+        EditorGUILayout.LabelField("플레이어 가스 적용 주기", $"{SectorRoomTraitRuntime.CurrentPlayerBiochemicalGasTickInterval:0.##}초");
 
-        _roomTraitDebugSelection = (SectorRoomTraitType)EditorGUILayout.EnumPopup(
-            "Trait To Apply",
-            _roomTraitDebugSelection);
+        var traitValues = (SectorRoomTraitType[])Enum.GetValues(typeof(SectorRoomTraitType));
+        int traitIndex = Array.IndexOf(traitValues, _roomTraitDebugSelection);
+        string[] traitLabels = Array.ConvertAll(traitValues, DebugRoomTraitName);
+        _roomTraitDebugSelection = traitValues[EditorGUILayout.Popup("시험 적용할 이상징후", Mathf.Max(0, traitIndex), traitLabels)];
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("Apply Runtime Trait"))
+            if (GUILayout.Button("현재 섹터에 시험 적용"))
             {
                 traits.SetDebugRoomTraitOverride(_roomTraitDebugSelection);
                 EditorApplication.QueuePlayerLoopUpdate();
@@ -359,7 +393,7 @@ public sealed partial class DebugMonitorWindow
 
             using (new EditorGUI.DisabledScope(!traits.HasDebugRoomTraitOverride))
             {
-                if (GUILayout.Button("Restore Rolled Trait"))
+                if (GUILayout.Button("생성 당시 이상징후로 복원"))
                 {
                     traits.ClearDebugRoomTraitOverride();
                     _roomTraitDebugSelection = traits.SelectedRoomTrait;
@@ -370,6 +404,49 @@ public sealed partial class DebugMonitorWindow
                 }
             }
         }
+    }
+
+    internal static string DebugRoomTraitName(SectorRoomTraitType trait) => trait switch
+    {
+        SectorRoomTraitType.Normal => "없음 (Normal)",
+        SectorRoomTraitType.Darkness => "어둠 — 시야 감소 (Darkness)",
+        SectorRoomTraitType.Armed => "적 종합 강화 — 기존 규칙 (Armed)",
+        SectorRoomTraitType.AmmoScavenger => "탄약 소모 증가 (AmmoScavenger)",
+        SectorRoomTraitType.Fear => "공포 — 부상 확률 증가 (Fear)",
+        SectorRoomTraitType.EnemyDamage => "적 공격 피해 증가 (EnemyDamage)",
+        SectorRoomTraitType.GasBoost => "가스 농도 증가 (GasBoost)",
+        _ => trait.ToString()
+    };
+
+    internal static string DebugRoomTraitDescription(SectorRoomTraitRuntime traits)
+    {
+        if (traits == null) return "섹터 없음";
+        switch (traits.SelectedRoomTrait)
+        {
+            case SectorRoomTraitType.Darkness:
+                return $"시야 거리 ×{SectorRoomTraitRuntime.CurrentPlayerVisionRangeMultiplier:0.##} · " +
+                       $"안개 알파 ×{SectorRoomTraitRuntime.CurrentPlayerFogAlphaMultiplier:0.##} (현재 플레이어 기준)";
+            case SectorRoomTraitType.AmmoScavenger:
+                return $"탄약 소모 ×{SectorRoomTraitRuntime.CurrentPlayerAmmoConsumptionMultiplier} (현재 플레이어 기준)";
+            case SectorRoomTraitType.Fear:
+                return $"부상 발생 확률 ×{SectorRoomTraitRuntime.CurrentPlayerInjuryChanceMultiplier:0.##} (현재 플레이어 기준)";
+            case SectorRoomTraitType.EnemyDamage:
+            case SectorRoomTraitType.Armed:
+                return DebugEnemyTraitDescription(traits);
+            case SectorRoomTraitType.GasBoost:
+                return $"현재 섹터 가스 감염 {traits.CurrentBiochemicalGasInfectionPerSecond:0.##}/초. " +
+                       "가스가 활성화되지 않은 섹터에서는 효과가 없습니다.";
+            default: return "추가 섹터 이상징후 없음. 스테이지 기본 가스·시간초과 가스는 별도로 적용됩니다.";
+        }
+    }
+
+    private static string DebugEnemyTraitDescription(SectorRoomTraitRuntime traits)
+    {
+        foreach (var modifier in traits.GetComponentsInChildren<SectorEnemyTraitModifier>(true))
+            return $"생성된 적 적용값: 공격 피해 ×{modifier.AttackDamageMultiplier:0.##} · " +
+                   $"최대 체력 ×{modifier.MaxHealthMultiplier:0.##} · 이동 속도 ×{modifier.MoveSpeedMultiplier:0.##} · " +
+                   $"방탄 등급 +{modifier.ArmorClassBonus}";
+        return "생성된 적의 강화 컴포넌트가 아직 없습니다. 적 생성 후 실제 적용값을 표시합니다.";
     }
 
     // Purpose: Draws the stage definition list authoring UI.
@@ -394,6 +471,55 @@ public sealed partial class DebugMonitorWindow
                     string.IsNullOrWhiteSpace(stage.DisplayName) ? stage.name : stage.DisplayName);
             }
         }
+    }
+
+    // Purpose: Ends the debug raid through the production extraction transaction.
+    private void ExtractDebugRaidToHome(RaidRuntime raid)
+    {
+        if (raid == null)
+        {
+            SetRaidExtractionStatus("진행 중인 RaidRuntime을 찾지 못했습니다.", MessageType.Error);
+            return;
+        }
+        Transform playerRoot = ResolveDebugPlayerRoot();
+        PlayerInventoryRuntime inventory = playerRoot != null
+            ? EntityComponentResolver.Resolve<PlayerInventoryRuntime>(playerRoot) : null;
+        if (inventory == null)
+        {
+            SetRaidExtractionStatus("탈출할 플레이어 인벤토리를 찾지 못했습니다.", MessageType.Error);
+            return;
+        }
+        SetRaidExtractionStatus("강제 탈출 요청 · 실제 탈출 경로로 HOME에 복귀합니다.", MessageType.Info);
+        try
+        {
+            bool accepted = raid.DebugTryExtractCurrentSector(inventory, success =>
+            {
+                if (this == null) return;
+                string failure = raid != null && !string.IsNullOrWhiteSpace(raid.LastExtractionFailure)
+                    ? raid.LastExtractionFailure : "HOME 복귀가 완료되지 않았습니다. SceneLoader 로그를 확인하세요.";
+                SetRaidExtractionStatus(success ? "레이드 탈출 완료 · HOME 복귀/실제 탈출 저장 처리." : "강제 탈출 실패: " + failure,
+                    success ? MessageType.Info : MessageType.Error);
+                RefreshRows(); Repaint();
+            });
+            if (!accepted) SetRaidExtractionStatus("강제 탈출 거절: " +
+                (string.IsNullOrWhiteSpace(raid.LastExtractionFailure) ? "탈출 요청을 시작하지 못했습니다." : raid.LastExtractionFailure), MessageType.Warning);
+        }
+        catch (Exception error)
+        {
+            SetRaidExtractionStatus("탈출 처리 예외: " + error.Message, MessageType.Error);
+            Debug.LogException(error);
+        }
+    }
+
+    private void SetRaidExtractionStatus(string message, MessageType type)
+    {
+        _raidExtractionStatus = message;
+        _raidExtractionStatusType = type;
+        string log = "[DebugMonitor][RaidExtraction] " + message;
+        if (type == MessageType.Error) Debug.LogError(log);
+        else if (type == MessageType.Warning) Debug.LogWarning(log);
+        else Debug.Log(log);
+        Repaint();
     }
 
     // Purpose: Performs the return debug player to start hub workflow for this component.

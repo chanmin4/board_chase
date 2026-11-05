@@ -1,946 +1,347 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Authoring window for the single Home-shop configuration asset. It exposes
-/// catalog weights and the persistent stage/quest unlock tree in one place.
+/// Shop Maker 창의 탐색/레이아웃. 기존 클래스와 .meta를 유지하여 열린 창의 연결도 보존한다.
+/// 데이터 변경은 ShopMakerAuthoring, 선택 항목 편집은 .Workbench 파일이 담당한다.
 /// </summary>
-public sealed class ShopProgressionTreeWindow : EditorWindow
+public sealed partial class ShopProgressionTreeWindow : EditorWindow
 {
-    private const string DefaultConfigFolder = "Assets/ScriptableObject/GameScene/Shop";
-
-    private enum ShopCatalogView
+    [SerializeField] private ShopConfigSO _config;
+    [SerializeField] private List<UnityEngine.Object> _pendingSaves = new();
+    [SerializeField] private string _selectedProductId = "", _selectedGroupId = "";
+    [SerializeField] private int _page, _productTab;
+    private List<QuestDefinitionSO> _quests = new();
+    private string _search = "", _category = "", _newGroupName = "New unlock group";
+    private MakerSelectionUiState _selectionUi;
+    private MakerSelectionUiState SelectionUi => _selectionUi ??= new MakerSelectionUiState();
+    private ItemSO _registrationItem;
+    private Vector2 _categoryScroll, _catalogScroll, _workbenchScroll;
+    private float _leftWidth = 215, _rightWidth = 400;
+    private int _draggingSplit;
+    private bool _guide;
+    private string _notice;
+    private List<string> _validation;
+    internal Action<string, Rect> ObserveControl;
+    private Vector2 _guiScreenOrigin;
+    private void Observe(string id, Rect rect)
     {
-        Setup,
-        Products
+        if (ObserveControl == null || Event.current.type != EventType.Repaint) return;
+        rect.position = GUIUtility.GUIToScreenPoint(rect.position) - _guiScreenOrigin;
+        ObserveControl(id, rect);
     }
 
-    private ShopConfigSO _config;
-    private Vector2 _catalogScrollPosition;
-    private Vector2 _treeScrollPosition;
-    private Vector2 _nodeScrollPosition;
-    private int _selectedNodeIndex = -1;
-    private int _selectedProductIndex = -1;
-    private int _prerequisiteToAddIndex;
-    private int _productToAddIndex;
-    private ShopCatalogView _catalogView;
+    private static string Pref(string key) => "BoardChase.ShopMaker." + Application.dataPath + "." + key;
+    [MenuItem("Tools/Authoring/Shop Maker")]
+    public static void Open() => GetWindow<ShopProgressionTreeWindow>("Shop Maker").Show();
 
-    [MenuItem("Tools/Authoring/Shop Progression Tree")]
-    // Purpose: Opens the open UI or workflow.
-    private static void Open()
+    public static void OpenForGroup(ShopConfigSO config, string nodeId)
     {
-        ShopProgressionTreeWindow window = GetWindow<ShopProgressionTreeWindow>("Shop Progression Tree");
-        window.minSize = new Vector2(1180f, 640f);
+        var window = GetWindow<ShopProgressionTreeWindow>("Shop Maker");
+        window._config = config; window._selectedGroupId = nodeId; window._page = 1;
+        window.SelectionUi.SelectionClicked();
+        window._showLegacyUnlocks = true;
+        window.Show(); window.Repaint();
     }
 
-    // Purpose: Activates runtime subscriptions and refreshes the enabled state.
+    public static void OpenForProduct(ShopConfigSO config, string productId)
+    {
+        var window = GetWindow<ShopProgressionTreeWindow>("Shop Maker");
+        window._config = config; window._selectedProductId = productId; window._page = 0; window._productTab = 2;
+        window.SelectionUi.SelectionClicked();
+        window._category = window._search = ""; window._workbenchScroll = Vector2.zero;
+        window.Show(); window.Repaint();
+    }
+
+    public static void OpenForQuest(ShopConfigSO config, QuestDefinitionSO quest)
+    {
+        var window = GetWindow<ShopProgressionTreeWindow>("Shop Maker");
+        window._config = config; window._selectedUnlockQuest = quest; window._page = 1; window._showLegacyUnlocks = false;
+        window.SelectionUi.SelectionClicked();
+        window._workbenchScroll = Vector2.zero; window.RefreshCatalog(); window.Show(); window.Repaint();
+    }
+
     private void OnEnable()
     {
-        FindDefaultConfig();
+        titleContent = new GUIContent("Shop Maker");
+        minSize = new Vector2(1060, 600);
+        _leftWidth = EditorPrefs.GetFloat(Pref("LeftWidth"), 215);
+        _rightWidth = EditorPrefs.GetFloat(Pref("RightWidth"), 400);
+        _guide = EditorPrefs.GetBool(Pref("Guide"), true);
+        if (_config == null)
+        {
+            _config = AssetDatabase.LoadAssetAtPath<ShopConfigSO>("Assets/ScriptableObject/GameScene/Shop/HomeShopConfig.asset");
+            if (_config == null) _config = AssetDatabase.FindAssets("t:ShopConfigSO").Select(g =>
+                AssetDatabase.LoadAssetAtPath<ShopConfigSO>(AssetDatabase.GUIDToAssetPath(g))).FirstOrDefault();
+        }
+        RefreshCatalog();
+        Undo.undoRedoPerformed += OnUndo;
+        EditorApplication.projectChanged += OnProjectChanged;
+        ShopMakerAuthoring.Changed += Track;
+    }
+    private void OnDisable()
+    {
+        Undo.undoRedoPerformed -= OnUndo;
+        EditorApplication.projectChanged -= OnProjectChanged;
+        ShopMakerAuthoring.Changed -= Track;
+    }
+    private void OnUndo() { _validation = null; Repaint(); }
+    private void OnProjectChanged() { RefreshCatalog(); Repaint(); }
+    private void RefreshCatalog()
+    {
+        _quests = AssetDatabase.FindAssets("t:QuestDefinitionSO")
+            .Select(g => AssetDatabase.LoadAssetAtPath<QuestDefinitionSO>(AssetDatabase.GUIDToAssetPath(g)))
+            .Where(q => q != null).OrderBy(q => q.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+        _validation = null;
+    }
+    private void Track(UnityEngine.Object asset)
+    {
+        if (asset == null || !AssetDatabase.Contains(asset)) return;
+        if (asset != null && !_pendingSaves.Contains(asset)) _pendingSaves.Add(asset);
+        _validation = null; Repaint();
+    }
+    private void SaveTrackedAssets()
+    {
+        // 전역 SaveAssets로 다른 편집창/씬의 미저장 작업을 함께 저장하지 않는다.
+        foreach (var asset in _pendingSaves.Where(a => a != null).ToArray()) AssetDatabase.SaveAssetIfDirty(asset);
+        _pendingSaves.RemoveAll(a => a == null || !EditorUtility.IsDirty(a));
+        ShowNotification(new GUIContent("Shop Maker changes saved"));
     }
 
-    // Purpose: Responds to the gui callback.
     private void OnGUI()
     {
-        AuthoringWorkspaceUi.DrawHeader(
-            "Home Shop Progression Tree",
-            "Owner: Economy / Progression",
-            "One ShopConfigSO owns catalog, item-payment trades, offer weights, and unlock rules. Run stock resets on player death.",
-            "1 Config",
-            "2 Economy",
-            "3 Catalog",
-            "4 Unlock Tree",
-            "5 Validate");
-
-        DrawConfigSection();
-
-        if (_config != null)
+        _guiScreenOrigin = GUIUtility.GUIToScreenPoint(Vector2.zero);
+        EditorGUILayout.LabelField("SHOP MAKER", EditorStyles.boldLabel);
+        using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
         {
-            SerializedObject serialized = new SerializedObject(_config);
-            serialized.Update();
-
-            float paneHeight = Mathf.Max(420f, position.height - 178f);
-            SerializedProperty nodes = serialized.FindProperty("_unlockNodes");
-            SerializedProperty products = serialized.FindProperty("_products");
-            using (new EditorGUILayout.HorizontalScope())
+            EditorGUI.BeginChangeCheck();
+            var next = (ShopConfigSO)EditorGUILayout.ObjectField(_config, typeof(ShopConfigSO), false, GUILayout.MinWidth(160));
+            if (EditorGUI.EndChangeCheck()) { _config = next; _selectedProductId = _selectedGroupId = ""; _validation = null; }
+            if (GUILayout.Button("New Shop...", EditorStyles.toolbarButton, GUILayout.Width(85))) CreateConfig();
+            if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(65))) RefreshCatalog();
+            if (GUILayout.Button("Item Maker", EditorStyles.toolbarButton, GUILayout.Width(85))) EditorApplication.ExecuteMenuItem("Tools/Authoring/Item Maker");
+            if (GUILayout.Button("Guide", EditorStyles.toolbarButton, GUILayout.Width(50)))
+            { _guide = !_guide; EditorPrefs.SetBool(Pref("Guide"), _guide); }
+            using (new EditorGUI.DisabledScope(_config == null))
+                if (GUILayout.Button("Check", EditorStyles.toolbarButton, GUILayout.Width(52)))
+                { _validation = ShopMakerAuthoring.Validate(_config, _quests); _page = 2; }
+            if (GUILayout.Button("Save" + (_pendingSaves.Any(a => a != null && EditorUtility.IsDirty(a)) ? " *" : ""),
+                    EditorStyles.toolbarButton, GUILayout.Width(60))) SaveTrackedAssets();
+        }
+        if (_guide)
+            EditorGUILayout.HelpBox("① ItemSO를 드래그해 상품 등록  →  ② 기본 가격·재고 설정  →  ③ 처음부터 판매 또는 퀘스트 해금 연결\n" +
+                "판매 해금 상품은 Quest Maker의 보상에서 ItemSO로 선택합니다. '퀘스트별 판매 해금'에서 연결을 확인하세요. 해금은 다음 재입고 추첨의 후보 추가이며 즉시 진열 보장이 아닙니다. 변경 후 Save · Ctrl+Z: Undo", MessageType.Info);
+        if (_config == null) { EditorGUILayout.HelpBox("Shop Config를 선택하거나 New Shop으로 시작하세요.", MessageType.Info); return; }
+        _page = GUILayout.Toolbar(_page, new[] { "상품 목록", "퀘스트별 판매 해금", "상점 설정 / 검사" }, GUILayout.Height(26));
+        if (!string.IsNullOrEmpty(_notice)) EditorGUILayout.HelpBox(_notice, MessageType.Info);
+        float height = Mathf.Max(250, position.height - (_guide ? 142 : 94) - (!string.IsNullOrEmpty(_notice) ? 40 : 0));
+        ClampWidths();
+        using (new EditorGUILayout.HorizontalScope(GUILayout.Height(height)))
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(_leftWidth), GUILayout.Height(height)))
+                DrawNavigation();
+            DrawSplitter(1, height);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.Height(height)))
             {
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(320f), GUILayout.Height(paneHeight)))
+                if (_page == 0) DrawCatalog();
+                else if (_page == 1) DrawQuestUnlockCatalog();
+                else DrawSettings();
+            }
+            if (_page != 2)
+            {
+                DrawSplitter(2, height);
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(_rightWidth), GUILayout.Height(height)))
                 {
-                    DrawShopCatalogPane(serialized, products);
-                }
-
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.Height(paneHeight)))
-                    DrawTreeGraphPane(nodes, products, paneHeight);
-
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(340f), GUILayout.Height(paneHeight)))
-                {
-                    DrawPaneHeader(
-                        HasSelectedProduct(products) ? "PRODUCT INSPECTOR" : "UNLOCK INSPECTOR",
-                        HasSelectedProduct(products)
-                            ? "Edit the selected shop offer, stock, probability, and item-payment requirements."
-                            : "Select a graph node, then define its requirements and unlocked products.");
-                    _nodeScrollPosition = EditorGUILayout.BeginScrollView(_nodeScrollPosition);
-                    DrawShopContextInspector(serialized, nodes, products);
+                    _workbenchScroll = EditorGUILayout.BeginScrollView(_workbenchScroll);
+                    if (_page == 0) DrawProductWorkbench();
+                    else if (_showLegacyUnlocks) DrawGroupWorkbench();
+                    else DrawQuestUnlockWorkbench();
                     EditorGUILayout.EndScrollView();
                 }
             }
-
-            if (serialized.ApplyModifiedProperties())
-                EditorUtility.SetDirty(_config);
         }
     }
 
-    // Purpose: Draws the pane header authoring UI.
-    private static void DrawPaneHeader(string title, string description)
+    private void ClampWidths()
     {
-        EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
-        EditorGUILayout.LabelField(description, EditorStyles.miniLabel);
-        EditorGUILayout.Space(3f);
+        _rightWidth = Mathf.Clamp(_rightWidth, 320, Mathf.Max(320, position.width - 510));
+        _leftWidth = Mathf.Clamp(_leftWidth, 160, Mathf.Max(160, position.width - _rightWidth - 350));
     }
-
-    // Purpose: Draws the config section authoring UI.
-    private void DrawConfigSection()
+    private void DrawSplitter(int id, float height)
     {
-        EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("1. Shop Config", EditorStyles.boldLabel);
-
-        EditorGUI.BeginChangeCheck();
-        _config = (ShopConfigSO)EditorGUILayout.ObjectField(
-            "Shop Config SO",
-            _config,
-            typeof(ShopConfigSO),
-            false);
-
-        if (EditorGUI.EndChangeCheck())
+        Rect rect = GUILayoutUtility.GetRect(6, height, GUILayout.Width(6), GUILayout.ExpandHeight(true));
+        Observe("split:" + id, rect);
+        EditorGUIUtility.AddCursorRect(rect, MouseCursor.ResizeHorizontal);
+        EditorGUI.DrawRect(new Rect(rect.center.x - 1, rect.y, 2, rect.height), new Color(.25f, .45f, .5f));
+        var e = Event.current;
+        int control = GUIUtility.GetControlID(0x5140 + id, FocusType.Passive, rect);
+        if (e.type == EventType.MouseDown && e.button == 0 && rect.Contains(e.mousePosition))
+        { _draggingSplit = id; GUIUtility.hotControl = control; e.Use(); }
+        if (_draggingSplit == id && e.type == EventType.MouseDrag)
+        { if (id == 1) _leftWidth += e.delta.x; else _rightWidth -= e.delta.x; ClampWidths(); e.Use(); Repaint(); }
+        if (_draggingSplit == id && e.type == EventType.MouseUp)
         {
-            _selectedNodeIndex = -1;
-            _selectedProductIndex = -1;
+            _draggingSplit = 0; GUIUtility.hotControl = 0;
+            EditorPrefs.SetFloat(Pref("LeftWidth"), _leftWidth); EditorPrefs.SetFloat(Pref("RightWidth"), _rightWidth); e.Use();
         }
+    }
 
+    private void DrawNavigation()
+    {
+        EditorGUILayout.LabelField(_page == 0 ? "ITEM CATEGORIES" : "WORKFLOW", EditorStyles.boldLabel);
+        if (_page != 0)
+        {
+            EditorGUILayout.HelpBox(_page == 1
+                ? "① 퀘스트 선택\n② Quest Maker에서 '상점 판매 해금' 보상 추가\n③ 해금할 ItemSO 추가 → Save\n\n여기서는 퀘스트별 상품 연결과 가격·판매 조건을 확인합니다."
+                : "설정은 현재 Shop Config에 적용됩니다. 가격은 상품 목록에서 ItemSO를 직접 편집합니다.", MessageType.None);
+            if (GUILayout.Button("← 상품 목록")) _page = 0;
+            return;
+        }
+        _categoryScroll = EditorGUILayout.BeginScrollView(_categoryScroll);
+        NavButton("", "All Items", _config.Products.Count);
+        var items = _config.Products.Where(p => p?.Item != null).Select(p => p.Item).ToList();
+        foreach (var family in new[] { ("Weapon", "Weapons"), ("Bullet", "Bullets"), ("Consumable", "Consumables") })
+        {
+            bool Match(ItemSO item)
+            {
+                string key = ItemMakerWindow.LootCategoryKey(item);
+                return family.Item1 == "Consumable" ? key == "Consumable" || key == "Medical" || key == "Throwable" : key.StartsWith(family.Item1, StringComparison.Ordinal);
+            }
+            var members = items.Where(Match).ToList();
+            if (members.Count == 0) continue;
+            string pref = Pref("Category." + family.Item1);
+            bool expanded = EditorPrefs.GetBool(pref, true);
+            bool next = EditorGUILayout.Foldout(expanded, family.Item2 + " (" + members.Count + ")", true);
+            if (next != expanded) EditorPrefs.SetBool(pref, next);
+            if (next) DrawCategoryButtons(members);
+        }
+        DrawCategoryButtons(items.Where(i => { string k = ItemMakerWindow.LootCategoryKey(i); return !k.StartsWith("Weapon") && !k.StartsWith("Bullet") && k != "Consumable" && k != "Medical" && k != "Throwable"; }));
+        EditorGUILayout.EndScrollView();
+        EditorGUILayout.LabelField("분류는 ItemSO 기준입니다.\n상품 등록은 가운데로 드래그하세요.", EditorStyles.wordWrappedMiniLabel);
+    }
+    private void DrawCategoryButtons(IEnumerable<ItemSO> items)
+    {
+        foreach (var category in items.GroupBy(ItemMakerWindow.LootCategoryKey).OrderBy(g => ItemMakerWindow.LootCategoryOrder(g.First())))
+            NavButton(category.Key, ItemMakerWindow.LootCategoryLabel(category.First()), category.Count());
+    }
+    private void NavButton(string key, string label, int count)
+    {
+        Color old = GUI.backgroundColor;
+        if (_category == key) GUI.backgroundColor = new Color(.3f, .65f, .8f);
+        if (GUILayout.Button(label + " (" + count + ")", GUILayout.Height(24))) { _category = key; _catalogScroll = Vector2.zero; }
+        GUI.backgroundColor = old;
+    }
+
+    private void DrawCatalog()
+    {
+        EditorGUILayout.LabelField("SHOP PRODUCTS", EditorStyles.boldLabel);
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("Create Shop Config..."))
-                CreateConfigAsset();
-
-            using (new EditorGUI.DisabledScope(_config == null))
+            _registrationItem = (ItemSO)EditorGUILayout.ObjectField(_registrationItem, typeof(ItemSO), false);
+            using (new EditorGUI.DisabledScope(_registrationItem == null))
+                if (GUILayout.Button("+ 등록", GUILayout.Width(60))) RegisterItems(new[] { _registrationItem });
+        }
+        if (_registrationItem != null)
+            MakerRegistrationUi.ItemSummary(_registrationItem, _config.Products.Any(p => p?.Item == _registrationItem)
+                ? "이 상점에 등록됨 — 다시 등록하면 기존 상품을 선택" : "이 상점에는 미등록");
+        Rect drop = GUILayoutUtility.GetRect(1, 38, GUILayout.ExpandWidth(true));
+        GUI.Box(drop, "Item Maker / Project의 ItemSO를 여기에 드래그\n중복 등록은 기존 상품을 선택합니다.", EditorStyles.helpBox);
+        var e = Event.current;
+        if (drop.Contains(e.mousePosition) && (e.type == EventType.DragUpdated || e.type == EventType.DragPerform))
+        {
+            var items = DragAndDrop.objectReferences.OfType<ItemSO>().Where(AssetDatabase.Contains).ToArray();
+            if (items.Length > 0)
             {
-                if (GUILayout.Button("Select Config"))
-                {
-                    Selection.activeObject = _config;
-                    EditorGUIUtility.PingObject(_config);
-                }
+                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                if (e.type == EventType.DragPerform) { DragAndDrop.AcceptDrag(); RegisterItems(items); }
+                e.Use();
             }
         }
-
-    }
-
-    // Purpose: Draws the economy section authoring UI.
-    private static void DrawEconomySection(SerializedObject serialized)
-    {
-        EditorGUILayout.Space(8f);
-        EditorGUILayout.LabelField("2. Home Shop Economy", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serialized.FindProperty("_configId"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_bulletOfferCount"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_itemOfferCount"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_allowDuplicateBulletOffers"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_allowDuplicateItemOffers"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_restockIntervalSeconds"));
-        EditorGUILayout.Space(3f);
-        EditorGUILayout.LabelField("PHYSICAL PAYMENT", EditorStyles.miniBoldLabel);
-        EditorGUILayout.PropertyField(serialized.FindProperty("_defaultCurrencyItem"), new GUIContent("Default Money Item"));
-        EditorGUILayout.HelpBox(
-            "Every catalog offer uses the item-payment window. A product with no explicit barter rows uses this Money Item at its Default Money Amount. Add explicit rows below for combinations such as Battery x2 + Weapon x1.",
-            MessageType.Info);
-        EditorGUILayout.PropertyField(serialized.FindProperty("_rerollCost"), new GUIContent("Reroll Cost (WIP Numeric)"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_sellPriceRate"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_armorRepairPriceRate"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_allowReroll"));
-
-        EditorGUILayout.Space(3f);
-        EditorGUILayout.LabelField("Always Available Infection Control Service", EditorStyles.miniBoldLabel);
-        EditorGUILayout.PropertyField(serialized.FindProperty("_infectionControlRecoveryItem"));
-        EditorGUILayout.HelpBox(
-            "The assigned recovery item takes one Item offer slot, has unlimited stock, restores Infection Control immediately, and raises its own price after each purchase during the run.",
-            MessageType.None);
-    }
-
-    // Purpose: Draws the catalog section authoring UI.
-    private void DrawCatalogSection(SerializedObject serialized)
-    {
-        EditorGUILayout.Space(8f);
-        EditorGUILayout.LabelField("3. Product Catalog, Trade, and Roll Weight", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox(
-            "One row is one shop product. Payment is always physical items: leave explicit rows empty to use Default Money Item, or add one or more rows for barter. Weight is the appearance probability among currently unlocked products in the same Bullet or Item section.",
-            MessageType.None);
-
-        SerializedProperty products = serialized.FindProperty("_products");
-
-        for (int i = 0; i < products.arraySize; i++)
+        _search = EditorGUILayout.TextField("Search", _search);
+        using (new EditorGUILayout.HorizontalScope())
         {
-            SerializedProperty product = products.GetArrayElementAtIndex(i);
-
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
+            EditorGUILayout.LabelField("등급 → 카테고리 → 이름", EditorStyles.miniLabel);
+            if (GUILayout.Button("Expand All", EditorStyles.miniButton)) SetRarityFoldouts(true);
+            if (GUILayout.Button("Collapse All", EditorStyles.miniButton)) SetRarityFoldouts(false);
+        }
+        var rows = ShopMakerAuthoring.SortedProducts(_config, _category, _search);
+        _catalogScroll = EditorGUILayout.BeginScrollView(_catalogScroll);
+        foreach (var group in rows.GroupBy(i => _config.Products[i].Item != null ? _config.Products[i].Item.Rarity.ToString() : "Missing Item"))
+        {
+            string key = Pref("Rarity." + group.Key);
+            bool open = EditorPrefs.GetBool(key, true);
+            bool next = EditorGUILayout.Foldout(open, group.Key + " (" + group.Count() + ")", true, EditorStyles.foldoutHeader);
+            Observe("rarity:" + group.Key, GUILayoutUtility.GetLastRect());
+            if (next != open) EditorPrefs.SetBool(key, next);
+            if (!next) continue;
+            int columns = Mathf.Max(1, Mathf.FloorToInt((position.width - _leftWidth - _rightWidth - 65) / 145));
+            var indices = group.ToArray();
+            for (int start = 0; start < indices.Length; start += columns)
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.LabelField($"Product {i + 1}", EditorStyles.boldLabel);
-
-                    if (GUILayout.Button("Remove", GUILayout.Width(62f)))
-                    {
-                        products.DeleteArrayElementAtIndex(i);
-                        _selectedNodeIndex = -1;
-                        break;
-                    }
+                    for (int j = start; j < Math.Min(indices.Length, start + columns); j++) DrawCard(indices[j]);
+                    GUILayout.FlexibleSpace();
                 }
-
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_productId"));
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_item"));
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_availableByDefault"));
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_offerWeight"));
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_stock"));
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_bundleAmount"));
-                EditorGUILayout.PropertyField(product.FindPropertyRelative("_priceOverride"), new GUIContent("Default Money Amount"));
-                DrawProductTradeRequirements(product);
-            }
         }
-
-        if (GUILayout.Button("Add Product"))
-            AddProduct(products);
-    }
-
-    // Purpose: Draws the left asset-store-style shop catalogue and switches between global setup and product cards.
-    private void DrawShopCatalogPane(SerializedObject serialized, SerializedProperty products)
-    {
-        DrawPaneHeader("SHOP CATALOG", "Use Setup for global shop rules, then select a product card to edit one offer at a time.");
-
-        using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
-        {
-            Color originalColor = GUI.backgroundColor;
-            if (_catalogView == ShopCatalogView.Setup)
-                GUI.backgroundColor = new Color(0.18f, 0.56f, 0.68f, 0.78f);
-            if (GUILayout.Button("Shop Setup", EditorStyles.toolbarButton))
-                _catalogView = ShopCatalogView.Setup;
-
-            GUI.backgroundColor = _catalogView == ShopCatalogView.Products
-                ? new Color(0.18f, 0.56f, 0.68f, 0.78f)
-                : originalColor;
-            if (GUILayout.Button($"Products ({products.arraySize})", EditorStyles.toolbarButton))
-                _catalogView = ShopCatalogView.Products;
-
-            GUI.backgroundColor = originalColor;
-        }
-
-        _catalogScrollPosition = EditorGUILayout.BeginScrollView(_catalogScrollPosition);
-        if (_catalogView == ShopCatalogView.Setup)
-            DrawEconomySection(serialized);
-        else
-            DrawProductCatalogBrowser(products);
+        if (rows.Count == 0) EditorGUILayout.HelpBox("표시할 상품이 없습니다. 필터를 바꾸거나 ItemSO를 등록하세요.", MessageType.Info);
         EditorGUILayout.EndScrollView();
     }
-
-    // Purpose: Draws each shop product as a selectable card instead of exposing every product's full property tree at once.
-    private void DrawProductCatalogBrowser(SerializedProperty products)
+    private void SetRarityFoldouts(bool value)
     {
-        EditorGUILayout.LabelField("PRODUCT ASSETS", EditorStyles.miniBoldLabel);
-        EditorGUILayout.LabelField(
-            "One card is one possible shop offer. Select it to edit price or barter requirements in the right inspector.",
-            EditorStyles.wordWrappedMiniLabel);
-
-        if (GUILayout.Button("+ Add Product", GUILayout.Height(24f)))
+        foreach (var p in _config.Products.Where(p => p != null))
+            EditorPrefs.SetBool(Pref("Rarity." + (p.Item != null ? p.Item.Rarity.ToString() : "Missing Item")), value);
+    }
+    private void RegisterItems(IEnumerable<ItemSO> items)
+    {
+        Undo.IncrementCurrentGroup(); int undo = Undo.GetCurrentGroup();
+        foreach (var item in items)
         {
-            AddProduct(products);
-            _selectedProductIndex = products.arraySize - 1;
-            _selectedNodeIndex = -1;
+            int index = ShopMakerAuthoring.Register(_config, item);
+            _selectedProductId = _config.Products[index].ProductId;
         }
-
-        EditorGUILayout.Space(4f);
-        for (int index = 0; index < products.arraySize; index++)
-            DrawProductCard(products, index);
-
-        if (products.arraySize == 0)
-            EditorGUILayout.HelpBox("This shop has no products yet. Add one product, then choose its ItemSO and payment in the right inspector.", MessageType.Info);
+        Undo.CollapseUndoOperations(undo);
+        _category = _search = ""; _registrationItem = null; SetRarityFoldouts(true);
+        _notice = null; Repaint();
+    }
+    private void DrawCard(int index)
+    {
+        var p = _config.Products[index];
+        string registrationText = p.Item != null ? MakerRegistrationIndex.Current.For(p.Item).LootLabel : "";
+        float registrationHeight = Mathf.Max(37, MakerRegistrationUi.BadgeHeight(registrationText, 128));
+        float height = 177 + registrationHeight;
+        Rect r = GUILayoutUtility.GetRect(140, height, GUILayout.Width(140), GUILayout.Height(height));
+        Color old = GUI.backgroundColor;
+        if (_selectedProductId == p.ProductId) GUI.backgroundColor = new Color(.3f, .65f, .8f);
+        if (GUI.Button(r, GUIContent.none)) { SelectionUi.SelectionClicked(); _selectedProductId = p.ProductId; _workbenchScroll = Vector2.zero; }
+        GUI.backgroundColor = old;
+        Observe("product:" + p.ProductId, r);
+        if (p.Item != null)
+        {
+            Texture texture = p.Item.PreviewImage != null ? p.Item.PreviewImage.texture : AssetPreview.GetAssetPreview(p.Item);
+            if (texture == null) texture = AssetPreview.GetMiniThumbnail(p.Item);
+            if (texture != null) GUI.DrawTexture(new Rect(r.x + 30, r.y + 5, 80, 75), texture, ScaleMode.ScaleToFit);
+            if (AssetPreview.IsLoadingAssetPreviews()) Repaint();
+        }
+        GUI.Label(new Rect(r.x + 6, r.y + 82, 128, 34), new GUIContent(p.Item != null ? p.Item.name : "Missing Item", p.ProductId), EditorStyles.wordWrappedMiniLabel);
+        GUI.Label(new Rect(r.x + 6, r.y + 117, 128, 18), p.UsesPhysicalPayment ? "물물교환" : "가격 " + p.ResolvePrice(), EditorStyles.miniLabel);
+        GUI.Label(new Rect(r.x + 6, r.y + 136, 128, 18), p.AvailableByDefault ? "처음부터 추첨 가능" : "퀘스트 해금 필요", EditorStyles.miniLabel);
+        GUI.Label(new Rect(r.x + 6, r.y + 151, 128, 18), "재고 " + p.Stock + "  |  비중 " + p.OfferWeight.ToString("0.##"), EditorStyles.miniLabel);
+        MakerRegistrationUi.Badge(new Rect(r.x + 6, r.y + 173, 128, registrationHeight), p.Item);
     }
 
-    // Purpose: Renders one concise product card containing only authoring identity, stock, and roll-weight summary data.
-    private void DrawProductCard(SerializedProperty products, int index)
+    private void CreateConfig()
     {
-        SerializedProperty product = products.GetArrayElementAtIndex(index);
-        ItemSO item = product.FindPropertyRelative("_item").objectReferenceValue as ItemSO;
-        bool selected = index == _selectedProductIndex;
-        Color originalColor = GUI.backgroundColor;
-        if (selected)
-            GUI.backgroundColor = new Color(0.16f, 0.58f, 0.70f, 0.78f);
-
-        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                Texture preview = item != null && item.PreviewImage != null
-                    ? item.PreviewImage.texture
-                    : Texture2D.grayTexture;
-                if (GUILayout.Button(new GUIContent(preview, "Select this product"), GUILayout.Width(42f), GUILayout.Height(42f)))
-                {
-                    _selectedProductIndex = index;
-                    _selectedNodeIndex = -1;
-                }
-
-                using (new EditorGUILayout.VerticalScope())
-                {
-                    string productId = product.FindPropertyRelative("_productId").stringValue;
-                    EditorGUILayout.LabelField(item != null ? item.name : "Unassigned Item", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField(string.IsNullOrWhiteSpace(productId) ? "Missing Product Id" : productId, EditorStyles.miniLabel);
-                    int weight = product.FindPropertyRelative("_offerWeight").intValue;
-                    int stock = product.FindPropertyRelative("_stock").intValue;
-                    EditorGUILayout.LabelField($"Weight {weight}  |  Stock {stock}", EditorStyles.miniLabel);
-                }
-            }
-        }
-
-        GUI.backgroundColor = originalColor;
-    }
-
-    // Purpose: Routes the right panel to the selected product or the selected unlock node without mixing the two authoring jobs.
-    private void DrawShopContextInspector(
-        SerializedObject serialized,
-        SerializedProperty nodes,
-        SerializedProperty products)
-    {
-        if (HasSelectedProduct(products))
-        {
-            DrawSelectedProductEditor(products);
-            return;
-        }
-
-        DrawNodeInspectorPane(serialized, nodes);
-    }
-
-    // Purpose: Checks whether the stored product-card selection is still valid after catalog changes.
-    private bool HasSelectedProduct(SerializedProperty products)
-    {
-        return _selectedProductIndex >= 0 && _selectedProductIndex < products.arraySize;
-    }
-
-    // Purpose: Edits exactly one selected shop offer so long product arrays remain readable.
-    private void DrawSelectedProductEditor(SerializedProperty products)
-    {
-        SerializedProperty product = products.GetArrayElementAtIndex(_selectedProductIndex);
-        EditorGUILayout.LabelField($"Product {_selectedProductIndex + 1}", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_productId"));
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_item"));
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_availableByDefault"));
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_offerWeight"));
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_stock"));
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_bundleAmount"));
-        EditorGUILayout.PropertyField(product.FindPropertyRelative("_priceOverride"), new GUIContent("Default Money Amount"));
-        DrawProductTradeRequirements(product);
-
-        EditorGUILayout.Space(6f);
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            ItemSO item = product.FindPropertyRelative("_item").objectReferenceValue as ItemSO;
-            using (new EditorGUI.DisabledScope(item == null))
-            {
-                if (GUILayout.Button("Select Item Asset"))
-                    Selection.activeObject = item;
-            }
-
-            if (GUILayout.Button("Remove Product"))
-            {
-                products.DeleteArrayElementAtIndex(_selectedProductIndex);
-                _selectedProductIndex = Mathf.Clamp(_selectedProductIndex, -1, products.arraySize - 1);
-            }
-        }
-    }
-
-    // Purpose: Draws one product's optional multi-item barter requirements in a compact, author-friendly list.
-    private static void DrawProductTradeRequirements(SerializedProperty product)
-    {
-        SerializedProperty requirements = product.FindPropertyRelative("_tradeRequirements");
-        if (requirements == null)
-            return;
-
-        EditorGUILayout.Space(2f);
-        EditorGUILayout.LabelField("ITEM PAYMENT / BARTER", EditorStyles.miniBoldLabel);
-
-        if (requirements.arraySize == 0)
-        {
-            EditorGUILayout.HelpBox(
-                "No explicit barter rows. This product uses Default Money Item × Default Money Amount.",
-                MessageType.None);
-        }
-        else
-        {
-            for (int requirementIndex = 0; requirementIndex < requirements.arraySize; requirementIndex++)
-            {
-                SerializedProperty requirement = requirements.GetArrayElementAtIndex(requirementIndex);
-                SerializedProperty item = requirement.FindPropertyRelative("_item");
-                SerializedProperty amount = requirement.FindPropertyRelative("_amount");
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    EditorGUILayout.PropertyField(item, GUIContent.none);
-                    EditorGUILayout.PropertyField(amount, GUIContent.none, GUILayout.Width(64f));
-
-                    if (GUILayout.Button("X", GUILayout.Width(24f)))
-                    {
-                        requirements.DeleteArrayElementAtIndex(requirementIndex);
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (GUILayout.Button("+ Add Required Item"))
-        {
-            requirements.arraySize++;
-            SerializedProperty added = requirements.GetArrayElementAtIndex(requirements.arraySize - 1);
-            added.FindPropertyRelative("_amount").intValue = 1;
-        }
-    }
-
-    // Purpose: Draws the tree graph pane authoring UI.
-    private void DrawTreeGraphPane(SerializedProperty nodes, SerializedProperty products, float paneHeight)
-    {
-        DrawPaneHeader("UNLOCK FLOW", "Conditions flow forward into product unlocks. Click a node to edit it.");
-        EditorGUILayout.HelpBox(
-            "Top half = unlock gates. Bottom half = products granted by this node. Arrows mean prerequisite node requirements.",
-            MessageType.None);
-
-        DrawTreeCanvas(nodes, products, paneHeight - 112f);
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            if (GUILayout.Button("Add Unlock Node"))
-            {
-                AddUnlockNode(nodes);
-                _selectedNodeIndex = nodes.arraySize - 1;
-                _selectedProductIndex = -1;
-            }
-
-        }
-    }
-
-    // Purpose: Draws the node inspector pane authoring UI.
-    private void DrawNodeInspectorPane(SerializedObject serialized, SerializedProperty nodes)
-    {
-        using (new EditorGUI.DisabledScope(_selectedNodeIndex < 0 || _selectedNodeIndex >= nodes.arraySize))
-        {
-            if (GUILayout.Button("Remove Selected Node"))
-            {
-                nodes.DeleteArrayElementAtIndex(_selectedNodeIndex);
-                _selectedNodeIndex = Mathf.Clamp(_selectedNodeIndex, -1, nodes.arraySize - 1);
-            }
-        }
-
-        if (_selectedNodeIndex < 0 || _selectedNodeIndex >= nodes.arraySize)
-        {
-            EditorGUILayout.HelpBox("Select an unlock node in the graph to edit it here.", MessageType.Info);
-            return;
-        }
-
-        DrawSelectedNodeEditor(serialized, nodes.GetArrayElementAtIndex(_selectedNodeIndex), nodes);
-    }
-
-    // Purpose: Draws the tree canvas authoring UI.
-    private void DrawTreeCanvas(SerializedProperty nodes, SerializedProperty products, float availableHeight)
-    {
-        const float nodeWidth = 235f;
-        const float nodeHeight = 132f;
-        const float columnGap = 42f;
-        const float rowGap = 22f;
-        const float minimumHeight = 240f;
-
-        Dictionary<string, int> indexById = BuildNodeIndex(nodes);
-        Dictionary<int, int> depthByIndex = new Dictionary<int, int>();
-        Dictionary<int, int> rowByIndex = new Dictionary<int, int>();
-        Dictionary<int, int> nextRowByDepth = new Dictionary<int, int>();
-        Dictionary<int, Rect> rectByIndex = new Dictionary<int, Rect>();
-
-        for (int i = 0; i < nodes.arraySize; i++)
-        {
-            int depth = ResolveNodeDepth(i, nodes, indexById, depthByIndex, new HashSet<int>());
-            if (!nextRowByDepth.TryGetValue(depth, out int row))
-                row = 0;
-
-            rowByIndex[i] = row;
-            nextRowByDepth[depth] = row + 1;
-        }
-
-        int maxDepth = 0;
-        int maxRow = 0;
-
-        foreach (KeyValuePair<int, int> pair in depthByIndex)
-            maxDepth = Mathf.Max(maxDepth, pair.Value);
-        foreach (KeyValuePair<int, int> pair in rowByIndex)
-            maxRow = Mathf.Max(maxRow, pair.Value);
-
-        float contentWidth = 24f + (maxDepth + 1) * (nodeWidth + columnGap);
-        float contentHeight = Mathf.Max(minimumHeight, 22f + (maxRow + 1) * (nodeHeight + rowGap));
-
-        _treeScrollPosition = EditorGUILayout.BeginScrollView(
-            _treeScrollPosition,
-            GUILayout.Height(Mathf.Max(180f, Mathf.Min(availableHeight, contentHeight + 18f))));
-
-        Rect canvas = GUILayoutUtility.GetRect(contentWidth, contentHeight);
-        EditorGUI.DrawRect(canvas, new Color(0.055f, 0.09f, 0.11f));
-
-        for (int i = 0; i < nodes.arraySize; i++)
-        {
-            int depth = depthByIndex[i];
-            int row = rowByIndex[i];
-            rectByIndex[i] = new Rect(
-                canvas.x + 12f + depth * (nodeWidth + columnGap),
-                canvas.y + 12f + row * (nodeHeight + rowGap),
-                nodeWidth,
-                nodeHeight);
-        }
-
-        if (Event.current.type == EventType.Repaint)
-        {
-            Handles.BeginGUI();
-            Handles.color = new Color(0.26f, 0.78f, 0.82f, 0.9f);
-
-            for (int i = 0; i < nodes.arraySize; i++)
-            {
-                SerializedProperty prerequisites = nodes.GetArrayElementAtIndex(i)
-                    .FindPropertyRelative("_prerequisiteNodeIds");
-
-                for (int prerequisiteIndex = 0; prerequisiteIndex < prerequisites.arraySize; prerequisiteIndex++)
-                {
-                    string id = prerequisites.GetArrayElementAtIndex(prerequisiteIndex).stringValue;
-
-                    if (!indexById.TryGetValue(id, out int sourceIndex) ||
-                        !rectByIndex.TryGetValue(sourceIndex, out Rect source) ||
-                        !rectByIndex.TryGetValue(i, out Rect target))
-                    {
-                        continue;
-                    }
-
-                    Vector3 start = new Vector3(source.xMax, source.center.y, 0f);
-                    Vector3 end = new Vector3(target.xMin, target.center.y, 0f);
-                    Handles.DrawAAPolyLine(2.5f, start, end);
-                    DrawArrowHead(end, Vector3.right);
-                }
-            }
-
-            Handles.EndGUI();
-        }
-
-        for (int i = 0; i < nodes.arraySize; i++)
-        {
-            SerializedProperty node = nodes.GetArrayElementAtIndex(i);
-            Rect rect = rectByIndex[i];
-            bool selected = i == _selectedNodeIndex;
-            EditorGUI.DrawRect(rect, selected ? new Color(0.10f, 0.34f, 0.40f) : new Color(0.08f, 0.20f, 0.24f));
-
-            string title = node.FindPropertyRelative("_displayName").stringValue;
-            if (string.IsNullOrWhiteSpace(title))
-                title = node.FindPropertyRelative("_nodeId").stringValue;
-
-            int minimumStage = node.FindPropertyRelative("_minimumHighestUnlockedStageIndex").intValue;
-            int questCount = node.FindPropertyRelative("_requiredCompletedQuests").arraySize;
-            SerializedProperty prerequisites = node.FindPropertyRelative("_prerequisiteNodeIds");
-            SerializedProperty productIds = node.FindPropertyRelative("_unlockedProductIds");
-            int prerequisiteCount = prerequisites.arraySize;
-            int productCount = productIds.arraySize;
-            string gateSummary = minimumStage >= 0 ? $"Stage gate: {minimumStage}" : "Stage gate: none";
-            string requirementSummary = $"Requires: {prerequisiteCount} node(s), {questCount} quest(s)";
-            string rewardSummary = BuildUnlockedProductPreview(productIds, products);
-            EditorGUI.DrawRect(new Rect(rect.x + 6f, rect.y + 31f, rect.width - 12f, 39f), new Color(0f, 0f, 0f, 0.16f));
-            EditorGUI.DrawRect(new Rect(rect.x + 6f, rect.y + 73f, rect.width - 12f, 51f), new Color(0f, 0f, 0f, 0.10f));
-            GUI.Label(new Rect(rect.x + 8f, rect.y + 8f, rect.width - 16f, 20f), title, EditorStyles.boldLabel);
-            GUI.Label(new Rect(rect.x + 10f, rect.y + 35f, rect.width - 20f, 16f), gateSummary, EditorStyles.miniLabel);
-            GUI.Label(new Rect(rect.x + 10f, rect.y + 52f, rect.width - 20f, 16f), requirementSummary, EditorStyles.miniLabel);
-            GUI.Label(new Rect(rect.x + 10f, rect.y + 77f, rect.width - 20f, 14f), "UNLOCKS", EditorStyles.miniBoldLabel);
-            GUI.Label(new Rect(rect.x + 10f, rect.y + 94f, rect.width - 20f, 16f), rewardSummary, EditorStyles.miniLabel);
-            GUI.Label(new Rect(rect.x + 10f, rect.y + 111f, rect.width - 20f, 14f), $"{productCount} product(s)", EditorStyles.miniLabel);
-
-            if (GUI.Button(rect, GUIContent.none, GUIStyle.none))
-            {
-                _selectedNodeIndex = i;
-                _selectedProductIndex = -1;
-                GUI.FocusControl(null);
-            }
-        }
-
-        EditorGUILayout.EndScrollView();
-    }
-
-    // Purpose: Builds the unlocked product preview from the current authored data.
-    private static string BuildUnlockedProductPreview(SerializedProperty productIds, SerializedProperty products)
-    {
-        if (productIds == null || productIds.arraySize == 0)
-            return "No product reward";
-
-        string firstId = productIds.GetArrayElementAtIndex(0).stringValue;
-        string firstLabel = ResolveProductLabel(products, firstId);
-        if (productIds.arraySize == 1)
-            return TruncateForNode(firstLabel);
-
-        return $"{TruncateForNode(firstLabel)} +{productIds.arraySize - 1}";
-    }
-
-    // Purpose: Performs the truncate for node workflow for this component.
-    private static string TruncateForNode(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "Unnamed product";
-
-        return value.Length <= 28 ? value : value.Substring(0, 25) + "...";
-    }
-
-    // Purpose: Draws the selected node editor authoring UI.
-    private void DrawSelectedNodeEditor(
-        SerializedObject serialized,
-        SerializedProperty node,
-        SerializedProperty allNodes)
-    {
-        EditorGUILayout.Space(5f);
-        EditorGUILayout.LabelField("1. NODE IDENTITY", EditorStyles.miniBoldLabel);
-        EditorGUILayout.PropertyField(node.FindPropertyRelative("_nodeId"));
-        EditorGUILayout.PropertyField(node.FindPropertyRelative("_displayName"));
-        EditorGUILayout.PropertyField(node.FindPropertyRelative("_description"));
-        EditorGUILayout.Space(4f);
-        EditorGUILayout.LabelField("2. UNLOCK GATES", EditorStyles.miniBoldLabel);
-        EditorGUILayout.PropertyField(node.FindPropertyRelative("_minimumHighestUnlockedStageIndex"));
-        EditorGUILayout.PropertyField(node.FindPropertyRelative("_requiredCompletedQuests"), true);
-
-        Dictionary<string, int> nodeIndexById = BuildNodeIndex(allNodes);
-        DrawNodePrerequisites(node.FindPropertyRelative("_prerequisiteNodeIds"), allNodes, nodeIndexById);
-        DrawNodeProducts(node.FindPropertyRelative("_unlockedProductIds"), serialized.FindProperty("_products"));
-    }
-
-    // Purpose: Draws the node prerequisites authoring UI.
-    private void DrawNodePrerequisites(
-        SerializedProperty prerequisites,
-        SerializedProperty allNodes,
-        Dictionary<string, int> nodeIndexById)
-    {
-        EditorGUILayout.Space(4f);
-        EditorGUILayout.LabelField("3. REQUIRED UNLOCK NODES", EditorStyles.miniBoldLabel);
-
-        List<string> labels = new List<string> { "< Select prerequisite >" };
-        List<string> ids = new List<string> { string.Empty };
-
-        for (int i = 0; i < allNodes.arraySize; i++)
-        {
-            if (i == _selectedNodeIndex)
-                continue;
-
-            SerializedProperty candidate = allNodes.GetArrayElementAtIndex(i);
-            string id = candidate.FindPropertyRelative("_nodeId").stringValue;
-            string displayName = candidate.FindPropertyRelative("_displayName").stringValue;
-
-            if (string.IsNullOrWhiteSpace(id))
-                continue;
-
-            labels.Add(string.IsNullOrWhiteSpace(displayName) ? id : $"{displayName} ({id})");
-            ids.Add(id);
-        }
-
-        _prerequisiteToAddIndex = Mathf.Clamp(_prerequisiteToAddIndex, 0, labels.Count - 1);
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            _prerequisiteToAddIndex = EditorGUILayout.Popup("Add prerequisite", _prerequisiteToAddIndex, labels.ToArray());
-
-            using (new EditorGUI.DisabledScope(_prerequisiteToAddIndex <= 0))
-            {
-                if (GUILayout.Button("Add", GUILayout.Width(52f)))
-                {
-                    string id = ids[_prerequisiteToAddIndex];
-
-                    if (!ContainsString(prerequisites, id) && !WouldCreateCycle(id, CurrentNodeId(allNodes)))
-                    {
-                        prerequisites.arraySize++;
-                        prerequisites.GetArrayElementAtIndex(prerequisites.arraySize - 1).stringValue = id;
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < prerequisites.arraySize; i++)
-        {
-            string id = prerequisites.GetArrayElementAtIndex(i).stringValue;
-            string label = nodeIndexById.TryGetValue(id, out int nodeIndex)
-                ? allNodes.GetArrayElementAtIndex(nodeIndex).FindPropertyRelative("_displayName").stringValue
-                : "Missing node";
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField(string.IsNullOrWhiteSpace(label) ? id : $"{label} ({id})");
-
-                if (GUILayout.Button("Remove", GUILayout.Width(62f)))
-                {
-                    prerequisites.DeleteArrayElementAtIndex(i);
-                    break;
-                }
-            }
-        }
-    }
-
-    // Purpose: Draws the node products authoring UI.
-    private void DrawNodeProducts(SerializedProperty productIds, SerializedProperty products)
-    {
-        EditorGUILayout.Space(4f);
-        EditorGUILayout.LabelField("4. PRODUCT REWARDS", EditorStyles.miniBoldLabel);
-
-        List<string> labels = new List<string> { "< Select product >" };
-        List<string> ids = new List<string> { string.Empty };
-
-        for (int i = 0; i < products.arraySize; i++)
-        {
-            SerializedProperty product = products.GetArrayElementAtIndex(i);
-            string id = product.FindPropertyRelative("_productId").stringValue;
-            ItemSO item = product.FindPropertyRelative("_item").objectReferenceValue as ItemSO;
-
-            if (string.IsNullOrWhiteSpace(id))
-                continue;
-
-            labels.Add(item != null ? $"{item.name} ({id})" : id);
-            ids.Add(id);
-        }
-
-        _productToAddIndex = Mathf.Clamp(_productToAddIndex, 0, labels.Count - 1);
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            _productToAddIndex = EditorGUILayout.Popup("Add product", _productToAddIndex, labels.ToArray());
-
-            using (new EditorGUI.DisabledScope(_productToAddIndex <= 0))
-            {
-                if (GUILayout.Button("Add", GUILayout.Width(52f)))
-                {
-                    string id = ids[_productToAddIndex];
-
-                    if (!ContainsString(productIds, id))
-                    {
-                        productIds.arraySize++;
-                        productIds.GetArrayElementAtIndex(productIds.arraySize - 1).stringValue = id;
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < productIds.arraySize; i++)
-        {
-            string id = productIds.GetArrayElementAtIndex(i).stringValue;
-            string label = ResolveProductLabel(products, id);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField(label);
-
-                if (GUILayout.Button("Remove", GUILayout.Width(62f)))
-                {
-                    productIds.DeleteArrayElementAtIndex(i);
-                    break;
-                }
-            }
-        }
-    }
-
-    // Purpose: Adds the requested product to this component.
-    private void AddProduct(SerializedProperty products)
-    {
-        products.arraySize++;
-        SerializedProperty product = products.GetArrayElementAtIndex(products.arraySize - 1);
-        product.FindPropertyRelative("_productId").stringValue = $"product_{products.arraySize}";
-        product.FindPropertyRelative("_offerWeight").floatValue = 1f;
-        product.FindPropertyRelative("_stock").intValue = 1;
-        product.FindPropertyRelative("_bundleAmount").intValue = 1;
-        product.FindPropertyRelative("_priceOverride").intValue = -1;
-    }
-
-    // Purpose: Adds the requested unlock node to this component.
-    private void AddUnlockNode(SerializedProperty nodes)
-    {
-        nodes.arraySize++;
-        SerializedProperty node = nodes.GetArrayElementAtIndex(nodes.arraySize - 1);
-        node.FindPropertyRelative("_nodeId").stringValue = $"unlock_{nodes.arraySize}";
-        node.FindPropertyRelative("_displayName").stringValue = $"Shop Unlock {nodes.arraySize}";
-        node.FindPropertyRelative("_minimumHighestUnlockedStageIndex").intValue = -1;
-    }
-
-    // Purpose: Creates the config asset owned by this workflow.
-    private void CreateConfigAsset()
-    {
-        string path = EditorUtility.SaveFilePanelInProject(
-            "Create Home Shop Config",
-            "HomeShopConfig",
-            "asset",
-            "Choose where to save the single Home-shop catalog and progression tree.",
-            DefaultConfigFolder);
-
-        if (string.IsNullOrWhiteSpace(path))
-            return;
-
-        _config = CreateInstance<ShopConfigSO>();
-        AssetDatabase.CreateAsset(_config, path);
-        AssetDatabase.SaveAssets();
-        Selection.activeObject = _config;
-        EditorGUIUtility.PingObject(_config);
-    }
-
-    // Purpose: Builds the node index from the current authored data.
-    private static Dictionary<string, int> BuildNodeIndex(SerializedProperty nodes)
-    {
-        Dictionary<string, int> result = new Dictionary<string, int>(StringComparer.Ordinal);
-
-        for (int i = 0; i < nodes.arraySize; i++)
-        {
-            string id = nodes.GetArrayElementAtIndex(i).FindPropertyRelative("_nodeId").stringValue;
-
-            if (!string.IsNullOrWhiteSpace(id) && !result.ContainsKey(id))
-                result.Add(id, i);
-        }
-
-        return result;
-    }
-
-    // Purpose: Resolves the node depth needed by this component.
-    private static int ResolveNodeDepth(
-        int nodeIndex,
-        SerializedProperty nodes,
-        Dictionary<string, int> indexById,
-        Dictionary<int, int> cache,
-        HashSet<int> path)
-    {
-        if (cache.TryGetValue(nodeIndex, out int cached))
-            return cached;
-
-        if (!path.Add(nodeIndex))
-            return 0;
-
-        int depth = 0;
-        SerializedProperty prerequisites = nodes.GetArrayElementAtIndex(nodeIndex)
-            .FindPropertyRelative("_prerequisiteNodeIds");
-
-        for (int i = 0; i < prerequisites.arraySize; i++)
-        {
-            if (indexById.TryGetValue(prerequisites.GetArrayElementAtIndex(i).stringValue, out int prerequisiteIndex))
-            {
-                depth = Mathf.Max(
-                    depth,
-                    ResolveNodeDepth(prerequisiteIndex, nodes, indexById, cache, path) + 1);
-            }
-        }
-
-        path.Remove(nodeIndex);
-        cache[nodeIndex] = depth;
-        return depth;
-    }
-
-    // Purpose: Performs the would create cycle workflow for this component.
-    private bool WouldCreateCycle(string proposedPrerequisiteId, string currentNodeId)
-    {
-        if (string.IsNullOrWhiteSpace(proposedPrerequisiteId) || string.IsNullOrWhiteSpace(currentNodeId))
-            return false;
-
-        SerializedObject serialized = new SerializedObject(_config);
-        SerializedProperty nodes = serialized.FindProperty("_unlockNodes");
-        Dictionary<string, int> indexById = BuildNodeIndex(nodes);
-
-        if (!indexById.TryGetValue(proposedPrerequisiteId, out int startIndex))
-            return false;
-
-        return HasPrerequisitePath(startIndex, currentNodeId, nodes, indexById, new HashSet<int>());
-    }
-
-    // Purpose: Checks whether this component has prerequisite path.
-    private static bool HasPrerequisitePath(
-        int index,
-        string targetNodeId,
-        SerializedProperty nodes,
-        Dictionary<string, int> indexById,
-        HashSet<int> visited)
-    {
-        if (!visited.Add(index))
-            return false;
-
-        SerializedProperty prerequisites = nodes.GetArrayElementAtIndex(index)
-            .FindPropertyRelative("_prerequisiteNodeIds");
-
-        for (int i = 0; i < prerequisites.arraySize; i++)
-        {
-            string id = prerequisites.GetArrayElementAtIndex(i).stringValue;
-
-            if (id == targetNodeId)
-                return true;
-
-            if (indexById.TryGetValue(id, out int nextIndex) &&
-                HasPrerequisitePath(nextIndex, targetNodeId, nodes, indexById, visited))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    // Purpose: Performs the current node id workflow for this component.
-    private string CurrentNodeId(SerializedProperty nodes)
-    {
-        return _selectedNodeIndex >= 0 && _selectedNodeIndex < nodes.arraySize
-            ? nodes.GetArrayElementAtIndex(_selectedNodeIndex).FindPropertyRelative("_nodeId").stringValue
-            : string.Empty;
-    }
-
-    // Purpose: Performs the contains string workflow for this component.
-    private static bool ContainsString(SerializedProperty values, string value)
-    {
-        for (int i = 0; i < values.arraySize; i++)
-        {
-            if (values.GetArrayElementAtIndex(i).stringValue == value)
-                return true;
-        }
-
-        return false;
-    }
-
-    // Purpose: Resolves the product label needed by this component.
-    private static string ResolveProductLabel(SerializedProperty products, string id)
-    {
-        for (int i = 0; i < products.arraySize; i++)
-        {
-            SerializedProperty product = products.GetArrayElementAtIndex(i);
-
-            if (product.FindPropertyRelative("_productId").stringValue != id)
-                continue;
-
-            ItemSO item = product.FindPropertyRelative("_item").objectReferenceValue as ItemSO;
-            return item != null ? $"{item.name} ({id})" : id;
-        }
-
-        return $"Missing product ({id})";
-    }
-
-    // Purpose: Draws the arrow head authoring UI.
-    private static void DrawArrowHead(Vector3 end, Vector3 direction)
-    {
-        Vector3 perpendicular = new Vector3(-direction.y, direction.x, 0f);
-        Vector3[] arrow =
-        {
-            end,
-            end - direction * 9f + perpendicular * 4f,
-            end - direction * 9f - perpendicular * 4f
-        };
-        Handles.DrawAAConvexPolygon(arrow);
-    }
-
-    // Purpose: Finds the requested default config.
-    private void FindDefaultConfig()
-    {
-        if (_config != null)
-            return;
-
-        string[] guids = AssetDatabase.FindAssets("t:ShopConfigSO");
-
-        if (guids.Length > 0)
-            _config = AssetDatabase.LoadAssetAtPath<ShopConfigSO>(AssetDatabase.GUIDToAssetPath(guids[0]));
+        string path = EditorUtility.SaveFilePanelInProject("New Shop", "ShopConfig", "asset", "새 상점 설정 저장 위치");
+        if (string.IsNullOrWhiteSpace(path)) return;
+        if (AssetDatabase.LoadMainAssetAtPath(path) != null) { _notice = "기존 에셋을 덮어쓸 수 없습니다."; return; }
+        var config = CreateInstance<ShopConfigSO>();
+        var so = new SerializedObject(config);
+        so.FindProperty("_configId").stringValue = "shop_" + Guid.NewGuid().ToString("N");
+        so.ApplyModifiedPropertiesWithoutUndo();
+        AssetDatabase.CreateAsset(config, path); _config = config;
+        _selectedProductId = _selectedGroupId = ""; _page = 2; _validation = null;
     }
 }
-
-#pragma warning restore CS0618

@@ -35,7 +35,7 @@ MonoBehaviour:
   _rarity: 1
   _purchasePrice: 10
   _worldVisualPrefab: {fileID: 1557910113621458, guid: 49e1983eb579f1c4b9bebeb6e3b40e86, type: 3}
-  _maxStack: 10
+  _maxStack: 1
   _maxOwnedAmount: 0
   _usableId: usable
   _usableDisplayName: Usable Item
@@ -44,6 +44,9 @@ MonoBehaviour:
   _heldViewLocalEulerAngles: {x: 0, y: 0, z: 0}
   _heldViewLocalScale: {x: 1, y: 1, z: 1}
   _healAmount: 30
+  _maxDurability: 100
+  _durabilityCostPerUse: 25
+  _bleedingStacksRemoved: 3
   _markRecoveryAmount: 0
   _useDurationSeconds: 4
   _appliedStatusEffect: {fileID: 0}

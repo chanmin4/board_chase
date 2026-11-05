@@ -504,12 +504,28 @@ public sealed class LootProgressionConfigSO : ScriptableObject
             if (lockedLootProfile != null)
                 rollCount += lockedLootProfile.GetAdditionalRollCount(random);
 
+            StageEquipmentLootDistribution equipment = null;
+            if (StageEquipmentLootDistribution.AppliesToStage(stageIndex))
+            {
+                equipment = GetStageEquipmentDistribution(pool, stageIndex, lockedLootProfile);
+                if (!equipment.HasLeveledEquipment) equipment = null;
+            }
+
             for (int i = 0; i < rollCount; i++)
             {
+                if (equipment != null)
+                {
+                    var row = equipment.Pick(random);
+                    if (row == null) continue;
+                    int min = Mathf.Max(1, row.Entry.minAmount), max = Mathf.Max(min, row.Entry.maxAmount);
+                    int amount = min + (int)(random.NextDouble() * ((long)max - min + 1));
+                    PassiveInstanceRuntime.Append(results, row.Entry.item, amount, row.Rarity, random);
+                    continue;
+                }
                 if (!TryRollOne(pool, random, lockedLootProfile, out LootRollResult result))
                     continue;
 
-                results.Add(result);
+                PassiveInstanceRuntime.Append(results, result.Item, result.Amount, result.Rarity, random);
             }
         }
 
@@ -519,6 +535,16 @@ public sealed class LootProgressionConfigSO : ScriptableObject
         TryAppendGlobalValuable(random, results);
 
         return results.Count > 0;
+    }
+
+    public static StageEquipmentLootDistribution GetStageEquipmentDistribution(LootStagePool pool, int stageIndex, LockedLootProfileSO profile = null)
+    {
+        var distribution = new StageEquipmentLootDistribution();
+        if (pool?.rarityTiers != null)
+            foreach (var tier in pool.rarityTiers)
+                distribution.AddTier(tier, new LootCategorySelection(tier, null), GetTierWeight(tier, profile));
+        distribution.ApplyStage(stageIndex);
+        return distribution;
     }
 
     /// <summary>

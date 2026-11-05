@@ -51,6 +51,7 @@ public class PlayerShooterShoot : EntityShootCore
     private float _invalidActionHideAt;
 
     public SoundStimulusEventChannelSO SoundStimulusEventChannel => _soundStimulusEvent;
+    public void PublishWeaponMalfunctionMessage(string message) => _systemMessageChannel?.RaiseEvent(message, 5f);
 
     private Transform VisualFireOrigin =>
         _equipmentController != null && _equipmentController.VisualFireOrigin != null
@@ -169,7 +170,7 @@ public class PlayerShooterShoot : EntityShootCore
         if (GameplayActionInputBlocker.IsAttackBlocked)
             return false;
 
-        // A shot cannot overlap the fallback swing if reload/equipment changes mid-swing.
+        // V키 나이프 공격 중에는 총을 발사하지 않습니다.
         ShooterMeleeAttack melee = EntityComponentResolver.Resolve<ShooterMeleeAttack>(this);
         if (melee != null && melee.IsAttacking) return false;
 
@@ -185,8 +186,11 @@ public class PlayerShooterShoot : EntityShootCore
         if (!_bulletLoadout.TryGetActiveBullet(ammoType, out BulletSO selectedBullet) ||
             selectedBullet == null)
         {
-            ShowMissingAmmoFeedback(ammoType);
-            return false;
+            // 탄종도 남아 있지 않은 0/0 상태는 자동 근접공격 대신 빈탄 소리만 냅니다.
+            if (!_aimAction.CanFireNowFor(ammoType))
+                return false;
+            dryFire = true;
+            return true;
         }
 
         if (!rangedWeapon.IsCompatibleWith(selectedBullet))
@@ -194,6 +198,9 @@ public class PlayerShooterShoot : EntityShootCore
             ShowIncompatibleAmmoFeedback(rangedWeapon, selectedBullet);
             return false;
         }
+
+        if (!GameProgressionRuntime.CanUse(rangedWeapon,out string levelMessage) || !GameProgressionRuntime.CanUse(selectedBullet,out levelMessage))
+        { PublishWeaponMalfunctionMessage(levelMessage); return false; }
 
         EntityEquipmentRuntime equipmentRuntime = _equipmentController.EquipmentRuntime;
         if (equipmentRuntime != null && !equipmentRuntime.CanFireCurrentWeapon)
@@ -210,6 +217,8 @@ public class PlayerShooterShoot : EntityShootCore
             dryFire = true;
             return true;
         }
+
+        if (_aimAction.CheckWeaponMalfunction(rangedWeapon)) return false;
 
         return true;
     }
@@ -234,6 +243,9 @@ public class PlayerShooterShoot : EntityShootCore
             return false;
 
         EntityShootStats stats = BuildPrimaryStats(bullet);
+        stats.headshotCandidate = _aimAction.CaptureHeadshotCandidate();
+        stats.headshotDamageMultiplier = _equipmentController != null && _equipmentController.CurrentWeapon is RangedWeaponSO weapon
+            ? weapon.HeadshotDamageMultiplier : 1f;
 
         Transform visualFireOrigin = VisualFireOrigin;
         Transform rangeOrigin = RangeOrigin;

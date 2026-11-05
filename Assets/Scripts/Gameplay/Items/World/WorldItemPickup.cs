@@ -14,6 +14,8 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class WorldItemPickup : MonoBehaviour
 {
+    private bool _awardsDiscovery=true; // Authored field items count; spawned player drops explicitly opt out.
+    public void SetDiscoveryEligibility(bool eligible)=>_awardsDiscovery=eligible;
     [Header("Visual")]
     [Tooltip("Child transform that receives ItemSO.WorldVisualPrefab. Keep this separate from the trigger collider and prompt anchor.")]
     [SerializeField] private Transform _visualRoot;
@@ -158,7 +160,7 @@ public sealed class WorldItemPickup : MonoBehaviour
         float armorMaxDurability,
         float gasMaskMaxFilterDurability)
     {
-        _item = item;
+        _item = PassiveInstanceRuntime.Create(item);
         _amount = Mathf.Max(1, amount);
         _bulletBundleAmount = Mathf.Max(1, bulletBundleAmount);
         _bulletSellPriceRate = Mathf.Clamp01(bulletSellPriceRate);
@@ -188,6 +190,11 @@ public sealed class WorldItemPickup : MonoBehaviour
                 weaponCurrentDurability >= 0f ? weaponCurrentDurability : _weaponMaxDurability,
                 0f,
                 _weaponMaxDurability);
+        }
+        else if (item is ConsumableItemSO medical && medical.UsesDurability)
+        {
+            _weaponMaxDurability = weaponMaxDurability > 0f ? Mathf.Min(weaponMaxDurability, medical.MaxDurability) : medical.MaxDurability;
+            _weaponCurrentDurability = Mathf.Clamp(weaponCurrentDurability >= 0f ? weaponCurrentDurability : _weaponMaxDurability, 0f, _weaponMaxDurability);
         }
         else
         {
@@ -281,6 +288,11 @@ public sealed class WorldItemPickup : MonoBehaviour
                 _weaponMaxDurability,
                 out message);
         }
+        else if (_item is ConsumableItemSO medical && medical.UsesDurability)
+        {
+            picked = inventory.TryPickupMedicalCondition(medical, _amount,
+                _weaponCurrentDurability, _weaponMaxDurability, out message);
+        }
         else if (_item is GasMaskItemSO gasMask)
         {
             picked = inventory.TryPickupGasMaskLoot(
@@ -306,6 +318,10 @@ public sealed class WorldItemPickup : MonoBehaviour
         }
 
         _pickedUp = true;
+        if(GameProgressionRuntime.InRaid)
+            EntityComponentResolver.Resolve<PlayerShooterInfection>(inventory)?.AddExposure(InfectionAggravationStatusSO.Active?.Settings.itemPickupExposure??0);
+        if(_awardsDiscovery&&GameProgressionRuntime.InRaid)
+            GameProgressionRuntime.Discover("pickup:"+GameProgressionRuntime.Identity(this),ExperienceRulesSO.Active?.experience.Discovery(_item.Rarity)??0);
         PickedUp?.Invoke(this);
 
         if (_destroyOnPickup)

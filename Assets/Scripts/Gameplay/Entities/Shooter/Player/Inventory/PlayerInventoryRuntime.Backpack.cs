@@ -1,6 +1,6 @@
 /*
  * Role hierarchy: Gameplay > Entities > Shooter > Player > Inventory
- * Primary responsibility: Owns the player's pocket and equipped-backpack boundary.
+ * Primary responsibility: Owns pocket, permanent inventory, and backpack bonus-slot boundaries.
  * Execution boundary: Runtime (Assembly-CSharp)
  */
 
@@ -12,40 +12,30 @@ public partial class PlayerInventoryRuntime
 {
     [Header("Pocket & Backpack")]
     [Tooltip("Always-available inventory slots. Removing a bag never removes these slots.")]
-    [SerializeField, Min(0)] private int _pocketCapacity = 2;
+    [SerializeField, HideInInspector, Min(0)] private int _pocketCapacity = 2;
 
-    [Tooltip("The bag currently worn by the player. Its contents are the inventory slots after the pocket range.")]
+    [Tooltip("The equipped bag adds its SO slot count to the character Config's base Inventory capacity; Pocket is separate.")]
     [SerializeField] private BackpackItemSO _equippedBackpack;
-
-    [Tooltip("Compatibility bridge for existing prefabs and saves created before backpacks. It is cleared as soon as the player equips or drops a bag.")]
-    [SerializeField] private bool _useLegacyBackpackCapacityFallback = true;
 
     public event Action<BackpackItemSO> BackpackChanged;
 
     public BackpackItemSO EquippedBackpack => _equippedBackpack;
     public bool HasEquippedBackpack => _equippedBackpack != null;
-    public int PocketCapacity => Mathf.Min(ResolveLegacyInventoryCapacity(), Mathf.Max(0, _pocketCapacity));
-    public int BackpackCapacity =>
-        _equippedBackpack != null
-            ? _equippedBackpack.InventorySlotCapacity
-            : _useLegacyBackpackCapacityFallback
-                ? Mathf.Max(0, ResolveLegacyInventoryCapacity() - PocketCapacity)
-                : 0;
+    private ShooterInventorySettings InventorySettings => _statsRuntime != null ? _statsRuntime.InventorySettings : null;
+    public int PocketCapacity => Mathf.Clamp((InventorySettings?.PocketCapacity ?? 6) + (SaveSystem.Active?.Profile.PocketSlotBonus ?? 0), 6, 10);
+    public int BaseInventoryCapacity => (InventorySettings?.BaseInventoryCapacity ?? 4)+Mathf.FloorToInt(_statsRuntime?.AdditionalStat(PlayerStatId.InventorySlots)??0);
+    /// <summary>Bonus slots supplied by the equipped bag, not the whole Inventory grid.</summary>
+    public int BackpackCapacity => _equippedBackpack != null ? _equippedBackpack.InventorySlotCapacity : 0;
+    public int InventoryCapacity => BaseInventoryCapacity + BackpackCapacity;
+    public int CapacityWithoutBackpack => PocketCapacity + BaseInventoryCapacity;
     public float BackpackMoveSpeedMultiplier =>
         _equippedBackpack != null ? _equippedBackpack.MoveSpeedMultiplier : 1f;
 
-    // Purpose: Resolves the total inventory capacity from pocket and equipped backpack state.
+    // Absolute slots: [Config Pocket][Config base Inventory][equipped backpack bonus].
+    // Only the final range belongs to the detachable backpack payload.
     private int ResolveBackpackInventoryCapacity()
     {
-        return Mathf.Max(0, PocketCapacity + BackpackCapacity);
-    }
-
-    // Purpose: Resolves the capacity used by content authored before backpack equipment existed.
-    private int ResolveLegacyInventoryCapacity()
-    {
-        return _statsRuntime != null && _statsRuntime.InventoryCapacity > 0
-            ? _statsRuntime.InventoryCapacity
-            : Mathf.Max(0, _inventoryCapacity);
+        return PocketCapacity + InventoryCapacity;
     }
 
     // Purpose: Equips a backpack from a standard inventory slot without losing any owned stacks.
@@ -57,7 +47,7 @@ public partial class PlayerInventoryRuntime
         if (_equippedBackpack != null)
             return Fail("Drop the equipped backpack before equipping another one.", out message);
 
-        if (!CanFitCurrentInventoryInCapacity(PocketCapacity + backpack.InventorySlotCapacity, index))
+        if (!CanFitCurrentInventoryInCapacity(CapacityWithoutBackpack + backpack.InventorySlotCapacity, index))
             return Fail("The backpack is too small for the items currently carried.", out message);
 
         _items[index].Clear();
@@ -65,6 +55,28 @@ public partial class PlayerInventoryRuntime
         message = $"{backpack.DisplayName} equipped.";
         NotifyChanged();
         return true;
+    }
+
+    // Resolve equipment before any starting inventory/ammo transaction. Loadout
+    // row order must not decide whether carried items have enough bag slots.
+    internal bool TryPrepareStartingLoadoutBackpack(ShooterLoadoutSnapshot snapshot, out string message)
+    {
+        message = string.Empty;
+        if (_startingLoadoutInventoryApplied || snapshot.inventoryStacks == null)
+            return true; // A restored run is authoritative; never re-equip its starter bag.
+
+        BackpackItemSO startingBackpack = null;
+        for (int i = 0; i < snapshot.inventoryStacks.Length; i++)
+        {
+            var stack = snapshot.inventoryStacks[i];
+            if (!stack.HasItem || stack.item is not BackpackItemSO backpack)
+                continue;
+            if (startingBackpack != null && startingBackpack != backpack)
+                return Fail("Starting loadout contains more than one equipped backpack.", out message);
+            startingBackpack = backpack;
+        }
+
+        return startingBackpack == null || TryApplyStartingLoadoutBackpack(startingBackpack, out message);
     }
 
     // Purpose: Equips the one backpack authored in the player's starting loadout.
@@ -77,7 +89,6 @@ public partial class PlayerInventoryRuntime
         {
             // The Player prefab mirrors the default backpack so capacity is available
             // before Start. The loadout remains the single content source of truth.
-            _useLegacyBackpackCapacityFallback = false;
             message = $"{backpack.DisplayName} already equipped.";
             return true;
         }
@@ -104,7 +115,13 @@ public partial class PlayerInventoryRuntime
             return false;
         }
 
-        for (int index = PocketCapacity; index < Capacity && index < _items.Count; index++)
+        for (int index = CapacityWithoutBackpack; index < Capacity && index < _items.Count; index++)
+        {
+            if (IsRaidLockedEquippedModule(_items[index]?.Item))
+                return Fail("가방을 내려놓으려면 장착 중인 모듈을 포켓이나 기본 인벤토리 칸으로 먼저 옮기세요.", out message);
+        }
+
+        for (int index = CapacityWithoutBackpack; index < Capacity && index < _items.Count; index++)
         {
             PlayerInventoryItemStack stack = _items[index];
 
@@ -116,7 +133,6 @@ public partial class PlayerInventoryRuntime
         }
 
         _equippedBackpack = null;
-        _useLegacyBackpackCapacityFallback = false;
         BackpackChanged?.Invoke(null);
         message = $"{backpack.DisplayName} detached with {cargo.Count} occupied cargo slot(s).";
         NotifyChanged();
@@ -137,7 +153,7 @@ public partial class PlayerInventoryRuntime
         if (_equippedBackpack != null)
             return Fail("Drop the equipped backpack before picking up another one.", out message);
 
-        int proposedCapacity = PocketCapacity + backpack.InventorySlotCapacity;
+        int proposedCapacity = CapacityWithoutBackpack + backpack.InventorySlotCapacity;
         List<PlayerInventoryItemStack> preservedCargo = new();
 
         if (cargo != null)
@@ -159,7 +175,7 @@ public partial class PlayerInventoryRuntime
         // covers legacy saves that still have items in the old capacity range
         // while no explicit backpack is equipped yet.
         List<int> cargoTargetIndices = new(preservedCargo.Count);
-        int nextTargetIndex = PocketCapacity;
+        int nextTargetIndex = CapacityWithoutBackpack;
 
         for (int index = 0; index < preservedCargo.Count; index++)
         {
@@ -195,7 +211,9 @@ public partial class PlayerInventoryRuntime
                 source.ArmorDurability,
                 source.WeaponCurrentDurability,
                 source.WeaponMaxDurability,
-                source.GasMaskFilterDurability);
+                source.GasMaskFilterDurability,
+                source.ArmorMaxDurability,
+                source.GasMaskMaxFilterDurability);
         }
 
         message = $"{backpack.DisplayName} equipped with preserved cargo.";
@@ -207,18 +225,16 @@ public partial class PlayerInventoryRuntime
     private void SetEquippedBackpack(BackpackItemSO backpack)
     {
         _equippedBackpack = backpack;
-        _useLegacyBackpackCapacityFallback = false;
         BackpackChanged?.Invoke(_equippedBackpack);
     }
 
     // Purpose: Clears the run-bound equipped backpack after player death.
     private void ClearEquippedBackpackForRunLoss()
     {
-        if (_equippedBackpack == null && !_useLegacyBackpackCapacityFallback)
+        if (_equippedBackpack == null)
             return;
 
         _equippedBackpack = null;
-        _useLegacyBackpackCapacityFallback = false;
         BackpackChanged?.Invoke(null);
     }
 
@@ -251,7 +267,9 @@ public partial class PlayerInventoryRuntime
             source.ArmorDurability,
             source.WeaponCurrentDurability,
             source.WeaponMaxDurability,
-            source.GasMaskFilterDurability);
+            source.GasMaskFilterDurability,
+            source.ArmorMaxDurability,
+            source.GasMaskMaxFilterDurability);
         return clone;
     }
 }

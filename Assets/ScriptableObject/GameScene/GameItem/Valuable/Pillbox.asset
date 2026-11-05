@@ -11,6 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 84f6310988464062bc8bf5b6ba2cf59a, type: 3}
   m_Name: Pillbox
+  _valuableCategoryId: medical
   m_EditorClassIdentifier: 
   _guid: c17a5e6fd70a9e941a57ba345f768236
   _name:
@@ -32,7 +33,7 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 0
+  _rarity: 1
   _purchasePrice: 10
   _worldVisualPrefab: {fileID: 3940032961137939108, guid: 99e35e29d705887438dfdddcf4468dfc, type: 3}
   _maxStack: 1

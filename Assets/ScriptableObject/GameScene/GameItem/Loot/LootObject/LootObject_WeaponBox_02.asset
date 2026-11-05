@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_WeaponBox_02
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: 6a8a57a769968a644801096c6172bee8, type: 3}
-  _displayName: Weapon Box 02
-  _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: 5d2f266f249e41d2a647f6485b3a5415, type: 2}
-  _lootTable: {fileID: 11400000, guid: b330000000000000000000000000001b, type: 2}
+  _worldPrefab: {fileID: 1101200857497856441, guid: 6a8a57a769968a644801096c6172bee8, type: 3}
+  _displayName: AmmoBox02
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lootSlotCount: 4
+  _sizeClass: 1
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 1
+  _maxGeneratedSlots: 1
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 6
+    legendary: 1
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 1
+  _lootTable: {fileID: 11400000, guid: cc6d602ceb8a41f4bbadd783bca1bf1c, type: 2}
+  references:
+    version: 2
+    RefIds: []

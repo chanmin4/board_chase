@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_RareLoot_01
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: 497567d2d3552b941897169aa1c15b08, type: 3}
-  _displayName: Rare Loot 01
-  _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: edd60b87a4824c47b48f919a3dd2cd86, type: 2}
-  _lootTable: {fileID: 11400000, guid: b330000000000000000000000000000a, type: 2}
+  _worldPrefab: {fileID: 1479563613570312076, guid: 497567d2d3552b941897169aa1c15b08, type: 3}
+  _displayName: TreasureBox
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lootSlotCount: 12
+  _sizeClass: 5
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 1
+  _maxGeneratedSlots: 1
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 6
+    legendary: 1
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 4
+  _lootTable: {fileID: 11400000, guid: 83eddae86247b6345a1aabb46d9d4194, type: 2}
+  references:
+    version: 2
+    RefIds: []

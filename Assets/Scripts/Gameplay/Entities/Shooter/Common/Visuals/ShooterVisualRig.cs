@@ -35,9 +35,15 @@ public sealed class ShooterVisualRig : MonoBehaviour
     [Tooltip("Preferred single asset for a complete shooter look. Legacy Appearance is used only when this is empty.")]
     [SerializeField] private ShooterCustomizeSO _defaultCustomize;
 
+    [Tooltip("Optional fixed Player/NPC character override. Clearing it preserves the original prefab appearance below.")]
+    [SerializeField] private ShooterCustomizeSO _characterCustomize;
+    public ShooterCustomizeSO CharacterCustomize => _characterCustomize;
+    public void SetCharacterCustomize(ShooterCustomizeSO customize) => _characterCustomize = customize;
+
     [Header("Legacy Appearance")]
     [Tooltip("Compatibility fallback for older assets. New looks should use Default Customize.")]
     [SerializeField] private ShooterVisualAppearanceProfileSO _defaultAppearanceProfile;
+    private bool _appearanceInitialized;
 
     private readonly List<CosmeticInstance> _cosmeticInstances = new List<CosmeticInstance>();
     private readonly List<CustomizeCosmeticInstance> _customizeCosmeticInstances =
@@ -45,6 +51,7 @@ public sealed class ShooterVisualRig : MonoBehaviour
     private readonly Dictionary<string, ShooterVisualOccupancy> _equipmentOccupancies =
         new Dictionary<string, ShooterVisualOccupancy>();
     private readonly HashSet<string> _faceEquipmentSources = new HashSet<string>();
+    private readonly Dictionary<string, ShooterVisualEquipmentKind> _equipmentKinds = new();
     private readonly Dictionary<Transform, ShooterVisualLocalTransform> _basePose =
         new Dictionary<Transform, ShooterVisualLocalTransform>();
     // Captured before runtime equipment and cosmetic instances are attached.
@@ -66,8 +73,10 @@ public sealed class ShooterVisualRig : MonoBehaviour
         AutoResolveReferences();
         CacheBasePose();
 
-        if (_defaultCustomize != null)
-            ApplyCustomize(_defaultCustomize);
+        // Inactive prefab instances can receive their spawn look before Awake runs.
+        if (_appearanceInitialized) return;
+        if (_characterCustomize != null || _defaultCustomize != null)
+            ApplyCustomize(_characterCustomize != null ? _characterCustomize : _defaultCustomize);
         else if (_defaultAppearanceProfile != null)
             ApplyAppearance(_defaultAppearanceProfile);
     }
@@ -148,7 +157,16 @@ public sealed class ShooterVisualRig : MonoBehaviour
         RefreshCosmeticOccupancy();
     }
 
-    // Purpose: Removes one dynamic equipment occupancy contribution.
+    // Equipment-kind conditions are separate from geometric region coverage and default to no extra hiding.
+    public void SetEquipmentKinds(string sourceId, ShooterVisualEquipmentKind kinds)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId)) return;
+        if (kinds == ShooterVisualEquipmentKind.None) _equipmentKinds.Remove(sourceId);
+        else _equipmentKinds[sourceId] = kinds;
+        RefreshCosmeticOccupancy();
+    }
+
+    // Removes every visibility contribution from this source, restoring cosmetics when no other source overlaps.
     public void ClearEquipmentOccupancy(string sourceId)
     {
         if (string.IsNullOrWhiteSpace(sourceId))
@@ -156,8 +174,9 @@ public sealed class ShooterVisualRig : MonoBehaviour
 
         bool occupancyChanged = _equipmentOccupancies.Remove(sourceId);
         bool faceSlotChanged = _faceEquipmentSources.Remove(sourceId);
+        bool kindsChanged = _equipmentKinds.Remove(sourceId);
 
-        if (occupancyChanged || faceSlotChanged)
+        if (occupancyChanged || faceSlotChanged || kindsChanged)
             RefreshCosmeticOccupancy();
     }
 
@@ -181,6 +200,7 @@ public sealed class ShooterVisualRig : MonoBehaviour
     // Purpose: Applies the requested appearance change.
     public void ApplyAppearance(ShooterVisualAppearanceProfileSO appearance)
     {
+        _appearanceInitialized = true;
         AutoResolveReferences();
         CacheBasePose();
         ResetBasePose();
@@ -201,6 +221,7 @@ public sealed class ShooterVisualRig : MonoBehaviour
     // Purpose: Applies the requested customize change.
     public void ApplyCustomize(ShooterCustomizeSO customize)
     {
+        _appearanceInitialized = true;
         AutoResolveReferences();
         CacheBasePose();
         ResetBasePose();
@@ -344,7 +365,7 @@ public sealed class ShooterVisualRig : MonoBehaviour
         attachment.localTransform.ApplyTo(instance.transform);
         RegisterRuntimeVisualWithVision(instance.transform);
         _customizeCosmeticInstances.Add(
-            new CustomizeCosmeticInstance(instance, attachment.socket, attachment.occupiedRegions));
+            new CustomizeCosmeticInstance(instance, attachment.socket, attachment.occupiedRegions, attachment.hideWhenEquipped));
         RefreshCosmeticOccupancy();
     }
 
@@ -396,6 +417,8 @@ public sealed class ShooterVisualRig : MonoBehaviour
     private void RefreshCosmeticOccupancy()
     {
         ShooterVisualOccupancy equippedRegions = ShooterVisualOccupancy.None;
+        ShooterVisualEquipmentKind kinds = ShooterVisualEquipmentKind.None;
+        foreach (var pair in _equipmentKinds) kinds |= pair.Value;
 
         foreach (KeyValuePair<string, ShooterVisualOccupancy> pair in _equipmentOccupancies)
             equippedRegions |= pair.Value;
@@ -416,7 +439,7 @@ public sealed class ShooterVisualRig : MonoBehaviour
             if (entry.instance == null)
                 continue;
 
-            bool overlaps = (entry.occupiedRegions & equippedRegions) != 0;
+            bool overlaps = (entry.occupiedRegions & equippedRegions) != 0 || (entry.hideWhenEquipped & kinds) != 0;
             entry.instance.SetActive(!overlaps);
         }
 
@@ -513,13 +536,15 @@ public sealed class ShooterVisualRig : MonoBehaviour
         for (int i = 0; i < _cosmeticInstances.Count; i++)
         {
             ShooterVisualAttachmentSO attachment = _cosmeticInstances[i].attachment;
-            if (attachment != null && attachment.Socket == ShooterVisualSocketId.Face)
+            if (attachment != null && attachment.Socket == ShooterVisualSocketId.Face &&
+                _cosmeticInstances[i].instance != null && _cosmeticInstances[i].instance.activeSelf)
                 return true;
         }
 
         for (int i = 0; i < _customizeCosmeticInstances.Count; i++)
         {
-            if (_customizeCosmeticInstances[i].socket == ShooterVisualSocketId.Face)
+            if (_customizeCosmeticInstances[i].socket == ShooterVisualSocketId.Face &&
+                _customizeCosmeticInstances[i].instance != null && _customizeCosmeticInstances[i].instance.activeSelf)
                 return true;
         }
 
@@ -552,15 +577,18 @@ public sealed class ShooterVisualRig : MonoBehaviour
         public readonly GameObject instance;
         public readonly ShooterVisualSocketId socket;
         public readonly ShooterVisualOccupancy occupiedRegions;
+        public readonly ShooterVisualEquipmentKind hideWhenEquipped;
 
         public CustomizeCosmeticInstance(
             GameObject instance,
             ShooterVisualSocketId socket,
-            ShooterVisualOccupancy occupiedRegions)
+            ShooterVisualOccupancy occupiedRegions,
+            ShooterVisualEquipmentKind hideWhenEquipped)
         {
             this.instance = instance;
             this.socket = socket;
             this.occupiedRegions = occupiedRegions;
+            this.hideWhenEquipped = hideWhenEquipped;
         }
     }
 }

@@ -14,12 +14,13 @@ public class SerializableScriptableObject : ScriptableObject
 {
 	[SerializeField, HideInInspector] private string _guid;
 	public string Guid => _guid;
+	protected void SetRuntimeGuid(string value) => _guid = value;
 
 #if UNITY_EDITOR
 	void OnValidate()
 	{
 		var path = AssetDatabase.GetAssetPath(this);
-		_guid = AssetDatabase.AssetPathToGUID(path);
+		if (!string.IsNullOrEmpty(path)) _guid = AssetDatabase.AssetPathToGUID(path);
 	}
 #endif
 }

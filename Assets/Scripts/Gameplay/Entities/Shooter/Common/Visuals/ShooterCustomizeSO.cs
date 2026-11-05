@@ -11,10 +11,14 @@ using UnityEngine;
 [Serializable]
 public struct ShooterCustomizeAttachment
 {
+    [Tooltip("장식 기본 정의의 출처. 아래 장착값은 캐릭터별 복사본이며 기본 SO를 수정해도 자동으로 바뀌지 않는다.")]
+    public ShooterVisualAttachmentSO definition;
     public ShooterVisualSocketId socket;
     public GameObject visualPrefab;
     public ShooterVisualLocalTransform localTransform;
     public ShooterVisualOccupancy occupiedRegions;
+    [Tooltip("Hide this cosmetic while any of these equipment visuals is worn. Removing the equipment restores it. None preserves existing looks.")]
+    public ShooterVisualEquipmentKind hideWhenEquipped;
 }
 
 /// <summary>

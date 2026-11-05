@@ -47,6 +47,7 @@ public sealed class QuestMissionPanelUI : MonoBehaviour
     private void Awake()
     {
         BuildRuntimeView();
+        SetVisible(false);
     }
 
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
@@ -81,6 +82,17 @@ public sealed class QuestMissionPanelUI : MonoBehaviour
     }
 
     public void EndConversation() => _questGiver?.EndConversation();
+
+    public void SetVisible(bool visible)
+    {
+        if (visible && !gameObject.activeSelf) gameObject.SetActive(true);
+        CanvasGroup group = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+        group.ignoreParentGroups = false;
+        group.alpha = visible ? 1f : 0f;
+        group.interactable = visible;
+        group.blocksRaycasts = visible;
+        if (!visible) EndConversation();
+    }
 
     private void AcceptQuest(QuestRuntime runtime, QuestDefinitionSO definition)
     {
@@ -232,6 +244,23 @@ public sealed class QuestMissionPanelUI : MonoBehaviour
                 () => AcceptQuest(runtime, definition),
                 row.transform);
         }
+        if (state != null && state.IsAccepted && !state.IsCompleted && fromGiver)
+        {
+            if (state.IsReadyToTurnIn) AddButton("임무 완료", true, () =>
+            {
+                runtime.TryTurnIn(definition, _questGiver, out string message);
+                Debug.Log($"[Quest turn-in] {message}");
+            }, row.transform);
+            bool hasSubmission = false;
+            for (int i = 0; i < objectives.Length; i++)
+                if (objectives[i]?.ObjectiveType == QuestObjectiveType.SubmitItem &&
+                    (i >= state.ObjectiveProgress.Count || state.ObjectiveProgress[i] < objectives[i].RequiredCount)) hasSubmission = true;
+            if (hasSubmission) AddButton("필요 아이템 제출", true, () =>
+            {
+                runtime.TrySubmitItems(definition, out string message);
+                Debug.Log($"[Quest submission] {message}");
+            }, row.transform);
+        }
     }
 
     // Purpose: Rebuilds dynamic labels after the selected locale and its table are ready.
@@ -333,7 +362,8 @@ public sealed class QuestMissionPanelUI : MonoBehaviour
         Image background = GetComponent<Image>();
         background.color = new Color(0.008f, 0.055f, 0.07f, 0.98f);
 
-        GameObject titleObject = new("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        GameObject titleObject = transform.Find("Title")?.gameObject ??
+            new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         titleObject.layer = gameObject.layer;
         titleObject.transform.SetParent(transform, false);
         RectTransform titleRect = (RectTransform)titleObject.transform;
@@ -348,7 +378,8 @@ public sealed class QuestMissionPanelUI : MonoBehaviour
         _titleText.color = Color.white;
         _titleText.alignment = TextAlignmentOptions.Left;
 
-        GameObject rowsObject = new("Rows", typeof(RectTransform), typeof(VerticalLayoutGroup));
+        GameObject rowsObject = transform.Find("Rows")?.gameObject ??
+            new GameObject("Rows", typeof(RectTransform), typeof(VerticalLayoutGroup));
         rowsObject.layer = gameObject.layer;
         rowsObject.transform.SetParent(transform, false);
         _rowsRoot = (RectTransform)rowsObject.transform;

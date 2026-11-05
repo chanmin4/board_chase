@@ -26,6 +26,23 @@ public class EntityEquipmentRuntime : MonoBehaviour
     [Tooltip("Runtime maximum durability for each ranged-weapon slot. Repairs may permanently lower this value.")]
     [ReadOnly] [SerializeField] private float[] _weaponMaxDurabilities = new float[DefaultWeaponSlotCount];
     [SerializeField, Min(0)] private int _activeWeaponSlotIndex;
+    [SerializeField, ReadOnly] private bool[] _weaponMalfunctions = new bool[DefaultWeaponSlotCount];
+    private ShooterStatsRuntime _weaponConditionOwnerStats;
+    private bool IsEnemyWeaponOwner
+    {
+        get
+        {
+            if (_weaponConditionOwnerStats == null)
+                _weaponConditionOwnerStats = EntityComponentResolver.Resolve<ShooterStatsRuntime>(this);
+            return _weaponConditionOwnerStats is EnemyShooterStatsRuntime;
+        }
+    }
+    public bool IsWeaponJammed(int slot) => !IsEnemyWeaponOwner && slot >= 0 && slot < (_weaponMalfunctions?.Length ?? 0) && _weaponMalfunctions[slot];
+    public void SetWeaponJammed(int slot, bool value)
+    {
+        EnsureWeaponSlots();
+        if (slot >= 0 && slot < WeaponSlotCount) _weaponMalfunctions[slot] = value && !IsEnemyWeaponOwner;
+    }
 
     [Header("Armor")]
     [SerializeField] private Transform _armorVisualRoot;
@@ -59,6 +76,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
     public float MaxArmorDurability => _currentArmor != null ? Mathf.Max(0f, _maxArmorDurability) : 0f;
     public bool HasUsableArmor =>
         _currentArmor != null &&
+        (IsEnemyWeaponOwner||_weaponConditionOwnerStats is not PlayerStatsRuntime||GameProgressionRuntime.CanUse(_currentArmor,out _))&&
         (MaxArmorDurability <= 0f || _currentArmorDurability > 0f);
 
     // Purpose: Caches the component references required before runtime initialization.
@@ -180,6 +198,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
         }
 
         _weaponSlots[resolvedSlotIndex] = weapon;
+        _weaponMalfunctions[resolvedSlotIndex] = false;
         _weaponSlotAmounts[resolvedSlotIndex] = resolvedAmount;
         _weaponCurrentDurabilities[resolvedSlotIndex] = resolvedCurrentDurability;
         _weaponMaxDurabilities[resolvedSlotIndex] = resolvedMaxDurability;
@@ -235,6 +254,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
         }
 
         _weaponSlots[resolvedSlotIndex] = null;
+        _weaponMalfunctions[resolvedSlotIndex] = false;
         _weaponSlotAmounts[resolvedSlotIndex] = 0;
         _weaponCurrentDurabilities[resolvedSlotIndex] = 0f;
         _weaponMaxDurabilities[resolvedSlotIndex] = 0f;
@@ -321,11 +341,13 @@ public class EntityEquipmentRuntime : MonoBehaviour
     }
 
     public bool CanFireCurrentWeapon =>
-        CurrentWeapon is not RangedWeaponSO || CurrentWeaponDurability > 0f;
+        IsEnemyWeaponOwner || CurrentWeapon is not RangedWeaponSO || CurrentWeaponDurability > 0f;
 
     // Purpose: Applies the requested current weapon fire wear change.
     public bool ApplyCurrentWeaponFireWear()
     {
+        // Enemy condition is spawn/drop data only. Even an accidental shared caller cannot wear it down.
+        if (IsEnemyWeaponOwner) return false;
         EnsureWeaponSlots();
         int slotIndex = ActiveWeaponSlotIndex;
 
@@ -340,7 +362,9 @@ public class EntityEquipmentRuntime : MonoBehaviour
             0f,
             previous - rangedWeapon.DurabilityLossPerFire);
 
-        if (!Mathf.Approximately(previous, _weaponCurrentDurabilities[slotIndex]))
+        if (_weaponCurrentDurabilities[slotIndex] <= 0f)
+            ClearWeapon(slotIndex); // Ownership is the equipped instance, not a hidden backpack copy.
+        else if (!Mathf.Approximately(previous, _weaponCurrentDurabilities[slotIndex]))
             PublishWeaponSlotChanged(slotIndex);
 
         return true;
@@ -349,6 +373,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
     // Purpose: Repairs or rebuilds weapon to full from the current source data.
     public bool RepairWeaponToFull(int slotIndex)
     {
+        if (!EquipmentRepairPolicy.Enabled) return false;
         EnsureWeaponSlots();
         int resolvedSlotIndex = ResolveWeaponSlotIndex(slotIndex);
 
@@ -389,6 +414,9 @@ public class EntityEquipmentRuntime : MonoBehaviour
         int fromAmount = _weaponSlotAmounts[fromSlotIndex];
         float fromCurrentDurability = _weaponCurrentDurabilities[fromSlotIndex];
         float fromMaxDurability = _weaponMaxDurabilities[fromSlotIndex];
+        bool fromJammed = _weaponMalfunctions[fromSlotIndex];
+        _weaponMalfunctions[fromSlotIndex] = _weaponMalfunctions[toSlotIndex];
+        _weaponMalfunctions[toSlotIndex] = fromJammed;
 
         _weaponSlots[fromSlotIndex] = _weaponSlots[toSlotIndex];
         _weaponSlotAmounts[fromSlotIndex] = _weaponSlotAmounts[toSlotIndex];
@@ -508,7 +536,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
 
     // Purpose: Resolves the health damage multiplier needed by this component.
     public float ResolveHealthDamageMultiplier(
-        int penetrationClass,
+        float penetrationClass,
         float baseArmorClass,
         float armorClassDelta)
     {
@@ -533,7 +561,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
 
     // Purpose: Resolves the mark damage multiplier needed by this component.
     public float ResolveMarkDamageMultiplier(
-        int penetrationClass,
+        float penetrationClass,
         float baseArmorClass,
         float armorClassDelta)
     {
@@ -545,6 +573,23 @@ public class EntityEquipmentRuntime : MonoBehaviour
             baseArmorClass,
             armorClassDelta);
     }
+    /// <summary>
+    /// 관통 판정은 호출자가 한 번만 계산합니다. 실제 흡수량만 1:1로 소모하고,
+    /// 남은 내구도를 초과하는 피해는 체력으로 넘깁니다. 상태이상/피해 배율은 이후에 적용합니다.
+    /// </summary>
+    public float AbsorbArmorHealthDamage(float incomingDamage, float penetrationHealthMultiplier)
+    {
+        float incoming = Mathf.Max(0f, incomingDamage);
+        if (!HasUsableArmor || MaxArmorDurability <= 0f)
+            return incoming;
+
+        float penetratedDamage = incoming * Mathf.Max(0f, penetrationHealthMultiplier);
+        float requestedAbsorption = Mathf.Max(0f, incoming - penetratedDamage);
+        float absorbed = Mathf.Min(requestedAbsorption, CurrentArmorDurability);
+        ApplyArmorAbsorbedDamage(absorbed);
+        return Mathf.Max(penetratedDamage, incoming - absorbed);
+    }
+
     // Purpose: Applies the requested armor absorbed damage change.
     public void ApplyArmorAbsorbedDamage(float absorbedDamage)
     {
@@ -574,6 +619,12 @@ public class EntityEquipmentRuntime : MonoBehaviour
         float previous = _currentArmorDurability;
         _currentArmorDurability = Mathf.Max(0f, _currentArmorDurability - durabilityDamage);
 
+        if (_currentArmorDurability <= 0f)
+        {
+            ClearArmor();
+            return;
+        }
+
         if (!Mathf.Approximately(previous, _currentArmorDurability))
         {
             OnArmorChanged?.Invoke(_currentArmor);
@@ -584,6 +635,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
     // Purpose: Repairs or rebuilds armor from the current source data.
     public void RepairArmor(float amount)
     {
+        if (!EquipmentRepairPolicy.Enabled) return;
         if (_currentArmor == null || MaxArmorDurability <= 0f)
             return;
 
@@ -603,6 +655,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
     // Purpose: Repairs armor to its reduced instance maximum while applying permanent maximum-condition loss.
     public void RepairArmorToFull()
     {
+        if (!EquipmentRepairPolicy.Enabled) return;
         if (_currentArmor == null || MaxArmorDurability <= 0f)
             return;
 
@@ -653,6 +706,8 @@ public class EntityEquipmentRuntime : MonoBehaviour
 
         if (_weaponSlots == null || _weaponSlots.Length != _weaponSlotCount)
             Array.Resize(ref _weaponSlots, _weaponSlotCount);
+        if (_weaponMalfunctions == null || _weaponMalfunctions.Length != _weaponSlotCount)
+            Array.Resize(ref _weaponMalfunctions, _weaponSlotCount);
 
         if (_weaponSlotAmounts == null || _weaponSlotAmounts.Length != _weaponSlotCount)
             Array.Resize(ref _weaponSlotAmounts, _weaponSlotCount);
@@ -667,6 +722,7 @@ public class EntityEquipmentRuntime : MonoBehaviour
         {
             if (_weaponSlots[i] == null)
             {
+                _weaponMalfunctions[i] = false;
                 _weaponSlotAmounts[i] = 0;
                 _weaponCurrentDurabilities[i] = 0f;
                 _weaponMaxDurabilities[i] = 0f;
@@ -813,14 +869,14 @@ public class EntityEquipmentRuntime : MonoBehaviour
 
     // Purpose: Resolves the base armor multiplier needed by this component.
     private static float ResolveBaseArmorMultiplier(
-        int penetrationClass,
+        float penetrationClass,
         int baseArmorClass,
         int armorClassDelta,
         float sameOrHigherMultiplier,
         float perClassGapMultiplier)
     {
         int effectiveArmorClass = Mathf.Max(0, Mathf.Max(0, baseArmorClass) + armorClassDelta);
-        int classGap = Mathf.Max(0, effectiveArmorClass - Mathf.Max(0, penetrationClass));
+        float classGap = Mathf.Max(0f, effectiveArmorClass - Mathf.Max(0f, penetrationClass));
 
         return Mathf.Max(
             0f,

@@ -56,6 +56,9 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
     /// </summary>
     public bool CaptureCurrentPlayerState()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (_restorePending)
         {
             _lastRunStateMessage = "Skipped capture while a saved run is waiting to restore.";
@@ -82,6 +85,7 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
         target.Clear();
 
         inventory.CaptureRunState(target);
+        inventory.GetComponent<PlayerQuickSlotRuntime>()?.CaptureUsableRunSlots(target.usableQuickSlots);
         inventory.GetComponent<PlayerBulletLoadoutRuntime>()?.CaptureRunState(target);
         inventory.GetComponent<PlayerPassiveInventoryRuntime>()?.CaptureRunState(target);
         inventory.GetComponent<EntityStatusEffectRuntime>()?.CaptureRunState(target);
@@ -114,7 +118,9 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
             return;
 
         runData.PlayerRunState.Clear();
+        runData.startingPassives = new();
         RaidRuntime.Active?.EndRaid();
+        if(SaveSystem.Active!=null)SaveSystem.Active.RunData.infectionExposure=new();
         runData.raid = new RaidRunSaveData();
         _restorePending = false;
         _lastRunStateMessage = "Cleared resumable player run after run loss.";
@@ -167,7 +173,7 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
         int removedReferenceCount = PruneUnavailableReferences(
             source,
             catalog,
-            inventory.PocketCapacity,
+            inventory.CapacityWithoutBackpack,
             equipment != null ? equipment.WeaponSlotCount : int.MaxValue,
             out string pruneMessage);
         if (removedReferenceCount > 0)
@@ -181,6 +187,9 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
         }
 
         string inventoryMessage = "not attempted";
+        var quickSlots = inventory.GetComponent<PlayerQuickSlotRuntime>();
+        if (source.usableQuickSlots.Count > 0 && (quickSlots == null || !quickSlots.CanRestoreUsableRunSlots(source.usableQuickSlots, catalog)))
+        { _restorePending = false; Debug.LogError("[Run restore] Invalid usable quick-slot snapshot; no inventory restored.", this); return; }
         string bulletMessage = "not attempted";
         string passiveMessage = "not attempted";
         string effectMessage = "not attempted";
@@ -198,10 +207,11 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
             return;
         }
 
+        infection.RestoreCurrentInfection(source.currentInfection);
         if (source.currentHealth > 0f)
             damageable.SetCurrentHealth(source.currentHealth);
+        quickSlots?.RestoreUsableRunSlots(source.usableQuickSlots, catalog);
 
-        infection.RestoreCurrentInfection(source.currentInfection);
         ShopRunRuntime.EnsureRuntime().RestoreRunState(source, catalog);
 
         _restorePending = false;
@@ -256,7 +266,7 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
     private static int PruneUnavailableReferences(
         PlayerRunStateSaveData source,
         RuntimeContentCatalogSO catalog,
-        int pocketCapacity,
+        int capacityWithoutBackpack,
         int weaponSlotCapacity,
         out string message)
     {
@@ -272,7 +282,7 @@ public sealed class PlayerRunStatePersistence : MonoBehaviour
             AddRemovedKind("armor", removedKinds);
         }
 
-        int restoredInventoryCapacity = Mathf.Max(0, pocketCapacity);
+        int restoredInventoryCapacity = Mathf.Max(0, capacityWithoutBackpack);
         if (!TryResolveOptionalTyped<BackpackItemSO>(catalog, source.equippedBackpackGuid))
         {
             source.equippedBackpackGuid = string.Empty;

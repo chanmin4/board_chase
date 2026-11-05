@@ -9,6 +9,9 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "FullMapUISettings", menuName = "Game/UI/Full Map Settings")]
 public class FullMapUISettingsSO : ScriptableObject
 {
+    [Header("Shared sector-type sprites")]
+    [SerializeField] private SectorMapIconSetSO _sectorIcons;
+    public SectorMapIconSetSO SectorIcons => _sectorIcons;
     [Header("Layout")]
     [Tooltip("Base RectTransform size applied to every generated full-map cell.")]
     [SerializeField] private Vector2 _cellSize = new Vector2(86f, 46f);
@@ -72,6 +75,33 @@ public class FullMapUISettingsSO : ScriptableObject
 
     [Tooltip("Icon shown for rooms that are not cleared/discovered yet. Use a question-mark icon here.")]
     [SerializeField] private Sprite _undiscoveredRoomIcon;
+
+    [Header("Raid Landmark Icons (empty fields use existing placeholders)")]
+    [SerializeField] private Sprite _hatchIcon;
+    [SerializeField] private Sprite _generatorIcon;
+    [SerializeField] private Sprite _extractionIcon;
+    [SerializeField] private Sprite _merchantIcon;
+    [SerializeField] private Sprite _armoryIcon;
+    [SerializeField] private Sprite _medicalIcon;
+    [SerializeField] private Sprite _vaultIcon;
+
+    public Sprite GetLandmarkIcon(RaidRoomRole role, bool extraction = false)
+    {
+        var kind = SectorMapIconPolicy.KindForRole(role, extraction);
+        if (_sectorIcons != null && kind != SectorMapIconKind.None) return _sectorIcons.GetIcon(kind);
+        if (extraction) return _extractionIcon != null ? _extractionIcon : _startRoomIcon;
+        return role switch
+        {
+            RaidRoomRole.Hatch => _hatchIcon != null ? _hatchIcon : _startRoomIcon,
+            RaidRoomRole.Generator => _generatorIcon != null ? _generatorIcon : _bossRoomIcon,
+            RaidRoomRole.Merchant => _merchantIcon != null ? _merchantIcon : _shopRoomIcon,
+            RaidRoomRole.Armory => _armoryIcon != null ? _armoryIcon : _normalBattleRoomIcon,
+            RaidRoomRole.Medical => _medicalIcon != null ? _medicalIcon : _treasureRoomIcon,
+            RaidRoomRole.Vault => _vaultIcon != null ? _vaultIcon : _treasureRoomIcon,
+            RaidRoomRole.UnknownCandidate => _undiscoveredRoomIcon,
+            _ => null
+        };
+    }
 
     [Header("Cell Border")]
     [Tooltip("Turns on FullMapCellUI.Border. Border is a shared outline/frame overlay above the BG sprite. Disable this if each BG sprite already contains its own border.")]

@@ -66,6 +66,15 @@ public sealed class CameraEntityOcclusionFadeController : MonoBehaviour
     private Shader _silhouetteShader;
     private Material _fallbackSilhouetteMaterial;
     private float _nextCharacterRefreshTime;
+    private bool _includePlayerSilhouette = true;
+
+    // The environment cutout replaces only the Player overlay. Enemy visibility and silhouettes stay unchanged.
+    internal void SetPlayerSilhouetteEnabled(bool enabled)
+    {
+        if (_includePlayerSilhouette == enabled) return;
+        _includePlayerSilhouette = enabled;
+        if (isActiveAndEnabled && _silhouetteShader != null) RefreshCharacterTargets();
+    }
 
     // Purpose: Ensures for is ready before the workflow continues.
     public static CameraEntityOcclusionFadeController EnsureFor(Camera worldCamera)
@@ -200,6 +209,9 @@ public sealed class CameraEntityOcclusionFadeController : MonoBehaviour
             return;
 
         Transform characterRoot = EntityComponentResolver.ResolveEntityRoot(characterMarker);
+
+        if (!_includePlayerSilhouette && (characterMarker is PlayerCharacter ||
+            (characterRoot != null && characterRoot.GetComponent<PlayerCharacter>() != null))) return;
 
         if (characterRoot == null ||
             !characterRoot.gameObject.activeInHierarchy ||

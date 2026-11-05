@@ -31,12 +31,16 @@ public enum InventoryContextMenuActionKind
     DiscardAmmoSlot = 5,
     SplitInventoryItem = 6,
     SplitAmmoSlot = 7,
-    UseInventoryItem = 8
+    UseInventoryItem = 8,
+    DismantlePassive = 9,
+    RerollPassive = 10
 }
 
 [Serializable]
 public sealed class InventoryContextMenuActionDefinition
 {
+    public static InventoryContextMenuActionDefinition ModuleAction(InventoryContextMenuActionKind action, string label) =>
+        new InventoryContextMenuActionDefinition { _action = action, _fallbackLabel = label };
     [SerializeField] private bool _enabled = true;
     [SerializeField] private InventoryContextMenuActionKind _action;
     [SerializeField] private LocalizedString _label;
@@ -348,6 +352,14 @@ public class InventoryItemContextMenuUI : MonoBehaviour
     private void RebuildButtons(InventoryContextMenuActionDefinition[] actions, ItemSO item)
     {
         ClearButtons();
+        if(actions!=null)actions=System.Array.FindAll(actions,a=>a!=null&&a.Action!=InventoryContextMenuActionKind.DismantlePassive);
+        if (item is PassiveItemSO && _owner is PlayerInventoryUI)
+        {
+            var moduleActions = new List<InventoryContextMenuActionDefinition>(actions ?? Array.Empty<InventoryContextMenuActionDefinition>());
+            if (GameProgressionRuntime.IsHomePreparation && item is PassiveItemSO passive && !passive.DisabledForRaid)
+                moduleActions.Add(InventoryContextMenuActionDefinition.ModuleAction(InventoryContextMenuActionKind.RerollPassive, "수치 리롤 · HOME / 통합 모듈"));
+            actions = moduleActions.ToArray();
+        }
 
         if (_buttonPrefab == null || actions == null)
         {
@@ -384,6 +396,8 @@ public class InventoryItemContextMenuUI : MonoBehaviour
     {
         return action switch
         {
+            InventoryContextMenuActionKind.DismantlePassive or InventoryContextMenuActionKind.RerollPassive =>
+                _targetKind == InventoryContextMenuTargetKind.InventoryItem && item is PassiveItemSO && _owner is PlayerInventoryUI,
             InventoryContextMenuActionKind.EquipInventoryItem =>
                 _targetKind == InventoryContextMenuTargetKind.InventoryItem &&
                 (item is WeaponSO || item is ArmorItemSO),
@@ -442,6 +456,12 @@ public class InventoryItemContextMenuUI : MonoBehaviour
 
         switch (action)
         {
+            case InventoryContextMenuActionKind.DismantlePassive:
+            case InventoryContextMenuActionKind.RerollPassive:
+                if (_owner is PlayerInventoryUI moduleOwner)
+                    moduleOwner.HandlePassiveModuleAction(_inventoryIndex, action == InventoryContextMenuActionKind.RerollPassive);
+                Hide();
+                break;
             case InventoryContextMenuActionKind.UseInventoryItem:
                 if (_inventoryIndex >= 0 && _owner is IConsumableInventoryContextMenuOwner consumableOwner)
                     consumableOwner.HandleContextMenuUseInventoryItem(_inventoryIndex);

@@ -67,6 +67,8 @@ public class PlayerShopPanelUI : PanelUI
     private readonly List<PlayerShopOffer> _itemOffers = new();
 
     private ShopConfigSO _activeShopConfig;
+    private SectorShop _activeStation;
+    private bool _raidTrade;
     private PlayerInventoryRuntime _inventoryRuntime;
     private PlayerInventoryUI _inventoryPanel;
     private PlayerInventoryItemSelection _selectedPlayerItem = PlayerInventoryItemSelection.None;
@@ -164,8 +166,10 @@ public class PlayerShopPanelUI : PanelUI
 
         ConfigureOfferColumn(bulletColumn);
         ConfigureOfferColumn(itemColumn);
-        AnchorFillHalf(sellSection, true);
+        if (EquipmentRepairPolicy.Enabled) AnchorFillHalf(sellSection, true);
+        else Stretch(sellSection, Vector2.zero, Vector2.zero);
         AnchorFillHalf(repairSection, false);
+        ApplyRepairAvailability();
 
         Canvas.ForceUpdateCanvases();
         if (content != null)
@@ -266,8 +270,10 @@ public class PlayerShopPanelUI : PanelUI
         IReadOnlyList<PlayerShopOffer> bulletOffers,
         IReadOnlyList<PlayerShopOffer> itemOffers,
         ShopConfigSO config,
-        bool allowReroll)
+        bool allowReroll, SectorShop station = null)
     {
+        _activeStation = station;
+        _raidTrade = station != null && station.IsRaidMerchant;
         _activeShopConfig = config;
         _activeAllowReroll = allowReroll;
         _activeSellPriceRate = config != null ? config.SellPriceRate : 0.5f;
@@ -371,7 +377,10 @@ public class PlayerShopPanelUI : PanelUI
         }
 
         ItemSO item = ResolveInventoryItem(slotIndex);
+        if (item is PassiveItemSO) { RaiseMessage("패시브는 판매할 수 없습니다. 분해하거나 리롤에 사용하세요."); return false; }
         int unitPrice = ResolveInventorySellUnitPrice(item);
+
+        if (!CanMerchantPaySale(unitPrice, amount)) return false;
 
         if (!_inventoryRuntime.TryRemoveInventoryItem(
                 slotIndex,
@@ -420,6 +429,9 @@ public class PlayerShopPanelUI : PanelUI
 
         int unitPrice = ResolveInventorySellUnitPrice(item);
 
+        if (!CanMerchantPaySale(unitPrice, slotKind == PlayerInventoryEquipmentSlotKind.Weapon ?
+            _inventoryRuntime.GetEquippedWeaponAmount(equipmentSlotIndex) : 1)) return false;
+
         if (!_inventoryRuntime.TryRemoveEquipped(
                 slotKind,
                 equipmentSlotIndex,
@@ -464,7 +476,7 @@ public class PlayerShopPanelUI : PanelUI
             request.bulletOffers,
             request.itemOffers,
             request.config,
-            request.allowReroll);
+            request.allowReroll, request.station);
     }
 
     // Purpose: Handles the incoming inventory runtime ready request or event.
@@ -580,6 +592,8 @@ public class PlayerShopPanelUI : PanelUI
     public bool TryCompletePhysicalPurchase(PlayerShopOffer offer, out string message)
     {
         ResolveInventoryRuntime();
+        if (_raidTrade && (_activeStation == null || !_activeStation.CanInteract))
+        { message = "상인이 있는 섹터에서만 거래할 수 있습니다."; return false; }
 
         if (offer == null || !offer.IsValid || offer.IsSoldOut)
         {
@@ -611,7 +625,7 @@ public class PlayerShopPanelUI : PanelUI
             return UIAudio.ReportResult(false, UIAudioCueType.InventoryMove);
         }
 
-        if (!_inventoryRuntime.TryConsumeInventoryItemRequirements(offer.TradeRequirements, out message))
+        if (!_inventoryRuntime.TryConsumeInventoryItemRequirements(offer.TradeRequirements, out var paymentReceipt, out message))
         {
             offer.RestoreConsumedStock();
             return UIAudio.ReportResult(false, UIAudioCueType.InventoryMove);
@@ -625,7 +639,7 @@ public class PlayerShopPanelUI : PanelUI
                 out string pickupMessage))
         {
             bool restored = _inventoryRuntime.TryRestoreInventoryItemRequirements(
-                offer.TradeRequirements,
+                paymentReceipt,
                 out string restoreMessage);
             offer.RestoreConsumedStock();
 
@@ -643,6 +657,7 @@ public class PlayerShopPanelUI : PanelUI
         }
 
         message = pickupMessage;
+        _activeStation?.ReceivePhysicalPayment(offer.TradeRequirements);
         RefreshAll();
         PlayUiAudio(UIAudioCueType.Buy);
         return true;
@@ -838,6 +853,7 @@ public class PlayerShopPanelUI : PanelUI
     // Purpose: Attempts to sell selected player item and reports whether the request succeeded.
     public bool TrySellSelectedPlayerItem()
     {
+        if (_selectedPlayerItem.item is PassiveItemSO) { RaiseMessage("패시브는 판매할 수 없습니다."); return false; }
         if (!_selectedPlayerItem.HasItem)
         {
             RaiseMessage("Select an item to sell.");
@@ -854,6 +870,7 @@ public class PlayerShopPanelUI : PanelUI
         }
 
         int unitPrice = ResolveInventorySellUnitPrice(_selectedPlayerItem.item);
+        if (!CanMerchantPaySale(unitPrice, _selectedPlayerItem.amount)) return false;
         PlayerInventoryRemovedStack removed;
         string message;
 
@@ -908,6 +925,12 @@ public class PlayerShopPanelUI : PanelUI
     // Purpose: Attempts to repair selected item and reports whether the request succeeded.
     public bool TryRepairSelectedItem()
     {
+        // Reject before resolving price, consuming currency, touching inventory or playing audio.
+        if (!EquipmentRepairPolicy.Enabled)
+        {
+            RaiseMessage(EquipmentRepairPolicy.DisabledMessage);
+            return false;
+        }
         if (!_selectedPlayerItem.HasItem || !_selectedPlayerItem.IsRepairable)
         {
             RaiseMessage("Select armor or a firearm to repair.");
@@ -1003,7 +1026,7 @@ public class PlayerShopPanelUI : PanelUI
             : null;
 
         bool hasItem = item != null;
-        // Keep the action rows visible so the player can discover Sell/Repair before
+        // Keep the sell action visible even before
         // selecting an item. Their buttons communicate validity through interactable.
         SetCanvasGroup(_playerItemSelectionGroup, true);
 
@@ -1024,6 +1047,8 @@ public class PlayerShopPanelUI : PanelUI
             _sellPriceText.text = hasItem
                 ? string.Format(_priceFormat, sellPrice)
                 : _emptyPriceText;
+            if (_raidTrade && _activeStation != null)
+                _sellPriceText.text += $"\n상인 소지금: {_activeStation.MerchantMoney:N0}";
         }
 
         if (_sellButton != null)
@@ -1031,7 +1056,7 @@ public class PlayerShopPanelUI : PanelUI
 
         int repairPrice = ResolveRepairPrice(_selectedPlayerItem);
         bool canRepair = hasItem && _selectedPlayerItem.IsRepairable && repairPrice > 0;
-        SetCanvasGroup(_repairActionGroup, true);
+        ApplyRepairAvailability();
 
         if (_repairPriceText != null)
         {
@@ -1042,6 +1067,21 @@ public class PlayerShopPanelUI : PanelUI
 
         if (_repairButton != null)
             _repairButton.interactable = canRepair;
+    }
+
+    private void ApplyRepairAvailability()
+    {
+        bool enabled = EquipmentRepairPolicy.Enabled;
+        var section = FindChildRect("RepairSection");
+        if (section != null) section.gameObject.SetActive(enabled);
+        SetCanvasGroup(_repairActionGroup, enabled);
+        if (_repairButton != null)
+        {
+            _repairButton.gameObject.SetActive(enabled);
+            if (!enabled) _repairButton.interactable = false;
+        }
+        if (_repairPriceText != null) _repairPriceText.gameObject.SetActive(enabled);
+        if (!enabled) Stretch(FindChildRect("SellSection"), Vector2.zero, Vector2.zero);
     }
     // Purpose: Refreshes the displayed or cached player item name text.
     private void RefreshPlayerItemNameText(ItemSO item)
@@ -1073,6 +1113,7 @@ public class PlayerShopPanelUI : PanelUI
     // Purpose: Resolves the repair price needed by this component.
     private int ResolveRepairPrice(PlayerInventoryItemSelection selection)
     {
+        if (!EquipmentRepairPolicy.Enabled) return 0;
         if (!selection.HasItem || !selection.IsRepairable)
             return 0;
 
@@ -1258,9 +1299,11 @@ public class PlayerShopPanelUI : PanelUI
         int unitPrice,
         out string message)
     {
-        int payout = Mathf.Max(0, unitPrice) * Mathf.Max(1, removed.amount);
+        int payout = (int)System.Math.Min(int.MaxValue, (long)Mathf.Max(0, unitPrice) * Mathf.Max(1, removed.amount));
+        bool reserved = !_raidTrade || (_activeStation != null && _activeStation.TryReservePayout(payout));
 
-        if (TryGrantPhysicalMoney(payout, out string payoutMessage))
+        string payoutMessage = "상인의 소지금이 부족하거나 거래 가능한 위치가 아닙니다.";
+        if (reserved && TryGrantPhysicalMoney(payout, out payoutMessage))
         {
             message = $"Sold {InventoryItemDisplayUtility.ResolveItemName(removed.item)} x{removed.amount}. {payoutMessage}";
             RaiseMessage(message);
@@ -1268,6 +1311,8 @@ public class PlayerShopPanelUI : PanelUI
             PlayUiAudio(UIAudioCueType.Sell);
             return true;
         }
+
+        if (_raidTrade && reserved) _activeStation?.RefundPayout(payout);
 
         string restoreMessage = string.Empty;
         bool restored = _inventoryRuntime != null &&
@@ -1280,6 +1325,15 @@ public class PlayerShopPanelUI : PanelUI
         Debug.LogError($"[Shop] {message}", this);
         RaiseMessage(message);
         RefreshAll();
+        return false;
+    }
+
+    private bool CanMerchantPaySale(int unitPrice, int amount)
+    {
+        if (!_raidTrade) return true;
+        long payout = (long)Mathf.Max(0, unitPrice) * Mathf.Max(1, amount);
+        if (_activeStation != null && _activeStation.CanInteract && payout <= _activeStation.MerchantMoney) return true;
+        RaiseMessage($"상인 소지금 부족 / 거래 불가. 남은 돈: {(_activeStation != null ? _activeStation.MerchantMoney : 0)}");
         return false;
     }
 

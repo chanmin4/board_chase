@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99ca85af63a94240aa97cd468d889997, type: 3}
+  m_Name: 정조준 전환
+  m_EditorClassIdentifier:
+  _previewImage: {fileID: 21300000, guid: 121110ca2db9e7a42a01255a1e2a7b0c, type: 3}
+  _guid: c026102600000000000000000000010b
+  _rarity: 0
+  _purchasePrice: 0
+  _maxStack: 1
+  _maxOwnedAmount: 0
+  _effectGroup: AimSpeed
+  _category: 0
+  _randomStatsEnabled: 1
+  _allowNumericReroll: 1
+  _dismantlePartAmount: 1
+  _allowDuplicatePickup: 1
+  _allowDuplicateEquip: 0
+  _effectStrength: 1
+  _statModifiers: []
+  _featureFlags: []
+  _rarityRolls:
+  - rarity: 0
+    stats:
+    - stat: 14
+      minimum: 12
+      maximum: 20
+      type: 1
+      step: 2
+  - rarity: 1
+    stats:
+    - stat: 14
+      minimum: 22
+      maximum: 30
+      type: 1
+      step: 2
+  - rarity: 3
+    stats:
+    - stat: 14
+      minimum: 32
+      maximum: 40
+      type: 1
+      step: 2
+  - rarity: 2
+    stats:
+    - stat: 14
+      minimum: 42
+      maximum: 50
+      type: 1
+      step: 2

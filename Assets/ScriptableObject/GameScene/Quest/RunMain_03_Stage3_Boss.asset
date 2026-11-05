@@ -11,7 +11,7 @@ MonoBehaviour:
   _description: Run objective. Defeat the Stage 3 rocket boss to open the route to Stage 4 for this run.
   _branch: 0
   _prerequisites:
-  - {fileID: 11400000, guid: a100c8d1e0cf4ae69e14d0e7a4b12c02, type: 2}
+  - {fileID: 11400000, guid: a100c8d1e0cf4ae69e14d0e7a4b12c01, type: 2}
   _objectives:
   - _objectiveType: 0
     _targetConfig: {fileID: 11400000, guid: 50ced4ffabc1496ea2b2d1ab3e10a103, type: 2}
@@ -39,5 +39,8 @@ MonoBehaviour:
     _shopConfig: {fileID: 11400000, guid: dcc637a49b254b1aa32ef08c66d9e511, type: 2}
     _shopUnlockNodeId: gas_stage_4_filter_upgrade
     _stageToUnlock: {fileID: 0}
+  - _rewardType: 2
+    _shopConfig: {fileID: 11400000, guid: dcc637a49b254b1aa32ef08c66d9e511, type: 2}
+    _shopUnlockNodeId: gas_stage_3_preparation
   _persistentRewardSummary: Unlock Stage 4 and Gas Filter Upgrade.
   _completionAudioCue: {fileID: 0}

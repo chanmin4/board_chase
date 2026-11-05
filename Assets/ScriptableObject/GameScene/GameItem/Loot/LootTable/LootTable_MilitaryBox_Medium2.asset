@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1100000000000000000000000000002, type: 3}
+  m_Name: LootTable_MilitaryBox_Medium2
+  m_EditorClassIdentifier: 
+  _pool:
+    minRollCount: 1
+    maxRollCount: 1
+    rarityTiers:
+    - rarity: 0
+      chancePercent: 63
+      items:
+      - item: {fileID: 11400000, guid: 159ce08102ed3294a962512401526ee2, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: 93085a1de9675ed45b01001bc658786b, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: 65bca7d88920e4c46b8721f9d89dcf78, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: 5ee9c1275d95499da28f35a008f4489d, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+    - rarity: 1
+      chancePercent: 30
+      items:
+      - item: {fileID: 11400000, guid: c1d9900155203f9489b09c1358be0488, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: c636cf491b9913f46816eb4473d0bf2d, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+    - rarity: 3
+      chancePercent: 6
+      items: []
+    - rarity: 2
+      chancePercent: 1
+      items: []
+    categorySettings: []

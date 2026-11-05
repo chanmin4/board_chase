@@ -56,7 +56,7 @@ public readonly struct PlayerInventoryItemSelection
         IsGasMask
             ? Mathf.Max(0f, Mathf.Max(0f, gasMaskMaxFilterDurability) - Mathf.Max(0f, gasMaskFilterDurability))
             : 0f;
-    public bool IsRepairable => IsArmor || IsRangedWeapon || IsGasMask;
+    public bool IsRepairable => EquipmentRepairPolicy.Enabled && (IsArmor || IsRangedWeapon || IsGasMask);
 
     public PlayerInventoryItemSelection(
         PlayerInventoryItemSelectionKind kind,

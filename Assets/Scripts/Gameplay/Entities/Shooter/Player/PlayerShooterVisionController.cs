@@ -11,6 +11,9 @@ public sealed class PlayerShooterVisionController : EntityVisionController
 {
     [Header("Player Aim")]
     [SerializeField] private PlayerAimController _aimAction;
+    private Vector3 _presentationForward;
+    private int _presentationFrame = -1;
+    private float _presentationAim01;
 
     // Purpose: Initializes Inspector defaults for this component.
     protected override void Reset()
@@ -38,12 +41,33 @@ public sealed class PlayerShooterVisionController : EntityVisionController
     // Purpose: Resolves the aim01 needed by this component.
     protected override float ResolveAim01()
     {
-        return _aimAction != null ? _aimAction.Aim01 : 0f;
+        if (!GameplayActionInputBlocker.IsAimBlocked)
+            _presentationAim01 = _aimAction != null ? _aimAction.Aim01 : 0f;
+        return _presentationAim01;
     }
 
     // Purpose: Resolves the forward direction needed by this component.
+    public void RefreshPresentationAimPoint()
+    {
+        if (GameplayActionInputBlocker.IsAimBlocked)
+        {
+            if (_presentationForward.sqrMagnitude <= .0001f)
+                _presentationForward = base.ResolveForwardDirection();
+            _presentationFrame = Time.frameCount;
+            return;
+        }
+        _presentationFrame = -1;
+        if (_aimAction == null || !_aimAction.TryGetRawAimPoint(out _) ||
+            !_aimAction.TryGetFlatAimDirection(VisualOrigin.position, out var direction)) return;
+        _presentationForward = direction;
+        _presentationFrame = Time.frameCount;
+    }
+
     protected override Vector3 ResolveForwardDirection()
     {
+        if (GameplayActionInputBlocker.IsAimBlocked)
+            return _presentationForward.sqrMagnitude > .0001f ? _presentationForward : base.ResolveForwardDirection();
+        if (_presentationFrame == Time.frameCount) return _presentationForward;
         if (_aimAction != null &&
             _aimAction.TryGetFlatAimDirection(VisualOrigin.position, out Vector3 direction))
         {

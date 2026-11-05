@@ -15,8 +15,11 @@ public enum BulletAmmoType
 
 public enum ShooterFaction
 {
-    Player,
-    Enemy
+    Player = 0,
+    // Keep the historical non-player value (1) valid for serialized data.
+    Scraper = 1,
+    Raider = 2,
+    Agent = 3
 }
 
 public enum BulletTier
@@ -133,10 +136,11 @@ public abstract class BulletSO : ItemSO
     public float ProjectileSoundInvestigateDelaySeconds => Mathf.Max(0f, _projectileSoundInvestigateDelaySeconds);
     public LayerMask ProjectileCollisionMask => projectileCollisionMask;
     public QueryTriggerInteraction ProjectileTriggerInteraction => projectileTriggerInteraction;
-    public virtual int PenetrationClass => 0;
+    public virtual float PenetrationClass => 0;
     public virtual BulletTier Tier => BulletTier.Tier1;
     public virtual float HealthDamage => 0f;
     public virtual float InfectionDamage => 0f;
+    public virtual float InfectionExposureOnHit => 0f;
     public virtual float MarkAmount => 0f;
     public PlayerStatModifier[] StatModifiers => statModifiers;
     public override ItemKind Kind => ItemKind.Bullet;

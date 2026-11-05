@@ -85,11 +85,28 @@ public class ShooterThrowableAttack : MonoBehaviour
         out string failureReason)
     {
         return TryThrowUsableInternal(
-            ShooterFaction.Enemy,
+            ShooterFactionUtility.Resolve(this),
             usable,
             aimPoint,
             true,
             out failureReason);
+    }
+
+    /// <summary>적 투척 후보의 경로를 미리 검사합니다. 소지품을 소비하거나 발사체/View를 생성하지 않습니다.</summary>
+    public bool CanThrowEnemyUsableWithSafeArc(ThrowableUsableItemSO usable, Vector3 aimPoint, out string failureReason)
+    {
+        failureReason = null;
+        var stamina = EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (stamina != null && stamina.IsSprinting)
+        { failureReason = "cannot throw while sprinting"; return false; }
+        if (usable == null || usable.HeldViewPrefab == null || GamePause.IsPaused || Time.timeScale <= 0f ||
+            (_dashController != null && _dashController.IsDashing) || Time.time < _nextThrowTime)
+        {
+            failureReason = "throw unavailable";
+            return false;
+        }
+        ResolveRefs();
+        return TryResolveSafeEnemyThrowSolution(usable, aimPoint, out _, out _, out _, out _, out _, out failureReason, false);
     }
 
     // Purpose: Attempts to throw usable internal and reports whether the request succeeded.
@@ -101,6 +118,9 @@ public class ShooterThrowableAttack : MonoBehaviour
         out string failureReason)
     {
         failureReason = null;
+        var stamina = EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (stamina != null && stamina.IsSprinting)
+        { failureReason = "cannot throw while sprinting"; return false; }
 
         if (usable == null)
         {
@@ -352,7 +372,8 @@ public class ShooterThrowableAttack : MonoBehaviour
         out Vector3 velocity,
         out float flightSeconds,
         out bool detonateImmediately,
-        out string failureReason)
+        out string failureReason,
+        bool logHighArc = true)
     {
         failureReason = null;
 
@@ -413,7 +434,7 @@ public class ShooterThrowableAttack : MonoBehaviour
             velocity = highArcVelocity;
             flightSeconds = highArcFlightSeconds;
 
-            Debug.Log(
+            if (logHighArc) Debug.Log(
                 $"[ThrowableDebug] Enemy safe throw selected high arc. item={usable.name}, " +
                 $"origin={origin}, target={targetPoint}, flight={flightSeconds:0.000}s, " +
                 $"velocity={velocity}, blockedNormal={normalArcBlocker}",

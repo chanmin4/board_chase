@@ -53,6 +53,7 @@ public class UIOverlayManager : MonoBehaviour
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
     private void OnEnable()
     {
+        RegisterEscapeHandler();
         if (_requestChannel != null)
             _requestChannel.OnEventRaised += HandleOverlayRequest;
     }
@@ -60,6 +61,7 @@ public class UIOverlayManager : MonoBehaviour
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        UIEscapeRouter.Unregister(this);
         if (_requestChannel != null)
             _requestChannel.OnEventRaised -= HandleOverlayRequest;
 
@@ -72,6 +74,7 @@ public class UIOverlayManager : MonoBehaviour
     {
         if (id == UIOverlayId.None)
             return;
+        RegisterEscapeHandler();
 
         if (!_panelById.TryGetValue(id, out UIOverlayPanel nextPanel) || nextPanel == null)
             CachePanels();
@@ -151,6 +154,20 @@ public class UIOverlayManager : MonoBehaviour
     {
         CloseAllInternal();
     }
+
+    public bool TryCloseTopOverlay()
+    {
+        if (!HasOpenOverlays) return false;
+        Close(TopOverlayId);
+        return true;
+    }
+
+    public bool IsCoveredByAnotherOverlay(UIOverlayPanel panel) => panel != null &&
+        _panelById.TryGetValue(panel.Id, out var registered) && registered == panel &&
+        _openOverlayStack.Contains(panel.Id) && TopOverlayId != panel.Id;
+
+    private void RegisterEscapeHandler() => UIEscapeRouter.Register(this,
+        () => HasOpenOverlays, () => TryCloseTopOverlay());
 
     // Purpose: Restores the saved input for open overlays state.
     public void RestoreInputForOpenOverlays()

@@ -36,18 +36,21 @@ MonoBehaviour:
   _purchasePrice: 10
   _worldVisualPrefab: {fileID: 2448057292638494091, guid: f2db53d600400a94280c6293ecd6056b, type: 3}
   _maxStack: 1
+  _maxOwnedAmount: 0
   _armorId: armor
   _displayName: ArmorLv1
   _armorClass: 1
-  _maxDurability: 100
+  _maxDurability: 1000
+  _repairPermanentLossRatio: 0.1
   _sameOrHigherPenetrationHealthDamageMultiplier: 1
   _healthDamageMultiplierPerClassGap: 0.5
   _sameOrHigherPenetrationMarkDamageMultiplier: 1
   _markDamageMultiplierPerClassGap: 0.75
   _equippedVisualPrefab: {fileID: 2448057292638494091, guid: f2db53d600400a94280c6293ecd6056b, type: 3}
-  _equippedVisualLocalPosition: {x: 0, y: 0.8, z: 0}
+  _equippedVisualLocalPosition: {x: 0, y: 0.8, z: -0.02}
   _equippedVisualLocalEulerAngles: {x: -0, y: 0, z: 0}
-  _equippedVisualLocalScale: {x: 2.8, y: 2.2, z: 3}
+  _equippedVisualLocalScale: {x: 2.8, y: 2.2, z: 3.2}
+  _visualCoverage: 8
   _statModifiers: []
   references:
     version: 2

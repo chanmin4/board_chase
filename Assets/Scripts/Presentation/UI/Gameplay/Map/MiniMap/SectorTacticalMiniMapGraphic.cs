@@ -28,6 +28,7 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
     [SerializeField] private Color _extractionPortalColor = new(0.1f, 1f, 0.35f, 1f);
 
     private readonly List<Collider> _structures = new();
+    private readonly List<Vector3> _structureCorners = new();
     private readonly List<VisionVisibilityTarget> _enemies = new();
     private readonly List<VisionDiscoveredVisibilityTarget> _discoveries = new();
     private readonly List<SectorPortal> _portals = new();
@@ -97,6 +98,7 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
 
         _sector = current;
         _structures.Clear();
+        _structureCorners.Clear();
         _portals.Clear();
         ResolveViewer();
         CacheDynamicTargets();
@@ -130,6 +132,22 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
             }
 
             _structures.Add(candidate);
+            if (candidate is BoxCollider box)
+            {
+                Vector3 half = box.size * .5f;
+                _structureCorners.Add(box.transform.TransformPoint(box.center + new Vector3(-half.x, 0, -half.z)));
+                _structureCorners.Add(box.transform.TransformPoint(box.center + new Vector3(-half.x, 0, half.z)));
+                _structureCorners.Add(box.transform.TransformPoint(box.center + new Vector3(half.x, 0, half.z)));
+                _structureCorners.Add(box.transform.TransformPoint(box.center + new Vector3(half.x, 0, -half.z)));
+            }
+            else
+            {
+                Bounds bounds = candidate.bounds;
+                _structureCorners.Add(bounds.min);
+                _structureCorners.Add(new Vector3(bounds.min.x, bounds.min.y, bounds.max.z));
+                _structureCorners.Add(bounds.max);
+                _structureCorners.Add(new Vector3(bounds.max.x, bounds.min.y, bounds.min.z));
+            }
         }
 
         CachePortal(_sector.XMin);
@@ -161,19 +179,13 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
         if (_sector == null)
             return;
 
-        VisionVisibilityTarget[] visibilityTargets =
-            _sector.GetComponentsInChildren<VisionVisibilityTarget>(true);
-
-        for (int i = 0; i < visibilityTargets.Length; i++)
+        _sector.GetComponentsInChildren(true, _enemies);
+        for (int i = _enemies.Count - 1; i >= 0; i--)
         {
-            VisionVisibilityTarget target = visibilityTargets[i];
-
-            if (target != null && target.Enemy != null)
-                _enemies.Add(target);
+            if (_enemies[i] == null || _enemies[i].Enemy == null) _enemies.RemoveAt(i);
         }
 
-        _discoveries.AddRange(
-            _sector.GetComponentsInChildren<VisionDiscoveredVisibilityTarget>(true));
+        _sector.GetComponentsInChildren(true, _discoveries);
     }
 
     // Purpose: Caches portal for later reuse.
@@ -201,7 +213,8 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
         if (_viewer.UsesForwardArc)
         {
             DrawClippedFan(vh, mapRect, origin, _viewer.ForwardDirection,
-                _viewer.ForwardArcAngle, _viewer.VisionRange, 40, _forwardVisionColor);
+                _viewer.GetForwardArcAngleAtDistance(_viewer.CloseVisionRadius),
+                _viewer.VisionRange, 40, _forwardVisionColor, forwardContour: true);
         }
     }
 
@@ -214,7 +227,8 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
         float angle,
         float range,
         int segments,
-        Color color)
+        Color color,
+        bool forwardContour = false)
     {
         if (range <= 0f || segments < 2)
             return;
@@ -227,6 +241,7 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
         forward.Normalize();
         Vector2 center = WorldToMap(origin, mapRect);
         Vector2 previous = default;
+        Vector2 previousInner = default;
 
         for (int i = 0; i <= segments; i++)
         {
@@ -235,16 +250,28 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
                 ? t * 360f
                 : Mathf.Lerp(-angle * 0.5f, angle * 0.5f, t);
             Vector3 direction = Quaternion.Euler(0f, yaw, 0f) * forward;
-            float visibleDistance = _viewer.GetVisibleDistanceFrom(
-                _viewer.EyePosition,
-                direction,
-                range);
+            // No physics queries from a Canvas mesh rebuild. Until fog has
+            // produced a matching sample, suppress the fan rather than reveal
+            // through structures or use an old room's occlusion.
+            if (!_viewer.TryGetPresentationVisibleDistance(origin, direction, range, out float visibleDistance))
+                return;
+            if (forwardContour) visibleDistance = Mathf.Min(visibleDistance, _viewer.GetForwardVisionDistance(direction));
             Vector2 current = WorldToMap(origin + direction * visibleDistance, mapRect);
+            Vector2 inner = WorldToMap(origin + direction * Mathf.Min(visibleDistance, _viewer.CloseVisionRadius), mapRect);
 
             if (i > 0)
-                AddTriangle(vh, center, previous, current, color);
+            {
+                if (forwardContour)
+                {
+                    // Do not paint the cone over the circle's center/interior.
+                    AddTriangle(vh, previousInner, previous, current, color);
+                    AddTriangle(vh, previousInner, current, inner, color);
+                }
+                else AddTriangle(vh, center, previous, current, color);
+            }
 
             previous = current;
+            previousInner = inner;
         }
     }
 
@@ -258,34 +285,11 @@ public sealed class SectorTacticalMiniMapGraphic : MaskableGraphic
             if (structure == null || !structure.enabled)
                 continue;
 
-            if (structure is BoxCollider box)
-            {
-                Vector3 half = box.size * 0.5f;
-                Vector3 center = box.center;
-                Vector2 a = WorldToMap(
-                    box.transform.TransformPoint(center + new Vector3(-half.x, 0f, -half.z)),
-                    mapRect);
-                Vector2 b = WorldToMap(
-                    box.transform.TransformPoint(center + new Vector3(-half.x, 0f, half.z)),
-                    mapRect);
-                Vector2 c = WorldToMap(
-                    box.transform.TransformPoint(center + new Vector3(half.x, 0f, half.z)),
-                    mapRect);
-                Vector2 d = WorldToMap(
-                    box.transform.TransformPoint(center + new Vector3(half.x, 0f, -half.z)),
-                    mapRect);
-                AddQuad(vh, a, b, c, d, _structureColor);
-                continue;
-            }
-
-            Bounds bounds = structure.bounds;
-            Vector2 min = WorldToMap(bounds.min, mapRect);
-            Vector2 max = WorldToMap(bounds.max, mapRect);
-            AddQuad(vh, Rect.MinMaxRect(
-                Mathf.Min(min.x, max.x),
-                Mathf.Min(min.y, max.y),
-                Mathf.Max(min.x, max.x),
-                Mathf.Max(min.y, max.y)), _structureColor);
+            int first = i * 4;
+            AddQuad(vh, WorldToMap(_structureCorners[first], mapRect),
+                WorldToMap(_structureCorners[first + 1], mapRect),
+                WorldToMap(_structureCorners[first + 2], mapRect),
+                WorldToMap(_structureCorners[first + 3], mapRect), _structureColor);
         }
     }
 

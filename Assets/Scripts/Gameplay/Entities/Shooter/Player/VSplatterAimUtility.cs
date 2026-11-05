@@ -16,7 +16,8 @@ public static class VSplatterAimUtility
         float fallbackPlaneY,
         Transform ignoredRoot,
         out Vector3 worldPoint,
-        out RaycastHit hitInfo)
+        out RaycastHit hitInfo,
+        Vector2? screenPoint = null)
     {
         worldPoint = default;
         hitInfo = default;
@@ -24,7 +25,7 @@ public static class VSplatterAimUtility
         if (aimCamera == null)
             return false;
 
-        Ray ray = aimCamera.ScreenPointToRay(Input.mousePosition);
+        Ray ray = aimCamera.ScreenPointToRay(screenPoint.HasValue ? (Vector3)screenPoint.Value : Input.mousePosition);
         RaycastHit[] hits = Physics.RaycastAll(ray, 999f, hitMask, QueryTriggerInteraction.Ignore);
 
         if (hits.Length > 0)
@@ -49,7 +50,7 @@ public static class VSplatterAimUtility
         if (!allowFallbackPlane)
             return false;
 
-        return TryGetAimPointOnPlane(aimCamera, fallbackPlaneY, out worldPoint);
+        return TryGetAimPointOnPlane(aimCamera, fallbackPlaneY, out worldPoint, screenPoint);
     }
 
     // Purpose: Attempts to get aim point and reports whether the request succeeded.
@@ -72,14 +73,14 @@ public static class VSplatterAimUtility
     }
 
     // Purpose: Attempts to get aim point on plane and reports whether the request succeeded.
-    public static bool TryGetAimPointOnPlane(Camera aimCamera, float planeY, out Vector3 worldPoint)
+    public static bool TryGetAimPointOnPlane(Camera aimCamera, float planeY, out Vector3 worldPoint, Vector2? screenPoint = null)
     {
         worldPoint = default;
 
         if (aimCamera == null)
             return false;
 
-        Ray ray = aimCamera.ScreenPointToRay(Input.mousePosition);
+        Ray ray = aimCamera.ScreenPointToRay(screenPoint.HasValue ? (Vector3)screenPoint.Value : Input.mousePosition);
         Plane plane = new Plane(Vector3.up, new Vector3(0f, planeY, 0f));
 
         if (!plane.Raycast(ray, out float enter))

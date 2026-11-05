@@ -15,6 +15,9 @@ namespace VSplatter.StateMachine
 	{
 		internal StateActionSO _originSO;
 
+        /// <summary>이 행동이 속한 계층의 상태/시간. Owner의 루트 상태와 구분합니다.</summary>
+        public StateMachineContext Context { get; internal set; }
+
 		/// <summary>
 		/// Use this property to access shared data from the <see cref="StateActionSO"/> that corresponds to this <see cref="StateAction"/>
 		/// </summary>
@@ -33,6 +36,15 @@ namespace VSplatter.StateMachine
 
 		public virtual void OnStateEnter() { }
 		public virtual void OnStateExit() { }
+
+		/// <summary>Legacy transition/reset callbacks retain their contract. Cancellation is opt-in:
+		/// an old Exit may commit an attack, so never invoke it implicitly for interruption.</summary>
+		public virtual void OnStateExit(StateExitReason reason)
+		{
+			if (reason == StateExitReason.Transition || reason == StateExitReason.Reset) OnStateExit();
+			else OnInterrupted(reason);
+		}
+		public virtual void OnInterrupted(StateExitReason reason) { }
 
 		/// <summary>
 		/// This enum is used to create flexible <c>StateActions</c> which can execute in any of the 3 available "moments".

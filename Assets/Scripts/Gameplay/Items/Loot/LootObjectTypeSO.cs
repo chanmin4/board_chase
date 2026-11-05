@@ -1,6 +1,6 @@
 /*
  * Role hierarchy: Gameplay > Items > Loot
- * Primary responsibility: Shares one fixed LootTableSO across a family of world loot-object prefabs.
+ * Primary responsibility: Reads legacy shared loot-family assets for compatibility only.
  * Execution boundary: Runtime (Assembly-CSharp)
  */
 
@@ -14,11 +14,10 @@ public enum LootContainerCategory
 }
 
 /// <summary>
-/// Authoring-level container family such as Abandoned Bag, Ammo Container, or
-/// Safe. Visual variants reference individual LootObjectSO records, while the
-/// records can share this type's single fixed LootTableSO.
+/// Legacy shared-family data. Current authored boxes store their category and
+/// independent LootTableSO directly; this type is retained for old serialized data.
 /// </summary>
-[CreateAssetMenu(fileName = "LootObjectType_", menuName = "Game/Loot/Loot Object Type")]
+// Legacy serialized asset only. New containers use an owned LootTableSO, not a shared family.
 public sealed class LootObjectTypeSO : ScriptableObject
 {
     [Header("Authoring Identity")]
@@ -40,8 +39,7 @@ public sealed class LootObjectTypeSO : ScriptableObject
     public void AssignCategory(LootContainerCategory category) => _category = category;
 
     /// <summary>
-    /// Initializes a newly created type and its shared table from Loot Maker.
-    /// Individual visual objects then bind here.
+    /// Initializes legacy import/test data. New Loot Maker authoring does not create families.
     /// </summary>
     public void Configure(string displayName, GameObject previewPrefab, LootTableSO lootTable)
     {

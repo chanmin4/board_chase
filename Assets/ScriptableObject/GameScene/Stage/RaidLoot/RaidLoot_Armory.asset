@@ -19,6 +19,51 @@ MonoBehaviour:
     - rarity: 0
       chancePercent: 63
       items:
+      - item: {fileID: 11400000, guid: 58e4c40c877e22b9d120e09621d3bd4d, type: 2}
+        minAmount: 1
+        maxAmount: 8
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: d0f0483e80edc54a423e39d7447f7e64, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000107, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c026102600000000000000000000010b, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000112, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000110, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000108, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000106, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
       - item: {fileID: 11400000, guid: 97b81463ac3d52148a21df4ab341b1ff, type: 2}
         minAmount: 1
         maxAmount: 1
@@ -236,10 +281,153 @@ MonoBehaviour:
         manualSharePercent: 0
     - rarity: 1
       chancePercent: 30
-      items: []
+      items:
+      - item: {fileID: 11400000, guid: 19e71b3132cd15637f7219b141957f55, type: 2}
+        minAmount: 1
+        maxAmount: 8
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: dc93dffcc4e01decb42cc17fd39bb212, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000107, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c026102600000000000000000000010b, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000112, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000110, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000108, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000106, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
     - rarity: 3
       chancePercent: 6
-      items: []
+      items:
+      - item: {fileID: 11400000, guid: a353170fc5f44b65bf7916fbc992cbf9, type: 2}
+        minAmount: 1
+        maxAmount: 8
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000107, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c026102600000000000000000000010b, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000112, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000110, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000108, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000106, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000113, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
     - rarity: 2
       chancePercent: 1
-      items: []
+      items:
+      - item: {fileID: 11400000, guid: ff337b67abd4318f873b5efb7ba00ca2, type: 2}
+        minAmount: 1
+        maxAmount: 8
+        useManualShare: 0
+        manualSharePercent: 0
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000107, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c026102600000000000000000000010b, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000112, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000110, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000108, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000106, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+      - item: {fileID: 11400000, guid: c0261026000000000000000000000113, type: 2}
+        minAmount: 1
+        maxAmount: 1
+        useManualShare: 1
+        manualSharePercent: 0.5
+    - rarity: 4
+      chancePercent: 1
+      items:
+      - item: {fileID: 11400000, guid: b11444ff01937358ebdab850a97556d1, type: 2}
+        minAmount: 1
+        maxAmount: 8
+        useManualShare: 0
+        manualSharePercent: 0

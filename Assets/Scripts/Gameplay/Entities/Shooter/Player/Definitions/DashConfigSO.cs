@@ -6,9 +6,7 @@
 
 using UnityEngine;
 
-[CreateAssetMenu(
-    fileName = "DashConfig",
-    menuName = "Game/Dash Config")]
+// WIP serialized compatibility only. New authoring lives in ShooterStatConfigSO._dash.
 public class DashConfigSO : ScriptableObject
 {
     [Header("Dash")]

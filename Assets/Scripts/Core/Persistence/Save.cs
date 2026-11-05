@@ -12,6 +12,38 @@ using UnityEngine.Localization;
 [Serializable]
 public class Save
 {
+    public PlayerExperienceSaveData experience = new();
+    public int recyclingSlotBonus;
+    public List<string> recyclingSlotReceipts=new();
+    public List<string> questWarehouseItemReceipts=new();
+    public List<PassiveInstanceSaveData> passiveInstances = new();
+    public List<QuestPassiveSlotRewardSaveData> questPocketSlotRewards = new();
+    public int PocketSlotBonus
+    {
+        get
+        {
+            int count = 0;
+            var seen = new HashSet<string>();
+            foreach (var row in questPocketSlotRewards ?? new())
+                if (row != null && row.slotAmount > 0 && seen.Add(row.questId + ":" + row.rewardIndex)) count += Mathf.Min(4, row.slotAmount);
+            return Mathf.Clamp(count, 0, 4);
+        }
+    }
+    public List<QuestPassiveSlotRewardSaveData> _questPassiveSlotRewards = new();
+    public List<QuestPassiveSlotRewardSaveData> QuestPassiveSlotRewards => _questPassiveSlotRewards ??= new();
+    public int UnlockedPassiveSlotCount
+    {
+        get
+        {
+            int count = PlayerPassiveInventoryRuntime.MinimumUnlockedSlotCount;
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var row in QuestPassiveSlotRewards)
+                if (row != null && !string.IsNullOrWhiteSpace(row.questId) && row.rewardIndex >= 0 &&
+                    keys.Add(row.questId + ":" + row.rewardIndex))
+                    count += Mathf.Clamp(row.slotAmount, 0, PlayerPassiveInventoryRuntime.MaximumSlotCount);
+            return Mathf.Clamp(count, PlayerPassiveInventoryRuntime.MinimumUnlockedSlotCount, PlayerPassiveInventoryRuntime.MaximumSlotCount);
+        }
+    }
     public const int CurrentSchemaVersion = 1;
 
     [Tooltip("Schema version for permanent player progression. Upgrade this through SaveMigration when the profile contract changes.")]
@@ -22,6 +54,7 @@ public class Save
     public int _roguelikeCurrency;
 
     [Header("Persistent Progress")]
+    [HideInInspector,Tooltip("WIP legacy save payload only. Preserved for old profiles; never applied to active character stats.")]
     public MetaUpgradeSaveData _metaUpgrades = new MetaUpgradeSaveData();
     public InheritanceWarehouseSaveData _inheritanceWarehouse =
         new InheritanceWarehouseSaveData();
@@ -128,6 +161,9 @@ public class Save
     // Purpose: Ensures runtime defaults is ready before the workflow continues.
     public void EnsureRuntimeDefaults()
     {
+        experience??=new();experience.total=Math.Max(0,experience.total);
+        experience.completedQuestIds??=new();experience.settledRunIds??=new();questWarehouseItemReceipts??=new();
+        QuestPassiveSlotRewards.RemoveAll(row => row == null || string.IsNullOrWhiteSpace(row.questId) || row.rewardIndex < 0 || row.slotAmount <= 0);
         _roguelikeCurrency = 0;
         MetaUpgrades.ClampNonNegative();
         InheritanceWarehouse.EnsureDefaults();
@@ -266,6 +302,7 @@ public sealed class PlayerRunStateSaveData
     public int shopRunId;
     public List<PlayerRunShopStateSaveData> shopStates = new List<PlayerRunShopStateSaveData>();
     public List<PlayerRunInventorySlotSaveData> inventorySlots = new List<PlayerRunInventorySlotSaveData>();
+    public List<PlayerRunInventorySlotSaveData> usableQuickSlots = new List<PlayerRunInventorySlotSaveData>();
     public List<PlayerRunWeaponSaveData> equippedWeapons = new List<PlayerRunWeaponSaveData>();
     public string equippedArmorGuid;
     public float equippedArmorDurability = -1f;
@@ -278,6 +315,7 @@ public sealed class PlayerRunStateSaveData
     public List<PlayerRunMagazineSaveData> weaponMagazines = new List<PlayerRunMagazineSaveData>();
     public int unlockedPassiveSlotCount = PlayerPassiveInventoryRuntime.MinimumUnlockedSlotCount;
     public List<string> equippedPassiveGuids = new List<string>();
+    public int passiveSlotSchemaVersion;
     public List<PlayerRunStatusEffectSaveData> statusEffects = new List<PlayerRunStatusEffectSaveData>();
 
     public void Clear()
@@ -289,6 +327,7 @@ public sealed class PlayerRunStateSaveData
         activeWeaponSlotIndex = 0;
         shopRunId = 0;
         shopStates?.Clear();
+        usableQuickSlots?.Clear();
         inventorySlots?.Clear();
         equippedWeapons?.Clear();
         equippedArmorGuid = string.Empty;
@@ -332,6 +371,8 @@ public sealed class PlayerRunStateSaveData
         weaponMagazines ??= new List<PlayerRunMagazineSaveData>();
         equippedPassiveGuids ??= new List<string>();
         statusEffects ??= new List<PlayerRunStatusEffectSaveData>();
+        usableQuickSlots ??= new List<PlayerRunInventorySlotSaveData>();
+        foreach (var quickSlot in usableQuickSlots) quickSlot?.EnsureDefaults();
 
         RemoveInvalidInventorySlots();
         RemoveInvalidShopStates();
@@ -468,6 +509,7 @@ public sealed class PlayerRunStateSaveData
 [Serializable]
 public sealed class PlayerRunShopStateSaveData
 {
+    public int merchantMoney = -1;
     public string shopStateId;
     public bool offersRolled;
     public int restockRevision;
@@ -571,6 +613,7 @@ public sealed class PlayerRunInventorySlotSaveData
 [Serializable]
 public sealed class PlayerRunWeaponSaveData
 {
+    public bool jammed;
     public int slotIndex;
     public string weaponGuid;
     public int amount;
@@ -613,9 +656,13 @@ public sealed class PlayerRunStatusEffectSaveData
 {
     public string statusEffectId;
     public float remainingSeconds;
+    public int stacks = 1;
+    public float tickRemaining = 1f;
 
     public void EnsureDefaults()
     {
+        stacks = Mathf.Max(1, stacks);
+        tickRemaining = float.IsNaN(tickRemaining) || float.IsInfinity(tickRemaining) ? 1f : Mathf.Max(.001f, tickRemaining);
         remainingSeconds = float.IsNaN(remainingSeconds) || float.IsInfinity(remainingSeconds)
             ? 0f
             : Mathf.Max(0f, remainingSeconds);
@@ -833,6 +880,11 @@ public sealed class DeviceSettingsSaveData
 [Serializable]
 public sealed class RunSaveData
 {
+    public StartingPassivePreparationSaveData startingPassives = new();
+    public RunExperienceSaveData experience = new();
+    public InfectionExposureSaveData infectionExposure = new();
+    public List<RecyclingSlotSaveData> recyclingSlots = new();
+    public List<PassiveInstanceSaveData> passiveInstances = new();
     public const int CurrentSchemaVersion = 2;
 
     public int schemaVersion = CurrentSchemaVersion;
@@ -852,6 +904,8 @@ public sealed class RunSaveData
     {
         PlayerRunState.EnsureDefaults();
         raid ??= new RaidRunSaveData();
+        experience??=new();experience.pending=Mathf.Max(0,experience.pending);experience.discoveries??=new();
+        infectionExposure??=new();recyclingSlots??=new();
     }
 }
 

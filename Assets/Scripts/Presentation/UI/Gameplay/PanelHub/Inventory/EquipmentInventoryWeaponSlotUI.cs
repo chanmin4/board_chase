@@ -126,7 +126,10 @@ public sealed class EquipmentInventoryWeaponSlotUI : EquipmentInventorySlotUI
             -1f,
             -1f,
             _currentDurability,
-            _maxDurability));
+            _maxDurability,
+            playerEquipmentOwner: !_isQuickSlot && Owner is PlayerInventoryUI playerOwner
+                ? playerOwner.InventoryRuntime : null,
+            playerWeaponSlotIndex: !_isQuickSlot ? _weaponSlotIndex : -1));
     }
 
     // Purpose: Ensures durability text is ready before the workflow continues.

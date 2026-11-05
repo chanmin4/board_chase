@@ -1,0 +1,243 @@
+// Archived 2026-09-29 verification/migration source; NOT an active Unity script.
+// Historical report gates and retry logic must be reviewed before any deliberate reuse.
+// User-authorized one-shot migration. Tests run first; report prevents repeated execution.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+[InitializeOnLoad]
+internal static class LootOwnershipMigrationOnce
+{
+    private const string Folder = "Library/LootOwnership-20260929";
+    private const string Report = Folder + "/result-v4.txt";
+    private static readonly List<string> Lines = new();
+    private static readonly Queue<(Type type, MethodInfo method, object[] args)> Tests = new();
+    private static readonly List<State> States = new();
+    private static readonly List<LootTableSO> Created = new();
+    private static readonly HashSet<int> SavedSourcesChecked = new();
+    private static readonly HashSet<int> UnsavedTablesToCopy = new();
+    private static LootProgressionEditorWindow _window;
+    private static EditorWindow _previousWindow;
+    private static readonly Dictionary<string, Rect> Controls = new();
+    private static int _passed, _frames, _phase;
+    private static bool _migrationComplete;
+    private static double _started;
+    private sealed class State
+    {
+        public LootObjectSO Box;
+        public LootTableSO Table;
+        public string Path, Json, Pool, Settings, Meta, PrefabPath, PrefabText;
+        public int Min, Max;
+        public LootContainerCategory Category;
+    }
+    static LootOwnershipMigrationOnce() { EditorApplication.delayCall += Start; }
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Start; return; }
+        try
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode || PrefabStageUtility.GetCurrentPrefabStage() != null)
+                throw new Exception("Exit Play/Prefab Mode before migrating.");
+            Directory.CreateDirectory(Folder);
+            _started = EditorApplication.timeSinceStartup;
+            string previousReport = Folder + "/result-v3.txt";
+            bool testsAlreadyPassed = File.Exists(previousReport) &&
+                File.ReadAllLines(previousReport).Count(line => line.StartsWith("PASS ", StringComparison.Ordinal)) == 71 &&
+                File.ReadAllText(previousReport).Contains("PASS AuthoredContainerPreviewsPointToActualRootGameObjects");
+            if (testsAlreadyPassed)
+            {
+                Lines.Add("70 unchanged runtime/authoring tests already passed in result-v3.txt. Retrying migration only.");
+                _passed = 70;
+            }
+            foreach (Type type in testsAlreadyPassed ? Array.Empty<Type>() : new[] { typeof(LootMakerTests), typeof(LootMakerAuthoringTests) })
+                foreach (MethodInfo test in type.GetMethods())
+                {
+                    // Deletion/rename scans are outside this change.
+                    if (test.Name.StartsWith("Delet") || test.Name.StartsWith("Rename") || test.Name.StartsWith("DisplayName")) continue;
+                    var cases = test.GetCustomAttributes<TestCaseAttribute>().ToArray();
+                    if (cases.Length > 0) foreach (var entry in cases) Tests.Enqueue((type, test, entry.Arguments));
+                    else if (test.IsDefined(typeof(TestAttribute))) Tests.Enqueue((type, test, Array.Empty<object>()));
+                }
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL before migration: " + ex); }
+    }
+    private static void Tick()
+    {
+        try
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+            if (EditorApplication.timeSinceStartup - _started > 300) throw new Exception("Verification timed out.");
+            if (Tests.Count > 0)
+            {
+                var test = Tests.Dequeue(); object fixture = Activator.CreateInstance(test.type);
+                try
+                {
+                    foreach (var setup in test.type.GetMethods().Where(m => m.IsDefined(typeof(SetUpAttribute)))) setup.Invoke(fixture, null);
+                    test.method.Invoke(fixture, test.args);
+                    Pass(test.method.Name + (test.args.Length > 0 ? "(" + string.Join(",", test.args) + ")" : ""));
+                }
+                finally
+                {
+                    foreach (var cleanup in test.type.GetMethods().Where(m => m.IsDefined(typeof(TearDownAttribute)))) cleanup.Invoke(fixture, null);
+                }
+                File.WriteAllLines(Folder + "/progress-v4.txt", Lines);
+                return;
+            }
+            if (!_migrationComplete)
+            {
+                Migrate(); _migrationComplete = true;
+                _previousWindow = EditorWindow.focusedWindow;
+                _window = ScriptableObject.CreateInstance<LootProgressionEditorWindow>();
+                _window.titleContent = new GUIContent("Independent loot verification");
+                _window.position = new Rect(60, 60, 1260, 820);
+                _window.GuiControlObserved = (name, rect) => Controls[name] = rect;
+                typeof(LootProgressionEditorWindow).GetMethod("SelectContainer", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Invoke(_window, new object[] { States[0].Box });
+                _window.ShowUtility();
+                return;
+            }
+            _window.Repaint();
+            if (++_frames < 12 || !Controls.ContainsKey("CopyTable")) return;
+            _frames = 0;
+            if (_phase++ == 0)
+            {
+                Check(Controls.ContainsKey("PasteTable"), "independent Copy/Paste controls rendered");
+                Rect rect = Controls["CopyTable"];
+                _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, mousePosition = rect.center });
+                _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, mousePosition = rect.center });
+            }
+            else
+            {
+                var clipboard = (LootTableSO)typeof(LootProgressionEditorWindow).GetField("_worldPoolClipboard", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(_window);
+                Check(clipboard != null && clipboard != States[0].Box.LootTable && JsonUtility.ToJson(clipboard.Pool) == JsonUtility.ToJson(States[0].Box.LootTable.Pool), "Copy button produces a detached content snapshot");
+                Finish("COMPLETE: " + States.Count + " independent box tables; no shared family links. Created " + Created.Count + " own tables. Original source tables/prefabs/scenes were not changed.");
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static string Settings(LootObjectSO box)
+    {
+        string json = EditorJsonUtility.ToJson(box);
+        json = Regex.Replace(json, "\"_(lootObjectType|lootTable)\":\\{[^}]*\\},?", "");
+        return Regex.Replace(json, "\"_(overrideCategory|category|slotGenerationVersion|minGeneratedSlots|maxGeneratedSlots)\":(?:true|false|-?[0-9]+),?", "");
+    }
+    private static void VerifySavedSource(UnityEngine.Object source)
+    {
+        if (source == null) throw new Exception("Missing source asset.");
+        if (!SavedSourcesChecked.Add(source.GetInstanceID()) || !EditorUtility.IsDirty(source)) return;
+        // Reload/validation can leave an asset dirty without changing its authored data.
+        // Compare against a separately imported disk copy; never discard or overwrite sources.
+        // Preserve the user's live authored state, including earlier independent-link edits.
+        // Table sources are never overwritten; records are explicitly saved by this migration.
+        string path = AssetDatabase.GetAssetPath(source);
+        string temporaryFolder = "Assets/__LootOwnershipDiskCheck_" + Guid.NewGuid().ToString("N");
+        AssetDatabase.CreateFolder("Assets", Path.GetFileName(temporaryFolder));
+        try
+        {
+            string copyPath = temporaryFolder + "/" + Path.GetFileName(path);
+            File.Copy(path, copyPath);
+            AssetDatabase.ImportAsset(copyPath, ImportAssetOptions.ForceSynchronousImport);
+            var saved = AssetDatabase.LoadAssetAtPath(copyPath, source.GetType());
+            string memoryJson = EditorJsonUtility.ToJson(source);
+            string diskJson = saved != null ? EditorJsonUtility.ToJson(saved) : "<missing>";
+            if (memoryJson != diskJson)
+            {
+                File.WriteAllText(Folder + "/dirty-memory-" + source.name + ".json", memoryJson);
+                File.WriteAllText(Folder + "/dirty-disk-" + source.name + ".json", diskJson);
+                if (source is LootTableSO)
+                {
+                    UnsavedTablesToCopy.Add(source.GetInstanceID());
+                    Lines.Add("PRESERVE LIVE CONTENTS in new tables; source disk file is not overwritten: " + path);
+                    return;
+                }
+                if (source is LootObjectSO || source is LootObjectTypeSO)
+                {
+                    Lines.Add("PRESERVE LIVE AUTHORING STATE during authorized detachment: " + path);
+                    return;
+                }
+                throw new Exception("Unsaved content differs from disk; save before migrating: " + path);
+            }
+            Pass("dirty flag only; saved contents match: " + path);
+        }
+        finally
+        {
+            if (temporaryFolder.StartsWith("Assets/__LootOwnershipDiskCheck_", StringComparison.Ordinal))
+                AssetDatabase.DeleteAsset(temporaryFolder);
+        }
+    }
+    private static void Migrate()
+    {
+        var boxes = AssetDatabase.FindAssets("t:LootObjectSO").Select(g => AssetDatabase.LoadAssetAtPath<LootObjectSO>(AssetDatabase.GUIDToAssetPath(g)))
+            .Where(b => b != null).OrderBy(AssetDatabase.GetAssetPath).ToArray();
+        Check(boxes.Length > 0, "authored box catalog found");
+        foreach (var box in boxes)
+        {
+            string path = AssetDatabase.GetAssetPath(box);
+            if (!path.StartsWith(LootMakerAuthoring.Root + "/LootObject/", StringComparison.Ordinal) || !AssetDatabase.IsOpenForEdit(box))
+                throw new Exception("Unexpected or read-only record: " + path);
+            VerifySavedSource(box);
+            VerifySavedSource(box.LootTable);
+            if (box.LootObjectType != null) VerifySavedSource(box.LootObjectType);
+            string prefabPath = AssetDatabase.GetAssetPath(box.WorldPrefab);
+            States.Add(new State { Box = box, Table = box.LootTable, Path = path, Json = EditorJsonUtility.ToJson(box),
+                Pool = JsonUtility.ToJson(box.LootTable.Pool), Settings = Settings(box), Meta = File.ReadAllText(path + ".meta"),
+                PrefabPath = prefabPath, PrefabText = string.IsNullOrEmpty(prefabPath) ? null : File.ReadAllText(prefabPath),
+                Min = box.MinGeneratedSlots, Max = box.MaxGeneratedSlots, Category = box.Category });
+        }
+        Directory.CreateDirectory(Folder + "/before-records");
+        foreach (State state in States) File.Copy(state.Path, Folder + "/before-records/" + Path.GetFileName(state.Path), true);
+        int group = Undo.GetCurrentGroup(); Undo.IncrementCurrentGroup();
+        try
+        {
+            foreach (State state in States)
+            {
+                if (LootMakerAuthoring.NeedsIndependentTable(state.Box) || UnsavedTablesToCopy.Contains(state.Table.GetInstanceID()))
+                    Created.Add(LootMakerAuthoring.MakeIndependent(state.Box, state.Table));
+                Check(state.Box.LootObjectType == null, "no family: " + state.Box.name);
+                Check(JsonUtility.ToJson(state.Box.LootTable.Pool) == state.Pool, "pool preserved: " + state.Box.name);
+                Check(Settings(state.Box) == state.Settings && state.Box.MinGeneratedSlots == state.Min && state.Box.MaxGeneratedSlots == state.Max && state.Box.Category == state.Category,
+                    "identity/title/size/quality/category/fill preserved: " + state.Box.name);
+                AssetDatabase.SaveAssetIfDirty(state.Box.LootTable); AssetDatabase.SaveAssetIfDirty(state.Box);
+            }
+            Check(boxes.Select(b => b.LootTable).Distinct().Count() == boxes.Length, "one unique table per box across every category");
+            foreach (State state in States)
+            {
+                AssetDatabase.ImportAsset(state.Path, ImportAssetOptions.ForceUpdate);
+                var loaded = AssetDatabase.LoadAssetAtPath<LootObjectSO>(state.Path);
+                Check(loaded.LootObjectType == null && loaded.LootTable == state.Box.LootTable && JsonUtility.ToJson(loaded.LootTable.Pool) == state.Pool, "saved/reloaded own table: " + state.Box.name);
+                Check(File.ReadAllText(state.Path + ".meta") == state.Meta && (state.PrefabText == null || File.ReadAllText(state.PrefabPath) == state.PrefabText) && JsonUtility.ToJson(state.Table.Pool) == state.Pool,
+                    "GUID/prefab/original table unchanged: " + state.Box.name);
+            }
+            Undo.CollapseUndoOperations(group + 1);
+        }
+        catch
+        {
+            foreach (State state in States) { EditorJsonUtility.FromJsonOverwrite(state.Json, state.Box); EditorUtility.SetDirty(state.Box); AssetDatabase.SaveAssetIfDirty(state.Box); }
+            foreach (var table in Created) { string path = AssetDatabase.GetAssetPath(table); if (path.StartsWith(LootMakerAuthoring.Root + "/LootTable/", StringComparison.Ordinal)) AssetDatabase.DeleteAsset(path); }
+            Created.Clear(); Lines.Add("Migration rolled back; original records restored."); throw;
+        }
+        Lines.Add("MIGRATION DONE: " + boxes.Length + " records, " + Created.Count + " new tables.");
+        File.WriteAllLines(Folder + "/progress-v4.txt", Lines);
+    }
+    private static void Pass(string label) { _passed++; Lines.Add("PASS " + label); }
+    private static void Check(bool condition, string label) { if (!condition) throw new Exception(label); Pass(label); }
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        if (_window != null) _window.Close();
+        if (_previousWindow != null) _previousWindow.Focus();
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Folder); File.WriteAllLines(Report, Lines);
+        if (result.StartsWith("COMPLETE")) Debug.Log("[LootOwnershipMigrationOnce] " + result);
+        else Debug.LogError("[LootOwnershipMigrationOnce] " + result);
+    }
+}

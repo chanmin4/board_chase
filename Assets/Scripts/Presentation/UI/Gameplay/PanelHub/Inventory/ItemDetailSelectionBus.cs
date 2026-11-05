@@ -17,6 +17,8 @@ public readonly struct ItemDetailSelection
     public readonly float weaponMaxDurability;
     public readonly float gasMaskFilterDurability;
     public readonly float gasMaskMaxFilterDurability;
+    public readonly PlayerInventoryRuntime playerEquipmentOwner;
+    public readonly int playerWeaponSlotIndex;
 
     public bool HasItem => item != null && amount > 0;
 
@@ -28,7 +30,9 @@ public readonly struct ItemDetailSelection
         float weaponCurrentDurability = -1f,
         float weaponMaxDurability = -1f,
         float gasMaskFilterDurability = -1f,
-        float gasMaskMaxFilterDurability = -1f)
+        float gasMaskMaxFilterDurability = -1f,
+        PlayerInventoryRuntime playerEquipmentOwner = null,
+        int playerWeaponSlotIndex = -1)
     {
         this.item = item;
         this.amount = Mathf.Max(0, amount);
@@ -38,6 +42,8 @@ public readonly struct ItemDetailSelection
         this.weaponMaxDurability = weaponMaxDurability;
         this.gasMaskFilterDurability = gasMaskFilterDurability;
         this.gasMaskMaxFilterDurability = gasMaskMaxFilterDurability;
+        this.playerEquipmentOwner = playerEquipmentOwner;
+        this.playerWeaponSlotIndex = playerWeaponSlotIndex;
     }
 }
 

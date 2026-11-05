@@ -17,7 +17,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
     [SerializeField] private UICanvasGroupOpacity _uicanvasgroupopacity;
 
     [Header("Infection")]
-    [Tooltip("Visual-only Infection overlay drawn on the same maximum-HP axis as the red health bar. Purple reaching the red endpoint means Infection is lethal.")]
+    [Tooltip("Maximum-health erosion overlay, normalized to uninfected maximum health. Ordinary wounds do not create an infection death threshold.")]
     [SerializeField] private RectTransform _infectionRoot;
     [SerializeField] private Image _infectionFillImage;
 
@@ -312,7 +312,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
         EnsureInfectionImageMode();
 
         float infectionAxisMaximum = hasInfectionRuntime && _damageable != null
-            ? Mathf.Max(0f, _damageable.MaxHealth)
+            ? Mathf.Max(0f, _damageable.UninfectedMaxHealth)
             : 0f;
         float infection01 = infectionAxisMaximum > 0f
             ? Mathf.Clamp01(_infection.CurrentInfection / infectionAxisMaximum)
@@ -336,7 +336,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
         float maxHealth = _damageable != null ? _damageable.MaxHealth : -1f;
         float currentInfection = _infection != null ? _infection.CurrentInfection : -1f;
         float infectionLimit = _infection != null ? _infection.InfectionLimit : -1f;
-        float infectionAxisMaximum = _damageable != null ? maxHealth : -1f;
+        float infectionAxisMaximum = _damageable != null ? _damageable.UninfectedMaxHealth : -1f;
         float expectedFill = infectionAxisMaximum > 0f
             ? Mathf.Clamp01(currentInfection / infectionAxisMaximum)
             : 0f;
@@ -361,7 +361,7 @@ public class EnemyHealthBarWidget : MonoBehaviour
             $"currentInfection={currentInfection:0.###}, infectionLimit={infectionLimit:0.###}, " +
             $"uiAxisMaximum={infectionAxisMaximum:0.###}, " +
             $"expectedFill={expectedFill:0.###}, appliedFill={appliedFill:0.###}, " +
-            $"lethalByRuntimeValues={(_infection != null && _damageable != null && currentInfection + 0.001f >= currentHealth)}, " +
+            $"lethalByRuntimeValues={(_infection != null && _damageable != null && maxHealth <= 0f)}, " +
             $"damageableDead={(_damageable != null && _damageable.IsDead)}, " +
             $"infectionDead={(_infection != null && _infection.IsDead)}, " +
             $"rootActive={(_infectionRoot != null && _infectionRoot.gameObject.activeInHierarchy)}, " +

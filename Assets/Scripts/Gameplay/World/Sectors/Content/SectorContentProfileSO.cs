@@ -17,7 +17,8 @@ public enum SectorContentSlotKind
 {
     LootContainer = 0,
     RareCache = 1,
-    SpecialInteractable = 2
+    SpecialInteractable = 2,
+    WorldItem = 3 // 이전 enum 직렬화 값은 유지합니다.
 }
 
 [Serializable]
@@ -28,6 +29,7 @@ public sealed class WeightedSectorContentPrefab
 
     [Tooltip("Relative selection weight. Zero keeps the candidate authored but disables it.")]
     [Min(0)] public int weight = 1;
+    [HideInInspector] public string persistenceKey;
 }
 
 [Serializable]
@@ -45,13 +47,19 @@ public sealed class SectorContentSlotDefinition
     [Tooltip("Independent chance that this one anchor receives content. Use a low value for a Rare Cache slot.")]
     [Range(0f, 100f)] public float spawnChancePercent = 100f;
 
+    [Tooltip("확률과 랜덤 생성 상한을 무시하고 항상 생성합니다. 별도 보장 자리입니다.")]
+    public bool alwaysSpawn;
+    public SectorLootObjectSpawnTableSO lootObjectTable;
+    public SectorWorldItemSpawnTableSO worldItemTable;
+
     [Tooltip("Candidate prefabs for this one anchor. Selection is deterministic when the caller supplies a seeded Random.")]
     public List<WeightedSectorContentPrefab> prefabCandidates = new();
 
     public bool IsConfigured =>
         enabled &&
         !string.IsNullOrWhiteSpace(slotId) &&
-        HasValidCandidate();
+        (contentKind == SectorContentSlotKind.WorldItem ? worldItemTable != null && worldItemTable.HasCandidates :
+            lootObjectTable != null ? lootObjectTable.HasCandidates : HasValidCandidate());
 
     /// <summary>
     /// Pure data roll; it does not instantiate anything. The future sector
@@ -64,8 +72,15 @@ public sealed class SectorContentSlotDefinition
         if (!IsConfigured || random == null)
             return false;
 
-        if (random.NextDouble() * 100d >= Mathf.Clamp(spawnChancePercent, 0f, 100f))
+        if (!alwaysSpawn && random.NextDouble() * 100d >= Mathf.Clamp(spawnChancePercent, 0f, 100f))
             return false;
+
+        if (lootObjectTable != null)
+        {
+            var selected = lootObjectTable.Pick(random);
+            prefab = selected != null ? selected.lootObject.WorldPrefab : null;
+            return prefab != null;
+        }
 
         int totalWeight = 0;
         for (int i = 0; i < prefabCandidates.Count; i++)
@@ -118,6 +133,15 @@ public sealed class SectorContentSlotDefinition
     menuName = "Game/Sector/Normal Sector Content Profile")]
 public sealed class SectorContentProfileSO : ScriptableObject
 {
+    [Tooltip("새 배치 규칙을 사용하는 방만 켭니다. 기존 방은 자동으로 전환하지 않습니다.")]
+    [SerializeField] private bool _useAuthoredLootPlacement;
+    [SerializeField] private bool _limitLootObjects;
+    [SerializeField, Min(0)] private int _maxLootObjects = 6;
+    [SerializeField] private bool _limitWorldItems;
+    [SerializeField, Min(0)] private int _maxWorldItems = 8;
+    public bool UseAuthoredLootPlacement => _useAuthoredLootPlacement;
+    public int MaxLootObjects => _limitLootObjects ? Mathf.Max(0, _maxLootObjects) : int.MaxValue;
+    public int MaxWorldItems => _limitWorldItems ? Mathf.Max(0, _maxWorldItems) : int.MaxValue;
     [Tooltip("Each row maps one-to-one to a SectorContentSlotAnchor in the selected Normal Sector prefab. The profile only describes candidates and chance; it never changes the prefab itself.")]
     [SerializeField] private List<SectorContentSlotDefinition> _slotDefinitions = new();
 

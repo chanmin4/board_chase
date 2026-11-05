@@ -58,6 +58,21 @@ public class CameraManager : MonoBehaviour
     [FormerlySerializedAs("enableEntityOccluderDither")]
     [SerializeField] private bool enableCharacterOcclusionSilhouette = true;
 
+    [Header("Environment Camera Cutout")]
+    [Tooltip("플레이어 주변을 가리는 전경 구조물만 국소 투시합니다. 적 발견·시야·충돌은 바꾸지 않습니다.")]
+    [SerializeField] private bool enableEnvironmentCameraCutout = true;
+    [SerializeField, Min(1f)] private float environmentRevealRadius = 9f;
+    [SerializeField, Min(.1f)] private float environmentRevealSoftEdge = 1.5f;
+    [SerializeField, Min(.02f)] private float environmentRevealFadeSeconds = .18f;
+    private CameraEnvironmentCutoutController _environmentCutout;
+    private Camera _occlusionCamera;
+    private bool _lastEnvironmentCutoutEnabled, _lastSilhouetteEnabled;
+
+    internal Transform CurrentFollowTarget => followTarget;
+    internal float EnvironmentRevealRadius => Mathf.Max(1f, environmentRevealRadius);
+    internal float EnvironmentRevealSoftEdge => Mathf.Clamp(environmentRevealSoftEdge, .1f, EnvironmentRevealRadius);
+    internal float EnvironmentRevealFadeSeconds => Mathf.Max(.02f, environmentRevealFadeSeconds);
+
     private Vector3 _followVelocity;
     private Vector3 _lookAheadVelocity;
     private Vector3 _smoothedLookAhead;
@@ -110,6 +125,8 @@ public class CameraManager : MonoBehaviour
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        if (_environmentCutout != null) _environmentCutout.enabled = false;
+        _occlusionCamera = null;
         if (worldCameraReadyChannel != null && mainCamera != null)
             worldCameraReadyChannel.Clear(mainCamera);
     }
@@ -117,6 +134,7 @@ public class CameraManager : MonoBehaviour
     // Purpose: Processes frame work that must run after the regular Update pass.
     private void LateUpdate()
     {
+        EnsureEntityOcclusionController();
         if (!TryResolveFollowTarget())
             return;
 
@@ -281,9 +299,21 @@ public class CameraManager : MonoBehaviour
     // Purpose: Ensures entity occlusion controller is ready before the workflow continues.
     private void EnsureEntityOcclusionController()
     {
-        if (!enableCharacterOcclusionSilhouette || mainCamera == null)
+        if (mainCamera == null)
             return;
-
-        CameraEntityOcclusionFadeController.EnsureFor(mainCamera);
+        if (_occlusionCamera == mainCamera && _lastEnvironmentCutoutEnabled == enableEnvironmentCameraCutout &&
+            _lastSilhouetteEnabled == enableCharacterOcclusionSilhouette) return;
+        if (_environmentCutout != null && _occlusionCamera != mainCamera) _environmentCutout.enabled = false;
+        if (enableCharacterOcclusionSilhouette) CameraEntityOcclusionFadeController.EnsureFor(mainCamera);
+        _environmentCutout = mainCamera.GetComponent<CameraEnvironmentCutoutController>();
+        if (enableEnvironmentCameraCutout)
+        {
+            if (_environmentCutout == null) _environmentCutout = mainCamera.gameObject.AddComponent<CameraEnvironmentCutoutController>();
+            _environmentCutout.Configure(mainCamera, this);
+        }
+        else if (_environmentCutout != null) _environmentCutout.enabled = false;
+        _occlusionCamera = mainCamera;
+        _lastEnvironmentCutoutEnabled = enableEnvironmentCameraCutout;
+        _lastSilhouetteEnabled = enableCharacterOcclusionSilhouette;
     }
 }

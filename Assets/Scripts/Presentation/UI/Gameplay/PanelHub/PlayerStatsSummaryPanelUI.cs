@@ -30,6 +30,7 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
         MoveSpeedBonus = 4,
         CurrentArmorClass = 5,
         MeleeDamage = 6,
+        GasDefenseLevel = 7,
     }
 
     [Serializable]
@@ -89,11 +90,30 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
     private PlayerStatsSnapshot _latestStatsSnapshot;
     private bool _hasStatsSnapshot;
     private bool _statusEffectsSubscribed;
+    private PlayerInventoryRuntime _inventoryRuntime;
+    private int _lastGasDefense = -1;
+    private float _nextGasRefresh;
 
     // Purpose: Caches the component references required before runtime initialization.
     private void Awake()
     {
+        if (_rowDefinitions == null) _rowDefinitions = Array.Empty<SummaryRowDefinition>();
+        if (!Array.Exists(_rowDefinitions, row => row.statId == SummaryStatId.GasDefenseLevel))
+        {
+            Array.Resize(ref _rowDefinitions, _rowDefinitions.Length + 1);
+            _rowDefinitions[_rowDefinitions.Length - 1] = new SummaryRowDefinition
+            { enabled = true, displayName = "가스방어력", statId = SummaryStatId.GasDefenseLevel, valueFormat = "{0:0}" };
+        }
         BuildRows();
+    }
+
+    private void Update()
+    {
+        if (Time.unscaledTime < _nextGasRefresh) return;
+        _nextGasRefresh = Time.unscaledTime + 0.25f;
+        ResolvePlayerRuntimeReferences();
+        int defense = _inventoryRuntime != null ? _inventoryRuntime.GasDefenseLevel : 0;
+        if (defense != _lastGasDefense) { _lastGasDefense = defense; RefreshRows(); }
     }
 
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
@@ -195,6 +215,8 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
     {
         switch (definition.statId)
         {
+            case SummaryStatId.GasDefenseLevel:
+                return FormatNumber(definition, _inventoryRuntime != null ? _inventoryRuntime.GasDefenseLevel : 0);
             case SummaryStatId.MaxHealthBonus:
                 return FormatNumber(definition, GetQuestPercentAdd(PlayerStatId.MaxHealth));
 
@@ -228,6 +250,8 @@ public class PlayerStatsSummaryPanelUI : MonoBehaviour
     {
         if (_playerStatsRuntime == null)
             _playerStatsRuntime = FindFirstObjectByType<PlayerStatsRuntime>();
+        if (_inventoryRuntime == null && _playerStatsRuntime != null)
+            _inventoryRuntime = EntityComponentResolver.Resolve<PlayerInventoryRuntime>(_playerStatsRuntime);
 
         if (_playerDamageable == null && _playerStatsRuntime != null)
             _playerDamageable = EntityComponentResolver.Resolve<Damageable>(_playerStatsRuntime);

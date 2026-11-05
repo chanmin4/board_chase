@@ -28,7 +28,7 @@ public partial class PlayerInventoryRuntime
         target.equippedWeapons.Clear();
         target.keyToolSlots.Clear();
 
-        for (int slotIndex = 0; slotIndex < Capacity && slotIndex < _items.Count; slotIndex++)
+        for (int slotIndex = 0; slotIndex < _items.Count; slotIndex++)
         {
             PlayerInventoryItemStack stack = _items[slotIndex];
             if (stack == null || stack.IsEmpty || stack.Item == null || string.IsNullOrWhiteSpace(stack.Item.Guid))
@@ -64,7 +64,8 @@ public partial class PlayerInventoryRuntime
                     weaponGuid = weapon.Guid,
                     amount = _equipmentRuntime.GetWeaponAmount(slotIndex),
                     currentDurability = _equipmentRuntime.GetWeaponCurrentDurability(slotIndex),
-                    maxDurability = _equipmentRuntime.GetWeaponMaxDurability(slotIndex)
+                    maxDurability = _equipmentRuntime.GetWeaponMaxDurability(slotIndex),
+                    jammed = _equipmentRuntime.IsWeaponJammed(slotIndex)
                 });
             }
 
@@ -139,13 +140,13 @@ public partial class PlayerInventoryRuntime
         ResetRunOwnershipForRestore();
 
         _equippedBackpack = restoredBackpack;
-        _useLegacyBackpackCapacityFallback = false;
         NormalizeStorage();
 
         for (int index = 0; index < source.inventorySlots.Count; index++)
         {
             PlayerRunInventorySlotSaveData entry = source.inventorySlots[index];
             ItemSO item = ResolveItem<ItemSO>(entry.itemGuid, catalog);
+            while (_items.Count <= entry.slotIndex) _items.Add(new PlayerInventoryItemStack());
             _items[entry.slotIndex] ??= new PlayerInventoryItemStack();
             _items[entry.slotIndex].Set(
                 item,
@@ -170,6 +171,7 @@ public partial class PlayerInventoryRuntime
                     entry.amount,
                     entry.currentDurability,
                     entry.maxDurability);
+                _equipmentRuntime.SetWeaponJammed(entry.slotIndex, entry.jammed);
             }
 
             ArmorItemSO armor = ResolveItem<ArmorItemSO>(source.equippedArmorGuid, catalog);
@@ -210,13 +212,23 @@ public partial class PlayerInventoryRuntime
         return true;
     }
 
+#if UNITY_EDITOR
+    /// <summary>Read-only preflight before lending a live player's inventory to the combat lab.</summary>
+    public bool CanRestoreCombatLabSnapshot(PlayerRunStateSaveData source, RuntimeContentCatalogSO catalog, out string message)
+    {
+        ResolveRefs();
+        if (source == null || catalog == null) { message = "Missing snapshot/catalog"; return false; }
+        return ValidateRunStateReferences(source, catalog, out message);
+    }
+#endif
+
     private bool ValidateRunStateReferences(
         PlayerRunStateSaveData source,
         RuntimeContentCatalogSO catalog,
         out string message)
     {
         message = string.Empty;
-        int capacity = PocketCapacity;
+        int capacity = CapacityWithoutBackpack;
 
         if (!string.IsNullOrWhiteSpace(source.equippedBackpackGuid))
         {
@@ -233,7 +245,7 @@ public partial class PlayerInventoryRuntime
         for (int index = 0; index < source.inventorySlots.Count; index++)
         {
             PlayerRunInventorySlotSaveData entry = source.inventorySlots[index];
-            if (entry.slotIndex < 0 || entry.slotIndex >= capacity || !catalog.TryResolveItem(entry.itemGuid, out _))
+            if (entry.slotIndex < 0 || entry.slotIndex >= 4096 || !catalog.TryResolveItem(entry.itemGuid, out _))
             {
                 message = $"Saved inventory entry cannot be restored. slot={entry.slotIndex}, guid={entry.itemGuid}";
                 return false;
@@ -340,7 +352,6 @@ public partial class PlayerInventoryRuntime
 
         _keyToolSlots.Clear();
         _equippedBackpack = null;
-        _useLegacyBackpackCapacityFallback = false;
         ClearEquippedGasMask();
 
         if (_equipmentRuntime != null)

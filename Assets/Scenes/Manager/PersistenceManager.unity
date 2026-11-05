@@ -925,6 +925,9 @@ MonoBehaviour:
   _loadingSortingOrder: 30000
   _minimumLoadingScreenSeconds: 0.35
   _waitFramesAfterSceneReady: 2
+  _runtimeReadinessTimeoutSeconds: 20
+  _runtimeReadinessGraceSeconds: 3
+  _logRuntimeReadinessDiagnostics: 1
   _requireStartConfirmationForGameplay: 1
   _loadingText: Loading...
   _readyToStartText: Click / Touch To Start

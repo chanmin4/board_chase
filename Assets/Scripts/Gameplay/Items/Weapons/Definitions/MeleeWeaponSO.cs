@@ -16,7 +16,7 @@ public class MeleeWeaponSO : WeaponSO, IMeleeAttackProfile
     [SerializeField, Min(0f)] private float _damage = 10f;
 
     [Tooltip("Penetration class used when armor resolves the final HP damage multiplier.")]
-    [SerializeField, Min(0)] private int _penetrationClass = 0;
+    [SerializeField, Min(0)] private float _penetrationClass = 0;
 
     [Tooltip("Durability loss multiplier applied to HP damage absorbed by armor.")]
     [SerializeField, Min(0f)] private float _armorHealthDurabilityLossMultiplier = 1f;
@@ -64,7 +64,7 @@ public class MeleeWeaponSO : WeaponSO, IMeleeAttackProfile
     [SerializeField] private ParticleSystem _swingTrailParticlePrefab;
 
     public float Damage => Mathf.Max(0f, _damage);
-    public int PenetrationClass => Mathf.Max(0, _penetrationClass);
+    public float PenetrationClass => Mathf.Max(0, _penetrationClass);
     public float ArmorHealthDurabilityLossMultiplier => Mathf.Max(0f, _armorHealthDurabilityLossMultiplier);
     public float Range => Mathf.Max(0.01f, _range);
     public float ArcAngle => Mathf.Clamp(_arcAngle, 1f, 180f);
@@ -84,7 +84,7 @@ public class MeleeWeaponSO : WeaponSO, IMeleeAttackProfile
     // Purpose: Resolves the damage target mask needed by this component.
     public LayerMask ResolveDamageTargetMask(ShooterFaction faction)
     {
-        return faction == ShooterFaction.Enemy
+        return faction != ShooterFaction.Player
             ? _enemyDamageTargetMask
             : _playerDamageTargetMask;
     }

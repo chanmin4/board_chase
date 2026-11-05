@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eae40ca160aa42c89b8085969443f995, type: 3}
   m_Name: Flashbang
   m_EditorClassIdentifier: 
-  _guid: f531e4fc1e4145bd98a651a7b417147f
+  _guid: 5ee9c1275d95499da28f35a008f4489d
   _name:
     m_TableReference:
       m_TableCollectionName: 
@@ -32,10 +32,10 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 2
+  _rarity: 0
   _purchasePrice: 80
   _worldVisualPrefab: {fileID: 6875246725044659727, guid: ef8bf8e0d335c2c449c0de74987b0c58, type: 3}
-  _maxStack: 10
+  _maxStack: 1
   _maxOwnedAmount: 0
   _usableId: flashbang
   _usableDisplayName: Flashbang
@@ -82,6 +82,7 @@ MonoBehaviour:
   _showImpactZoneVisual: 1
   _impactZoneVisualColor: {r: 1, g: 0.93, b: 0.25, a: 0.48}
   _impactZoneVisualDurationSeconds: 2
+  _audioProfile: {fileID: 0}
   _throwAudioCue: {fileID: 0}
   _explosionAudioCue: {fileID: 0}
   references:

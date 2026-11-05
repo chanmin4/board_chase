@@ -1,6 +1,6 @@
 /*
  * Role hierarchy: Editor > Loot
- * Primary responsibility: Authors categorized shared container loot and per-container yield, separately from enemy stage drops.
+ * Primary responsibility: Authors independent per-container loot and yield, separately from enemy stage drops.
  * Execution boundary: Editor (Assembly-CSharp-Editor)
  */
 
@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-public sealed class LootProgressionEditorWindow : EditorWindow
+public sealed partial class LootProgressionEditorWindow : EditorWindow
 {
     private enum AuthoringMode
     {
@@ -23,12 +23,15 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     }
 
     private LootProgressionConfigSO _config;
+    private MakerSelectionUiState _sourceSelectionUi;
+    private MakerSelectionUiState SourceSelectionUi => _sourceSelectionUi ??= new MakerSelectionUiState();
     private Vector2 _sourceScroll;
     private Vector2 _detailScroll;
     private Vector2 _worldLootObjectScroll;
     private Vector2 _worldLootTableScroll;
     private int _selectedSourceIndex = -1;
     private int _selectedStageIndex;
+    [SerializeField] private int _lootStagePreview = 1;
     private LootStagePool _poolClipboard;
     private string _poolClipboardLabel = string.Empty;
     private ItemSO _quickAddItem;
@@ -39,9 +42,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     private int _validatedSourceIndex = -1;
     private string _sourceSearch = string.Empty;
     private string _worldLootObjectSearch = string.Empty;
-    private string _newWorldLootTypeName = "New Loot List";
     private LootObjectSO _selectedWorldLootObject;
-    private LootObjectTypeSO _selectedWorldLootType;
     private ItemSO _worldQuickAddItem;
     private int _sourceFilterIndex;
     private AuthoringMode _authoringMode = AuthoringMode.WorldContainers;
@@ -53,17 +54,24 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     private readonly Dictionary<PlayerShopItemRarity, bool> _tierExpanded = new();
     private readonly Dictionary<string, bool> _worldTierExpanded = new();
     private LootContainerCategory? _worldCategoryFilter;
-    private LootContainerCategory _newWorldCategory;
     private bool _showUnassignedVariants;
     private List<LootObjectSO> _containerCatalog = new();
-    private List<LootObjectTypeSO> _familyCatalog = new();
     private LootTableSO _focusedWorldTable;
     private Vector2 _categoryScroll;
-    private bool _showPoolManagement;
+    private const string CategoryTreeScope = "LootMaker";
     private bool _showContainerAdvanced;
     private bool _showPoolAdvanced;
     private bool _showItemProbabilities;
-    private bool _showSharedUsers;
+    // Optional observer for IMGUI interaction regression tests; never edits assets.
+    internal System.Action<string, Rect> GuiControlObserved;
+    private Vector2 _guiScreenOrigin;
+
+    private void ObserveGuiControl(string name, Rect rect)
+    {
+        if (GuiControlObserved == null || Event.current.type != EventType.Repaint) return;
+        rect.position = GUIUtility.GUIToScreenPoint(rect.position) - _guiScreenOrigin;
+        GuiControlObserved(name, rect);
+    }
 
     // Preserve class/GUID so saved dock layouts and existing navigation helpers survive.
     private void OnEnable()
@@ -71,10 +79,11 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         titleContent = new GUIContent("Loot Maker");
         minSize = new Vector2(1060f, 600f);
         // Reconcile any selection left by the old family-first layout after a domain reload.
-        _selectedWorldLootType = _selectedWorldLootObject?.LootObjectType;
         _focusedWorldTable = _selectedWorldLootObject?.LootTable;
         _worldTypeDetailTab = WorldTypeDetailTab.Items;
         RefreshWorldCatalog();
+        Undo.undoRedoPerformed -= OnLootUndoRedo;
+        Undo.undoRedoPerformed += OnLootUndoRedo;
     }
 
     private void OnProjectChange() { RefreshWorldCatalog(); Repaint(); }
@@ -106,20 +115,9 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         window._worldCategoryFilter = null;
         window._worldLootObjectSearch = string.Empty;
         window._showUnassignedVariants = false;
-        window._selectedWorldLootType = null;
         window._selectedWorldLootObject = null;
         window._focusedWorldTable = table;
         window.RefreshWorldCatalog();
-
-        List<LootObjectTypeSO> types = FindWorldLootTypes();
-        for (int index = 0; index < types.Count; index++)
-        {
-            if (types[index] != null && types[index].LootTable == table)
-            {
-                window._selectedWorldLootType = types[index];
-                break;
-            }
-        }
 
         if (table != null)
         {
@@ -135,7 +133,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             }
         }
 
-        window._worldCategoryFilter = window._selectedWorldLootObject?.LootObjectType?.Category;
+        window._worldCategoryFilter = window._selectedWorldLootObject?.Category;
         window._worldTypeDetailTab = WorldTypeDetailTab.Items;
         window._worldQuickAddItem = quickAddItem;
         window._worldLootTableScroll = Vector2.zero;
@@ -150,7 +148,8 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     /// </summary>
     public static void OpenAndSelectSource(
         LootProgressionConfigSO config,
-        LootSourceDefinition source)
+        LootSourceDefinition source,
+        int stageIndex = 0)
     {
         LootProgressionEditorWindow window = GetWindow<LootProgressionEditorWindow>("Loot Maker");
         window.minSize = new Vector2(1180f, 640f);
@@ -158,7 +157,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         window._selectedSourceIndex = config != null && source != null
             ? window.IndexOfSource(source)
             : -1;
-        window._selectedStageIndex = 0;
+        window._selectedStageIndex = Mathf.Max(0, stageIndex);
         window._validatedSourceIndex = -1;
         window._sourceSearch = string.Empty;
         window._authoringMode = AuthoringMode.EnemyDrops;
@@ -169,6 +168,9 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     // Purpose: Responds to the gui callback.
     private void OnGUI()
     {
+        MakerCategoryTreeUi.BeginWindow(this);
+        _guiScreenOrigin = GUIUtility.GUIToScreenPoint(Vector2.zero);
+        HandleContainerDragCancellation();
         if (_authoringMode == AuthoringMode.WorldContainers)
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
@@ -306,14 +308,22 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             GUILayout.FlexibleSpace();
             GUILayout.Label("Save when finished", EditorStyles.miniLabel);
             if (GUILayout.Button("Save", EditorStyles.toolbarButton, GUILayout.Width(52f)))
-            { AssetDatabase.SaveAssets(); ShowNotification(new GUIContent("Loot settings saved.")); }
+            {
+                foreach (var box in _containerCatalog)
+                {
+                    if (box == null || box.HasSlotGenerationSettings) continue;
+                    Undo.RecordObject(box, "Save Box Generation Settings");
+                    box.InitializeSlotGenerationSettings();
+                    EditorUtility.SetDirty(box);
+                }
+                AssetDatabase.SaveAssets(); ShowNotification(new GUIContent("Loot settings saved."));
+            }
         }
     }
 
     // One browsing hierarchy: category -> actual containers -> selected container workbench.
     private void RefreshWorldCatalog()
     {
-        _familyCatalog = FindWorldLootTypes();
         _containerCatalog = FindWorldLootObjects();
     }
 
@@ -336,6 +346,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(width), GUILayout.Height(height)))
         {
             EditorGUILayout.LabelField("1. CATEGORIES", EditorStyles.boldLabel);
+            MakerCategoryTreeUi.DrawToolbar(CategoryTreeScope, ContainerTreeKeys());
             _categoryScroll = EditorGUILayout.BeginScrollView(_categoryScroll);
             DrawContainerCategoryButton($"All Containers ({_containerCatalog.Count})", null, false);
             foreach (LootContainerCategory category in System.Enum.GetValues(typeof(LootContainerCategory)))
@@ -349,56 +360,53 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             int unassigned = FilterWorldContainers(_containerCatalog, null, true, null).Count;
             DrawContainerCategoryButton($"Unassigned ({unassigned})", null, true);
             EditorGUILayout.Space(12);
-            EditorGUILayout.LabelField("Choose a category to filter the boxes.", EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(10);
-            _showPoolManagement = EditorGUILayout.Foldout(_showPoolManagement, "Advanced: Loot Lists", true);
-            if (_showPoolManagement)
-            {
-                EditorGUILayout.LabelField("Only needed to create a different shared item list.", EditorStyles.wordWrappedMiniLabel);
-                _newWorldLootTypeName = EditorGUILayout.TextField(_newWorldLootTypeName);
-                _newWorldCategory = (LootContainerCategory)EditorGUILayout.EnumPopup(_newWorldCategory);
-                if (GUILayout.Button("+ Create Loot List")) CreateWorldLootType(_newWorldLootTypeName);
-                foreach (var family in _familyCatalog)
-                {
-                    if (family == null) continue;
-                    if (GUILayout.Button(family.DisplayName, EditorStyles.miniButton))
-                    {
-                        _selectedWorldLootObject = null;
-                        _selectedWorldLootType = family;
-                        _focusedWorldTable = family.LootTable;
-                        _worldTypeDetailTab = WorldTypeDetailTab.Items;
-                        _worldCategoryFilter = family.Category;
-                        _showUnassignedVariants = false;
-                        _worldLootObjectSearch = string.Empty;
-                        _worldLootTableScroll = Vector2.zero;
-                    }
-                }
-            }
+            EditorGUILayout.LabelField("Arrow: expand / collapse boxes. Name: filter. Drag a box card onto a category to move it, even when collapsed. Ctrl+Z: undo.\nAll / Unassigned are filters, not drop targets.", EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.EndScrollView();
         }
     }
 
     private void DrawContainerCategoryButton(string label, LootContainerCategory? category, bool unassigned)
     {
-        Color before = GUI.backgroundColor;
-        if (_worldCategoryFilter == category && _showUnassignedVariants == unassigned)
-            GUI.backgroundColor = new Color(.23f, .65f, .86f, .8f);
-        if (GUILayout.Button(label, GUILayout.Height(28)))
+        Rect rect = GUILayoutUtility.GetRect(new GUIContent(label), GUI.skin.button, GUILayout.Height(28));
+        HandleContainerCategoryDrop(rect, category, unassigned);
+        string key = unassigned ? "Unassigned" : category?.ToString() ?? "All";
+        bool group = category.HasValue || unassigned;
+        bool hover = _containerDropHover == category && category.HasValue && !unassigned;
+        bool selected = _worldCategoryFilter == category && _showUnassignedVariants == unassigned;
+        var children = group ? FilterWorldContainers(_containerCatalog, category, unassigned, null) : null;
+        if (MakerCategoryTreeUi.DrawRow(rect, CategoryTreeScope, key,
+            new GUIContent(label, label + "\nArrow: expand / collapse. Name: filter boxes."), selected || hover,
+            group && children.Count > 0, tint: hover ? new Color(.35f, .85f, .55f) : (Color?)null))
         {
             _worldCategoryFilter = category;
             _showUnassignedVariants = unassigned;
-            _newWorldCategory = category ?? LootContainerCategory.Uncategorized;
             _worldLootObjectSearch = string.Empty;
             _worldLootObjectScroll = Vector2.zero;
             var visible = FilterWorldContainers(_containerCatalog, category, unassigned, null);
             SelectContainer(visible.Count > 0 ? visible[0] : null);
-            if (visible.Count == 0 && category.HasValue && !unassigned)
+        }
+        if (!group || !MakerCategoryTreeUi.IsExpanded(CategoryTreeScope, key)) return;
+        foreach (var box in children)
+        {
+            Rect childRect = GUILayoutUtility.GetRect(GUIContent.none, GUI.skin.button, GUILayout.Height(24));
+            string title = GetContainerTitle(box);
+            if (MakerCategoryTreeUi.DrawRow(childRect, CategoryTreeScope, "Box:" + AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(box)),
+                new GUIContent(title, title + "\n" + AssetDatabase.GetAssetPath(box)), box == _selectedWorldLootObject, false, 18))
             {
-                _selectedWorldLootType = _familyCatalog.Find(f => f != null && f.Category == category.Value);
-                _focusedWorldTable = _selectedWorldLootType?.LootTable;
+                _worldCategoryFilter = category;
+                _showUnassignedVariants = unassigned;
+                _worldLootObjectSearch = string.Empty;
+                _worldLootObjectScroll = Vector2.zero;
+                SelectContainer(box);
             }
         }
-        GUI.backgroundColor = before;
+    }
+
+    private static IEnumerable<string> ContainerTreeKeys()
+    {
+        foreach (LootContainerCategory category in System.Enum.GetValues(typeof(LootContainerCategory)))
+            yield return category.ToString();
+        yield return "Unassigned";
     }
 
     private static string CategoryLabel(LootContainerCategory category) => category switch
@@ -426,9 +434,9 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         foreach (var container in containers)
         {
             if (container == null) continue;
-            var family = container.LootObjectType;
-            if (unassignedOnly && family != null) continue;
-            if (!unassignedOnly && category.HasValue && (family == null || family.Category != category.Value)) continue;
+            if (unassignedOnly && container.HasCategoryAssignment) continue;
+            if (!unassignedOnly && category.HasValue &&
+                (!container.HasCategoryAssignment || container.Category != category.Value)) continue;
             if (!string.IsNullOrEmpty(search) &&
                 GetContainerTitle(container).IndexOf(search, System.StringComparison.OrdinalIgnoreCase) < 0 &&
                 container.name.IndexOf(search, System.StringComparison.OrdinalIgnoreCase) < 0 &&
@@ -453,13 +461,14 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(width), GUILayout.Height(height)))
         {
             EditorGUILayout.LabelField("2. CONTAINERS", EditorStyles.boldLabel);
+            DrawPrefabRegistration();
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.Label("Find", GUILayout.Width(32));
                 _worldLootObjectSearch = EditorGUILayout.TextField(_worldLootObjectSearch);
             }
             var visible = FilterWorldContainers(_containerCatalog, _worldCategoryFilter, _showUnassignedVariants, _worldLootObjectSearch);
-            EditorGUILayout.LabelField($"{visible.Count} boxes - click a card to edit", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"{visible.Count} boxes - click to edit / drag to a category", EditorStyles.miniLabel);
             // Searches must not leave a hidden, previously selected container in the workbench.
             if (_selectedWorldLootObject != null && !visible.Contains(_selectedWorldLootObject)) SelectContainer(null);
             _worldLootObjectScroll = EditorGUILayout.BeginScrollView(_worldLootObjectScroll, false, true);
@@ -483,35 +492,36 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     private void DrawContainerCard(LootObjectSO container, float width)
     {
         Rect rect = GUILayoutUtility.GetRect(width, 166f, GUILayout.Width(width), GUILayout.Height(166f));
+        ObserveGuiControl("Card:" + container.name, rect);
         bool selected = _selectedWorldLootObject == container;
-        if (GUI.Button(rect, new GUIContent(string.Empty, GetContainerTitle(container)), GUIStyle.none))
-            SelectContainer(container);
         EditorGUI.DrawRect(rect, selected ? new Color(.16f, .39f, .48f) : new Color(.18f, .20f, .22f));
         GUI.Box(rect, GUIContent.none);
-        Texture preview = GetAssetPreview(container.WorldPrefab);
-        GUI.DrawTexture(new Rect(rect.x + 10, rect.y + 5, rect.width - 20, 91), preview, ScaleMode.ScaleToFit);
+        DrawBoxPreview(new Rect(rect.x + 10, rect.y + 5, rect.width - 20, 91), container.WorldPrefab);
         var nameStyle = new GUIStyle(EditorStyles.miniBoldLabel) { wordWrap = true };
         GUI.Label(new Rect(rect.x + 7, rect.y + 98, rect.width - 14, 32), GetContainerTitle(container), nameStyle);
         string size = SizeLabel(container.SizeClass);
         GUI.Label(new Rect(rect.x + 7, rect.y + 132, rect.width - 14, 16), $"{size} | {container.LootSlotCount} slots", EditorStyles.miniLabel);
         int count = CountWorldPoolItems(container.LootTable);
         GUI.Label(new Rect(rect.x + 7, rect.y + 148, rect.width - 14, 16),
-            container.LootTable == null ? "Choose a loot list" : count == 0 ? "Add loot items" : $"{count} loot items", EditorStyles.miniLabel);
+            container.LootTable == null ? "Choose a loot list" : count == 0 ? "Add loot items" : $"Fill {container.MinGeneratedSlots}-{container.MaxGeneratedSlots} | {count} items", EditorStyles.miniLabel);
+        HandleContainerCardInput(rect, container);
     }
 
     private void SelectContainer(LootObjectSO container)
     {
+        ContainerNameUi.SelectionClicked();
+        // Re-clicking the same card must not silently dismiss an in-flight/completed delete review.
+        if (_selectedWorldLootObject != container) ClearContainerDeleteReview();
         _selectedWorldLootObject = container;
-        _selectedWorldLootType = container?.LootObjectType;
         _focusedWorldTable = container?.LootTable;
         _worldLootTableScroll = Vector2.zero;
         _worldTypeDetailTab = WorldTypeDetailTab.Items;
         _showContainerAdvanced = false;
-        _showSharedUsers = false;
+        _namingBox = null;
     }
 
     private LootTableSO CurrentWorldTable => _selectedWorldLootObject != null
-        ? _selectedWorldLootObject.LootTable : _selectedWorldLootType != null ? _selectedWorldLootType.LootTable : _focusedWorldTable;
+        ? _selectedWorldLootObject.LootTable : _focusedWorldTable;
 
     private void DrawContainerWorkbench(float width, float height)
     {
@@ -520,22 +530,34 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             EditorGUILayout.LabelField("3. EDIT SELECTED BOX", EditorStyles.boldLabel);
             var container = _selectedWorldLootObject;
             var table = CurrentWorldTable;
-            if (container == null && _selectedWorldLootType == null && table == null)
+            if (container == null)
             {
                 GUILayout.Space(24);
                 EditorGUILayout.HelpBox("Click a container card in the middle.\n\nIts loot items, capacity and drop chance appear here.", MessageType.Info);
                 return;
             }
-            EditorGUILayout.LabelField(container != null ? GetContainerTitle(container) :
-                _selectedWorldLootType != null ? _selectedWorldLootType.DisplayName : table.name,
+            EditorGUILayout.LabelField(GetContainerTitle(container),
                 new GUIStyle(EditorStyles.boldLabel) { wordWrap = true });
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Select Asset", EditorStyles.miniButton))
-                    Selection.activeObject = container != null ? container : (Object)_selectedWorldLootType ?? table;
+                    Selection.activeObject = container;
                 using (new EditorGUI.DisabledScope(container == null || container.WorldPrefab == null))
                     if (GUILayout.Button("Open Prefab", EditorStyles.miniButton)) AssetDatabase.OpenAsset(container.WorldPrefab);
+                using (new EditorGUI.DisabledScope(container == null || _deletePending || EditorApplication.isPlayingOrWillChangePlaymode))
+                    if (GUILayout.Button(new GUIContent("Delete...", "Delete this catalog record only. The prefab and loot table are kept. Checks references first."),
+                        EditorStyles.miniButton, GUILayout.Width(72))) QueueContainerDeleteCheck(container);
+                ObserveGuiControl("Delete", GUILayoutUtility.GetLastRect());
             }
+            if (_deleteBox != null)
+            {
+                // A dedicated, scrollable mode: never bury review actions above the loot-table editor.
+                _worldLootTableScroll = EditorGUILayout.BeginScrollView(_worldLootTableScroll, false, true);
+                DrawContainerDeletePanel();
+                EditorGUILayout.EndScrollView();
+                return;
+            }
+            if (container != null) DrawContainerNaming(container);
             _worldTypeDetailTab = (WorldTypeDetailTab)GUILayout.Toolbar((int)_worldTypeDetailTab,
                 new[] { "Loot Items", "Box Settings" }, GUILayout.Height(28));
             _worldLootTableScroll = EditorGUILayout.BeginScrollView(_worldLootTableScroll, false, true);
@@ -543,9 +565,12 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             EditorGUIUtility.labelWidth = 125;
             try
             {
+                _lootStagePreview = EditorGUILayout.Popup("Stage preview", _lootStagePreview,
+                    new[] { "Home / Base weights", "Stage 1 · LV1–4", "Stage 2 · LV2–5", "Stage 3 · LV3–6", "Stage 4 · LV4–7", "Stage 5 · LV5–8" });
+                DrawEquipmentStageHint(_lootStagePreview);
                 if (_worldTypeDetailTab == WorldTypeDetailTab.Items) DrawSimpleItemPool(table);
                 else if (container != null) DrawSimpleContainerSettings(container);
-                else EditorGUILayout.HelpBox("You selected a shared list. Choose a box card to edit its capacity.", MessageType.Info);
+                else EditorGUILayout.HelpBox("Choose a box card to edit its capacity.", MessageType.Info);
             }
             finally { EditorGUIUtility.labelWidth = previousLabelWidth; }
             EditorGUILayout.EndScrollView();
@@ -554,27 +579,31 @@ public sealed class LootProgressionEditorWindow : EditorWindow
 
     private void DrawSimpleItemPool(LootTableSO table)
     {
+        ObserveGuiControl("LootItems/Begin", Rect.zero);
         if (table == null)
         {
-            EditorGUILayout.HelpBox("Choose a shared loot list below to get started.", MessageType.Warning);
-            DrawFamilyAssignment();
+            EditorGUILayout.HelpBox("Create this box's own table to get started.", MessageType.Warning);
+            DrawWorldTableActions(null, 0);
             return;
         }
         int users = CountSharedTableUsers(_containerCatalog, table);
-        string title = _selectedWorldLootObject?.LootObjectType?.DisplayName ?? _selectedWorldLootType?.DisplayName ?? table.name;
-        EditorGUILayout.HelpBox($"Shared list: {title}\nItem edits apply to all {users} boxes using this list. Box Settings remain independent.", MessageType.Info);
-        _showSharedUsers = EditorGUILayout.Foldout(_showSharedUsers, $"Show boxes using this list ({users})", true);
-        if (_showSharedUsers)
-            foreach (var other in _containerCatalog)
-                if (other != null && other.LootTable == table)
-                    EditorGUILayout.LabelField("• " + GetContainerTitle(other), EditorStyles.wordWrappedMiniLabel);
+        string title = table.name;
+        bool needsConversion = users > 1 || _selectedWorldLootObject?.LootObjectType != null;
+        EditorGUILayout.HelpBox(needsConversion
+            ? "Legacy or duplicated table detected. Editing is blocked until this box has an independent copy."
+            : $"OWN TABLE: {title}\nOnly this box changes. Copy / Paste copies contents, never links boxes.",
+            needsConversion ? MessageType.Warning : MessageType.Info);
+        DrawWorldTableActions(table, users);
+        if (needsConversion) return;
         LootObjectPool pool = table.Pool;
         EditorGUILayout.Space(4);
         DrawWorldItemDropTarget(table, pool);
+        bool quickItemRegistered = MakerRegistrationIndex.Contains(table, _worldQuickAddItem);
         using (new EditorGUILayout.HorizontalScope())
         {
             _worldQuickAddItem = (ItemSO)EditorGUILayout.ObjectField(_worldQuickAddItem, typeof(ItemSO), false);
-            using (new EditorGUI.DisabledScope(_worldQuickAddItem == null))
+            quickItemRegistered = MakerRegistrationIndex.Contains(table, _worldQuickAddItem);
+            using (new EditorGUI.DisabledScope(_worldQuickAddItem == null || quickItemRegistered))
                 if (GUILayout.Button("+ Add", GUILayout.Width(64)))
                 {
                     RecordLootTable(table, "Add Loot Item");
@@ -583,37 +612,29 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                     _worldQuickAddItem = null;
                 }
         }
+        MakerRegistrationUi.ItemSummary(_worldQuickAddItem, quickItemRegistered ? "이 상자에 등록됨" : "이 상자에는 미등록");
+        DrawRegistrationCandidates(table);
         if (CountWorldPoolItems(table) == 0)
             EditorGUILayout.HelpBox("Empty list. Choose an item above and click + Add, or drag items from Item Maker.", MessageType.Warning);
         EditorGUILayout.Space(5);
         _showItemProbabilities = EditorGUILayout.ToggleLeft("Edit individual item chances", _showItemProbabilities);
-        for (int i = 0; i < pool.rarityTiers.Count; i++) DrawSimpleLootTier(table, pool.rarityTiers[i]);
+        EditorGUILayout.LabelField("Sort: Rarity > Item Category > Name (A-Z)", EditorStyles.miniLabel);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Expand Categories", EditorStyles.miniButtonLeft))
+                LootMakerItemView.SetAllCategoriesExpanded(table, true);
+            ObserveGuiControl("LootItems/ExpandCategories", GUILayoutUtility.GetLastRect());
+            if (GUILayout.Button("Collapse Categories", EditorStyles.miniButtonRight))
+                LootMakerItemView.SetAllCategoriesExpanded(table, false);
+            ObserveGuiControl("LootItems/CollapseCategories", GUILayoutUtility.GetLastRect());
+        }
+        foreach (var tier in LootMakerItemView.SortedTiers(pool.rarityTiers)) DrawSimpleLootTier(table, tier);
         EditorGUILayout.Space(8);
-        _showPoolAdvanced = EditorGUILayout.Foldout(_showPoolAdvanced, "Advanced: List Defaults / Links", true);
+        _showPoolAdvanced = EditorGUILayout.Foldout(_showPoolAdvanced, "Advanced: Table Asset", true);
         if (_showPoolAdvanced)
         {
-            EditorGUILayout.HelpBox("Default attempts for boxes that do not override their roll count in Box Settings.", MessageType.None);
-            EditorGUI.BeginChangeCheck();
-            int min = EditorGUILayout.IntField("Default Min Rolls", pool.minRollCount);
-            int max = EditorGUILayout.IntField("Default Max Rolls", pool.maxRollCount);
-            if (EditorGUI.EndChangeCheck())
-            {
-                RecordLootTable(table, "Edit Shared Loot Attempts");
-                pool.minRollCount = Mathf.Max(1, min);
-                pool.maxRollCount = Mathf.Max(pool.minRollCount, max);
-            }
-            EditorGUILayout.HelpBox("Base rarity weights: Normal 63 / Rare 30 / Unique 6 / Legendary 1. Empty tiers are skipped and weights are normalized. Lock bonuses apply separately.", MessageType.None);
-            DrawFamilyAssignment();
+            EditorGUILayout.HelpBox("Each filled slot draws Rarity > Category > Item. Auto category mode preserves existing item chances. Custom mode uses category weights and within-category item shares. Filled slots and rarity weights: Box Settings.", MessageType.None);
             using (new EditorGUI.DisabledScope(true)) EditorGUILayout.ObjectField("Table Asset", table, typeof(LootTableSO), false);
-            if (_selectedWorldLootType != null && _selectedWorldLootObject == null)
-            {
-                using var serialized = new SerializedObject(_selectedWorldLootType);
-                serialized.Update();
-                EditorGUILayout.PropertyField(serialized.FindProperty("_displayName"), new GUIContent("List Name"));
-                EditorGUILayout.PropertyField(serialized.FindProperty("_category"), new GUIContent("Category"));
-                EditorGUILayout.PropertyField(serialized.FindProperty("_lootTable"), new GUIContent("Shared Table"));
-                serialized.ApplyModifiedProperties();
-            }
         }
     }
 
@@ -633,7 +654,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         if (current.type == EventType.DragPerform)
         {
             DragAndDrop.AcceptDrag();
-            RecordLootTable(table, "Add Items to Shared Loot Pool");
+            RecordLootTable(table, "Add Items to Box Loot Table");
             int added = AddItemsToWorldPool(pool, items);
             ShowNotification(new GUIContent($"Added {added} items. Existing entries kept."));
         }
@@ -667,12 +688,73 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         string key = $"{table.GetInstanceID()}:{tier.rarity}";
         bool expanded = !_worldTierExpanded.TryGetValue(key, out bool saved) || saved;
         expanded = EditorGUILayout.Foldout(expanded, $"{tier.rarity} - {CountValidItemEntries(tier)} items", true, EditorStyles.foldoutHeader);
+        ObserveGuiControl("LootItems/Tier/" + tier.rarity, GUILayoutUtility.GetLastRect());
         _worldTierExpanded[key] = expanded;
         if (!expanded || tier.items == null) return;
-        for (int i = 0; i < tier.items.Count; i++)
+        var settings = table.Pool.FindCategorySettings(tier.rarity);
+        bool customCategories = settings?.useCustomCategoryWeights == true;
+        bool nextCustom = EditorGUILayout.ToggleLeft(new GUIContent("Custom category chances",
+            "Auto preserves existing tier-wide item probabilities. Custom chooses a category by weight, then applies each item's Custom Share only INSIDE that category."), customCategories);
+        ObserveGuiControl("LootItems/CategoryChances/" + tier.rarity, GUILayoutUtility.GetLastRect());
+        if (nextCustom != customCategories)
         {
-            var entry = tier.items[i];
-            if (entry == null) continue;
+            LootMakerAuthoring.SetCustomCategoryChances(table, tier, nextCustom);
+            settings = table.Pool.FindCategorySettings(tier.rarity);
+            customCategories = nextCustom;
+        }
+        EditorGUILayout.LabelField(customCategories
+            ? "Category weights are relative (70:30 = 70%:30%). 0 excludes a category. New categories start at weight 1."
+            : "Auto: existing item chances preserved. Enable Custom to set category weights.", EditorStyles.wordWrappedMiniLabel);
+        if (customCategories && tier.items.Exists(item => item?.useManualShare == true))
+            EditorGUILayout.LabelField("Custom item shares now apply within each category, not across the whole tier.", EditorStyles.wordWrappedMiniLabel);
+        var distribution = table.GetCategorySelection(tier);
+        if (tier.items.Count > 0 && !distribution.HasCandidates)
+            EditorGUILayout.HelpBox("No eligible category/items in this tier. Give a category and at least one of its items a positive weight; this tier is currently excluded.", MessageType.Warning);
+        string lastCategory = null;
+        bool categoryExpanded = true;
+        var rows = LootMakerItemView.SortedRows(tier);
+        foreach (var row in rows)
+        {
+            var entry = row.Entry;
+            if (row.CategoryKey != lastCategory)
+            {
+                EditorGUILayout.Space(3);
+                categoryExpanded = LootMakerItemView.IsCategoryExpanded(table, tier.rarity, row.CategoryKey);
+                int count = rows.FindAll(other => other.CategoryKey == row.CategoryKey).Count;
+                bool next;
+                using (new EditorGUI.IndentLevelScope())
+                    next = EditorGUILayout.Foldout(categoryExpanded, $"{row.CategoryLabel} ({count})", true);
+                if (next != categoryExpanded)
+                    LootMakerItemView.SetCategoryExpanded(table, tier.rarity, row.CategoryKey, next);
+                categoryExpanded = next;
+                ObserveGuiControl("LootItems/Category/" + tier.rarity + "/" + row.CategoryOrder, GUILayoutUtility.GetLastRect());
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(!customCategories || entry.item == null))
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        float value = EditorGUILayout.FloatField(new GUIContent("Category Weight", "Relative weight, not a fixed percentage. Empty or disabled categories are excluded and the remaining weights are normalized."),
+                            customCategories ? (float)(distribution.Groups.Find(g => g.Key == row.CategoryKey)?.CategoryWeight ?? 0d) : distribution.CategoryPercent(row.CategoryKey));
+                        ObserveGuiControl("LootItems/CategoryWeight/" + tier.rarity + "/" + row.CategoryKey, GUILayoutUtility.GetLastRect());
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            LootMakerAuthoring.SetCategoryWeight(table, tier, row.CategoryKey, value);
+                            distribution = table.GetCategorySelection(tier);
+                        }
+                    }
+                    GUILayout.Label($"{distribution.CategoryPercent(row.CategoryKey):0.##}% in tier", EditorStyles.miniLabel, GUILayout.Width(100));
+                }
+                if (_showItemProbabilities && customCategories)
+                {
+                    float reserved = 0f;
+                    foreach (var candidate in rows)
+                        if (candidate.CategoryKey == row.CategoryKey && candidate.Entry.item != null && candidate.Entry.useManualShare)
+                            reserved += (float)LootCategorySelection.Positive(candidate.Entry.manualSharePercent);
+                    if (reserved > 100f) EditorGUILayout.HelpBox("Custom item shares exceed 100% in this category. Manual entries are normalized; Automatic entries get 0%.", MessageType.Warning);
+                }
+                lastCategory = row.CategoryKey;
+            }
+            if (!categoryExpanded) continue;
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 using (new EditorGUILayout.HorizontalScope())
@@ -682,16 +764,19 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                     GUILayout.Label(icon, GUILayout.Width(28), GUILayout.Height(28));
                     // Replacing an item through add/remove prevents accidental cross-rarity entries.
                     using (new EditorGUI.DisabledScope(true)) EditorGUILayout.ObjectField(entry.item, typeof(ItemSO), false);
+                    ObserveGuiControl("LootItems/Row/" + tier.rarity + "/" + row.SourceIndex, GUILayoutUtility.GetLastRect());
                     if (GUILayout.Button(new GUIContent("×", "Remove from this list only. The original item asset is kept."), GUILayout.Width(24)))
                     {
                         RecordLootTable(table, "Remove Loot Item");
-                        tier.items.RemoveAt(i);
+                        tier.items.RemoveAt(row.SourceIndex);
                         return;
                     }
+                    ObserveGuiControl("LootItems/Delete/" + tier.rarity + "/" + row.SourceIndex, GUILayoutUtility.GetLastRect());
                 }
+                MakerRegistrationUi.ItemSummary(entry.item, "이 상자에 등록됨");
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    GUILayout.Label("Qty", GUILayout.Width(30));
+                    GUILayout.Label(new GUIContent("Qty", "Item units in ONE filled slot. Clamped to the item's Max Stack."), GUILayout.Width(30));
                     EditorGUI.BeginChangeCheck();
                     int min = EditorGUILayout.IntField(entry.minAmount, GUILayout.MinWidth(35));
                     GUILayout.Label("~", GUILayout.Width(12));
@@ -702,15 +787,20 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                         entry.minAmount = Mathf.Max(1, min);
                         entry.maxAmount = Mathf.Max(entry.minAmount, max);
                     }
-                    GUILayout.Label($"Tier share: {LootProgressionConfigSO.GetResolvedItemSharePercent(tier, entry):0.#}%",
+                    float share = customCategories ? distribution.ItemPercentInCategory(entry) : LootProgressionConfigSO.GetResolvedItemSharePercent(tier, entry);
+                    GUILayout.Label($"{(customCategories ? "Category" : "Tier")} share: {share:0.#}%",
                         EditorStyles.miniLabel, GUILayout.Width(123));
                 }
+                if (_selectedWorldLootObject != null)
+                    EditorGUILayout.LabelField($"{(_lootStagePreview > 0 ? "Stage " + _lootStagePreview : "Base")}: {table.GetEffectiveItemPercent(tier, entry, _selectedWorldLootObject.RarityWeights, _lootStagePreview):0.##}% per filled slot", EditorStyles.miniLabel);
+                if (entry.item != null && entry.maxAmount > Mathf.Max(1, entry.item.MaxStack))
+                    EditorGUILayout.HelpBox($"One slot holds at most {Mathf.Max(1, entry.item.MaxStack)}. Generated quantity will be capped, not split into extra slots.", MessageType.Warning);
                 if (_showItemProbabilities)
                 {
                     EditorGUI.BeginChangeCheck();
                     bool manual = EditorGUILayout.Toggle("Custom Share", entry.useManualShare);
                     float percent = entry.manualSharePercent;
-                    if (manual) percent = EditorGUILayout.Slider("Share in Tier (%)", percent, 0, 100);
+                    if (manual) percent = EditorGUILayout.Slider(customCategories ? "Share in Category (%)" : "Share in Tier (%)", percent, 0, 100);
                     if (EditorGUI.EndChangeCheck())
                     {
                         RecordLootTable(table, "Edit Loot Item Share");
@@ -725,60 +815,41 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         float reservedShare = 0f;
         foreach (var entry in tier.items)
             if (entry?.item != null && entry.useManualShare) reservedShare += Mathf.Clamp(entry.manualSharePercent, 0f, 100f);
-        if (_showItemProbabilities && reservedShare > 100f)
+        if (_showItemProbabilities && !customCategories && reservedShare > 100f)
             EditorGUILayout.HelpBox("Custom shares exceed 100% in this tier.", MessageType.Warning);
     }
 
     private static string SizeLabel(LootContainerSize size) => size switch
     {
+        LootContainerSize.VerySmall => "Very Small",
         LootContainerSize.Small => "Small",
         LootContainerSize.Medium => "Medium",
         LootContainerSize.Large => "Large",
+        LootContainerSize.VeryLarge => "Very Large",
         _ => "Custom"
     };
 
     private void DrawSimpleContainerSettings(LootObjectSO container)
     {
-        EditorGUILayout.HelpBox("Only this box changes here. Other boxes and the shared loot items are unchanged.", MessageType.Info);
+        EditorGUILayout.HelpBox("Only this box changes here. Other boxes are unchanged.", MessageType.Info);
         EditorGUILayout.LabelField("QUICK SIZE PRESETS", EditorStyles.boldLabel);
         using (new EditorGUILayout.HorizontalScope())
         {
-            DrawSizePreset(container, LootContainerSize.Small, "Small | 4 slots", "1-3 rolls / 65% chance each");
-            DrawSizePreset(container, LootContainerSize.Medium, "Medium | 8 slots", "2-5 rolls / 80% chance each");
-            DrawSizePreset(container, LootContainerSize.Large, "Large | 12 slots", "4-8 rolls / 90% chance each");
+            DrawSizePreset(container, LootContainerSize.VerySmall, "Very Small | 3 slots");
+            DrawSizePreset(container, LootContainerSize.Small, "Small | 4 slots");
+            DrawSizePreset(container, LootContainerSize.Medium, "Medium | 6 slots");
         }
-        EditorGUILayout.LabelField("Click a preset to apply its slots, roll count and chance to this box.", EditorStyles.wordWrappedMiniLabel);
-        EditorGUILayout.Space(8);
-        using (var serialized = new SerializedObject(container))
+        using (new EditorGUILayout.HorizontalScope())
         {
-            serialized.Update();
-            EditorGUILayout.PropertyField(serialized.FindProperty("_lootSlotCount"), new GUIContent("Inventory Slots"));
-            var rules = serialized.FindProperty("_rollSettings");
-            var useOverride = rules.FindPropertyRelative("overrideTableRollCount");
-            EditorGUILayout.PropertyField(useOverride, new GUIContent("Override Rolls"));
-            if (useOverride.boolValue)
-            {
-                EditorGUILayout.PropertyField(rules.FindPropertyRelative("minRollCount"), new GUIContent("Min Rolls"));
-                EditorGUILayout.PropertyField(rules.FindPropertyRelative("maxRollCount"), new GUIContent("Max Rolls"));
-            }
-            else if (container.LootTable != null)
-                EditorGUILayout.LabelField("Shared Default", $"{container.LootTable.Pool.minRollCount} - {container.LootTable.Pool.maxRollCount} rolls");
-            EditorGUILayout.PropertyField(rules.FindPropertyRelative("rollSuccessChancePercent"), new GUIContent("Chance per Roll (%)"));
-            serialized.ApplyModifiedProperties();
+            DrawSizePreset(container, LootContainerSize.Large, "Large | 9 slots");
+            DrawSizePreset(container, LootContainerSize.VeryLarge, "Very Large | 12 slots");
         }
-        var settings = container.RollSettings;
-        var pool = container.LootTable?.Pool;
-        int min = settings.overrideTableRollCount ? settings.MinRolls : pool?.minRollCount ?? 0;
-        int max = settings.overrideTableRollCount ? settings.MaxRolls : pool?.maxRollCount ?? 0;
+        EditorGUILayout.LabelField("Changes capacity only. Fill range is limited by capacity; rarity weights stay unchanged.", EditorStyles.wordWrappedMiniLabel);
         EditorGUILayout.Space(8);
-        EditorGUILayout.HelpBox($"Current: {container.LootSlotCount} slots | {min}-{max} rolls | {settings.SuccessChance:0.#}% each\n" +
-            "Example: 3 rolls at 50% = three independent chances to draw an item. An empty box is possible. This is NOT the box spawn chance.", MessageType.None);
-        if (max > container.LootSlotCount)
-            EditorGUILayout.HelpBox("More rolls than slots. Items that cannot stack or fit use the existing world-drop fallback.", MessageType.Warning);
-        _showContainerAdvanced = EditorGUILayout.Foldout(_showContainerAdvanced, "Advanced: Category / Loot List", true);
+        DrawBoxGenerationFields(container, _lootStagePreview);
+        _showContainerAdvanced = EditorGUILayout.Foldout(_showContainerAdvanced, "Advanced: Box Assets", true);
         if (_showContainerAdvanced)
         {
-            DrawFamilyAssignment();
             using (new EditorGUI.DisabledScope(true))
             {
                 EditorGUILayout.ObjectField("Box Data", container, typeof(LootObjectSO), false);
@@ -789,54 +860,71 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         }
     }
 
-    private void DrawSizePreset(LootObjectSO container, LootContainerSize size, string label, string tooltip)
+    private void DrawSizePreset(LootObjectSO container, LootContainerSize size, string label)
     {
+        const string tooltip = "Set capacity only. Filled-slot range cannot exceed capacity. Keeps rarity weights and loot list.";
         if (!GUILayout.Button(new GUIContent(label, tooltip), GUILayout.Height(28))) return;
         Undo.RecordObject(container, "Apply Loot Size Preset");
         container.ApplySizePreset(size);
         EditorUtility.SetDirty(container);
     }
 
-    private void DrawFamilyAssignment()
+    internal static void DrawBoxGenerationFields(LootObjectSO container, int previewStage = 0)
     {
-        var container = _selectedWorldLootObject;
-        if (container == null) return;
-        var labels = new string[_familyCatalog.Count + 1];
-        labels[0] = "Unassigned (standalone table)";
-        int current = 0;
-        for (int i = 0; i < _familyCatalog.Count; i++)
-        {
-            labels[i + 1] = _familyCatalog[i].DisplayName;
-            if (container.LootObjectType == _familyCatalog[i]) current = i + 1;
-        }
         EditorGUI.BeginChangeCheck();
-        int next = EditorGUILayout.Popup("Shared Loot List", current, labels);
+        int capacity = EditorGUILayout.IntField("Total Slots", container.LootSlotCount);
+        int min = EditorGUILayout.IntField(new GUIContent("Min Filled Slots", "Guaranteed occupied slots. Use 0 to allow empty boxes."), container.MinGeneratedSlots);
+        int max = EditorGUILayout.IntField("Max Filled Slots", container.MaxGeneratedSlots);
         if (EditorGUI.EndChangeCheck())
         {
-            var family = next > 0 ? _familyCatalog[next - 1] : null;
-            Undo.RecordObject(container, "Change Loot Shared List");
-            container.AssignLootObjectType(family);
+            Undo.RecordObject(container, "Edit Box Filled Slots");
+            using var data = new SerializedObject(container);
+            data.FindProperty("_lootSlotCount").intValue = Mathf.Max(1, capacity);
+            data.ApplyModifiedProperties();
+            container.SetGeneratedSlotRange(min, max);
             EditorUtility.SetDirty(container);
-            _selectedWorldLootType = family;
-            _focusedWorldTable = container.LootTable;
-            _worldCategoryFilter = family?.Category;
-            _showUnassignedVariants = family == null;
-            _worldLootObjectSearch = string.Empty;
         }
-        EditorGUILayout.LabelField("Changing the list also changes this box's category and loot items. Slots and roll settings stay unchanged.", EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.HelpBox($"Fill {container.MinGeneratedSlots}-{container.MaxGeneratedSlots} of {container.LootSlotCount} slots.\n" +
+            "Each filled slot gets one stack. Duplicate items stay in separate slots. No second success/failure check.", MessageType.None);
+        if (!container.HasSlotGenerationSettings)
+            EditorGUILayout.HelpBox("Using the previous count range, capped to capacity. Old per-attempt success chance is no longer used. Save to store these as box-specific settings.", MessageType.Info);
+        EditorGUILayout.Space(5);
+        EditorGUILayout.LabelField("THIS BOX'S RARITY WEIGHTS", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Base weights, not fixed percentages. Actual includes the selected stage's armor/ammo LV rule; other loot keeps its relative share.", EditorStyles.wordWrappedMiniLabel);
+        using (var data = new SerializedObject(container))
+        {
+            var weights = data.FindProperty("_rarityWeights");
+            DrawBoxRarityWeight(container, weights, "normal", PlayerShopItemRarity.Normal, previewStage);
+            DrawBoxRarityWeight(container, weights, "rare", PlayerShopItemRarity.Rare, previewStage);
+            DrawBoxRarityWeight(container, weights, "unique", PlayerShopItemRarity.Unique, previewStage);
+            DrawBoxRarityWeight(container, weights, "legendary", PlayerShopItemRarity.Legendary, previewStage);
+            data.ApplyModifiedProperties();
+        }
+        if (container.MaxGeneratedSlots > 0 && (container.LootTable == null || !container.LootTable.HasSlotItems(container.RarityWeights, previewStage)))
+            EditorGUILayout.HelpBox("Cannot generate in this stage: add eligible items with positive weights. Armor/ammo also need candidates inside the stage's LV range. This is a configuration error, not an empty-box chance.", MessageType.Error);
+        if (container.WorldPrefab != null && container.WorldPrefab.GetComponentInChildren<LockableLootObject>(true) != null)
+            EditorGUILayout.HelpBox("The lock controls access only for slot-based boxes. Legacy lock bonus rolls / rarity multipliers are not applied; author all rewards here.", MessageType.Info);
     }
 
-    private static List<LootObjectTypeSO> FindWorldLootTypes()
+    private static void DrawBoxRarityWeight(LootObjectSO box, SerializedProperty weights, string field, PlayerShopItemRarity rarity, int previewStage)
     {
-        var result = new List<LootObjectTypeSO>();
-        foreach (string guid in AssetDatabase.FindAssets("t:LootObjectTypeSO"))
+        using (new EditorGUILayout.HorizontalScope())
         {
-            var family = AssetDatabase.LoadAssetAtPath<LootObjectTypeSO>(AssetDatabase.GUIDToAssetPath(guid));
-            if (family != null) result.Add(family);
+            EditorGUILayout.PropertyField(weights.FindPropertyRelative(field), new GUIContent(rarity.ToString()));
+            float actual = box.LootTable != null ? box.LootTable.GetEffectiveTierPercent(rarity, box.RarityWeights, previewStage) : 0f;
+            GUILayout.Label($"Actual {actual:0.##}%", EditorStyles.miniLabel, GUILayout.Width(92));
         }
-        result.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, System.StringComparison.OrdinalIgnoreCase));
-        return result;
     }
+
+    private static void DrawEquipmentStageHint(int stage)
+    {
+        string message = stage > 0
+            ? $"방탄복·일반 탄약: LV{stage} / {stage + 1} / {stage + 2} / {stage + 3} = 60 / 30 / 9 / 1\n" +
+              "기존 방탄복·각 탄종의 총 비중은 유지하고 LV 비율만 교체합니다. 없는 LV·비중 0 후보는 제외 후 재계산합니다."
+            : "Home / 기본 비중 미리보기입니다. Stage 1–5에서는 방탄복·일반 탄약의 LV 비율에 공통 60 / 30 / 9 / 1 규칙이 적용됩니다.";
+        EditorGUILayout.HelpBox(message + "\n미리보기는 데이터·실제 스테이지를 변경하지 않습니다.", MessageType.Info);
+    }
+
 
     private static List<LootObjectSO> FindWorldLootObjects()
     {
@@ -861,31 +949,6 @@ public sealed class LootProgressionEditorWindow : EditorWindow
         return count;
     }
 
-    private void CreateWorldLootType(string displayName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName)) return;
-        const string typeFolder = "Assets/ScriptableObject/GameScene/GameItem/Loot/LootObjectType";
-        const string tableFolder = "Assets/ScriptableObject/GameScene/GameItem/Loot/LootTable";
-        string safeName = MakeObjectId(displayName);
-        var table = CreateInstance<LootTableSO>();
-        table.name = $"LootTable_{safeName}";
-        table.EnsurePool();
-        AssetDatabase.CreateAsset(table, AssetDatabase.GenerateUniqueAssetPath($"{tableFolder}/{table.name}.asset"));
-        var family = CreateInstance<LootObjectTypeSO>();
-        family.name = $"LootObjectType_{safeName}";
-        family.Configure(displayName, null, table);
-        family.AssignCategory(_newWorldCategory);
-        AssetDatabase.CreateAsset(family, AssetDatabase.GenerateUniqueAssetPath($"{typeFolder}/{family.name}.asset"));
-        AssetDatabase.SaveAssets();
-        RefreshWorldCatalog();
-        SelectContainer(null);
-        _selectedWorldLootType = family;
-        _focusedWorldTable = table;
-        _worldCategoryFilter = _newWorldCategory;
-        _showUnassignedVariants = false;
-        _worldLootObjectSearch = string.Empty;
-        ShowNotification(new GUIContent("Loot list created. Assign boxes to it from their advanced settings."));
-    }
 
     // Purpose: Counts filled entries for the direct world-object pool display.
     private static int CountValidItemEntries(LootRarityTier tier)
@@ -906,6 +969,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     // Purpose: Registers Undo and persistence for one directly authored LootTableSO.
     private static void RecordLootTable(LootTableSO table, string action)
     {
+        MakerRegistrationIndex.Invalidate();
         if (table == null)
             return;
 
@@ -1207,7 +1271,10 @@ public sealed class LootProgressionEditorWindow : EditorWindow
 
                 visibleCount++;
                 if (DrawSourceRow(source, i))
+                {
+                    SourceSelectionUi.SelectionClicked();
                     _selectedSourceIndex = i;
+                }
             }
 
             if (visibleCount == 0)
@@ -1509,6 +1576,9 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                 _quickAddItem,
                 typeof(ItemSO),
                 false);
+            MakerRegistrationUi.ItemSummary(_quickAddItem, MakerRegistrationIndex.Contains(pool, _quickAddItem)
+                ? "이 적의 선택된 루팅 목록에 등록됨"
+                : "이 적의 선택된 루팅 목록에는 미등록");
             _quickAddRarity = (PlayerShopItemRarity)EditorGUILayout.EnumPopup(
                 "Rarity Tier",
                 _quickAddRarity);
@@ -1676,6 +1746,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
     // Purpose: Draws the source fields authoring UI.
     private void DrawSourceFields(LootSourceDefinition source)
     {
+        SourceSelectionUi.Synchronize(source, _selectedStageIndex.ToString());
         EditorGUI.BeginChangeCheck();
         string displayName = EditorGUILayout.TextField("Display Name (SO Fallback)", source.displayName);
 
@@ -1766,13 +1837,15 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                 }
             }
 
+            DrawEquipmentStageHint(_selectedStageIndex);
+            var preview = LootProgressionConfigSO.GetStageEquipmentDistribution(pool, _selectedStageIndex);
             for (int tierIndex = 0; tierIndex < pool.rarityTiers.Count; tierIndex++)
-                DrawTier(pool.rarityTiers[tierIndex]);
+                DrawTier(pool.rarityTiers[tierIndex], preview);
         }
     }
 
     // Purpose: Draws the tier authoring UI.
-    private void DrawTier(LootRarityTier tier)
+    private void DrawTier(LootRarityTier tier, StageEquipmentLootDistribution preview)
     {
         if (tier == null)
             return;
@@ -1791,7 +1864,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             : defaultExpanded;
         expanded = EditorGUILayout.Foldout(
             expanded,
-            $"{tier.rarity}   {tier.chancePercent:0.#}% chance   •   {validItemCount} item(s)",
+            $"{tier.rarity}   Base {tier.chancePercent:0.#} / Actual {preview.RarityPercent(tier.rarity):0.##}%   •   {validItemCount} item(s)",
             true,
             EditorStyles.foldoutHeader);
         _tierExpanded[tier.rarity] = expanded;
@@ -1818,7 +1891,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                 GUILayout.Label("Min", EditorStyles.miniBoldLabel, GUILayout.Width(42f));
                 GUILayout.Label("Max", EditorStyles.miniBoldLabel, GUILayout.Width(42f));
                 GUILayout.Label("Share", EditorStyles.miniBoldLabel, GUILayout.Width(126f));
-                GUILayout.Label("Resolved", EditorStyles.miniBoldLabel, GUILayout.Width(52f));
+                GUILayout.Label(new GUIContent("Actual", "Final chance per drop, including the stage LV rule. Excludes the separate global valuable roll."), EditorStyles.miniBoldLabel, GUILayout.Width(52f));
             }
 
             for (int itemIndex = 0; itemIndex < tier.items.Count; itemIndex++)
@@ -1848,7 +1921,7 @@ public sealed class LootProgressionEditorWindow : EditorWindow
                         entry.manualSharePercent = Mathf.Clamp(manualPercent, 0f, 100f);
                     }
 
-                    float resolved = LootProgressionConfigSO.GetResolvedItemSharePercent(tier, entry);
+                    float resolved = preview.ItemPercent(entry);
                     GUILayout.Label($"{resolved:0.##}%", EditorStyles.miniLabel, GUILayout.Width(52f));
 
                     if (GUILayout.Button("X", GUILayout.Width(22f)))
@@ -2269,5 +2342,26 @@ public sealed class LootProgressionEditorWindow : EditorWindow
             return "loot_object";
 
         return value.Trim().ToLowerInvariant().Replace(' ', '_');
+    }
+}
+
+// The regular Inspector exposes the same occupied-slot contract as Loot Maker.
+[CustomEditor(typeof(LootObjectSO))]
+public sealed class LootObjectSOEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        var box = (LootObjectSO)target;
+        int min = box.MinGeneratedSlots, max = box.MaxGeneratedSlots;
+        serializedObject.Update();
+        DrawPropertiesExcluding(serializedObject, "_rollSettings", "_slotGenerationVersion",
+            "_minGeneratedSlots", "_maxGeneratedSlots", "_rarityWeights", "_lootSlotCount");
+        if (serializedObject.ApplyModifiedProperties() && !box.HasSlotGenerationSettings)
+        {
+            Undo.RecordObject(box, "Keep Box Filled Slots");
+            box.SetGeneratedSlotRange(min, max);
+            EditorUtility.SetDirty(box);
+        }
+        LootProgressionEditorWindow.DrawBoxGenerationFields(box);
     }
 }

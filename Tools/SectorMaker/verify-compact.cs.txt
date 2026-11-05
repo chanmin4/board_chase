@@ -1,0 +1,19 @@
+// Archived one-shot trigger. Copy to Assets/Editor only for a deliberate rerun outside Prefab/Play Mode.
+// The runner itself lives in Assets/Tests/EditMode/Editor and has no Tools menu.
+using System.IO;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+
+[InitializeOnLoad]
+internal static class SectorMakerCompactVerificationOnce
+{
+    static SectorMakerCompactVerificationOnce() { EditorApplication.delayCall += TryRun; }
+    private static void TryRun()
+    {
+        if (File.Exists(SectorMakerCompactVerificationRunner.Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode ||
+            PrefabStageUtility.GetCurrentPrefabStage() != null)
+        { EditorApplication.delayCall += TryRun; return; }
+        SectorMakerCompactVerificationRunner.Run();
+    }
+}

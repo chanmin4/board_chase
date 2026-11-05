@@ -9,18 +9,34 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public sealed class EntityStatusEffectRuntime : MonoBehaviour
+public sealed partial class EntityStatusEffectRuntime : MonoBehaviour
 {
     public sealed class ActiveStatusEffect
     {
         public StatusEffectDefinitionSO Definition { get; }
         public float ExpiresAt { get; private set; }
+        private int _stacks = 1;
+        private float _tickRemaining;
+        private readonly InfectionExposureSaveData _accumulation;
+        public int Stacks => _accumulation != null ? _accumulation.stacks : _stacks;
+        public float Gauge => _accumulation != null ? _accumulation.gauge : 0f;
+        public bool UsesAccumulationState(InfectionExposureSaveData state) => ReferenceEquals(_accumulation, state);
+        public float TickRemaining { get => _accumulation != null ? _accumulation.nextTick : _tickRemaining;
+            set { if (_accumulation != null) _accumulation.nextTick = value; else _tickRemaining = value; } }
         public float RemainingSeconds => Mathf.Max(0f, ExpiresAt - Time.time);
 
-        public ActiveStatusEffect(StatusEffectDefinitionSO definition, float expiresAt)
+        public ActiveStatusEffect(StatusEffectDefinitionSO definition, float expiresAt, InfectionExposureSaveData accumulation = null)
         {
             Definition = definition;
             ExpiresAt = expiresAt;
+            _accumulation = accumulation;
+            if (accumulation == null) TickRemaining = definition.DamageTickInterval;
+        }
+
+        public void SetStacks(int stacks)
+        {
+            if (_accumulation != null) _accumulation.stacks = Mathf.Clamp(stacks, 0, Definition.MaximumStacks);
+            else _stacks = Mathf.Clamp(stacks, 1, Definition.MaximumStacks);
         }
 
         // Purpose: Refreshes the displayed or cached refresh.
@@ -56,10 +72,28 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
     // Purpose: Processes this component's per-frame runtime work.
     private void Update()
     {
+        TickInfectionAggravation(Time.deltaTime);
         bool changed = false;
 
         for (int i = _activeEffects.Count - 1; i >= 0; i--)
         {
+            var active = _activeEffects[i];
+            if (active.Definition is InfectionAggravationStatusSO) continue; // Already ticked once above; never deduct HP as well.
+            if (active.Definition.PersistentStacks)
+            {
+                active.TickRemaining -= Time.deltaTime;
+                if (active.TickRemaining <= 0f)
+                {
+                    float interval = active.Definition.DamageTickInterval;
+                    int ticks = 1 + Mathf.FloorToInt(-active.TickRemaining / interval);
+                    active.TickRemaining += ticks * interval;
+                    EntityComponentResolver.Resolve<Damageable>(this)?.ReceiveStatusDamageOverTime(
+                        active.Definition.DamagePerStackPerSecond * active.Stacks * interval * ticks);
+                    // Death may clear the runtime through lifecycle callbacks.
+                    if (_activeEffects.Count <= i) break;
+                }
+                continue;
+            }
             if (_activeEffects[i].ExpiresAt > Time.time)
                 continue;
 
@@ -86,11 +120,16 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
     {
         if (definition == null)
             return false;
+        if (definition is InfectionAggravationStatusSO aggravation)
+        {
+            AddInfectionAggravation(aggravation.Settings.baseGaugeCapacity);
+            return true;
+        }
 
         float duration = durationOverride > 0f
             ? durationOverride
             : definition.DurationSeconds;
-        float expiresAt = Time.time + Mathf.Max(0.05f, duration);
+        float expiresAt = definition.PersistentStacks ? float.PositiveInfinity : Time.time + Mathf.Max(0.05f, duration);
 
         for (int i = 0; i < _activeEffects.Count; i++)
         {
@@ -100,7 +139,8 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
                 continue;
 
             // Same effect never stacks. Contact only refreshes the one timer.
-            active.Refresh(expiresAt);
+            if (definition.PersistentStacks) active.SetStacks(active.Stacks + 1);
+            else active.Refresh(expiresAt);
             OnChanged?.Invoke(this);
             return false;
         }
@@ -115,6 +155,7 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
     /// </summary>
     public bool RemoveAll()
     {
+        ClearInfectionAggravation();
         if (_activeEffects.Count == 0)
             return false;
 
@@ -128,6 +169,7 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
     {
         if (definition == null)
             return false;
+        if (definition is InfectionAggravationStatusSO) ClearInfectionAggravation();
 
         for (int i = _activeEffects.Count - 1; i >= 0; i--)
         {
@@ -158,6 +200,7 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
         {
             ActiveStatusEffect active = _activeEffects[index];
             StatusEffectDefinitionSO definition = active != null ? active.Definition : null;
+            if (definition is InfectionAggravationStatusSO) continue; // Saved once in RunData.infectionExposure.
             float remaining = active != null ? active.RemainingSeconds : 0f;
 
             if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || remaining <= 0f)
@@ -166,7 +209,9 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
             target.statusEffects.Add(new PlayerRunStatusEffectSaveData
             {
                 statusEffectId = definition.Id,
-                remainingSeconds = remaining
+                remainingSeconds = definition.PersistentStacks ? 1f : remaining,
+                stacks = active.Stacks,
+                tickRemaining = active.TickRemaining
             });
         }
     }
@@ -213,6 +258,9 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
             PlayerRunStatusEffectSaveData entry = source.statusEffects[index];
             catalog.TryResolveStatusEffect(entry.statusEffectId, out StatusEffectDefinitionSO definition);
             Apply(definition, entry.remainingSeconds);
+            var restored = _activeEffects[_activeEffects.Count - 1];
+            restored.SetStacks(entry.stacks <= 0 ? 1 : entry.stacks);
+            restored.TickRemaining = Mathf.Clamp(entry.tickRemaining, .001f, definition.DamageTickInterval);
         }
 
         OnChanged?.Invoke(this);
@@ -263,6 +311,26 @@ public sealed class EntityStatusEffectRuntime : MonoBehaviour
             OnChanged?.Invoke(this);
 
         return removedCount;
+    }
+
+    public int BleedingStacks
+    {
+        get { int total = 0; foreach (var effect in _activeEffects) if (effect.Definition.IsBleeding) total += effect.Stacks; return total; }
+    }
+
+    public int TreatBleeding(int amount)
+    {
+        int remaining = Mathf.Max(0, amount);
+        for (int i = _activeEffects.Count - 1; i >= 0 && remaining > 0; i--)
+        {
+            var effect = _activeEffects[i];
+            if (!effect.Definition.IsBleeding) continue;
+            int removed = Mathf.Min(remaining, effect.Stacks); remaining -= removed;
+            if (removed == effect.Stacks) _activeEffects.RemoveAt(i);
+            else effect.SetStacks(effect.Stacks - removed);
+        }
+        if (remaining != amount) OnChanged?.Invoke(this);
+        return Mathf.Max(0, amount) - remaining;
     }
 
     // Purpose: Checks whether this component has has.

@@ -20,6 +20,9 @@ public struct SectorMapCellSnapshot
     public RaidRoomRole raidRole;
     public bool hasPublicRaidMarker;
     public StageRoomType roomType;
+    public SectorMapIconKind mapIconKind;
+    // Retired per-preset image field. Kept only for old consumers; no active renderer uses it.
+    public Sprite mapIcon;
 
     public SectorOwner owner;
     public SectorOwner dominantOwner;

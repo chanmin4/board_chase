@@ -12,7 +12,7 @@ using UnityEngine.Serialization;
 public class EntityPaintMarkSettings
 {
     [Header("Enable")]
-    [SerializeField] private bool _usePaintMark = true;
+    [SerializeField, HideInInspector] private bool _usePaintMark;
 
     [Header("Stack Amount")]
     [SerializeField, Min(1f)] private float _markAmountPerStack = 100f;
@@ -34,7 +34,8 @@ public class EntityPaintMarkSettings
     [Tooltip("Effective Armor Class removed by each completed Mark stack, regardless of paint faction.")]
     [SerializeField, Min(0)] private int _armorClassReductionPerStack = 1;
 
-    public bool UsePaintMark => _usePaintMark;
+    // WIP only. Serialized legacy values are retained, never enabled by old assets.
+    public bool UsePaintMark => false;
     public float MarkAmountPerStack => Mathf.Max(1f, _markAmountPerStack);
     public int MaxVaccineMarkStacks => Mathf.Max(1, _maxVaccineMarkStacks);
     public int MaxVirusMarkStacks => Mathf.Max(1, _maxVirusMarkStacks);
@@ -77,6 +78,10 @@ public class EntityVisionSettings
 
     [Tooltip("Forward cone multiplier at full aim. 0.5 means the cone becomes half as wide while fully aimed.")]
     [SerializeField, Range(0.05f, 1f)] private float _aimArcAngleMultiplier = 0.65f;
+    [Tooltip("Selects a wider connection on the close circle. Straight sides connect that point to the unchanged far arc endpoints. Scales with aim; zero keeps the original cone.")]
+    [SerializeField, Range(0f, 120f)] private float _nearForwardArcExtraAngle;
+    // Retired curved-blend setting: retained only to deserialize existing assets.
+    [HideInInspector, SerializeField, Min(0f)] private float _nearForwardBlendDistance;
 
     // Kept for Unity serialization and the generic entity defaults.
     public EntityVisionSettings()
@@ -99,7 +104,9 @@ public class EntityVisionSettings
             targetHeight: 1f,
             useForwardArc: true,
             baseArcAngle: 60f,
-            aimArcAngleMultiplier: 1f);
+            aimArcAngleMultiplier: 1f,
+            nearForwardArcExtraAngle: 60f,
+            nearForwardBlendDistance: 22.5f);
     }
 
     private EntityVisionSettings(
@@ -111,7 +118,9 @@ public class EntityVisionSettings
         float targetHeight,
         bool useForwardArc,
         float baseArcAngle,
-        float aimArcAngleMultiplier)
+        float aimArcAngleMultiplier,
+        float nearForwardArcExtraAngle,
+        float nearForwardBlendDistance)
     {
         _visionRange = visionRange;
         _closeVisionRadius = closeVisionRadius;
@@ -122,6 +131,8 @@ public class EntityVisionSettings
         _useForwardArc = useForwardArc;
         _baseArcAngle = baseArcAngle;
         _aimArcAngleMultiplier = aimArcAngleMultiplier;
+        _nearForwardArcExtraAngle = nearForwardArcExtraAngle;
+        _nearForwardBlendDistance = nearForwardBlendDistance;
     }
 
     public float VisionRange => Mathf.Max(0.1f, _visionRange);
@@ -133,6 +144,8 @@ public class EntityVisionSettings
     public bool UseForwardArc => _useForwardArc;
     public float BaseArcAngle => Mathf.Clamp(_baseArcAngle, 1f, 360f);
     public float AimArcAngleMultiplier => Mathf.Clamp(_aimArcAngleMultiplier, 0.05f, 1f);
+    public float NearForwardArcExtraAngle => Mathf.Clamp(_nearForwardArcExtraAngle, 0f, 120f);
+    public float NearForwardBlendDistance => Mathf.Max(0f, _nearForwardBlendDistance);
 }
 
 [Serializable]
@@ -189,8 +202,8 @@ public abstract class EntityStatConfigSO : ScriptableObject
     [Tooltip("Base armor class owned by this entity before equipped armor and paint mark modifiers are applied.")]
     [SerializeField, Min(0)] private int _baseArmorClass = 0;
 
-    [Header("Paint Mark")]
-    [SerializeField] private EntityPaintMarkSettings _paintMark = new();
+    // WIP compatibility data only: not an authored gameplay setting anymore.
+    [SerializeField, HideInInspector] private EntityPaintMarkSettings _paintMark = new();
 
     [Header("Vision")]
     [SerializeField] private EntityVisionSettings _vision = new();

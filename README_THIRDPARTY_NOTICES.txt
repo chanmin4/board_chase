@@ -21,3 +21,9 @@ Changes: optimized, material settings adjusted, and integrated into this game.
 "Gas Mask/respirator" (https://skfb.ly/6Sqzw) by Daniel Ryan is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
 
 "Unix 5000" (https://skfb.ly/6VW8o) by Eugen Vahrushin is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+"Lowpoly Hatch Trap door" (https://skfb.ly/oAysn) by UsefulStuff is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+"Medical Equipment" (https://skfb.ly/oSSKA) by A9908244 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+"Medical Equipment" (https://skfb.ly/pBZnx) by Chenchanchong is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).

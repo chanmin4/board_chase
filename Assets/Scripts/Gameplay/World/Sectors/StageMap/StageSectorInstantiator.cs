@@ -116,9 +116,9 @@ public class StageSectorInstantiator : MonoBehaviour
         int consecutiveNoHitStageCount,
         RaidRunSaveData restoredRaid = null)
     {
-        if (stage == null)
+        if (stage == null || !stage.CanEnter)
         {
-            Debug.LogError("[StageSectorInstantiator] StageDefinitionSO is missing.", this);
+            Debug.LogError("[StageSectorInstantiator] StageDefinitionSO is missing or marked development-only (entry disabled).", this);
             return false;
         }
 
@@ -129,72 +129,28 @@ public class StageSectorInstantiator : MonoBehaviour
         }
 
         bool startOnly = stage.UseStartSectorOnly || stage.RoomGridSize <= 0;
-        int gridSize = startOnly ? 0 : Mathf.Max(1, stage.RoomGridSize);
 
         _sectorStateManager = sectorStateManager;
 
-        int stageSeed = StageMapGenerator.BuildStageSeed(_runSeed, stage.StageIndex);
-        if (!startOnly && stage.MapPolicy == StageMapPolicy.OddSquareRaid)
+        if (restoredRaid != null)
         {
-            if (restoredRaid != null)
-            {
-                if (!restoredRaid.TryValidate(out string restoreError) || restoredRaid.layout.stageIndex != stage.StageIndex)
-                { Debug.LogError($"[Raid] Cannot restore raid: {restoreError}", this); return false; }
-                restoredRaid = JsonUtility.FromJson<RaidRunSaveData>(JsonUtility.ToJson(restoredRaid));
-                CurrentLayout = restoredRaid.layout;
-                _runSeed = CurrentLayout.runSeed;
-            }
-            else
-            {
-                if (_randomizeRunSeedOnAwake) _runSeed = Random.Range(int.MinValue, int.MaxValue);
-                if (!RaidMapGenerator.TryGenerate(_runSeed, stage.StageIndex, gridSize, _startSectorCoord,
-                        stage.RaidMap, out StageMapLayout raidLayout, out string raidError))
-                { Debug.LogError($"[Raid] Cannot generate raid: {raidError}", this); return false; }
-                CurrentLayout = raidLayout;
-            }
-        }
-        else if (!startOnly && stage.HasEnabledBranchTopology)
-        {
-            string topologyError = "No valid positive-weight topology could be selected.";
-            StageMapLayout topologyLayout = null;
-            bool topologyGenerated =
-                stage.TryPickBranchTopology(stageSeed, out StageTopologySO topology) &&
-                StageMapGenerator.TryGenerateBranchTopology(
-                    _runSeed,
-                    stage.StageIndex,
-                    _startSectorCoord,
-                    stage.GoalRoomType,
-                    topology,
-                    out topologyLayout,
-                    out topologyError);
-
-            if (!topologyGenerated)
-            {
-                Debug.LogError(
-                    $"[StageSectorInstantiator] Could not generate Branch Topology. " +
-                    $"stage={stage.StageIndex}, definition={stage.name}, reason={topologyError}",
-                    stage);
-                ClearGeneratedSectors();
-                CurrentLayout = null;
-                return false;
-            }
-
-            CurrentLayout = topologyLayout;
+            if (!restoredRaid.TryValidate(out string restoreError) || restoredRaid.layout.stageIndex != stage.StageIndex)
+            { Debug.LogError($"[Raid] Cannot restore raid: {restoreError}", this); return false; }
+            restoredRaid = JsonUtility.FromJson<RaidRunSaveData>(JsonUtility.ToJson(restoredRaid));
+            CurrentLayout = restoredRaid.layout;
+            _runSeed = CurrentLayout.runSeed;
         }
         else
         {
-            CurrentLayout = StageMapGenerator.GenerateFullGrid(
-                _runSeed,
-                stage.StageIndex,
-                gridSize,
-                _startSectorCoord,
-                stage.GoalRoomType,
-                // Dedicated Treasure rooms are WIP legacy content. Normal Sector
-                // loot slots own Rare Cache placement, so full-grid generation
-                // must keep every non-boss room classified as Normal here.
-                StageTreasureRoomGenerationSettings.Disabled,
-                StageShopRoomGenerationSettings.Disabled);
+            if (!startOnly && stage.MapPolicy != StageMapPolicy.Legacy && _randomizeRunSeedOnAwake)
+                _runSeed = Random.Range(int.MinValue, int.MaxValue);
+            if (!StageMapBuildPipeline.TryGenerate(stage, _runSeed, _startSectorCoord, out var generated, out string error))
+            { Debug.LogError($"[StageSectorInstantiator] 맵 생성 실패: stage={stage.StageIndex}, seed={_runSeed}, reason={error}", this); CurrentLayout = null; return false; }
+            CurrentLayout = generated;
         }
+
+        if (CurrentLayout.usesRaidLayout && !RaidExtractionPortalPolicy.TryPrepare(CurrentLayout, out string exitError))
+        { Debug.LogError($"[Raid] Cannot prepare extraction portals: {exitError}", this); return false; }
 
         ClearGeneratedSectors();
         RaidRuntime raidRuntime = GetComponent<RaidRuntime>();
@@ -214,37 +170,10 @@ public class StageSectorInstantiator : MonoBehaviour
             if (node == null || node.roomType == StageRoomType.Empty)
                 continue;
 
-            StageBattleEncounterPresetSO encounterPreset = null;
-            SectorPresetSO sectorPreset;
-
-            if (node.roomType == StageRoomType.Boss)
+            if (!StageMapBuildPipeline.TryResolveRoomPreset(stage, CurrentLayout, node,
+                    out SectorPresetSO sectorPreset, out StageBattleEncounterPresetSO encounterPreset, out string presetError))
             {
-                if (!stage.TryPickBossBattle(
-                        CurrentLayout.stageSeed,
-                        node.coord,
-                        out encounterPreset,
-                        out SectorBossBattlePresetSO bossSectorPreset))
-                {
-                    Debug.LogError(
-                        $"[StageSectorInstantiator] No valid Boss battle entry is registered. " +
-                        $"stage={stage.StageIndex}, coord={node.coord}, definition={stage.name}",
-                        stage);
-                    ClearGeneratedSectors();
-                    CurrentLayout = null;
-                    return false;
-                }
-
-                sectorPreset = bossSectorPreset;
-            }
-            else if (!stage.TryPickSectorPreset(
-                         CurrentLayout.stageSeed,
-                         node.coord,
-                         node.roomType,
-                         out sectorPreset))
-            {
-                Debug.LogError(
-                    $"[StageSectorInstantiator] No valid SectorPresetSO is registered. stage={stage.StageIndex}, roomType={node.roomType}, coord={node.coord}, definition={stage.name}",
-                    stage);
+                Debug.LogError($"[StageSectorInstantiator] stage={stage.StageIndex}: {presetError}", stage);
                 ClearGeneratedSectors();
                 CurrentLayout = null;
                 return false;
@@ -252,14 +181,20 @@ public class StageSectorInstantiator : MonoBehaviour
 
             RaidRoomPresetBinding raidBinding = CurrentLayout.usesRaidLayout
                 ? stage.RaidRuntime.FindRoom(node.raidRole) : null;
-            if (raidBinding != null && node.roomType == StageRoomType.Normal &&
-                raidBinding.TryPickSectorPreset(stageSeed, node.coord, out SectorPresetSO rolePreset))
-                sectorPreset = rolePreset;
-
+            if (CurrentLayout.usesRaidLayout && !node.hasInternalCombatLock && node.roomType == StageRoomType.Normal &&
+                node.coord != CurrentLayout.startSectorCoord)
+            {
+                var presetLock = SectorLockedCombatArea.Find(sectorPreset.SectorPrefab);
+                if (restoredRaid == null && node.raidRole == RaidRoomRole.Vault && stage.RaidRuntime.vaultUsesInternalCombatLock || presetLock != null)
+                {
+                    node.hasInternalCombatLock = true;
+                    node.internalCombatKeyTier = presetLock != null ? presetLock.KeyTier : stage.RaidRuntime.vaultEntryKeyTier;
+                }
+            }
             bool usesEnemyEncounter = !node.isCleared && (
                 node.roomType == StageRoomType.Boss ||
                 (node.roomType == StageRoomType.Normal &&
-                 NormalSectorPolicySO.ResolveUsesEnemyEncounter(sectorPreset.NormalSectorPolicy)));
+                 (node.hasInternalCombatLock || NormalSectorPolicySO.ResolveUsesEnemyEncounter(sectorPreset.NormalSectorPolicy))));
 
             if (node.roomType == StageRoomType.Normal &&
                 usesEnemyEncounter &&
@@ -293,7 +228,10 @@ public class StageSectorInstantiator : MonoBehaviour
                 _generatedRoot != null ? _generatedRoot : transform);
 
             sector.name = $"Stage_{stage.StageIndex}_{node.roomType}_{node.raidRole}_{node.coord.x}_{node.coord.y}";
+            SectorAppearance.ApplyStageDefault(sector, stage.SectorTheme);
             sector.SetRuntimeInfo(node.coord, node.isOpened, isStartSector);
+            sector.ConfigureMapIconKind(SectorMapIconPolicy.KindForRoom(node));
+            if (CurrentLayout.usesRaidLayout) SectorDestructibleCover.BindSector(sector, raidRuntime.State);
             if (node.roomType == StageRoomType.Normal)
                 sector.ConfigureNormalSectorPolicy(sectorPreset.NormalSectorPolicy);
 
@@ -304,17 +242,31 @@ public class StageSectorInstantiator : MonoBehaviour
                 roomTraitRuntime = sector.gameObject.AddComponent<SectorRoomTraitRuntime>();
 
             roomTraitRuntime.Configure(
-                stage.RoomTraitTable,
+                CurrentLayout.generationVersion == 3 ? stage.RaidAnomalyTable : stage.RoomTraitTable,
                 node.roomType,
                 CurrentLayout.stageSeed,
                 node.coord,
                 stage.EnableBiochemicalGas,
-                stage.BiochemicalGas);
+                stage.BiochemicalGas, stage.StageIndex, usesEnemyEncounter, stage.AnomalyGasBaseline,
+                stage.MapPolicy == StageMapPolicy.Legacy);
+            if(CurrentLayout.gameSystemPolicyVersion>0)roomTraitRuntime.ConfigureVirusRoom(node.virusRoom, stage.EncounterRules.infectedRoomGasPressure);
+            if (CurrentLayout.generationVersion == 3)
+            {
+                if (node.hasTraitSnapshot)
+                {
+                    roomTraitRuntime.ConfigureAuthoredRoomTrait(node.savedTrait);
+                    roomTraitRuntime.RestoreGasLeakStacks(node.gasLeakStacks);
+                }
+                else
+                { node.savedTrait = roomTraitRuntime.RolledRoomTrait; node.hasTraitSnapshot = true; }
+            }
             if (CurrentLayout.usesRaidLayout && node.raidRole == RaidRoomRole.Armory)
                 roomTraitRuntime.ConfigureAuthoredRoomTrait(SectorRoomTraitType.Armed);
             sector.SetCleared(isStartSector || node.isCleared);
             if (CurrentLayout.usesRaidLayout)
                 RaidStationFactory.Attach(raidRuntime, sector, node, stage.RaidRuntime);
+            if (CurrentLayout.generationVersion == 3)
+                RaidMerchantFactory.Attach(raidRuntime, sector, node, stage.RaidRuntime);
 
             _generatedSectors.Add(sector);
 
@@ -336,18 +288,39 @@ public class StageSectorInstantiator : MonoBehaviour
                 }
             }
 
-            if (node.roomType == StageRoomType.Normal &&
-                (raidBinding?.content != null || sectorPreset.ContentProfile != null))
+            // Only bind geometry already saved in the prefab. No runtime authoring.
+            if (CurrentLayout.usesRaidLayout && node.hasInternalCombatLock)
+            {
+                var area = sector.GetComponentInChildren<SectorLockedCombatArea>(true);
+                if (area == null || !area.Bind(raidRuntime, sector, node))
+                {
+                    Debug.LogError($"[Raid] 내부 잠금방의 벽/판정/패널 사전 배치가 없습니다. Sector Maker에서 프리팹을 작성하세요. sector={sector.name}, coord={node.coord}", sector);
+                    ClearGeneratedSectors(); CurrentLayout = null; return false;
+                }
+            }
+
+            // 새 배치 방은 방 전용 프로필이 권위자입니다. 오래된 역할별 공유 override가
+            // Maker에서 작성한 자리를 다시 덮어쓰지 않게 합니다. 기존 방의 우선순위는 유지합니다.
+            var contentProfile = sectorPreset.ContentProfile != null && sectorPreset.ContentProfile.UseAuthoredLootPlacement ?
+                sectorPreset.ContentProfile : raidBinding?.content != null ? raidBinding.content : sectorPreset.ContentProfile;
+            var savedContent = raidRuntime?.State?.sectorContent?.Find(room => room != null && room.coord == sector.Coord);
+            bool supportsPlacement = node.roomType == StageRoomType.Normal || contentProfile != null && contentProfile.UseAuthoredLootPlacement;
+            if ((supportsPlacement && contentProfile != null) || savedContent != null)
             {
                 SectorContentSlotSpawner.Populate(
                     sector,
-                    raidBinding?.content != null ? raidBinding.content : sectorPreset.ContentProfile,
-                    CurrentLayout.stageSeed);
+                    contentProfile,
+                    CurrentLayout.stageSeed,
+                    CurrentLayout.usesRaidLayout ? raidRuntime.State : null);
             }
 
             // WIP legacy: no StageRoomType.Treasure node is generated. Existing
-            if (raidBinding?.lootObject != null)
+            bool authoredLootPlacement = sector.GetComponent<SectorContentPopulationState>()?.Snapshot?.authoredLootPlacement ??
+                contentProfile != null && contentProfile.UseAuthoredLootPlacement;
+            if (!authoredLootPlacement && raidBinding?.lootObject != null)
                 RaidRoomContentSpawner.Populate(sector, raidBinding.lootObject);
+            if (!authoredLootPlacement && CurrentLayout.generationVersion == 3 && node.raidRole == RaidRoomRole.Normal)
+                RaidRoomContentSpawner.AddGeneralSupply(sector, stage.RaidRuntime, CurrentLayout.stageSeed);
             if (CurrentLayout.usesRaidLayout) raidRuntime.BindContainers(sector);
 
             // SectorTreasure components remain serialized for manual migration

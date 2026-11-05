@@ -31,6 +31,7 @@ public class SectorRuntime : MonoBehaviour
     // of serialized per sector. Every sector variant inherits the same
     // Container/WorldItemContainer child from Sector_Base.
     private Transform _worldItemContainer;
+    private SectorMapIconKind _mapIconKind;
 
     [Header("Ref Don't Touch")]
     [ReadOnly] public Vector2Int coord;
@@ -50,6 +51,8 @@ public class SectorRuntime : MonoBehaviour
     [SerializeField] private Vector2 fallbackSizeXZ = new Vector2(10f, 10f);
 
     public Vector2Int Coord => coord;
+    public SectorMapIconKind MapIconKind => _mapIconKind;
+    public void ConfigureMapIconKind(SectorMapIconKind kind) => _mapIconKind = kind;
     public bool IsOpened => isOpened;
     public bool IsCleared => isCleared;
     public bool IsStartSector => is_startsector;
@@ -57,11 +60,18 @@ public class SectorRuntime : MonoBehaviour
     public Transform PatternObjectRoot => _PatternObjectRoot != null ? _PatternObjectRoot : transform;
     public NormalSectorPolicySO NormalSectorPolicy => _normalSectorPolicy;
     public bool UsesNormalSectorEnemyEncounter =>
+        (InternalCombatArea != null && InternalCombatArea.IsBound) ||
         NormalSectorPolicySO.ResolveUsesEnemyEncounter(_normalSectorPolicy);
     public bool RequiresNormalSectorEnemyClearForProgression =>
+        (InternalCombatArea != null && InternalCombatArea.IsBound) ||
         NormalSectorPolicySO.ResolveRequiresEnemyClearForProgression(_normalSectorPolicy);
     public bool AllowsPortalTravelBeforeClear =>
-        NormalSectorPolicySO.ResolveAllowsPortalTravelBeforeClear(_normalSectorPolicy);
+        InternalCombatArea != null && InternalCombatArea.IsBound
+            ? InternalCombatArea.AllowsPerimeterTravel
+            : NormalSectorPolicySO.ResolveAllowsPortalTravelBeforeClear(_normalSectorPolicy);
+    private SectorLockedCombatArea _internalCombatArea;
+    public SectorLockedCombatArea InternalCombatArea => _internalCombatArea != null
+        ? _internalCombatArea : (_internalCombatArea = SectorLockedCombatArea.Find(this));
     public bool UsesNormalSectorStageDefaultTimer =>
         NormalSectorPolicySO.ResolveUsesStageDefaultTimer(_normalSectorPolicy);
 
@@ -111,6 +121,7 @@ public class SectorRuntime : MonoBehaviour
             return transform;
         }
     }
+    public void ConfigurePlayerStartPoint(Transform point) { if(point!=null)_playerStartPoint=point; }
 
     // Purpose: Updates the runtime info state.
     public void SetRuntimeInfo(Vector2Int newCoord, bool opened, bool isStartSector)

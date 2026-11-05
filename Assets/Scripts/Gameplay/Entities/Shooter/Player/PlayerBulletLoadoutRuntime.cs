@@ -109,6 +109,22 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
     private bool _startingLoadoutAmmoApplied;
     private BulletSO _lastNotifiedSelectedBullet;
     private WeaponMagazineState[] _weaponMagazines;
+
+    public float CarriedLoadedAndLegacyAmmoWeightKg
+    {
+        get
+        {
+            float total = 0f;
+            if (_weaponMagazines != null)
+                foreach (var magazine in _weaponMagazines)
+                    if (magazine != null) total += magazine.bullet?.WeightForAmount(magazine.currentAmmo) ?? 0f;
+            if (_slots != null)
+                foreach (var slot in _slots)
+                    if (slot != null && !slot.infiniteReserve && !slot.requiredDefault)
+                        total += slot.bullet?.WeightForAmount(slot.TotalAmmo) ?? 0f;
+            return total;
+        }
+    }
     private PlayerInventoryRuntime _subscribedInventoryRuntime;
     private EntityEquipmentRuntime _subscribedEquipmentRuntime;
     private bool _isMutatingInventory;
@@ -126,6 +142,9 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
     {
         if (_statsRuntime != null)
             return Mathf.Max(1, _statsRuntime.ResolveMagazineSize(bullet));
+
+        if (_equipmentRuntime != null && _equipmentRuntime.CurrentWeapon is RangedWeaponSO firearm)
+            return firearm.MagazineSize;
 
         if (!_warnedMissingStatsRuntime)
         {
@@ -250,6 +269,15 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
             return;
         }
 
+        // Stats-ready/OnEnable can run before PlayerInventoryRuntime.Start.
+        // Prepare the same rolled bag before storing reserve ammo in inventory.
+        if (!_inventoryRuntime.TryPrepareStartingLoadoutBackpack(snapshot, out string backpackMessage))
+        {
+            Debug.LogError("[PlayerBulletLoadoutRuntime] Failed to prepare starting backpack. " +
+                $"reason={backpackMessage}", this);
+            return;
+        }
+
         bool changed = false;
         _isMutatingInventory = true;
 
@@ -348,7 +376,7 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         return true;
     }
 
-    // Keep automatic reload ahead of gun bashing while reserve rounds are available.
+    // Ammo availability query only; empty firearms no longer trigger gun bashing.
     public bool HasNoFireableAmmunition
     {
         get
@@ -434,6 +462,7 @@ public class PlayerBulletLoadoutRuntime : MonoBehaviour
         int requestedConsumption = amount *
             SectorRoomTraitRuntime.CurrentPlayerAmmoConsumptionMultiplier;
         int actualConsumption = Mathf.Min(magazine.currentAmmo, requestedConsumption);
+        if(UnityEngine.Random.value<Mathf.Clamp01((_statsRuntime?.AdditionalStat(PlayerStatId.AmmoPreservationChance)??0)/100f))actualConsumption=0;
 
         magazine.currentAmmo -= actualConsumption;
         bullet = magazine.bullet;

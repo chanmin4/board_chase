@@ -5,6 +5,19 @@ using UnityEngine;
 [Serializable]
 public sealed class RaidRuntimeSettings
 {
+    [Header("해치 · 원정 중 다음 스테이지")]
+    [Tooltip("ON: HOME 정산 없이 다음 해금된 스테이지로 진행. OFF: 기존 HOME 탈출.")]
+    public bool hatchAdvancesStage = true;
+    [Tooltip("선택한 퀘스트 완료 후에만 다음 스테이지 해치를 사용합니다. 다음 스테이지 접근 해금도 별도로 필요합니다.")]
+    public QuestDefinitionSO hatchRequiredQuest;
+    [Header("Infection management — demo tuning")]
+    [Min(1f)] public float suppressionDurationSeconds = 180f;
+    [Min(1)] public int stage1MedicalDose = 1;
+    [Min(1)] public int stage2MedicalDose = 3;
+    [Min(1)] public int stage3MedicalDose = 5;
+    [Min(0f)] public float infectionPerPressureSecond = 1f;
+    public int MedicalDose(int stage) => Mathf.Max(1,
+        stage <= 1 ? stage1MedicalDose : stage == 2 ? stage2MedicalDose : stage3MedicalDose);
     [Tooltip("Temporary authoring value, not a final balance pass. Zero disables the raid clock.")]
     [Min(0)] public float durationSeconds = 1200f;
     [Min(0)] public float overtimeInfectionPerSecond = 6f;
@@ -23,8 +36,24 @@ public sealed class RaidRuntimeSettings
     public bool specialExtractionWip;
     [Min(3)] public int specialExtractionMinimumStage = 3;
     public List<RaidRoomPresetBinding> rooms = new();
+    [Header("Emergency merchant — test tuning")]
+    public ShopConfigSO merchantConfig;
+    [Min(0)] public int merchantInitialMoney = 1000;
+    public SectorShopOpenRequestEventChannelSO merchantOpenChannel;
+    public UIOverlayRequestEventChannelSO merchantOverlayChannel;
+    [Header("Vault entry — uses existing Key Tool durability")]
+    public LootKeyTier vaultEntryKeyTier = LootKeyTier.Normal;
+    [Tooltip("새 원정 금고방은 입장 포탈 대신 내부 차단벽/4방향 패널을 사용합니다. 기존 저장의 포탈 잠금은 유지합니다.")]
+    public bool vaultUsesInternalCombatLock = true;
+    [Header("General-room supply — test tuning, existing loot pools")]
+    [Range(0f, 1f)] public float normalSupplyChance = 0.25f;
+    [Range(0f, 1f)] public float weaponSupplyShare = 0.5f;
+    public LootObjectSO normalWeaponSupply;
+    public LootObjectSO normalMedicalSupply;
 
-    public RaidRoomPresetBinding FindRoom(RaidRoomRole role) => rooms?.Find(row => row != null && row.role == role);
+    // Extraction is route metadata, never a separate room preset (including obsolete authoring rows).
+    public RaidRoomPresetBinding FindRoom(RaidRoomRole role) => role == RaidRoomRole.Extraction ? null :
+        rooms?.Find(row => row != null && row.role == role);
 }
 
 [Serializable]

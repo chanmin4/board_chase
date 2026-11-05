@@ -20,6 +20,51 @@ public enum EntityDeathCause
 
 public class Damageable : MonoBehaviour
 {
+    public bool IsPeriodicStatusDamage { get; private set; }
+
+    public void AddInfectionExposure(float amount)
+    {
+        if (IsDead || !InfectionAggravationMath.FinitePositive(amount)) return;
+        if (EntityComponentResolver.Resolve<ShooterInfection>(this) is ShooterInfection shooter)
+        {
+            if (shooter is PlayerShooterInfection player) player.AddExposure(amount);
+            else
+            {
+                var status = EntityComponentResolver.Resolve<EntityStatusEffectRuntime>(shooter);
+                if (status != null) status.AddInfectionAggravation(amount);
+                else shooter.AddInfection(amount);
+            }
+            return;
+        }
+        // Creature damageables do not necessarily use the shooter infection component.
+        var effects = EntityComponentResolver.Resolve<EntityStatusEffectRuntime>(this) ??
+            gameObject.AddComponent<EntityStatusEffectRuntime>();
+        effects.AddInfectionAggravation(amount);
+    }
+
+    // Classify the current notification only; nested direct hits must remain interrupting attacks.
+    private void PublishDamageReceived(float damage, bool periodicStatus = false)
+    {
+        bool previous = IsPeriodicStatusDamage;
+        IsPeriodicStatusDamage = periodicStatus;
+        try { OnDamaged?.Invoke(this, damage); }
+        finally { IsPeriodicStatusDamage = previous; }
+    }
+
+    // Bleeding is not another incoming attack: no dodge/armor, hit lock, invulnerability,
+    // target acquisition, or bandage interruption. Health/death notifications still run.
+    public float ReceiveStatusDamageOverTime(float damage)
+    {
+        if (IsDead || damage <= 0f || float.IsNaN(damage) || float.IsInfinity(damage)) return 0f;
+        float previousHealth = _currentHealth;
+        _currentHealth = Mathf.Clamp(_currentHealth - damage, 0f, _maxHealth);
+        SyncRuntimeHealthDebug();
+        PublishDamageReceived(damage, periodicStatus: true);
+        EntityComponentResolver.Resolve<PlayerShooterInfection>(this)?.AddHitExposure(previousHealth - _currentHealth);
+        if (_currentHealth <= 0f) Die(EntityDeathCause.HealthDepleted, "status damage over time");
+        else NotifyHealthChanged();
+        return damage;
+    }
     [Header("Health Config")]
     [FormerlySerializedAs("_mutarusStatConfigSO")]
     [FormerlySerializedAs("_enemyStatConfigSO")]
@@ -30,6 +75,8 @@ public class Damageable : MonoBehaviour
 
     [Header("Runtime Health")]
     [ReadOnly] [SerializeField] private float _maxHealth;
+    [ReadOnly] [SerializeField] private float _uninfectedMaxHealth;
+    [ReadOnly] [SerializeField] private float _infectionMaxHealthLoss;
     [ReadOnly] [SerializeField] private float _currentHealth;
     [System.NonSerialized] private GameObject _lastDamageAttacker;
 
@@ -55,15 +102,15 @@ public class Damageable : MonoBehaviour
     [Header("Stats Runtime")]
     [SerializeField] private ShooterStatsRuntime _statsRuntime;
     [SerializeField] private EntityEquipmentRuntime _equipmentRuntime;
-    [SerializeField] private EntityPaintMarkController _paintMarkController;
+    [SerializeField, HideInInspector] private EntityPaintMarkController _paintMarkController;
     [SerializeField] private EntityStatusEffectRuntime _statusEffects;
 
     [Header("Base Armor Fallback")]
     [SerializeField, Min(0f)] private float _baseArmorHealthDamageMultiplier = 1f;
     [Tooltip("Legacy data retained for existing prefabs. Base armor health damage uses ArmorPenetrationDamageCurve.")]
     [SerializeField, HideInInspector, Range(0f, 1f)] private float _baseArmorHealthDamageMultiplierPerClassGap = 0.5f;
-    [SerializeField, Min(0f)] private float _baseArmorMarkDamageMultiplier = 1f;
-    [SerializeField, Range(0f, 1f)] private float _baseArmorMarkDamageMultiplierPerClassGap = 0.75f;
+    [SerializeField, HideInInspector, Min(0f)] private float _baseArmorMarkDamageMultiplier = 1f;
+    [SerializeField, HideInInspector, Range(0f, 1f)] private float _baseArmorMarkDamageMultiplierPerClassGap = 0.75f;
 
     [Header("Invulnerability")]
     [SerializeField] private InvulnerabilityController _invulnerabilityController;
@@ -101,6 +148,8 @@ public class Damageable : MonoBehaviour
     public bool IsDead { get; set; }
 
     public float MaxHealth => _maxHealth;
+    public float UninfectedMaxHealth => _uninfectedMaxHealth > 0f ? _uninfectedMaxHealth : _maxHealth;
+    public float InfectionMaxHealthLoss => _infectionMaxHealthLoss;
     public float CurrentHealth => _currentHealth;
     public float HealthNormalized => _maxHealth > 0f ? Mathf.Clamp01(_currentHealth / _maxHealth) : 0f;
     public EntityDeathCause LastDeathCause { get; private set; }
@@ -204,7 +253,7 @@ public class Damageable : MonoBehaviour
     }
 
     // Purpose: Performs the receive an attack workflow for this component.
-    public void ReceiveAnAttack(float damage, GameObject attacker, int penetrationClass)
+    public void ReceiveAnAttack(float damage, GameObject attacker, float penetrationClass)
     {
         ReceiveAnAttack(damage, attacker, penetrationClass, 1f);
     }
@@ -213,7 +262,7 @@ public class Damageable : MonoBehaviour
     public void ReceiveAnAttack(
         float damage,
         GameObject attacker,
-        int penetrationClass,
+        float penetrationClass,
         float armorHealthDurabilityLossMultiplier)
     {
         if (!CanReceiveDamage)
@@ -224,12 +273,34 @@ public class Damageable : MonoBehaviour
 
         float rawDamage = Mathf.Max(0f, damage);
         ShieldArmorRuntime shield = EntityComponentResolver.Resolve<ShieldArmorRuntime>(this);
+        if (RaidArmorPenetration.Enabled)
+        {
+            if (_statusEffects == null) _statusEffects = EntityComponentResolver.Resolve<EntityStatusEffectRuntime>(this);
+            bool shielding = shield != null && shield.IsProtecting;
+            bool vest = !shielding && _equipmentRuntime != null && _equipmentRuntime.HasUsableArmor;
+            float armorClass = (shielding ? shield.ArmorClass : vest ? _equipmentRuntime.ArmorClass : 0f) +
+                ResolveBaseArmorClass() + ResolveArmorClassDelta();
+            var result = RaidArmorPenetration.Resolve(Mathf.Max(0, armorClass), penetrationClass,
+                shielding ? shield.CurrentDurability : vest ? _equipmentRuntime.CurrentArmorDurability : 1f,
+                shielding ? shield.MaximumDurability : vest ? _equipmentRuntime.MaxArmorDurability : 1f, UnityEngine.Random.value);
+            float status = _statusEffects != null ? _statusEffects.GetMultiplier(StatusEffectModifierType.DamageTakenMultiplier) : 1f;
+            float afterProtection = vest
+                ? _equipmentRuntime.AbsorbArmorHealthDamage(rawDamage, result.healthMultiplier)
+                : rawDamage * result.healthMultiplier;
+            // 적의 특수 실드가 아니라 착용 방탄복만 흡수량 1:1 내구도 풀로 처리합니다.
+            if (shielding)
+                shield.ApplyDurabilityDamage(rawDamage * result.wearMultiplier * Mathf.Max(0, armorHealthDurabilityLossMultiplier));
+            float hp = afterProtection * FinalDamageTakenMultiplier * status;
+            ApplyHealthHit(Mathf.Max(0, hp), attacker);
+            return;
+        }
         float afterShield = shield != null ? shield.Absorb(rawDamage, penetrationClass, armorHealthDurabilityLossMultiplier) : rawDamage;
         // Sample each armor layer once. Vest wear excludes damage absorbed by shield/base armor/status.
         float vestMultiplier = _equipmentRuntime != null && _equipmentRuntime.HasUsableArmor
             ? _equipmentRuntime.CurrentArmor.ResolveHealthDamageMultiplier(penetrationClass, 0f, 0f) : 1f;
-        float afterVest = afterShield * vestMultiplier;
-        ApplyArmorHealthDurabilityDamage(afterShield, afterVest, armorHealthDurabilityLossMultiplier);
+        float afterVest = _equipmentRuntime != null && _equipmentRuntime.HasUsableArmor
+            ? _equipmentRuntime.AbsorbArmorHealthDamage(afterShield, vestMultiplier)
+            : afterShield;
         float baseMultiplier = ResolveBaseHealthArmorMultiplier(penetrationClass, ResolveBaseArmorClass(),
             ResolveArmorClassDelta(), _baseArmorHealthDamageMultiplier);
         if (_statusEffects == null) _statusEffects = EntityComponentResolver.Resolve<EntityStatusEffectRuntime>(this);
@@ -252,6 +323,7 @@ public class Damageable : MonoBehaviour
         if (finalDamage <= 0f)
             return;
 
+        float previousHealth = _currentHealth;
         float nextHealth = _currentHealth - finalDamage;
 
         _currentHealth = Mathf.Clamp(nextHealth, 0f, _maxHealth);
@@ -259,10 +331,12 @@ public class Damageable : MonoBehaviour
 
         SyncRuntimeHealthDebug();
         GetHit = true;
-        OnDamaged?.Invoke(this, finalDamage);
+        PublishDamageReceived(finalDamage);
         _hitReceivedEvent?.RaiseEvent(gameObject);
         ReportDamageNumber(finalDamage, DamageNumberKind.Health);
         QuestRuntime.ReportEntityHit(attacker, this);
+        var infection=EntityComponentResolver.Resolve<PlayerShooterInfection>(this);
+        if (infection != null) infection.AddHitExposure(previousHealth - _currentHealth);
 
         if (_currentHealth <= 0f)
         {
@@ -309,12 +383,19 @@ public class Damageable : MonoBehaviour
         if (finalDamage <= 0f)
             return 0f;
 
+        var playerInfection = EntityComponentResolver.Resolve<PlayerShooterInfection>(this);
+        if (playerInfection != null)
+        {
+            playerInfection.AddExposure(finalDamage);
+            return finalDamage; // Legacy infection injection feeds the gauge, never a second HP DOT.
+        }
+
         _currentHealth = Mathf.Clamp(_currentHealth - finalDamage, 0f, _maxHealth);
         _lastDamageAttacker = attacker;
 
         SyncRuntimeHealthDebug();
         GetHit = true;
-        OnDamaged?.Invoke(this, finalDamage);
+        PublishDamageReceived(finalDamage, periodicStatus: true);
         _hitReceivedEvent?.RaiseEvent(gameObject);
         ReportDamageNumber(finalDamage, DamageNumberKind.Infection);
 
@@ -349,7 +430,8 @@ public class Damageable : MonoBehaviour
     // Purpose: Performs the revive workflow for this component.
     public void Revive()
     {
-        _currentHealth = Mathf.Max(1f, _maxHealth);
+        if (_maxHealth <= 0f) return; // A depleted ceiling must be restored/reset before revival.
+        _currentHealth = _maxHealth;
         IsDead = false;
         LastDeathCause = EntityDeathCause.None;
         _lastDamageAttacker = null;
@@ -379,7 +461,8 @@ public class Damageable : MonoBehaviour
     // Purpose: Updates the max health state.
     public void SetMaxHealth(float maxHealth, bool healToFull)
     {
-        _maxHealth = Mathf.Max(1f, maxHealth);
+        _uninfectedMaxHealth = Mathf.Max(1f, maxHealth);
+        _maxHealth = Mathf.Max(0f, _uninfectedMaxHealth - _infectionMaxHealthLoss);
 
         _currentHealth = healToFull
             ? _maxHealth
@@ -396,6 +479,19 @@ public class Damageable : MonoBehaviour
     }
 
     // Purpose: Updates the current health state.
+    public void SetInfectionMaxHealthLoss(float loss)
+    {
+        if (float.IsNaN(loss) || float.IsInfinity(loss)) return;
+        if (_uninfectedMaxHealth <= 0f) _uninfectedMaxHealth = Mathf.Max(1f, _maxHealth);
+        _infectionMaxHealthLoss = Mathf.Max(0f, loss);
+        _maxHealth = Mathf.Max(0f, _uninfectedMaxHealth - _infectionMaxHealthLoss);
+        _currentHealth = Mathf.Clamp(_currentHealth, 0f, _maxHealth);
+        // Maximum-health erosion is not a second weapon hit or HP damage tick.
+        SyncRuntimeHealthDebug();
+        if (!IsDead && _maxHealth <= 0f) Die(EntityDeathCause.InfectionOvertake, "infection exhausted maximum health");
+        else NotifyHealthChanged();
+    }
+
     public void SetCurrentHealth(float currentHealth)
     {
         float nextHealth = Mathf.Clamp(currentHealth, 0f, _maxHealth);
@@ -465,6 +561,8 @@ public class Damageable : MonoBehaviour
         float initialHealth = ResolveInitialHealth();
 
         _maxHealth = initialHealth;
+        _uninfectedMaxHealth = initialHealth;
+        _infectionMaxHealthLoss = 0f;
         _currentHealth = initialHealth;
     }
 
@@ -473,6 +571,15 @@ public class Damageable : MonoBehaviour
     {
         if (IsDead)
             return;
+
+#if UNITY_EDITOR
+        if (CombatLabRuntime.HandlePlayerDeath(this))
+        {
+            _currentHealth = 1f;
+            SyncRuntimeHealthDebug(); NotifyHealthChanged();
+            return;
+        }
+#endif
 
         _currentHealth = 0f;
         IsDead = true;
@@ -534,7 +641,7 @@ public class Damageable : MonoBehaviour
     }
 
     // Purpose: Resolves the health damage multiplier for penetration needed by this component.
-    public float ResolveHealthDamageMultiplierForPenetration(int penetrationClass)
+    public float ResolveHealthDamageMultiplierForPenetration(float penetrationClass)
     {
         if (_statusEffects == null)
             _statusEffects = EntityComponentResolver.Resolve<EntityStatusEffectRuntime>(this);
@@ -560,7 +667,7 @@ public class Damageable : MonoBehaviour
     }
 
     // Purpose: Resolves the paint mark damage multiplier for penetration needed by this component.
-    public float ResolvePaintMarkDamageMultiplierForPenetration(int penetrationClass)
+    public float ResolvePaintMarkDamageMultiplierForPenetration(float penetrationClass)
     {
         return _equipmentRuntime != null
             ? _equipmentRuntime.ResolveMarkDamageMultiplier(
@@ -576,7 +683,7 @@ public class Damageable : MonoBehaviour
     }
 
     // Purpose: Resolves the infection damage multiplier for penetration needed by this component.
-    public float ResolveInfectionDamageMultiplierForPenetration(int penetrationClass)
+    public float ResolveInfectionDamageMultiplierForPenetration(float penetrationClass)
     {
         // Infection is the armor-ignoring secondary kill pressure. Penetration
         // and effective Armor Class only modify direct Health damage.
@@ -603,7 +710,7 @@ public class Damageable : MonoBehaviour
     }
 
     // Purpose: Resolves the final health damage needed by this component.
-    private float ResolveFinalHealthDamage(float damage, int penetrationClass)
+    private float ResolveFinalHealthDamage(float damage, float penetrationClass)
     {
         return Mathf.Max(
             0f,
@@ -631,36 +738,10 @@ public class Damageable : MonoBehaviour
             armorInfectionDurabilityLossMultiplier);
     }
 
-    // Purpose: Applies the requested armor health durability damage change.
-    private void ApplyArmorHealthDurabilityDamage(
-        float rawDamage,
-        float finalHealthDamage,
-        float armorHealthDurabilityLossMultiplier)
-    {
-        if (_equipmentRuntime == null)
-            return;
-
-        float absorbedDamage = Mathf.Max(0f, rawDamage - finalHealthDamage);
-
-        if (absorbedDamage <= 0f)
-            return;
-
-        _equipmentRuntime.ApplyArmorAbsorbedDamage(
-            absorbedDamage,
-            0f,
-            armorHealthDurabilityLossMultiplier,
-            0f);
-    }
-
     // Purpose: Resolves the armor class delta from paint mark needed by this component.
     private int ResolveArmorClassDeltaFromPaintMark()
     {
-        if (_paintMarkController == null)
-            _paintMarkController = EntityComponentResolver.Resolve<EntityPaintMarkController>(this);
-
-        return _paintMarkController != null
-            ? _paintMarkController.ArmorClassDelta
-            : 0;
+        return 0; // WIP: mark stacks never modify armor in current combat.
     }
 
     // Purpose: Resolves the armor class delta needed by this component.
@@ -687,7 +768,7 @@ public class Damageable : MonoBehaviour
 
     // Purpose: Resolves the base health armor multiplier needed by this component.
     private static float ResolveBaseHealthArmorMultiplier(
-        int penetrationClass,
+        float penetrationClass,
         float baseArmorClass,
         float armorClassDelta,
         float sameOrHigherMultiplier)
@@ -704,7 +785,7 @@ public class Damageable : MonoBehaviour
 
     // Purpose: Resolves the base armor multiplier needed by this component.
     private static float ResolveBaseArmorMultiplier(
-        int penetrationClass,
+        float penetrationClass,
         float baseArmorClass,
         float armorClassDelta,
         float sameOrHigherMultiplier,

@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a70e18d36f44738a4d1a6f32b1c5e7d, type: 3}
+  m_Name: Raider_AngryEye1
+  m_EditorClassIdentifier: 
+  _customizeId: d6dabc8bdbd54ba0b704b2087fbaa24b
+  _visualPrefab: {fileID: 3325123100923411404, guid: de4d3cabff57d2a4f8c90e54d9bea671, type: 3}
+  _bodyTint: {r: 0.764151, g: 0.7618572, b: 0.7647059, a: 1}
+  _bodyVisualTransform:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  _socketPoses:
+  - socket: 0
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 1
+    localTransform:
+      localPosition: {x: 0.6, y: 1, z: 0.19999999}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 2
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 3
+    localTransform:
+      localPosition: {x: 0, y: 2, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 4
+    localTransform:
+      localPosition: {x: 0, y: 0.06, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 7
+    localTransform:
+      localPosition: {x: 0, y: -0.21, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 8
+    localTransform:
+      localPosition: {x: 0, y: 1.44, z: 0.5}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 9
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 10
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  - socket: 5
+    localTransform:
+      localPosition: {x: 0, y: 1, z: -0.5}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+  _attachments:
+  - definition: {fileID: 11400000, guid: 031c10a56cdb1a24998b4bf0fec8d6a9, type: 2}
+    socket: 4
+    visualPrefab: {fileID: 525961635239786231, guid: 380616db44c7be748aa6ecde369d3334, type: 3}
+    localTransform:
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+    occupiedRegions: 0
+    hideWhenEquipped: 0
+  - definition: {fileID: 11400000, guid: 24e589a87ec9f184295c014af6e1edb4, type: 2}
+    socket: 3
+    visualPrefab: {fileID: 2363371223614799849, guid: a3b163a398aeda64bbade0dfd977c45e, type: 3}
+    localTransform:
+      localPosition: {x: 0, y: -0.4, z: 0.3}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      localScale: {x: 1, y: 1, z: 1}
+    occupiedRegions: 0
+    hideWhenEquipped: 0

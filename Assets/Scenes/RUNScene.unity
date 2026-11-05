@@ -687,6 +687,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6b40bee0e7908a47a287a38200f881d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _retiredWip: 1
   _rules: {fileID: 11400000, guid: 62770ed2b54521b44b321d0c2448c858, type: 2}
   _summaryChangedChannel: {fileID: 11400000, guid: 6f617f5b512f7664ab2f5dfb45d8d2f5, type: 2}
   _infectionControlChangedChannel: {fileID: 11400000, guid: d4a1b31fac4a6a3409012878ae27b3e8, type: 2}
@@ -880,7 +881,7 @@ MonoBehaviour:
   autoFindPlayerByTag: 1
   playerTag: Player
   followTarget: {fileID: 0}
-  tiltFromTopDeg: 20
+  tiltFromTopDeg: 30
   yawDeg: 0
   cameraDistance: 120
   targetHeight: 1
@@ -894,6 +895,10 @@ MonoBehaviour:
   lookAheadSmoothTime: 0.08
   worldCameraReadyChannel: {fileID: 11400000, guid: 146996504b565444db1e3e08729b6a6f, type: 2}
   enableCharacterOcclusionSilhouette: 1
+  enableEnvironmentCameraCutout: 1
+  environmentRevealRadius: 9
+  environmentRevealSoftEdge: 1.5
+  environmentRevealFadeSeconds: 0.18
 --- !u!1 &1225504679
 GameObject:
   m_ObjectHideFlags: 0
@@ -1092,10 +1097,8 @@ MonoBehaviour:
   _saveSystem: {fileID: 11400000, guid: 096e40e8aee5c694a824b4025828ec02, type: 2}
   _homeScene: {fileID: 11400000, guid: aa12657ca5b245ea867e57ef6eb3d566, type: 2}
   _sectorStateManagerReadyChannel: {fileID: 11400000, guid: 1b754a4c71da8a844ac4eb4f568cc06d, type: 2}
-  _infectionControlManagerReadyChannel: {fileID: 11400000, guid: 53066018a5f6f1c47a4217f83ff95b83, type: 2}
   _finalStageCompletedChannel: {fileID: 11400000, guid: 92bd65b92c9bac44fbbec273db5f8271, type: 2}
   _snapshotChangedChannel: {fileID: 11400000, guid: d269bc3726506604fac16db87f13ac97, type: 2}
-  _stageInfectionControlRecoverChannel: {fileID: 11400000, guid: 2cd9d23abd5992b49bc9a777ebc764bf, type: 2}
   _playerHitReceivedChannel: {fileID: 11400000, guid: 38bfe3f5cedaebb49bbadc6c6dfd4afb, type: 2}
 --- !u!4 &1636498291
 Transform:
@@ -1165,6 +1168,7 @@ MonoBehaviour:
   _onSceneReady: {fileID: 11400000, guid: 6ffdab77583331c4ca20a575a1ebcdee, type: 2}
   _startSectorReadyEvent: {fileID: 11400000, guid: d67983433baabf2489d0f5dec4b948ec, type: 2}
   _projectilesRoot: {fileID: 1775271296}
+  _cameraManager: {fileID: 0}
   _parentPlayerToCurrentSector: 1
   _spawnYOffset: 0.2
   _useCharacterControllerSpawnHeight: 1

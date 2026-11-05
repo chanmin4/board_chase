@@ -19,7 +19,8 @@ public sealed class RaidMapFoundationTests
             Assert.AreEqual(size * size + 1, map.rooms.Count);
             Assert.AreEqual(new Vector2Int(size / 2, size / 2), map.hatchRoomCoord);
             Assert.AreNotEqual(map.bossRoomCoord, map.extractionSectorCoord);
-            Assert.IsFalse(map.IsExtractionPortal(map.extractionSectorCoord, SectorPortalDirection.ZMax));
+            Assert.IsTrue(map.IsExtractionPortal(map.extractionSectorCoord, map.extractionDirection));
+            Assert.IsTrue(RaidExtractionPortalPolicy.TryValidate(map, out error), error);
             Assert.AreEqual(1, map.rooms.FindAll(r => r.raidRole == RaidRoomRole.Generator).Count);
             Assert.AreEqual(1, map.rooms.FindAll(r => r.raidRole == RaidRoomRole.Hatch).Count);
             AssertCornerLayout(map);

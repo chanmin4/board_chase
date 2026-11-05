@@ -17,7 +17,7 @@ public struct PlayerHealthSnapshot
     public bool isDead;
 
     public float Health01 => maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
-    public float Infection01 => currentHealth > 0f ? Mathf.Clamp01(currentInfection / currentHealth) : 0f;
+    public float Infection01 => maxHealth + currentInfection > 0f ? Mathf.Clamp01(currentInfection / (maxHealth + currentInfection)) : 0f;
 
     public PlayerHealthSnapshot(
         float maxHealth,

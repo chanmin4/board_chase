@@ -8,7 +8,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-public sealed class SectorMakerWindow : EditorWindow
+public sealed partial class SectorMakerWindow : EditorWindow
 {
     private enum PlacementMode
     {
@@ -33,24 +33,24 @@ public sealed class SectorMakerWindow : EditorWindow
     [SerializeField] private bool _paintingEnabled;
     [SerializeField] private PlacementMode _mode;
     [SerializeField] private SectorPresetSO _activeSectorPreset;
-    [SerializeField] private SectorRuntime _activeSectorRuntime;
+    [System.NonSerialized] private SectorRuntime _activeSectorRuntime;
     [SerializeField] private bool _showAdvancedTopology;
 
     [SerializeField] private LayerMask _floorSurfaceMask;
     [SerializeField] private bool _surfaceMaskInitialized;
 
     [SerializeField] private GameObject _structurePrefab;
-    [SerializeField] private Transform _sectorObjectParent;
+    [System.NonSerialized] private Transform _sectorObjectParent;
     [SerializeField] private float _structureBottomOffset = 0.3f;
 
-    [SerializeField] private Transform _enemySpawnPointParent;
-    [SerializeField] private SectorRuntime _sectorRuntime;
+    [System.NonSerialized] private Transform _enemySpawnPointParent;
+    [System.NonSerialized] private SectorRuntime _sectorRuntime;
     [SerializeField] private float _enemySpawnPointYOffset = 0.3f;
     [Tooltip("Shows every authored EnemySpawnPoint below the assigned parent as a numbered Scene-view overlay while the Enemy Spawn Point tab is selected.")]
     [SerializeField] private bool _showExistingEnemySpawnPoints = true;
 
-    [SerializeField] private Transform _contentSlotParent;
-    [SerializeField] private SectorRuntime _contentSectorRuntime;
+    [System.NonSerialized] private Transform _contentSlotParent;
+    [System.NonSerialized] private SectorRuntime _contentSectorRuntime;
     [SerializeField] private SectorPresetSO _contentSectorPreset;
     [SerializeField] private SectorContentProfileSO _contentProfile;
     [SerializeField] private string _contentSlotId = "loot_a";
@@ -78,59 +78,40 @@ public sealed class SectorMakerWindow : EditorWindow
     private static void Open()
     {
         SectorMakerWindow window = GetWindow<SectorMakerWindow>("Sector Maker");
-        window.minSize = new Vector2(1180f, 640f);
+        window.ApplyWorkspaceSizeLimits();
     }
 
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
     private void OnEnable()
     {
         InitializeFloorMask();
-        minSize = new Vector2(1180f, 640f);
+        ApplyWorkspaceSizeLimits();
+        _paintingEnabled = false;
+        RefreshCatalog();
+        if (_roomPrefab == null && _activeSectorPreset != null && _activeSectorPreset.SectorPrefab != null)
+            _roomPrefab = _activeSectorPreset.SectorPrefab.gameObject;
+        PrunePresetSelection();
+        if (_selectedPresets.Count == 0 && _activeSectorPreset != null) ResetPresetSelection(_activeSectorPreset);
+        PrefabStage.prefabStageOpened += OnRoomStageOpened;
+        PrefabStage.prefabStageClosing += OnRoomStageClosing;
         SceneView.duringSceneGui += HandleSceneGUI;
     }
 
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        EditorApplication.delayCall -= ApplyRequestedWorkspaceMode;
+        _requestedCompactMode = null;
         SceneView.duringSceneGui -= HandleSceneGUI;
+        PrefabStage.prefabStageOpened -= OnRoomStageOpened;
+        PrefabStage.prefabStageClosing -= OnRoomStageClosing;
+        DisposeSelectionEditor();
     }
 
     // Purpose: Responds to the gui callback.
     private void OnGUI()
     {
-        if (!_showAdvancedTopology && _mode == PlacementMode.StageTopology)
-            _mode = PlacementMode.FixedSectorStructure;
-
-        AuthoringWorkspaceUi.DrawHeader(
-            "Sector Maker",
-            "Owner: Level / Encounter",
-            "Select a room preset, open its room prefab, then place objects or spawn positions directly on the floor.",
-            "1 Choose Room",
-            "2 Choose Placement",
-            "3 Click Floor",
-            "4 Save");
-
-        DrawRoomSelection();
-
-        float workspaceHeight = Mathf.Max(410f, position.height - 228f);
-        using (new EditorGUILayout.HorizontalScope(GUILayout.Height(workspaceHeight)))
-        {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(324f), GUILayout.Height(workspaceHeight)))
-                DrawSimplePlacementControls();
-
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.Height(workspaceHeight)))
-            {
-                EditorGUILayout.LabelField(
-                    _mode == PlacementMode.StageTopology ? "ADVANCED STAGE ROUTES" : "PLACEMENT SETTINGS",
-                    EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(GetActiveLayerInstruction(), EditorStyles.wordWrappedMiniLabel);
-                _settingsScrollPosition = EditorGUILayout.BeginScrollView(_settingsScrollPosition);
-                DrawSelectedDataLinkContext();
-                EditorGUILayout.Space(7f);
-                DrawActiveLayerSettings();
-                EditorGUILayout.EndScrollView();
-            }
-        }
+        DrawGuidedWorkspace();
     }
 
     // Purpose: Draws the room-preset and active-room selection workflow.
@@ -249,19 +230,13 @@ public sealed class SectorMakerWindow : EditorWindow
         _roomReadinessIssues ??= new System.Collections.Generic.List<RoomReadinessIssue>();
         _roomReadinessIssues.Clear();
 
-        if (_activeSectorPreset == null)
+        if (_roomPrefab == null)
         {
-            AddRoomReadinessIssue(MessageType.Error, "Choose a Room Preset before running the setup check.");
+            AddRoomReadinessIssue(MessageType.Error, "먼저 방 프리팹을 선택하세요.");
             return;
         }
 
-        if (_activeSectorPreset.SectorPrefab == null)
-        {
-            AddRoomReadinessIssue(MessageType.Error, "The selected Room Preset has no Sector Prefab assigned.");
-            return;
-        }
-
-        string prefabPath = AssetDatabase.GetAssetPath(_activeSectorPreset.SectorPrefab.gameObject);
+        string prefabPath = AssetDatabase.GetAssetPath(_roomPrefab);
         if (string.IsNullOrWhiteSpace(prefabPath))
         {
             AddRoomReadinessIssue(MessageType.Error, "The selected Room Preset does not reference a Project prefab asset.");
@@ -271,8 +246,12 @@ public sealed class SectorMakerWindow : EditorWindow
         GameObject prefabContents = null;
         try
         {
-            prefabContents = PrefabUtility.LoadPrefabContents(prefabPath);
-            SectorRuntime[] sectorRuntimes = prefabContents.GetComponentsInChildren<SectorRuntime>(true);
+            // Inspect unsaved live contents when this room is open; otherwise use isolated contents.
+            var openStage = PrefabStageUtility.GetCurrentPrefabStage();
+            bool live = openStage != null && openStage.assetPath == prefabPath;
+            prefabContents = live ? null : PrefabUtility.LoadPrefabContents(prefabPath);
+            GameObject checkedRoot = live ? openStage.prefabContentsRoot : prefabContents;
+            SectorRuntime[] sectorRuntimes = checkedRoot.GetComponentsInChildren<SectorRuntime>(true);
             if (sectorRuntimes.Length == 0)
             {
                 AddRoomReadinessIssue(MessageType.Error, "The room prefab has no SectorRuntime. It cannot be used by the stage generator or Sector Maker.");
@@ -285,10 +264,10 @@ public sealed class SectorMakerWindow : EditorWindow
             }
 
             SectorRuntime sectorRuntime = sectorRuntimes[0];
-            CheckFloorPlacementReadiness(prefabContents, sectorRuntime);
+            CheckFloorPlacementReadiness(checkedRoot, sectorRuntime);
             CheckStaticObjectParentReadiness(sectorRuntime);
             CheckEnemySpawnReadiness(sectorRuntime);
-            CheckContentSlotReadiness(sectorRuntime, _activeSectorPreset.ContentProfile);
+            CheckContentSlotReadiness(sectorRuntime, _contentProfile);
             CheckActiveRoomMatchesPreset(prefabPath);
         }
         catch (System.Exception exception)
@@ -447,7 +426,8 @@ public sealed class SectorMakerWindow : EditorWindow
         if (_activeSectorRuntime == null || string.IsNullOrWhiteSpace(expectedPrefabPath))
             return;
 
-        string activePrefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(_activeSectorRuntime.gameObject);
+        var stage = PrefabStageUtility.GetPrefabStage(_activeSectorRuntime.gameObject);
+        string activePrefabPath = stage != null ? stage.assetPath : PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(_activeSectorRuntime.gameObject);
         if (!string.IsNullOrWhiteSpace(activePrefabPath) &&
             !string.Equals(activePrefabPath, expectedPrefabPath, System.StringComparison.OrdinalIgnoreCase))
         {
@@ -544,7 +524,10 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Stores the selected room preset and mirrors its existing content profile.
     private void SetActiveSectorPreset(SectorPresetSO preset)
     {
+        RoomSelectionUi.SelectionClicked();
+        _paintingEnabled = false;
         _activeSectorPreset = preset;
+        if (!_preservePresetSelection) ResetPresetSelection(preset);
         _contentSectorPreset = preset;
         _contentProfile = preset != null ? preset.ContentProfile : null;
         ClearRoomReadinessCheck();
@@ -554,12 +537,7 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Opens the currently selected room prefab for direct Scene-view authoring.
     private void OpenActiveSectorPrefab()
     {
-        if (_activeSectorPreset == null || _activeSectorPreset.SectorPrefab == null)
-            return;
-
-        GameObject prefab = _activeSectorPreset.SectorPrefab.gameObject;
-        Selection.activeObject = prefab;
-        AssetDatabase.OpenAsset(prefab);
+        OpenRoomForEditing();
     }
 
     // Purpose: Uses the selected hierarchy object or one of its parents as the active room.
@@ -581,13 +559,17 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Sets the active room and resolves compatible existing placement parents.
     private void SetActiveSectorRuntime(SectorRuntime sectorRuntime)
     {
+        if (_activeSectorRuntime != sectorRuntime) _paintingEnabled = false;
         _activeSectorRuntime = sectorRuntime;
         _sectorRuntime = sectorRuntime;
         _contentSectorRuntime = sectorRuntime;
         ClearRoomReadinessCheck();
 
         if (sectorRuntime == null)
+        {
+            _sectorObjectParent = _enemySpawnPointParent = _contentSlotParent = null;
             return;
+        }
 
         if (_sectorObjectParent == null || !_sectorObjectParent.IsChildOf(sectorRuntime.transform))
         {
@@ -620,6 +602,9 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Repaints the selected-data link panel whenever the Hierarchy or Project selection changes.
     private void OnSelectionChange()
     {
+        if (!_paintingEnabled && IsEditingRoom && Selection.activeTransform != null &&
+            Selection.activeTransform != _activeSectorRuntime.transform && Selection.activeTransform.IsChildOf(_activeSectorRuntime.transform))
+            _workbenchTab = 1;
         Repaint();
     }
 
@@ -714,6 +699,16 @@ public sealed class SectorMakerWindow : EditorWindow
                 ? $"Enabled  •  {definition.spawnChancePercent:0.#}% chance"
                 : "Disabled");
 
+        if (definition.contentKind == SectorContentSlotKind.WorldItem)
+        {
+            EditorGUILayout.ObjectField("아이템 테이블", definition.worldItemTable, typeof(SectorWorldItemSpawnTableSO), false);
+            return;
+        }
+        if (definition.lootObjectTable != null)
+        {
+            EditorGUILayout.ObjectField("루팅 오브젝트 테이블", definition.lootObjectTable, typeof(SectorLootObjectSpawnTableSO), false);
+            return;
+        }
         if (definition.prefabCandidates == null || definition.prefabCandidates.Count == 0)
         {
             EditorGUILayout.HelpBox("This Content Profile row has no candidate prefab yet.", MessageType.Warning);
@@ -1239,15 +1234,7 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Saves assets and the room's currently open scene or prefab stage.
     private void SaveCurrentRoom()
     {
-        if (_activeSectorRuntime != null && _activeSectorRuntime.gameObject.scene.IsValid())
-        {
-            var activeRoomScene = _activeSectorRuntime.gameObject.scene;
-            EditorSceneManager.MarkSceneDirty(activeRoomScene);
-            EditorSceneManager.SaveScene(activeRoomScene);
-        }
-
-        AssetDatabase.SaveAssets();
-        ShowNotification(new GUIContent("Current room changes saved."));
+        SaveEditingRoom();
     }
 
     // Purpose: Draws the sector assembly flow authoring UI.
@@ -2077,6 +2064,15 @@ public sealed class SectorMakerWindow : EditorWindow
         if (current == null)
             return;
 
+        SyncRoomStage();
+        if (!IsEditingRoom) return;
+        if (current.type == EventType.KeyDown && current.keyCode == KeyCode.Escape)
+        {
+            _paintingEnabled = false;
+            current.Use(); Repaint(); sceneView.Repaint();
+            return;
+        }
+
         if (current.type == EventType.Repaint)
         {
             DrawExistingEnemySpawnPoints();
@@ -2091,6 +2087,8 @@ public sealed class SectorMakerWindow : EditorWindow
 
         if (HandleKeyboard(current))
             sceneView.Repaint();
+
+        if (current.alt) return; // Orbit/navigation never belongs to the painting tool.
 
         int controlId = GUIUtility.GetControlID(FocusType.Passive);
 
@@ -2170,12 +2168,15 @@ public sealed class SectorMakerWindow : EditorWindow
                 continue;
             }
 
+            if (_activeSectorRuntime == null || !collider.transform.IsChildOf(_activeSectorRuntime.transform))
+                continue;
+
             int layerBit = 1 << collider.gameObject.layer;
 
             if ((_floorSurfaceMask.value & layerBit) == 0)
                 continue;
 
-            if (_sectorObjectParent != null &&
+            if (_sectorObjectParent != null && _activeSectorRuntime != null && _sectorObjectParent != _activeSectorRuntime.transform &&
                 collider.transform.IsChildOf(_sectorObjectParent))
             {
                 continue;
@@ -2387,6 +2388,7 @@ public sealed class SectorMakerWindow : EditorWindow
         {
             SectorContentSlotKind.RareCache => new Color(1f, 0.72f, 0.08f, 0.95f),
             SectorContentSlotKind.SpecialInteractable => new Color(0.82f, 0.28f, 1f, 0.95f),
+            SectorContentSlotKind.WorldItem => new Color(0.3f, 0.7f, 1f, 0.95f),
             _ => new Color(0.18f, 0.86f, 0.72f, 0.95f)
         };
     }
@@ -2398,6 +2400,7 @@ public sealed class SectorMakerWindow : EditorWindow
         {
             SectorContentSlotKind.RareCache => "RARE",
             SectorContentSlotKind.SpecialInteractable => "SPECIAL",
+            SectorContentSlotKind.WorldItem => "ITEM",
             _ => "LOOT"
         };
     }
@@ -2450,6 +2453,7 @@ public sealed class SectorMakerWindow : EditorWindow
         };
 
         Vector3 position = hitPoint + Vector3.up * yOffset;
+        DrawLootPlacementPreview(position);
 
         Handles.color = _mode switch
         {
@@ -2511,6 +2515,7 @@ public sealed class SectorMakerWindow : EditorWindow
         }
 
         Undo.RegisterCreatedObjectUndo(instance, $"Place {_structurePrefab.name}");
+        ApplyStructureVisionPlacement(instance);
 
         instance.transform.SetPositionAndRotation(
             hitPoint,
@@ -2571,6 +2576,7 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Creates the content slot anchor owned by this workflow.
     private void CreateContentSlotAnchor(Vector3 hitPoint)
     {
+        if (!CanEditContentPlan()) return;
         string slotId = _contentSlotId != null ? _contentSlotId.Trim() : string.Empty;
         if (string.IsNullOrWhiteSpace(slotId))
         {
@@ -2602,11 +2608,14 @@ public sealed class SectorMakerWindow : EditorWindow
         if (_contentProfile != null)
         {
             Undo.RecordObject(_contentProfile, "Add Sector Content Slot Definition");
-            _contentProfile.GetOrCreateSlotDefinition(slotId, _contentSlotKind);
+            var definition = _contentProfile.GetOrCreateSlotDefinition(slotId, _contentSlotKind);
+            ApplyLootPlacementDraft(definition);
             EditorUtility.SetDirty(_contentProfile);
         }
 
         FinalizeCreatedObject(marker);
+        Selection.activeGameObject = marker;
+        _contentSlotId = NextSlotId(_contentSlotParent, slotId);
     }
 
     // Purpose: Checks whether this component has content slot anchor with id.
@@ -2631,6 +2640,11 @@ public sealed class SectorMakerWindow : EditorWindow
     // Purpose: Attempts to validate configuration and reports whether the request succeeded.
     private bool TryValidateConfiguration(out string message)
     {
+        if (!IsEditingRoom)
+        {
+            message = "선택한 방의 'Scene에서 편집 시작'을 먼저 누르세요.";
+            return false;
+        }
         if (_mode == PlacementMode.StageTopology)
         {
             message = "Branch Topology is edited in the Sector Maker window and does not use Scene-view placement.";
@@ -2640,6 +2654,19 @@ public sealed class SectorMakerWindow : EditorWindow
         if (_floorSurfaceMask.value == 0)
         {
             message = "Select at least one Floor Surface Mask layer. The clicked object also needs a non-trigger Collider.";
+            return false;
+        }
+
+        Transform placementParent = _mode == PlacementMode.FixedSectorStructure ? _sectorObjectParent :
+            _mode == PlacementMode.EnemySpawnPoint ? _enemySpawnPointParent : _contentSlotParent;
+        if (placementParent != null && !placementParent.IsChildOf(_activeSectorRuntime.transform))
+        {
+            message = "배치 부모가 선택한 방 바깥에 있습니다. 방을 다시 열어 연결해주세요.";
+            return false;
+        }
+        if (_mode == PlacementMode.ContentSlotAnchor && !CanEditContentPlan())
+        {
+            message = "이 방 전용 콘텐츠 설정을 먼저 만들거나 선택해주세요.";
             return false;
         }
 
@@ -2654,6 +2681,12 @@ public sealed class SectorMakerWindow : EditorWindow
             if (!PrefabUtility.IsPartOfPrefabAsset(_structurePrefab))
             {
                 message = "Structure Prefab must be a Project prefab asset, not a scene object.";
+                return false;
+            }
+
+            if (_structurePrefab.GetComponent<SectorRuntime>() != null)
+            {
+                message = "섹터 프리팹은 방 안에 중첩 배치할 수 없습니다. 장식·장애물·상자 프리팹을 선택해주세요.";
                 return false;
             }
 

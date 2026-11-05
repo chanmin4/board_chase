@@ -5,6 +5,8 @@ public static class RaidMapValidation
 {
     public static bool TryValidate(StageMapLayout layout, out string error)
     {
+        if (layout?.generationVersion == RadialBraidedRaidGenerator.GenerationVersion)
+            return RadialBraidedRaidGenerator.TryValidate(layout, out error);
         error = string.Empty;
         if (layout == null || !layout.usesRaidLayout || layout.gridSize < 5 || (layout.gridSize & 1) == 0 ||
             layout.rooms == null || layout.usesBranchTopology || !layout.hasExtraction ||
@@ -54,13 +56,15 @@ public static class RaidMapValidation
         if (!HasRole(layout, center, RaidRoomRole.Hatch) ||
             !HasRole(layout, generator, RaidRoomRole.Generator) ||
             !HasRole(layout, layout.bossRoomCoord, RaidRoomRole.Boss) ||
-            !HasRole(layout, layout.extractionSectorCoord, RaidRoomRole.Extraction))
+            !HasRole(layout, layout.extractionSectorCoord,
+                layout.extractionPortalVersion == 0 ? RaidRoomRole.Extraction : RaidRoomRole.Normal))
             return Fail("Reserved raid room role is missing.", out error);
         if (!layout.TryGetRoom(layout.bossRoomCoord, out StageRoomNode boss) ||
             (boss.roomType == StageRoomType.Boss) != layout.bossSpawned)
             return Fail("Boss spawn result disagrees with the stored room.", out error);
         if (RaidMapGenerator.GetDistances(layout, layout.startSectorCoord).Count != expected)
             return Fail("A raid room cannot be reached from the start.", out error);
+        if (layout.extractionPortalVersion != 0 && !RaidExtractionPortalPolicy.TryValidate(layout, out error)) return false;
         return true;
     }
 

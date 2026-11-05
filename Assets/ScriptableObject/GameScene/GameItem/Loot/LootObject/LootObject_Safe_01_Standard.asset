@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_Safe_01_Standard
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: 6282e4dc79aa2d84b93952d489c17c9c, type: 3}
-  _displayName: Safe 01 Standard
-  _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: b8aa1000000000000000000000000003, type: 2}
-  _lootTable: {fileID: 11400000, guid: b330000000000000000000000000000b, type: 2}
+  _worldPrefab: {fileID: 510000000000000101, guid: 6282e4dc79aa2d84b93952d489c17c9c, type: 3}
+  _displayName: YellowSafe
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lootSlotCount: 9
+  _sizeClass: 3
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 2
+  _maxGeneratedSlots: 3
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 17
+    legendary: 3
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 5
+  _lootTable: {fileID: 11400000, guid: 65ed9ef49b1f0ea4285bbd105d94c670, type: 2}
+  references:
+    version: 2
+    RefIds: []

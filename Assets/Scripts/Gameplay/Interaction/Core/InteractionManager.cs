@@ -23,7 +23,10 @@ public enum InteractionType
     Reload = 9,
     StageSelect = 10,
     SectorSkip = 11,
-    RaidStation = 12
+    RaidStation = 12,
+    SectorLockPanel = 13,
+    HomeInfectionPurifier = 14,
+    PortalActivation = 15
 }
 
 public class InteractionManager : MonoBehaviour
@@ -57,10 +60,29 @@ public class InteractionManager : MonoBehaviour
     [SerializeField] private string _interactionKeyLabel = "E";
 
     private LinkedList<Interaction> _potentialInteractions = new LinkedList<Interaction>();
+    private readonly Dictionary<GameObject, HashSet<GameObject>> _interactionSources = new();
+    private ZoneTriggerController _interactionZone;
+    private float _nextRangeValidationTime;
     private float _nextPortalInteractAllowedTime;
     private Coroutine _interactionCastRoutine;
     private Interaction _castingInteraction;
     private InteractionPromptAnchor _activePromptAnchor;
+    private RaidStation _activePromptStation;
+    private Damageable _castDamageable;
+    private PlayerAimController _castAim;
+    private void CancelForMove(Vector2 input) { if(input.sqrMagnitude>.001f)CancelForAction(); }
+    private void CancelForDamage(Damageable target,float damage)
+    {
+        if(target!=null&&target.IsPeriodicStatusDamage)return;
+        CancelForAction();
+    }
+    private void CancelForAction()
+    {
+        if(_castingInteraction==null)return;
+        CancelInteractionCast();
+        RequestUpdateUI(_potentialInteractions.Count>0);
+    }
+    public void NotifyPortalTravelCompleted() => _nextPortalInteractAllowedTime = 0f;
 
     private Transform InteractionActor
     {
@@ -84,6 +106,16 @@ public class InteractionManager : MonoBehaviour
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
     private void OnEnable()
     {
+        if(_inputReader!=null) {
+            _inputReader.MoveEvent+=CancelForMove; _inputReader.ShootEvent+=CancelForAction;
+            _inputReader.MeleeAttackEvent+=CancelForAction; _inputReader.DashEvent+=CancelForAction;
+        }
+        _castDamageable=EntityComponentResolver.Resolve<Damageable>(InteractionActor);
+        if(_castDamageable!=null)_castDamageable.OnDamaged+=CancelForDamage;
+        _potentialInteractions.Clear();
+        _interactionSources.Clear();
+        ResolveInteractionZone();
+        SetActivePromptStation(null);
         SetActivePromptAnchor(null);
 
         if (_inputReader != null)
@@ -99,8 +131,17 @@ public class InteractionManager : MonoBehaviour
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        if(_inputReader!=null) {
+            _inputReader.MoveEvent-=CancelForMove; _inputReader.ShootEvent-=CancelForAction;
+            _inputReader.MeleeAttackEvent-=CancelForAction; _inputReader.DashEvent-=CancelForAction;
+        }
+        if(_castDamageable!=null)_castDamageable.OnDamaged-=CancelForDamage;
+        SetActivePromptStation(null);
         CancelInteractionCast();
         SetActivePromptAnchor(null);
+        _potentialInteractions.Clear();
+        _interactionSources.Clear();
+        PublishInteractionPrompt(false);
 
         if (_inputReader != null)
             _inputReader.InteractEvent -= OnInteractionButtonPress;
@@ -110,6 +151,34 @@ public class InteractionManager : MonoBehaviour
 
         if (_onCutsceneStart != null)
             _onCutsceneStart.OnEventRaised -= ResetPotentialInteractions;
+    }
+
+    private void ResolveInteractionZone()
+    {
+        if (_interactionZone != null) return;
+        _interactionZone = _interactionActor != null
+            ? _interactionActor.GetComponent<ZoneTriggerController>() : null;
+        if (_interactionZone == null) _interactionZone = GetComponentInChildren<ZoneTriggerController>(true);
+    }
+
+    private bool IsTargetInInteractionZone(GameObject owner)
+    {
+        if (owner == null || !owner.activeInHierarchy) return false;
+        ResolveInteractionZone();
+        if (_interactionZone == null || !_interactionSources.TryGetValue(owner, out var sources)) return false;
+        foreach (GameObject source in sources)
+            if (_interactionZone.IsObjectInZone(source)) return true;
+        return false;
+    }
+
+    private void Update()
+    {
+        if (_potentialInteractions.Count == 0 || _interactionCastRoutine != null ||
+            Time.unscaledTime < _nextRangeValidationTime) return;
+        _nextRangeValidationTime = Time.unscaledTime + .15f;
+        int previousCount = _potentialInteractions.Count;
+        RefreshPotentialInteractions();
+        if (previousCount != _potentialInteractions.Count) RequestUpdateUI(_potentialInteractions.Count > 0);
     }
 
     // Purpose: Collects collect for this workflow.
@@ -124,6 +193,7 @@ public class InteractionManager : MonoBehaviour
             return;
 
         GameObject itemObject = interaction.interactableObject;
+        _interactionSources.Remove(itemObject);
         _potentialInteractions.RemoveFirst();
         Destroy(itemObject);
         RequestUpdateUI(false);
@@ -173,16 +243,49 @@ public class InteractionManager : MonoBehaviour
     // Purpose: Performs the execute interaction workflow for this component.
     private void ExecuteInteraction(Interaction interaction)
     {
-        if (interaction == null)
+        if (!IsInteractionStillValid(interaction))
+        {
+            RefreshPotentialInteractions();
+            RequestUpdateUI(_potentialInteractions.Count > 0);
             return;
+        }
 
         currentInteractionType = interaction.type;
 
+        if (interaction.type == InteractionType.PortalActivation)
+        {
+            var device = interaction.interactableObject.GetComponent<SectorPortalActivator>();
+            bool succeeded = device != null && device.TryInteract(InteractionActor);
+            currentInteractionType = InteractionType.None;
+            RefreshPotentialInteractions();
+            RequestUpdateUI(!succeeded && _potentialInteractions.Count > 0);
+            return;
+        }
+
+        if (interaction.type == InteractionType.HomeInfectionPurifier)
+        {
+            var purifier = interaction.interactableObject.GetComponent<HomeInfectionPurifier>();
+            bool succeeded = purifier != null && purifier.TryInteract(InteractionActor);
+            currentInteractionType = InteractionType.None;
+            RequestUpdateUI(!succeeded && _potentialInteractions.Count > 0);
+            return;
+        }
+
+        if (interaction.type == InteractionType.SectorLockPanel)
+        {
+            var panel = interaction.interactableObject.GetComponent<SectorLockPanel>();
+            bool succeeded = panel != null && panel.TryInteract(InteractionActor);
+            currentInteractionType = InteractionType.None;
+            RequestUpdateUI(!succeeded && _potentialInteractions.Count > 0);
+            return;
+        }
+
         if (interaction.type == InteractionType.RaidStation)
         {
-            interaction.interactableObject?.GetComponent<RaidStation>()?.TryInteract(InteractionActor);
+            RaidStation station = interaction.interactableObject != null ? interaction.interactableObject.GetComponent<RaidStation>() : null;
+            bool succeeded = station != null && station.TryInteract(InteractionActor);
             currentInteractionType = InteractionType.None;
-            RequestUpdateUI(false);
+            RequestUpdateUI(!succeeded && _potentialInteractions.Count > 0);
             return;
         }
 
@@ -235,7 +338,17 @@ public class InteractionManager : MonoBehaviour
             PublishInteractionPrompt(false);
 
         Transform actor = InteractionActor;
+        var damageable=EntityComponentResolver.Resolve<Damageable>(actor);
+        if(damageable!=_castDamageable)
+        {
+            if(_castDamageable!=null)_castDamageable.OnDamaged-=CancelForDamage;
+            _castDamageable=damageable;
+            if(_castDamageable!=null)_castDamageable.OnDamaged+=CancelForDamage;
+        }
+        _castAim=EntityComponentResolver.Resolve<PlayerAimController>(actor);
+        if(_castAim!=null)_castAim.OnShotConsumed+=CancelForAction; // Also catches held automatic fire, not only the initial input press.
         Transform anchor = ResolveCastBarAnchor(actor, interaction.interactableObject);
+        Vector3 castPosition=actor!=null?actor.position:Vector3.zero;
         float startTime = Time.time;
         float duration = Mathf.Max(0f, castSeconds);
 
@@ -248,7 +361,7 @@ public class InteractionManager : MonoBehaviour
 
         while (Time.time < startTime + duration)
         {
-            if (!IsInteractionStillValid(interaction))
+            if (!IsInteractionStillValid(interaction) || (actor!=null && (actor.position-castPosition).sqrMagnitude>.0025f))
             {
                 if (_debugCastLogs)
                 {
@@ -270,6 +383,14 @@ public class InteractionManager : MonoBehaviour
             yield return null;
         }
 
+        // Revalidate after the final yield too (death, movement or availability can change on this frame).
+        if (!IsInteractionStillValid(interaction) || (damageable != null && damageable.IsDead) ||
+            (actor != null && (actor.position - castPosition).sqrMagnitude > .0025f))
+        {
+            ClearInteractionCastState();
+            RequestUpdateUI(_potentialInteractions.Count > 0);
+            yield break;
+        }
         PublishInteractionCast(interaction, actor, anchor, 1f, duration);
 
         if (_debugCastLogs)
@@ -301,12 +422,12 @@ public class InteractionManager : MonoBehaviour
 
         bool moved = portal.TryInteract(InteractionActor);
 
-        if (moved)
+        if (moved && !portal.HasPendingKeyConfirmation)
         {
-            _nextPortalInteractAllowedTime =
-                Time.time + ResolvePortalInteractCooldown();
+            // Movement completion, not accepted loading/key UI, starts the shared cooldown.
             currentInteractionType = InteractionType.None;
             _potentialInteractions.Clear();
+            _interactionSources.Clear();
             RequestUpdateUI(false);
         }
     }
@@ -324,7 +445,7 @@ public class InteractionManager : MonoBehaviour
         if (questNpc == null || !questNpc.CanInteract)
             return;
 
-        questNpc.TryInteract(this);
+        questNpc.TryInteract(InteractionActor);
     }
 
     // Purpose: Attempts to use hideout stage select station and reports whether the request succeeded.
@@ -388,7 +509,7 @@ public class InteractionManager : MonoBehaviour
             return;
 
         currentInteractionType = InteractionType.None;
-        RemovePotentialInteraction(pickupObject);
+        RemovePotentialInteraction(pickupObject, removeAllSources: true);
     }
 
     // Purpose: Attempts to use shop and reports whether the request succeeded.
@@ -551,6 +672,7 @@ public class InteractionManager : MonoBehaviour
 
         if (ContainsInteractionObject(newPotentialInteraction.interactableObject))
         {
+            RegisterInteractionSource(newPotentialInteraction.interactableObject, obj);
             if (_debugInteractionLogs)
             {
                 Debug.Log(
@@ -563,6 +685,7 @@ public class InteractionManager : MonoBehaviour
             return;
         }
 
+        RegisterInteractionSource(newPotentialInteraction.interactableObject, obj);
         _potentialInteractions.AddFirst(newPotentialInteraction);
 
         if (_debugInteractionLogs)
@@ -579,9 +702,39 @@ public class InteractionManager : MonoBehaviour
     }
 
     // Purpose: Removes the requested potential interaction from this component.
-    private void RemovePotentialInteraction(GameObject obj)
+    private void RegisterInteractionSource(GameObject owner, GameObject source)
+    {
+        if (!_interactionSources.TryGetValue(owner, out var sources))
+        {
+            sources = new HashSet<GameObject>();
+            _interactionSources.Add(owner, sources);
+        }
+        sources.Add(source);
+    }
+
+    private void RemovePotentialInteraction(GameObject obj, bool removeAllSources = false)
     {
         GameObject normalizedObject = ResolveInteractableObject(obj);
+        // Exit uses the exact owner remembered at Enter, even if components were
+        // disabled/reparented meanwhile. One child Exit must not clear its siblings.
+        if (!removeAllSources)
+        {
+            foreach (var pair in _interactionSources)
+                if (pair.Value.Contains(obj)) { normalizedObject = pair.Key; break; }
+        }
+        if (normalizedObject == null) return;
+        if (_interactionSources.TryGetValue(normalizedObject, out var sources))
+        {
+            if (!removeAllSources)
+            {
+                ResolveInteractionZone();
+                // Multiple colliders can share one GameObject; an Exit from one
+                // collider does not invalidate another still inside the detector.
+                if (_interactionZone == null || !_interactionZone.IsObjectInZone(obj)) sources.Remove(obj);
+                if (IsTargetInInteractionZone(normalizedObject)) return;
+            }
+            _interactionSources.Remove(normalizedObject);
+        }
 
         if (_castingInteraction != null &&
             _castingInteraction.interactableObject == normalizedObject)
@@ -616,13 +769,32 @@ public class InteractionManager : MonoBehaviour
         }
     }
 
+    // Presentation preview only: never registers a potential interaction or
+    // changes the E-key trigger range/selected target.
+    public bool TryResolveNearbyPrompt(GameObject obj, out Transform anchor)
+    {
+        anchor = null;
+        if (!TryCreateInteraction(obj, out Interaction interaction)) return false;
+        if (interaction.interactableObject == null || !interaction.interactableObject.activeInHierarchy) return false;
+        anchor = ResolvePromptAnchor(interaction.interactableObject);
+        return anchor != null;
+    }
+
+    public bool CanInteractWithTarget(GameObject owner)
+    {
+        return isActiveAndEnabled && IsTargetInInteractionZone(owner) &&
+            TryCreateInteraction(owner, out Interaction interaction) && interaction.interactableObject == owner;
+    }
+
 	// Purpose: Attempts to create interaction and reports whether the request succeeded.
 	private bool TryCreateInteraction(
         GameObject obj,
         out Interaction interaction,
         bool logDecision = false)
 	{
-		interaction = new Interaction(InteractionType.None, null);
+		interaction = null;
+        // Registration, refresh and removal must resolve the same canonical owner.
+        obj = ResolveInteractableObject(obj);
 
 		if (obj == null)
 		{
@@ -633,6 +805,13 @@ public class InteractionManager : MonoBehaviour
 		}
 
 		SectorPortal portal = obj.GetComponentInParent<SectorPortal>();
+        var activator = obj.GetComponentInParent<SectorPortalActivator>();
+        if (activator != null && activator.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.PortalActivation, activator.gameObject);
+            LogResolvedInteraction(logDecision, interaction, obj);
+            return true;
+        }
 
 		//Debug.Log($"[InteractionManager] TryCreateInteraction obj={obj.name}, portal={portal}, portalCanInteract={(portal != null ? portal.CanInteract.ToString() : "null")}");
 
@@ -666,6 +845,20 @@ public class InteractionManager : MonoBehaviour
         {
             interaction = new Interaction(InteractionType.Treasure, treasure.gameObject);
             LogResolvedInteraction(logDecision, interaction, obj);
+            return true;
+        }
+
+        var lockPanel = obj.GetComponentInParent<SectorLockPanel>();
+        if (lockPanel != null && lockPanel.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.SectorLockPanel, lockPanel.gameObject);
+            return true;
+        }
+
+        var purifier = obj.GetComponentInParent<HomeInfectionPurifier>();
+        if (purifier != null && purifier.CanInteract)
+        {
+            interaction = new Interaction(InteractionType.HomeInfectionPurifier, purifier.gameObject);
             return true;
         }
 
@@ -768,8 +961,8 @@ public class InteractionManager : MonoBehaviour
         if (obj == null)
             return null;
 
-        RaidStation raidStation = obj.GetComponentInParent<RaidStation>();
-        if (raidStation != null) return raidStation.gameObject;
+        var activator = obj.GetComponentInParent<SectorPortalActivator>();
+        if (activator != null) return activator.gameObject;
 
         SectorPortal portal = obj.GetComponentInParent<SectorPortal>();
         if (portal != null)
@@ -787,9 +980,24 @@ public class InteractionManager : MonoBehaviour
         if (treasure != null)
             return treasure.gameObject;
 
+        SectorLockPanel lockPanel = obj.GetComponentInParent<SectorLockPanel>();
+        if (lockPanel != null) return lockPanel.gameObject;
+
+        var purifier = obj.GetComponentInParent<HomeInfectionPurifier>();
+        if (purifier != null) return purifier.gameObject;
+
+        RaidStation raidStation = obj.GetComponentInParent<RaidStation>();
+        if (raidStation != null) return raidStation.gameObject;
+
         SectorSkipStation sectorSkipStation = obj.GetComponentInParent<SectorSkipStation>();
         if (sectorSkipStation != null)
             return sectorSkipStation.gameObject;
+
+        HomeQuestNpc questNpc = obj.GetComponentInParent<HomeQuestNpc>();
+        if (questNpc != null) return questNpc.gameObject;
+
+        LootableObject lootableObject = obj.GetComponentInParent<LootableObject>();
+        if (lootableObject != null) return lootableObject.gameObject;
 
         EnemyLootInventoryRuntime loot =
             EntityComponentResolver.Resolve<EnemyLootInventoryRuntime>(obj.transform);
@@ -860,6 +1068,7 @@ public class InteractionManager : MonoBehaviour
     {
         CancelInteractionCast();
         _potentialInteractions.Clear();
+        _interactionSources.Clear();
         RequestUpdateUI(false);
     }
 
@@ -874,6 +1083,8 @@ public class InteractionManager : MonoBehaviour
             ? ResolvePromptAnchorComponent(selectedInteraction.interactableObject)
             : null;
         SetActivePromptAnchor(selectedAnchor);
+        SetActivePromptStation(selectedInteraction?.type == InteractionType.RaidStation &&
+            selectedInteraction.interactableObject != null ? selectedInteraction.interactableObject.GetComponent<RaidStation>() : null);
 
         if (_interactionPromptChannel == null)
             return;
@@ -917,6 +1128,20 @@ public class InteractionManager : MonoBehaviour
             anchor,
             ResolveInteractionKeyLabel(),
             ResolveActionLabel(interaction)));
+    }
+
+    private void SetActivePromptStation(RaidStation station)
+    {
+        if (_activePromptStation == station) return;
+        if (!ReferenceEquals(_activePromptStation, null)) _activePromptStation.PromptChanged -= HandleStationPromptChanged;
+        _activePromptStation = station;
+        if (_activePromptStation != null) _activePromptStation.PromptChanged += HandleStationPromptChanged;
+    }
+
+    private void HandleStationPromptChanged()
+    {
+        if (_interactionCastRoutine != null && _hidePromptWhileCasting) return;
+        RequestUpdateUI(_potentialInteractions.Count > 0);
     }
 
     // Purpose: Resolves the prompt anchor needed by this component.
@@ -985,6 +1210,9 @@ public class InteractionManager : MonoBehaviour
         if (interaction == null || interaction.interactableObject == null)
             return 0f;
 
+        if (interaction.type == InteractionType.Portal) return Mathf.Max(0f, SectorTravelRulesSO.Active?.travel.portalCast ?? 5f);
+        if (interaction.type == InteractionType.PortalActivation) return Mathf.Max(0f, SectorTravelRulesSO.Active?.travel.portalActivationCast ?? 5f);
+
         PlayerInteractConfigSO config = ResolvePlayerInteractConfig();
         return config != null
             ? config.ResolveCastSeconds(interaction.type)
@@ -1012,7 +1240,7 @@ public class InteractionManager : MonoBehaviour
     // Purpose: Checks whether interaction still valid is currently true.
     private bool IsInteractionStillValid(Interaction interaction)
     {
-        if (interaction == null || interaction.interactableObject == null)
+        if (interaction == null || !IsTargetInInteractionZone(interaction.interactableObject))
             return false;
 
         if (!TryCreateInteraction(interaction.interactableObject, out Interaction refreshed))
@@ -1057,6 +1285,8 @@ public class InteractionManager : MonoBehaviour
     // Purpose: Clears the current interaction cast state state.
     private void ClearInteractionCastState()
     {
+        if(_castAim!=null)_castAim.OnShotConsumed-=CancelForAction;
+        _castAim=null;
         _interactionCastRoutine = null;
         _castingInteraction = null;
         SetActivePromptAnchor(null);
@@ -1075,6 +1305,11 @@ public class InteractionManager : MonoBehaviour
     // Purpose: Resolves the action label needed by this component.
     private string ResolveActionLabel(Interaction interaction)
     {
+        if (interaction?.type == InteractionType.PortalActivation) return "포탈 개방";
+        if (interaction?.type == InteractionType.SectorLockPanel && interaction.interactableObject != null)
+            return interaction.interactableObject.GetComponent<SectorLockPanel>()?.PromptLabel ?? string.Empty;
+        if (interaction?.type == InteractionType.HomeInfectionPurifier && interaction.interactableObject != null)
+            return interaction.interactableObject.GetComponent<HomeInfectionPurifier>()?.PromptLabel ?? string.Empty;
         if (interaction?.type == InteractionType.RaidStation && interaction.interactableObject != null)
             return interaction.interactableObject.GetComponent<RaidStation>()?.PromptLabel ?? string.Empty;
         if (interaction != null &&
@@ -1113,9 +1348,16 @@ public class InteractionManager : MonoBehaviour
                 return sectorSkipStation.PromptLabel;
         }
 
+        if (interaction?.type == InteractionType.Portal && interaction.interactableObject != null)
+        {
+            var portal = interaction.interactableObject.GetComponentInParent<SectorPortal>();
+            if (portal != null && portal.IsExtraction)
+                return UIRuntimeLocalization.Get("UI_Map", "Map_Extract", "탈출");
+        }
+
         return interaction != null ? interaction.type switch
         {
-            InteractionType.Portal => "",
+            InteractionType.Portal => "섹터 이동",
             InteractionType.QTE => "",
             InteractionType.PickUp => "",
             InteractionType.Shop => "",
@@ -1138,8 +1380,11 @@ public class InteractionManager : MonoBehaviour
             LinkedListNode<Interaction> next = node.Next;
             GameObject obj = node.Value.interactableObject;
 
-            if (obj == null || !TryCreateInteraction(obj, out Interaction refreshedInteraction))
+            if (!IsTargetInInteractionZone(obj) || !TryCreateInteraction(obj, out Interaction refreshedInteraction))
+            {
                 _potentialInteractions.Remove(node);
+                if (!ReferenceEquals(obj, null)) _interactionSources.Remove(obj);
+            }
             else
                 node.Value = refreshedInteraction;
 

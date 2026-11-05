@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 // Editor-only working copy. Nothing touches a project asset until an explicit save.
-public sealed class ShooterCustomizeDraft : ScriptableObject
+public sealed partial class ShooterCustomizeDraft : ScriptableObject
 {
     public GameObject visualPrefab;
     public ShooterCustomizeSO target;
@@ -18,6 +18,44 @@ public sealed class ShooterCustomizeDraft : ScriptableObject
     public ShooterVisualOccupancy equipmentCoverage;
     public ShooterVisualLocalTransform equipmentPose = ShooterVisualLocalTransform.Identity;
     public bool equipmentDirty;
+
+    // Fitting selections are editor-only. CaptureTo deliberately never copies these into a look.
+    public WeaponSO previewWeapon;
+    public ArmorItemSO previewArmor;
+    public BackpackItemSO previewBackpack;
+    public GameObject backpackPrefab;
+    public ShooterVisualLocalTransform backpackPose = ShooterVisualLocalTransform.Identity;
+    public ShooterVisualOccupancy backpackCoverage = ShooterVisualOccupancy.Back;
+    public bool backpackDirty;
+    public bool showPreviewBackpack = true;
+    public bool showPreviewWeapon = true, showPreviewArmor = true, showPreviewMask = true;
+    public bool ignoreEquipmentHiding;
+    public bool HasPreviewEquipment => equipment != null || previewArmor != null || previewWeapon != null || previewBackpack != null;
+
+    public void LoadBackpack(BackpackItemSO item)
+    {
+        previewBackpack = item;
+        backpackPrefab = item != null ? item.EquippedVisualPrefab : null;
+        backpackPose = item != null ? item.EquippedVisualTransform : ShooterVisualLocalTransform.Identity;
+        backpackCoverage = item != null ? (ShooterVisualOccupancy)new SerializedObject(item).FindProperty("_visualCoverage").intValue : ShooterVisualOccupancy.Back;
+        backpackDirty = false;
+    }
+
+    public void SaveBackpack()
+    {
+        if (previewBackpack == null) return;
+        Undo.RecordObject(previewBackpack, "Save Backpack Visual Placement");
+        previewBackpack.SetEquippedVisual(backpackPrefab, backpackPose);
+        EditorUtility.SetDirty(previewBackpack); AssetDatabase.SaveAssetIfDirty(previewBackpack);
+        backpackDirty = false;
+    }
+
+    public void RemoveAttachment(int index)
+    {
+        if (index < 0 || index >= attachments.Count) return;
+        attachments.RemoveAt(index);
+        lookDirty = true;
+    }
 
     public void LoadLook(GameObject source, ShooterCustomizeSO look, ShooterVisualRig baseline)
     {

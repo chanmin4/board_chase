@@ -120,6 +120,7 @@ GameObject:
   - component: {fileID: 506223428337099510}
   - component: {fileID: 2369597981790017084}
   - component: {fileID: 2369597981790017075}
+  - component: {fileID: 800000000000010000}
   m_Layer: 7
   m_Name: SM_Walls_Door_08
   m_TagString: Untagged
@@ -217,3 +218,17 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.2388723, y: 2.201752, z: 0.10114601}
   m_Center: {x: 0, y: 1.1008757, z: -0.0000000949949}
+--- !u!114 &800000000000010000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4315148554830886889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84dddf5f8c854426a7e27be2f4f74017, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _blocksVision: 1
+  _overrideChildren: 0

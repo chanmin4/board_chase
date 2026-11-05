@@ -41,6 +41,7 @@ public sealed class EnemyShooterDeathCorpseController : ShooterDeathCorpseContro
     {
         if (_syncLootEquipment)
             _lootInventory?.SyncEquipmentFromRuntime();
+        _lootInventory?.PrepareCorpseArmorDrop();
 
         StopNavMeshAgent();
     }

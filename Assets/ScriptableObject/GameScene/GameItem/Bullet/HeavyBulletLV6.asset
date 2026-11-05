@@ -32,10 +32,11 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 0
+  _rarity: 3
   _purchasePrice: 10
   _worldVisualPrefab: {fileID: 7611937310320503209, guid: 3b1a298e51f2f76077e4f05a812f033c, type: 3}
-  _maxStack: 120
+  _maxStack: 60
+  _maxOwnedAmount: 0
   bulletId: heavybullet_lv6
   displayName: HeavyBulletLV6
   projectilePrefab: {fileID: 7611937310320503209, guid: 3b1a298e51f2f76077e4f05a812f033c, type: 3}
@@ -65,7 +66,6 @@ MonoBehaviour:
   _tier: 6
   _healthDamage: 30
   _infectionDamage: 10
-  _markAmount: 25
   references:
     version: 2
     RefIds: []

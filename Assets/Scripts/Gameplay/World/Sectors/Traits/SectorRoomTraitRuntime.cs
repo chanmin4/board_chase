@@ -26,6 +26,7 @@ public sealed class SectorRoomTraitRuntime : MonoBehaviour
     [ReadOnly] [SerializeField] private SectorRoomTraitTableSO _table;
 
     private static SectorRoomTraitRuntime _currentPlayerSectorTrait;
+    private float _anomalyGasBaseline;
 
     public StageRoomType RoomType => _roomType;
     public SectorRoomTraitType RolledRoomTrait => _rolledRoomTrait;
@@ -35,10 +36,16 @@ public sealed class SectorRoomTraitRuntime : MonoBehaviour
     public int TimerFailureLeakStacks => Mathf.Max(0, _timerFailureLeakStacks);
     public float CurrentBiochemicalGasInfectionPerSecond =>
         _biochemicalGasEnabled
-            ? Mathf.Max(0f, _baselineGasInfectionPerSecond +
+            ? Mathf.Max(0f, (_selectedRoomTrait == SectorRoomTraitType.GasBoost ?
+                Mathf.Max(_baselineGasInfectionPerSecond, _anomalyGasBaseline) : _baselineGasInfectionPerSecond) +
                 _timerFailureLeakInfectionPerSecond * TimerFailureLeakStacks)
             : 0f;
     public bool IsDarknessRoom => _selectedRoomTrait == SectorRoomTraitType.Darkness;
+    public void ConfigureVirusRoom(bool enabled, float pressure = 1f)
+    {
+        _biochemicalGasEnabled=enabled;
+        _baselineGasInfectionPerSecond=enabled?Mathf.Max(0,pressure):0;
+    }
     public bool IsArmedRoom => _selectedRoomTrait == SectorRoomTraitType.Armed;
     public bool IsAmmoScavengerRoom => _selectedRoomTrait == SectorRoomTraitType.AmmoScavenger;
     public bool IsFearRoom => _selectedRoomTrait == SectorRoomTraitType.Fear;
@@ -91,10 +98,13 @@ public sealed class SectorRoomTraitRuntime : MonoBehaviour
         int stageSeed,
         Vector2Int sectorCoord,
         bool biochemicalGasEnabled,
-        StageDefinitionSO.BiochemicalGasSettings biochemicalGas)
+        StageDefinitionSO.BiochemicalGasSettings biochemicalGas, int stageIndex = 0,
+        bool combatRoom = true, float anomalyGasBaseline = 0f, bool useRoomTimerLeaks = true)
     {
         _table = table;
         _roomType = roomType;
+        _anomalyGasBaseline = Mathf.Max(0f, anomalyGasBaseline);
+        useRoomTimerLeaks = false; // Deadlines are replaced by personal suppression management.
         bool appliesConfiguredGas = biochemicalGas != null &&
                                   biochemicalGas.AppliesTo(roomType);
         _biochemicalGasEnabled = appliesConfiguredGas ||
@@ -104,10 +114,10 @@ public sealed class SectorRoomTraitRuntime : MonoBehaviour
             : biochemicalGasEnabled && table != null
                 ? table.BiochemicalGasInfectionPerSecond
                 : 0f;
-        _timerFailureLeakInfectionPerSecond = appliesConfiguredGas
+        _timerFailureLeakInfectionPerSecond = appliesConfiguredGas && useRoomTimerLeaks
             ? Mathf.Max(0f, biochemicalGas.timerFailureLeakInfectionPerSecond)
             : 0f;
-        _maxTimerFailureLeakStacks = appliesConfiguredGas
+        _maxTimerFailureLeakStacks = appliesConfiguredGas && useRoomTimerLeaks
             ? Mathf.Max(0, biochemicalGas.maxTimerFailureLeakStacks)
             : 0;
         _biochemicalGasTickInterval = appliesConfiguredGas
@@ -120,7 +130,7 @@ public sealed class SectorRoomTraitRuntime : MonoBehaviour
                     stageSeed,
                     sectorCoord,
                     RoomTraitPickSalt + (int)roomType),
-                roomType)
+                roomType, stageIndex, combatRoom)
             : SectorRoomTraitType.Normal;
         _selectedRoomTrait = _rolledRoomTrait;
         _hasDebugRoomTraitOverride = false;
@@ -158,12 +168,14 @@ public sealed class SectorRoomTraitRuntime : MonoBehaviour
         SectorEnemyTraitModifier modifier =
             enemy.GetComponent<SectorEnemyTraitModifier>();
 
-        if (modifier == null && IsArmedRoom && _table != null)
+        if (modifier == null && (IsArmedRoom || _selectedRoomTrait == SectorRoomTraitType.EnemyDamage) && _table != null)
             modifier = enemy.gameObject.AddComponent<SectorEnemyTraitModifier>();
 
         if (modifier != null)
-            modifier.Configure(_table, IsArmedRoom);
+            modifier.Configure(_table, IsArmedRoom, _selectedRoomTrait == SectorRoomTraitType.EnemyDamage);
     }
+
+    public void RestoreGasLeakStacks(int stacks) => _timerFailureLeakStacks = Mathf.Clamp(stacks, 0, _maxTimerFailureLeakStacks);
 
     /// <summary>
     /// Debug-only runtime override. This never changes the shared trait table,

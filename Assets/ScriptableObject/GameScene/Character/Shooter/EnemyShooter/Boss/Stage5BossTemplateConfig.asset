@@ -5,6 +5,20 @@ MonoBehaviour:
   m_ObjectHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e27a454e74f73745b473c6fafffc143, type: 3}
   m_Name: Stage5BossTemplateConfig
+  _dash:
+    useMoveSpeedBasedDash: 1
+    speedMultiplier: 1.8
+    fixedSpeed: 20
+    durationSeconds: 0.3
+    cooldownSeconds: 10
+    distanceMultiplier: 1.3
+    useForwardWhenNoMovementInput: 1
+    rotateTowardDashDirection: 1
+    useVisualLean: 1
+    visualLeanEuler: {x: 18, y: 0, z: 0}
+    visualLeanInSpeed: 18
+    visualLeanOutSpeed: 12
+  _alertReactionMultiplier: 0.5
   m_EditorClassIdentifier: 
   _initialHealth: 900
   _moveSpeed: 16

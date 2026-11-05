@@ -27,10 +27,16 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
     private TextMeshProUGUI _titleText;
     private TextMeshProUGUI _usageText;
     private TextMeshProUGUI _feedbackText;
+    private TextMeshProUGUI _helpText;
     private RectTransform _slotGrid;
     private GridLayoutGroup _gridLayout;
     private readonly List<InventoryItemSlotUI> _slots = new();
     private bool _isOpen;
+    public PlayerInventoryRuntime Inventory => _inventory;
+    public static void CloseFor(PlayerInventoryUI host)
+    {
+        if (host != null) host.GetComponentInChildren<KeyToolContainerPanel>(true)?.Close();
+    }
 
     // Purpose: Gets or builds the panel below the active Player Inventory UI, then opens the selected Key Tool.
     public static bool TryOpen(
@@ -65,12 +71,17 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
     private void Update()
     {
         if (_isOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            Close();
+            UIEscapeRouter.TryCloseTopPopup();
     }
+
+    private void OnEnable() => RegisterEscapeHandler();
+    private void OnDisable() => UIEscapeRouter.Unregister(this);
+    private void RegisterEscapeHandler() => UIEscapeRouter.Register(this, () => _isOpen, Close, 100);
 
     // Purpose: Releases transient event subscriptions when the panel is destroyed with its Player Panel hierarchy.
     private void OnDestroy()
     {
+        UIEscapeRouter.Unregister(this);
         UnsubscribeInventory();
     }
 
@@ -86,6 +97,7 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
         _keyTool = keyTool;
         _inventory.KeyToolChanged += Refresh;
         _isOpen = true;
+        RegisterEscapeHandler();
 
         EnsureSlots();
         gameObject.SetActive(true);
@@ -101,6 +113,7 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
             return;
 
         _isOpen = false;
+        UIEscapeRouter.Unregister(this);
         UnsubscribeInventory();
         SetVisible(false);
     }
@@ -118,6 +131,10 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
         }
 
         EnsureSlots();
+        if (_helpText != null) _helpText.text = ShopPurchaseTradePanel.IsKeySubmissionOpen
+            ? "열쇠 드래그 / 더블클릭: 제출 · 입장 확정 전에는 소모하지 않습니다."
+            : UIRuntimeLocalization.Get("UI_Inventory", "Inventory_KeyToolHelp",
+                "Double-click a key to return it to inventory  •  Esc / X: Close");
 
         if (_titleText != null)
             _titleText.text = _keyTool.DisplayName.ToUpperInvariant();
@@ -165,7 +182,7 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
             InventoryItemSlotUI slot = Instantiate(template, _slotGrid);
             slot.name = $"KeyToolSlot_{index:00}";
             slot.gameObject.SetActive(true);
-            slot.Initialize(this, index, false, true, InventoryDragSourceKind.Inventory);
+            slot.Initialize(this, index, ShopPurchaseTradePanel.IsKeySubmissionOpen, true, InventoryDragSourceKind.KeyTool);
             _slots.Add(slot);
         }
 
@@ -176,7 +193,7 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
                 continue;
 
             slot.name = $"KeyToolSlot_{index:00}";
-            slot.Initialize(this, index, false, true, InventoryDragSourceKind.Inventory);
+            slot.Initialize(this, index, ShopPurchaseTradePanel.IsKeySubmissionOpen, true, InventoryDragSourceKind.KeyTool);
             slot.gameObject.SetActive(index < capacity);
         }
     }
@@ -186,6 +203,8 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
     {
         if (_inventory == null)
             return;
+
+        if (ShopPurchaseTradePanel.TrySubmitContainedKey(_inventory, slotIndex)) return;
 
         if (_inventory.TryWithdrawKeyToolSlot(slotIndex, out string message))
             SetFeedback(message, true);
@@ -301,6 +320,7 @@ public sealed class KeyToolContainerPanel : MonoBehaviour, IInventorySlotOwner
         SetAnchors(_feedbackText.rectTransform, new Vector2(0.09f, 0.095f), new Vector2(0.91f, 0.15f));
 
         TextMeshProUGUI help = CreateText("Help", frame.transform, 14f, FontStyles.Normal, TextAlignmentOptions.Center);
+        _helpText = help;
         help.text = UIRuntimeLocalization.Get(
             "UI_Inventory",
             "Inventory_KeyToolHelp",

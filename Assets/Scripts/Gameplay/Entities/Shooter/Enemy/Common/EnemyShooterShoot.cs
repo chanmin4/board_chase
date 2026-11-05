@@ -29,7 +29,7 @@ public class EnemyShooterShoot : EntityShootCore
     [SerializeField] private bool _debugDraw = false;
     [SerializeField, Min(0f)] private float _debugDrawDuration = 0.15f;
 
-    private const ShooterFaction ShooterSide = ShooterFaction.Enemy;
+    private ShooterFaction ShooterSide => Config != null ? Config.Faction : ShooterFaction.Scraper;
     private const PaintMarkFaction HitMarkSide = PaintMarkFaction.Virus;
 
     private Damageable _damageable;
@@ -108,7 +108,7 @@ public class EnemyShooterShoot : EntityShootCore
         direction = aimDirection.normalized;
         maxDistance = Mathf.Max(
             0.1f,
-            _statsRuntime != null ? _statsRuntime.MaxRange : config.MaxRange);
+            _statsRuntime != null ? _statsRuntime.MaxRange : weapon.MaxRange);
         return true;
     }
 
@@ -250,6 +250,8 @@ public class EnemyShooterShoot : EntityShootCore
     // Purpose: Attempts to fire at and reports whether the request succeeded.
     public bool TryFireAt(Vector3 aimWorldPoint)
     {
+        var stamina = EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (stamina != null && stamina.IsSprinting) return false;
         EnemyShooterConfigSO config = ResolveConfig();
         BulletSO bullet = CurrentBullet;
 
@@ -271,12 +273,6 @@ public class EnemyShooterShoot : EntityShootCore
 
             return false;
         }
-
-        EntityEquipmentRuntime equipmentRuntime = _equipmentController != null
-            ? _equipmentController.EquipmentRuntime
-            : null;
-        if (equipmentRuntime != null && !equipmentRuntime.CanFireCurrentWeapon)
-            return false;
 
         TickReload();
 
@@ -309,8 +305,10 @@ public class EnemyShooterShoot : EntityShootCore
             return false;
 
         _equipmentController?.PlayMuzzleParticle();
-        equipmentRuntime?.ApplyCurrentWeaponFireWear();
-        _magazineAmmo = Mathf.Max(0, _magazineAmmo - 1);
+        // Enemy firing consumes ammunition, not weapon condition, and never rolls a malfunction.
+        float preserveChance=Mathf.Clamp01((_statsRuntime?.AdditionalStat(PlayerStatId.AmmoPreservationChance)??0f)/100f);
+        if(preserveChance<=0f||UnityEngine.Random.value>=preserveChance)
+            _magazineAmmo = Mathf.Max(0, _magazineAmmo - 1);
         PublishGunshotSound();
 
         if (_magazineAmmo <= 0)
@@ -437,13 +435,15 @@ public class EnemyShooterShoot : EntityShootCore
         BulletSO bullet = CurrentBullet;
 
         return new EntityShootStats(
-            _statsRuntime != null ? _statsRuntime.MaxRange : config.MaxRange,
-            _statsRuntime != null ? _statsRuntime.ResolveAttackDamage(bullet) : bullet != null ? bullet.HealthDamage : 0f,
+            _statsRuntime != null ? _statsRuntime.MaxRange : CurrentRangedWeapon != null ? CurrentRangedWeapon.MaxRange : 0f,
+            _statsRuntime != null ? _statsRuntime.ResolveAttackDamage(bullet) : bullet != null && CurrentRangedWeapon != null
+                ? bullet.HealthDamage * CurrentRangedWeapon.ResolveDamageMultiplierPerProjectile(bullet) : 0f,
             bullet != null ? bullet.ResolveDamageTargetMask(ShooterSide) : default,
             HitMarkSide,
-            _statsRuntime != null ? _statsRuntime.ResolvePaintMarkDamage(bullet) : bullet != null ? bullet.MarkAmount : 0f,
-            _statsRuntime != null ? _statsRuntime.ResolveInfectionDamage(bullet) : bullet != null ? bullet.InfectionDamage : 0f,
-            _statsRuntime != null ? _statsRuntime.ResolvePenetrationClass(bullet) : bullet != null ? bullet.PenetrationClass : 0,
+            0f,
+            0f,
+            _statsRuntime != null ? _statsRuntime.ResolvePenetrationClass(bullet)
+                : (bullet != null ? bullet.PenetrationClass : 0f) + (CurrentRangedWeapon != null ? CurrentRangedWeapon.PenetrationClassBonus : 0f),
             _statsRuntime != null ? _statsRuntime.ResolveArmorHealthDurabilityLossMultiplier(bullet) : 1f,
             _statsRuntime != null ? _statsRuntime.ResolveArmorInfectionDurabilityLossMultiplier(bullet) : 0.5f);
     }
@@ -518,6 +518,8 @@ public class EnemyShooterShoot : EntityShootCore
     // Purpose: Begins the reload workflow.
     private void BeginReload()
     {
+        var stamina = EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (stamina != null && stamina.IsSprinting) return;
         if (_isReloading)
             return;
 
@@ -554,8 +556,7 @@ public class EnemyShooterShoot : EntityShootCore
         if (_statsRuntime != null)
             return _statsRuntime.ResolveMagazineSize(bullet);
 
-        EnemyShooterConfigSO config = ResolveConfig();
-        return config != null ? config.MagazineSize : 1;
+        return CurrentRangedWeapon != null ? CurrentRangedWeapon.MagazineSize : 1;
     }
 
     // Purpose: Resolves the reload duration needed by this component.
@@ -564,8 +565,7 @@ public class EnemyShooterShoot : EntityShootCore
         if (_statsRuntime != null)
             return Mathf.Max(0f, _statsRuntime.ReloadDurationSeconds);
 
-        EnemyShooterConfigSO config = ResolveConfig();
-        return config != null ? config.ReloadDurationSeconds : 0f;
+        return CurrentRangedWeapon != null ? CurrentRangedWeapon.ReloadDurationSeconds : 0f;
     }
 
     // Purpose: Publishes the gunshot sound notification.

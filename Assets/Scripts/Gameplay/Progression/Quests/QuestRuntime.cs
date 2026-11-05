@@ -20,6 +20,17 @@ public sealed class QuestRuntimeState
     public QuestDefinitionSO Definition => _definition;
     public bool IsAccepted => _accepted;
     public bool IsCompleted => _completed;
+    public bool IsReadyToTurnIn
+    {
+        get
+        {
+            if (!_accepted || _completed || _definition == null || _definition.Objectives.Length == 0) return false;
+            for (int i = 0; i < _definition.Objectives.Length; i++)
+                if (_definition.Objectives[i] == null || i >= _objectiveProgress.Length ||
+                    _objectiveProgress[i] < _definition.Objectives[i].RequiredCount) return false;
+            return true;
+        }
+    }
     public IReadOnlyList<int> ObjectiveProgress => _objectiveProgress;
     public bool AreAllRewardsGranted
     {
@@ -216,6 +227,7 @@ public sealed class QuestRuntimeState
 public sealed class QuestRuntime : MonoBehaviour
 {
     private static QuestRuntime _instance;
+    private bool _submittingItems;
 
     [SerializeField] private List<QuestRuntimeState> _states = new();
     [NonSerialized] private HomeQuestNpc _selectedQuestGiver;
@@ -389,18 +401,28 @@ public sealed class QuestRuntime : MonoBehaviour
                 return false;
         }
 
+        if(definition.AcceptanceItems.Length>0)
+        {
+            ResolvePlayerInventory();
+            if(_playerInventory==null||!_playerInventory.CanReceiveQuestAcceptance(definition.AcceptanceItems,out _))return false;
+        }
         return true;
     }
 
     // Purpose: Attempts to accept and reports whether the request succeeded.
     public bool TryAccept(QuestDefinitionSO definition)
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (!CanAccept(definition))
             return false;
 
         QuestRuntimeState state = new();
         state.Accept(definition);
         _states.Add(state);
+        if(definition.AcceptanceItems.Length>0&&(_playerInventory==null||!_playerInventory.TryReceiveQuestAcceptance(definition.AcceptanceItems,out _)))
+        {_states.Remove(state);return false;}
         PublishSystemMessage($"Quest accepted: {definition.DisplayName}");
         UIAudio.PlayQuestNotification(definition.AcceptedAudioCue, false);
 
@@ -414,6 +436,9 @@ public sealed class QuestRuntime : MonoBehaviour
     // Purpose: Performs the debug complete workflow for this component.
     public bool DebugComplete(QuestDefinitionSO definition)
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (definition == null)
             return false;
 
@@ -442,6 +467,7 @@ public sealed class QuestRuntime : MonoBehaviour
     // Purpose: Performs the report entity killed workflow for this component.
     public static void ReportEntityKilled(GameObject attacker, Damageable target)
     {
+        GameProgressionRuntime.Kill(attacker, target);
         _instance?.ReportCombatEvent(QuestObjectiveType.Kill, attacker, target);
     }
 
@@ -460,13 +486,22 @@ public sealed class QuestRuntime : MonoBehaviour
     }
 
     // Purpose: Performs the report combat event workflow for this component.
-    private void ReportCombatEvent(QuestObjectiveType eventType, GameObject attacker, Damageable target)
+    public static void ReportHeadshot(GameObject attacker, Damageable target, bool killed, WeaponSO shotWeapon)
     {
+        _instance?.ReportCombatEvent(QuestObjectiveType.HeadshotHit, attacker, target, shotWeapon);
+        if (killed) _instance?.ReportCombatEvent(QuestObjectiveType.HeadshotKill, attacker, target, shotWeapon);
+    }
+
+    private void ReportCombatEvent(QuestObjectiveType eventType, GameObject attacker, Damageable target, WeaponSO shotWeapon = null)
+    {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return;
+#endif
         if (!IsPlayerSource(attacker) || target == null)
             return;
 
         float distance = Vector3.Distance(attacker.transform.position, target.transform.position);
-        WeaponSO usedWeapon = ResolvePlayerWeapon(attacker);
+        WeaponSO usedWeapon = shotWeapon != null ? shotWeapon : ResolvePlayerWeapon(attacker);
         bool stateChanged = false;
 
         for (int stateIndex = 0; stateIndex < _states.Count; stateIndex++)
@@ -490,11 +525,7 @@ public sealed class QuestRuntime : MonoBehaviour
                 stateChanged = true;
             }
 
-            if (state.TryComplete())
-            {
-                HandleQuestCompleted(state);
-                stateChanged = true;
-            }
+            // Goal progress is not completion. Only the Home NPC turn-in button grants rewards.
         }
 
         if (stateChanged)
@@ -554,12 +585,86 @@ public sealed class QuestRuntime : MonoBehaviour
     // Purpose: Handles the incoming player inventory changed request or event.
     private void HandlePlayerInventoryChanged()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return;
+#endif
+        if (_submittingItems) return;
         RefreshCollectObjectives();
+    }
+
+    /// <summary>
+    /// Explicit submission, unlike CollectItem ownership observation. All remaining rows
+    /// are aggregated and consumed atomically through the existing physical-trade path.
+    /// Content/quantities are authored later; no quest data is generated here.
+    /// </summary>
+    public bool TrySubmitItems(QuestDefinitionSO definition, out string message)
+    {
+        message = "제출할 수 있는 진행 중 퀘스트가 없습니다.";
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) { message = "전투실험 중에는 임무 진행을 변경하지 않습니다."; return false; }
+#endif
+        if (_submittingItems || definition == null || !CanTurnInAt(_selectedQuestGiver, definition)) return false;
+        QuestRuntimeState state = FindState(definition);
+        if (state == null || !state.IsAccepted || state.IsCompleted) return false;
+        ResolvePlayerInventory();
+        if (_playerInventory == null || _playerInventory.GetComponent<Damageable>()?.IsDead == true) return false;
+        var requirements = new List<ShopTradeRequirement>();
+        var rows = new List<int>();
+        for (int i = 0; i < definition.Objectives.Length; i++)
+        {
+            var goal = definition.Objectives[i];
+            if (goal == null || goal.ObjectiveType != QuestObjectiveType.SubmitItem) continue;
+            int current = i < state.ObjectiveProgress.Count ? state.ObjectiveProgress[i] : 0;
+            int remaining = goal.RequiredCount - current;
+            if (remaining <= 0) continue;
+            if (goal.TargetItem == null) { message = "제출 대상 Item SO가 지정되지 않았습니다."; return false; }
+            requirements.Add(new ShopTradeRequirement(goal.TargetItem, remaining)); rows.Add(i);
+        }
+        if (rows.Count == 0) return false;
+        _submittingItems = true;
+        try
+        {
+            if (!_playerInventory.TryConsumeInventoryItemRequirements(requirements, out message)) return false;
+            foreach (int row in rows) state.TrySetProgress(row, definition.Objectives[row].RequiredCount);
+            message = "아이템 제출 완료. 같은 항목은 다시 소비하지 않습니다.";
+            NotifyStateChanged(); return true;
+        }
+        finally { _submittingItems = false; }
+    }
+
+    private bool CanTurnInAt(HomeQuestNpc giver, QuestDefinitionSO definition)
+    {
+        ResolvePlayerInventory();
+        return giver != null && giver.CanInteract && giver.IsConversationOpen && giver.CanOffer(definition) &&
+               _playerInventory != null && _playerInventory.GetComponent<Damageable>()?.IsDead != true &&
+               (giver.transform.position - _playerInventory.transform.position).sqrMagnitude <= 100f;
+    }
+
+    public bool TryTurnIn(QuestDefinitionSO definition, HomeQuestNpc giver, out string message)
+    {
+        message = "HOME 임무 NPC와 대화하여 목표를 제출하고 완료 버튼을 누르세요.";
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
+        var state = FindState(definition);
+        if (state == null || !CanTurnInAt(giver, definition) || !state.IsReadyToTurnIn) return false;
+        var warehouse=FindFirstObjectByType<InheritanceWarehouseRuntime>(FindObjectsInactive.Include);
+        bool needsWarehouse=false;
+        foreach(var reward in definition.Rewards)if(reward?.RewardType==QuestRewardType.Item)needsWarehouse=true;
+        if(needsWarehouse&&(warehouse==null||!warehouse.CanReceiveQuestItems(state,out message)))return false;
+        if(!state.TryComplete())return false;
+        HandleQuestCompleted(state);
+        NotifyStateChanged();
+        message = "임무 완료. 보상이 지급되었습니다.";
+        return true;
     }
 
     // Purpose: Refreshes the displayed or cached collect objectives.
     private bool RefreshCollectObjectives()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (_playerInventory == null)
             return false;
 
@@ -591,11 +696,7 @@ public sealed class QuestRuntime : MonoBehaviour
                 stateChanged = true;
             }
 
-            if (state.TryComplete())
-            {
-                HandleQuestCompleted(state);
-                stateChanged = true;
-            }
+            // Keep the ready state until the player explicitly turns this quest in at Home.
         }
 
         if (stateChanged)
@@ -610,6 +711,8 @@ public sealed class QuestRuntime : MonoBehaviour
         if (state == null || state.Definition == null)
             return;
 
+        GameProgressionRuntime.GrantQuest(state.Definition.QuestId, state.Definition.ExperienceReward);
+
         PublishSystemMessage($"Quest complete: {state.Definition.DisplayName}");
         UIAudio.PlayQuestNotification(state.Definition.CompletionAudioCue, true);
         ProcessPendingRewardGrants();
@@ -618,6 +721,9 @@ public sealed class QuestRuntime : MonoBehaviour
     // Purpose: Processes every outstanding individual quest reward exactly once.
     private bool ProcessPendingRewardGrants()
     {
+#if UNITY_EDITOR
+        if (CombatLabRuntime.IsIsolatedSession) return false;
+#endif
         if (_isGrantingRewards)
             return false;
 
@@ -674,11 +780,14 @@ public sealed class QuestRuntime : MonoBehaviour
             QuestRewardType.ShopUnlock => TryGrantShopUnlockReward(definition, rewardIndex, reward),
             QuestRewardType.StageUnlock => TryGrantStageUnlockReward(definition, rewardIndex, reward),
             QuestRewardType.WarehouseSlots => TryGrantWarehouseSlotReward(definition, rewardIndex, reward),
+            QuestRewardType.PassiveSlots => TryGrantPassiveSlotReward(definition, rewardIndex, reward),
+            QuestRewardType.PocketSlots => TryGrantPocketSlotReward(definition, rewardIndex, reward),
+            QuestRewardType.RecyclingSlots => TryGrantRecyclingSlots(definition,rewardIndex,reward),
             _ => false
         };
     }
 
-    // Purpose: Gives an authored item reward to inventory, or preserves it as a floor drop if inventory cannot accept it.
+    // Item rewards are warehouse-only. No inventory/floor fallback may bypass the completion preflight.
     private bool TryGrantItemReward(
         QuestDefinitionSO definition,
         int rewardIndex,
@@ -693,35 +802,9 @@ public sealed class QuestRuntime : MonoBehaviour
             return false;
         }
 
-        if (_playerInventory == null)
-            ResolvePlayerInventory();
-
-        if (_playerInventory == null)
-            return false;
-
-        int amount = reward.ItemAmount;
-        if (_playerInventory.TryPickup(item, amount, out _))
-        {
-            PublishSystemMessage($"Quest reward received: {item.name} x{amount}");
-            return true;
-        }
-
-        Vector3 dropPosition = _playerInventory.transform.position + Vector3.forward * 0.45f;
-        if (!WorldItemPickupSpawner.TrySpawn(
-                item,
-                amount,
-                amount,
-                0f,
-                -1f,
-                dropPosition,
-                Quaternion.identity,
-                out _))
-        {
-            return false;
-        }
-
-        PublishSystemMessage($"Quest reward dropped at feet: {item.name} x{amount}");
-        return true;
+        var warehouse=FindFirstObjectByType<InheritanceWarehouseRuntime>(FindObjectsInactive.Include);
+        if(warehouse==null||!warehouse.TryReceiveQuestItem(item,reward.ItemAmount,definition.QuestId+":"+rewardIndex,out string message))return false;
+        PublishSystemMessage($"창고 보상: {item.name} ×{reward.ItemAmount}");return true;
     }
 
     // Purpose: Adds one permanent direct-stat reward to the save profile and rebuilds the live player snapshot.
@@ -867,11 +950,47 @@ public sealed class QuestRuntime : MonoBehaviour
     }
 
     // Purpose: Updates an already-open Home warehouse after a quest reward changes its saved capacity.
+    private bool TryGrantPassiveSlotReward(QuestDefinitionSO definition, int rewardIndex, QuestRewardDefinition reward)
+    {
+        if (definition == null || string.IsNullOrWhiteSpace(definition.QuestId) || rewardIndex < 0) return false;
+        var saves = SaveSystem.Active;
+        if (saves == null) return false;
+        var records = saves.Profile.QuestPassiveSlotRewards;
+        if (!records.Exists(x => x != null && x.questId == definition.QuestId && x.rewardIndex == rewardIndex))
+            records.Add(new QuestPassiveSlotRewardSaveData { questId = definition.QuestId, rewardIndex = rewardIndex, slotAmount = reward.PassiveSlotAmount });
+        var passive = FindFirstObjectByType<PlayerPassiveInventoryRuntime>();
+        if (passive != null) passive.SetUnlockedSlotCount(saves.Profile.UnlockedPassiveSlotCount);
+        // Record and capacity are persisted in the same profile, before marking the quest reward granted.
+        saves.SaveDataToDisk();
+        return true;
+    }
+
+    private bool TryGrantPocketSlotReward(QuestDefinitionSO definition, int rewardIndex, QuestRewardDefinition reward)
+    {
+        if (definition == null || string.IsNullOrWhiteSpace(definition.QuestId) || rewardIndex < 0) return false;
+        var saves = SaveSystem.Active;
+        if (saves == null) return false;
+        var records = saves.Profile.questPocketSlotRewards ??= new();
+        if (!records.Exists(x => x != null && x.questId == definition.QuestId && x.rewardIndex == rewardIndex))
+            records.Add(new QuestPassiveSlotRewardSaveData { questId = definition.QuestId, rewardIndex = rewardIndex, slotAmount = reward.PocketSlotAmount });
+        _playerInventory?.PublishMedicalItemChange();
+        saves.SaveDataToDisk();
+        return true;
+    }
+
     private static void ApplyWarehouseCapacityToLiveRuntime(int capacity)
     {
         InheritanceWarehouseRuntime warehouse =
             FindFirstObjectByType<InheritanceWarehouseRuntime>(FindObjectsInactive.Include);
         warehouse?.TryApplyPersistentCapacity(capacity);
+    }
+    private bool TryGrantRecyclingSlots(QuestDefinitionSO quest,int index,QuestRewardDefinition reward)
+    {
+        var profile=SaveSystem.Active?.Profile;if(profile==null)return false;
+        var receipts=profile.recyclingSlotReceipts??=new();string key=quest.QuestId+":"+index;
+        if(receipts.Contains(key))return true;
+        receipts.Add(key);profile.recyclingSlotBonus=Mathf.Min(RecyclingRulesSO.Active?.recycling.maximumSlots??10,profile.recyclingSlotBonus+reward.RecyclingSlotAmount);
+        return true; // Quest state and bonus are persisted together by the caller.
     }
 
     // Purpose: Rebuilds the active player stat snapshot after a persistent quest modifier changes.

@@ -14,7 +14,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 		/// <summary>
 		/// Will create a new custom <see cref="StateAction"/> or return an existing one inside <paramref name="createdInstances"/>
 		/// </summary>
-		internal StateAction GetAction(StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances)
+		internal StateAction GetAction(StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances, StateMachineContext context = null)
 		{
 			if (createdInstances.TryGetValue(this, out var obj))
 				return (StateAction)obj;
@@ -22,6 +22,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 			var action = CreateAction();
 			createdInstances.Add(this, action);
 			action._originSO = this;
+            action.Context = context ?? stateMachine?.Context;
 			action.Awake(stateMachine);
 			return action;
 		}

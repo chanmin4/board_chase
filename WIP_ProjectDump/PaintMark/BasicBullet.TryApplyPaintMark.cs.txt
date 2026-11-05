@@ -1,0 +1,25 @@
+    private bool TryApplyPaintMark(Damageable damageable)
+    {
+        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletMark ||
+            damageable == null ||
+            (_vaccineMarkAmountOnHit <= 0f && _virusMarkAmountOnHit <= 0f))
+        {
+            return false;
+        }
+
+        EntityPaintMarkController mark =
+            EntityComponentResolver.Resolve<EntityPaintMarkController>(damageable);
+
+        // Mark is the equipment-gap recovery route. It must not be reduced by
+        // the armor it is intended to break, and becomes irrelevant at AC 0.
+        if (mark == null || damageable.EffectiveArmorClass <= 0)
+            return false;
+
+        if (_vaccineMarkAmountOnHit > 0f)
+            mark.AddMark(PaintMarkFaction.Vaccine, _vaccineMarkAmountOnHit);
+
+        if (_virusMarkAmountOnHit > 0f)
+            mark.AddMark(PaintMarkFaction.Virus, _virusMarkAmountOnHit);
+
+        return true;
+    }

@@ -151,7 +151,7 @@ public class NamedSectorController : MonoBehaviour
         if (!IsTimerPhase(_phase))
             return;
 
-        _timer = Mathf.Max(0f, _timer - Time.deltaTime);
+        RuntimeCountdown.Tick(ref _timer, Time.deltaTime);
 
         TickTimerSnapshot();
         TickDebugLog();

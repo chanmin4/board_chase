@@ -285,6 +285,7 @@ public class SectorOccupancyManager : MonoBehaviour
                 raidRole = raidRole,
                 hasPublicRaidMarker = publicMarker,
                 roomType = ResolveRoomType(sector, isStartSector),
+                mapIconKind = sector.MapIconKind,
                 owner = snapshot.owner,
                 dominantOwner = snapshot.dominantOwner,
                 contestState = snapshot.contestState,
@@ -298,6 +299,16 @@ public class SectorOccupancyManager : MonoBehaviour
 
         AddMissingRaidMapCells(cells);
         AddStartSectorMapCellIfMissing(cells);
+
+        StageMapLayout presentationLayout = _sectorStateManager?.CurrentStageMapLayout;
+        if (presentationLayout?.generationVersion == 3)
+            for (int i = 0; i < cells.Count; i++)
+            {
+                var cell = cells[i];
+                if (presentationLayout.TryGetRoom(cell.coord, out var room))
+                    RaidMapPresentation.Apply(presentationLayout, room, GetMapSnapshotCenterCoord(), ref cell);
+                cells[i] = cell;
+            }
 
         SectorMapSnapshot snapshotMap = new SectorMapSnapshot
         {
@@ -323,10 +334,12 @@ public class SectorOccupancyManager : MonoBehaviour
             bool start = room.coord == layout.startSectorCoord;
             bool hatch = room.raidRole == RaidRoomRole.Hatch && RaidRuntime.IsHatchRevealedFor(layout);
             bool boss = room.raidRole == RaidRoomRole.Boss && layout.bossSpawned;
-            bool extraction = start || hatch || room.raidRole == RaidRoomRole.Extraction;
+            bool extraction = start || hatch || layout.IsExtractionSector(room.coord);
+            _sectorStateManager.TryGetSector(room.coord, out var sector);
             cells.Add(new SectorMapCellSnapshot
             {
                 coord = room.coord, roomType = room.roomType, isStartSector = start,
+                mapIconKind = sector != null ? sector.MapIconKind : SectorMapIconPolicy.KindForRoom(room),
                 isOpened = room.isOpened, isRevealed = start || room.isRevealed,
                 isLocked = !start && !room.isRevealed, isCleared = room.isCleared,
                 isExtraction = extraction,
@@ -362,6 +375,7 @@ public class SectorOccupancyManager : MonoBehaviour
             isCleared = startSector.IsCleared,
             isExtraction = false,
             roomType = StageRoomType.Start,
+            mapIconKind = startSector.MapIconKind,
             owner = SectorOwner.Neutral,
             dominantOwner = SectorOwner.Neutral,
             contestState = SectorContestState.None,

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d26f1002000000000000000000000009, type: 3}
+  m_Name: EnemyShooter_HFSM
+  m_EditorClassIdentifier:
+  _rootTable: {fileID: 11400000, guid: a15f7d901a35c08408740d76b264c7c8, type: 2}
+  _entry: {fileID: 11400000, guid: b48cc61d0f2e4bc58cd61120bdad0001, type: 2}
+  _scopes:
+  - Label: "Alive 행동"
+    OwnerScope: 0
+    OwnerState: {fileID: 11400000, guid: b48cc61d0f2e4bc58cd61120bdad0002, type: 2}
+    Table: {fileID: 11400000, guid: 5fa584140f462684a9bcc79d0f1210e3, type: 2}
+    Entry: {fileID: 11400000, guid: a0d381d240574e4a8b85a47b7a6cf004, type: 2}
+    Reentry: 0

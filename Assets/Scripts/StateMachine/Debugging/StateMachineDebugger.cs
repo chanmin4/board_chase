@@ -35,6 +35,7 @@ namespace VSplatter.StateMachine.Debugging
 		internal string currentState;
 
 		private StateMachine _stateMachine;
+        private StateMachineContext _context;
 		private StringBuilder _logBuilder;
 		private string _targetState = string.Empty;
 
@@ -47,11 +48,15 @@ namespace VSplatter.StateMachine.Debugging
 		/// Must be called together with <c>StateMachine.Awake()</c>
 		/// </summary>
 		internal void Awake(StateMachine stateMachine)
+		{ Awake(stateMachine.Context); }
+
+        internal void Awake(StateMachineContext context)
 		{
-			_stateMachine = stateMachine;
+            _context = context;
+			_stateMachine = context.Owner;
 			_logBuilder = new StringBuilder();
 
-			currentState = stateMachine._currentState._originSO.name;
+            currentState = context.CurrentState != null ? context.CurrentState.name : "<null>";
 		}
 
 		// Purpose: Performs the transition evaluation begin workflow for this component.

@@ -8,7 +8,7 @@ using UnityEngine;
 
 [CreateAssetMenu(
     fileName = "CurrencyItem",
-    menuName = "Game/Currency Item")]
+    menuName = "Game/Items/Valuable/Currency")]
 /// <summary>
 /// A valuable with explicit payment semantics. Currency stays physically
 /// lootable and sellable, while shop and repair transactions can still
@@ -16,9 +16,8 @@ using UnityEngine;
 /// </summary>
 public class CurrencyItemSO : ValuableItemSO
 {
-    [Header("Physical Currency")]
-    [Tooltip("Currency is a normal physical stack. It has no numerical wallet type or hidden runtime balance.")]
-    [SerializeField, TextArea] private string _physicalCurrencyNote = "Use this ItemSO in inventory, loot pools, shop payments, repairs, and rerolls.";
-
-    public override ItemKind Kind => ItemKind.Currency;
+    public const string CategoryId = "currency";
+    public const int CurrencyStackLimit = 500_000;
+    public override string ValuableCategoryId => CategoryId;
+    public override int MaxStack => CurrencyStackLimit;
 }

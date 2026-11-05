@@ -37,6 +37,27 @@ public class SectorShop : MonoBehaviour
     private ShopRunRuntime _shopRunRuntime;
     private int _restockRevision;
     private float _nextRestockTime = -1f;
+    private bool _raidMerchant;
+    private int _raidSeed;
+    private readonly MerchantFunds _funds = new();
+    public bool IsRaidMerchant => _raidMerchant;
+    public int MerchantMoney => _funds.balance;
+    public bool TryReservePayout(int amount) => !_raidMerchant || (CanInteract && _funds.TryReserve(amount));
+    public void RefundPayout(int amount) { if (_raidMerchant) _funds.Credit(amount); }
+    public void ReceivePhysicalPayment(IReadOnlyList<ShopTradeRequirement> payment)
+    {
+        if (!_raidMerchant || payment == null) return;
+        foreach (var row in payment) if (row.Item == _activeConfig.DefaultCurrencyItem) _funds.Credit(row.Amount);
+    }
+
+    public void ConfigureForRaid(SectorRuntime sector, ShopConfigSO config, int seed, int initialMoney,
+        SectorShopOpenRequestEventChannelSO openChannel, UIOverlayRequestEventChannelSO overlay)
+    {
+        _sector = sector; _raidMerchant = true; _raidSeed = seed;
+        _funds.balance = Mathf.Max(0, initialMoney);
+        _shopOpenRequestChannel = openChannel; _overlayRequestChannel = overlay;
+        Configure(config);
+    }
 
     public bool CanInteract => IsShopRoom();
 
@@ -55,7 +76,8 @@ public class SectorShop : MonoBehaviour
         }
 
         _activeConfig = config;
-        ShopUnlockRuntime.EnsureRuntime().Configure(config, saveSystem);
+        // Raid catalog is independent of permanent Home-shop unlock ownership.
+        if (!_raidMerchant) ShopUnlockRuntime.EnsureRuntime().Configure(config, saveSystem);
         _offersRolled = false;
         _bulletOffers.Clear();
         _itemOffers.Clear();
@@ -220,6 +242,7 @@ public class SectorShop : MonoBehaviour
         target.shopStateId = stateId;
         target.offersRolled = _offersRolled;
         target.restockRevision = Mathf.Max(0, _restockRevision);
+        target.merchantMoney = _raidMerchant ? _funds.balance : -1;
         target.bulletOffers.Clear();
         target.itemOffers.Clear();
         CaptureOffers(_bulletOffers, target.bulletOffers);
@@ -260,6 +283,7 @@ public class SectorShop : MonoBehaviour
         _itemOffers.AddRange(restoredItems);
         _offersRolled = source.offersRolled;
         _restockRevision = Mathf.Max(0, source.restockRevision);
+        if (_raidMerchant && source.merchantMoney >= 0) _funds.balance = source.merchantMoney;
         _nextRestockTime = _offersRolled && _activeConfig != null && _activeConfig.HasTimedRestock
             ? Time.unscaledTime + _activeConfig.RestockIntervalSeconds
             : -1f;
@@ -282,7 +306,8 @@ public class SectorShop : MonoBehaviour
         }
 
         Vector2Int coord = ResolveSectorCoord();
-        stateId = $"{_activeConfig.ConfigId}@{coord.x},{coord.y}";
+        stateId = _raidMerchant ? $"raid:{_raidSeed}:{_activeConfig.ConfigId}@{coord.x},{coord.y}" :
+            $"{_activeConfig.ConfigId}@{coord.x},{coord.y}";
         return true;
     }
 
@@ -459,7 +484,7 @@ public class SectorShop : MonoBehaviour
                 _bulletOffers,
                 _itemOffers,
                 _activeConfig,
-                _activeConfig != null && _activeConfig.AllowReroll));
+                !_raidMerchant && _activeConfig != null && _activeConfig.AllowReroll, this));
 
         // Bind the offers first. PlayerPanelHub then prepares the sibling ShopHub.
         _overlayRequestChannel.Open(UIOverlayId.ShopHub);
@@ -498,7 +523,7 @@ public class SectorShop : MonoBehaviour
     // Purpose: Attempts to restock if due and reports whether the request succeeded.
     private bool TryRestockIfDue()
     {
-        if (_activeConfig == null ||
+        if (_raidMerchant || _activeConfig == null ||
             !_activeConfig.HasTimedRestock ||
             _nextRestockTime < 0f ||
             Time.unscaledTime < _nextRestockTime)
@@ -528,8 +553,8 @@ public class SectorShop : MonoBehaviour
             return true;
         }
 
-        ShopUnlockRuntime unlockRuntime = ShopUnlockRuntime.EnsureRuntime();
-        unlockRuntime.Configure(_activeConfig);
+        ShopUnlockRuntime unlockRuntime = _raidMerchant ? null : ShopUnlockRuntime.EnsureRuntime();
+        if (unlockRuntime != null) unlockRuntime.Configure(_activeConfig);
         int seed = ResolveOfferSeed(
             stageIndex,
             ResolveSectorCoord(),
@@ -541,10 +566,10 @@ public class SectorShop : MonoBehaviour
 
         _bulletOffers.AddRange(_activeConfig.CreateBulletOffers(
             seed,
-            product => unlockRuntime.IsProductAvailable(_activeConfig, product)));
+            product => _raidMerchant ? product.AvailableByDefault : unlockRuntime.IsProductAvailable(_activeConfig, product)));
         _itemOffers.AddRange(_activeConfig.CreateItemOffers(
             seed + 1009,
-            product => unlockRuntime.IsProductAvailable(_activeConfig, product),
+            product => _raidMerchant ? product.AvailableByDefault : unlockRuntime.IsProductAvailable(_activeConfig, product),
             _activeConfig.ItemOfferCount));
 
         _offersRolled = true;
@@ -570,6 +595,8 @@ public class SectorShop : MonoBehaviour
         if (_sector == null)
             return false;
 
+        if (_raidMerchant) return RaidRuntime.Active != null && RaidRuntime.Active.IsInSector(_sector) && _sector.IsCleared;
+
         return _allowStartSectorHub && _sector.IsStartSector;
     }
 
@@ -593,8 +620,9 @@ public class SectorShop : MonoBehaviour
         int restockRevision)
     {
         int stageSeed = stageIndex;
+        if (_raidMerchant) stageSeed = _raidSeed;
 
-        if (_sectorStateManager != null &&
+        if (!_raidMerchant && _sectorStateManager != null &&
             _sectorStateManager.CurrentStageMapLayout != null)
         {
             stageSeed = _sectorStateManager.CurrentStageMapLayout.stageSeed;

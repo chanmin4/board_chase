@@ -1,0 +1,163 @@
+// Archived category-chance probe: copy deliberately to Assets/Editor with a fresh report path to rerun, then remove.
+// Only temporary memory/test assets are modified; no real tables/items/scenes are saved.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class LootCategoryChanceVerificationOnce
+{
+    private const string Report = "Library/LootCategoryChances-20260929/result-v1.txt";
+    private static readonly List<string> Lines = new();
+    private static readonly List<Object> Temporary = new();
+    private static readonly Dictionary<string, Rect> Controls = new();
+    private static LootProgressionEditorWindow _window;
+    private static EditorWindow _previous;
+    private static LootTableSO _table;
+    private static LootObjectSO _box;
+    private static readonly Dictionary<string, (bool exists, bool value)> SavedPrefs = new();
+    private static LootRarityTier _normal;
+    private static string _before;
+    private static int _phase, _frames, _passed;
+    private static double _started;
+    static LootCategoryChanceVerificationOnce() { EditorApplication.delayCall += Start; }
+    private static T Temp<T>() where T : ScriptableObject
+    { var obj = ScriptableObject.CreateInstance<T>(); Temporary.Add(obj); return obj; }
+    private static LootItemEntry Item<T>(string name) where T : ItemSO
+    { var item = Temp<T>(); item.name = name; return new LootItemEntry { item = item, minAmount = 1, maxAmount = 1 }; }
+    private static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Start; return; }
+        try
+        {
+            _started = EditorApplication.timeSinceStartup;
+            foreach (var type in new[] { typeof(LootMakerTests), typeof(LootCategorySelectionTests), typeof(LootMakerItemViewTests) })
+                foreach (var test in type.GetMethods())
+                {
+                    var cases = test.GetCustomAttributes<TestCaseAttribute>().ToArray();
+                    var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments).ToArray()
+                        : test.IsDefined(typeof(TestAttribute)) ? new[] { Array.Empty<object>() } : Array.Empty<object[]>();
+                    foreach (var args in arguments)
+                    {
+                        object fixture = Activator.CreateInstance(type);
+                        try
+                        {
+                            foreach (var setup in type.GetMethods().Where(m => m.IsDefined(typeof(SetUpAttribute)))) setup.Invoke(fixture, null);
+                            test.Invoke(fixture, args);
+                            Check(true, test.Name + "(" + string.Join(",", args) + ")");
+                        }
+                        finally
+                        {
+                            foreach (var cleanup in type.GetMethods().Where(m => m.IsDefined(typeof(TearDownAttribute)))) cleanup.Invoke(fixture, null);
+                        }
+                    }
+                }
+            _table = Temp<LootTableSO>(); _table.name = "Sort verification only";
+            _normal = _table.Pool.FindTier(PlayerShopItemRarity.Normal);
+            _normal.items.Add(Item<PassiveItemSO>("A passive"));
+            _normal.items.Add(Item<ArmorItemSO>("Z armor"));
+            _normal.items.Add(Item<ArmorItemSO>("A armor"));
+            _box = Temp<LootObjectSO>(); _box.name = "Loot foldout test"; _box.AssignOwnLootTable(_table);
+            _before = JsonUtility.ToJson(_table.Pool);
+            foreach (var tier in _table.Pool.rarityTiers)
+                foreach (var row in LootMakerItemView.SortedRows(tier))
+                {
+                    string key = LootMakerItemView.CategoryPreferenceKey(_table, tier.rarity, row.CategoryKey);
+                    if (SavedPrefs.ContainsKey(key)) continue;
+                    SavedPrefs[key] = (EditorPrefs.HasKey(key), EditorPrefs.GetBool(key));
+                    EditorPrefs.DeleteKey(key);
+                }
+            _previous = EditorWindow.focusedWindow;
+            OpenWindow();
+            EditorApplication.update += Tick;
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void OpenWindow()
+    {
+        Controls.Clear(); _frames = 0;
+        _window = ScriptableObject.CreateInstance<LootProgressionEditorWindow>();
+        _window.titleContent = new GUIContent("Loot category chance verification");
+        _window.position = new Rect(50, 40, 1260, 960);
+        typeof(LootProgressionEditorWindow).GetField("_containerCatalog", BindingFlags.NonPublic | BindingFlags.Instance)
+            .SetValue(_window, new List<LootObjectSO> { _box });
+        typeof(LootProgressionEditorWindow).GetMethod("SelectContainer", BindingFlags.NonPublic | BindingFlags.Instance)
+            .Invoke(_window, new object[] { _box });
+        _window.GuiControlObserved = (id, rect) => { if (id == "LootItems/Begin") Controls.Clear(); else Controls[id] = rect; };
+        _window.ShowUtility();
+    }
+    private static string ArmorHeader => "LootItems/Category/Normal/" + ItemMakerWindow.LootCategoryOrder(_normal.items[1].item);
+    private static string PassiveHeader => "LootItems/Category/Normal/" + ItemMakerWindow.LootCategoryOrder(_normal.items[0].item);
+    private static bool RowVisible(int index) => Controls.ContainsKey("LootItems/Row/Normal/" + index);
+    private static void Click(string id)
+    {
+        var rect = Controls[id];
+        _window.SendEvent(new Event { type = EventType.MouseDown, button = 0, clickCount = 1, mousePosition = rect.center });
+        _window.SendEvent(new Event { type = EventType.MouseUp, button = 0, clickCount = 1, mousePosition = rect.center });
+    }
+    private static void Tick()
+    {
+        try
+        {
+            if (_window == null) throw new Exception("Verification window closed early.");
+            if (EditorApplication.timeSinceStartup - _started > 90) throw new Exception("Timed out.");
+            _window.Repaint();
+            if (++_frames < 12 || !Controls.ContainsKey("LootItems/Tier/Normal")) return;
+            _frames = 0;
+            switch (_phase++)
+            {
+                case 0:
+                    Check(_table.Pool.FindCategorySettings(PlayerShopItemRarity.Normal) == null, "opening table does not migrate/modify category settings");
+                    Check(Controls.ContainsKey("LootItems/CategoryChances/Normal") && Controls.ContainsKey("LootItems/CategoryWeight/Normal/Armor"), "category toggle and weight input rendered");
+                    Click("LootItems/CategoryChances/Normal"); break;
+                case 1:
+                    Check(_table.Pool.FindCategorySettings(PlayerShopItemRarity.Normal)?.useCustomCategoryWeights == true, "custom toggle writes selected rarity setting");
+                    LootMakerAuthoring.SetCategoryWeight(_table, _normal, "Armor", 70);
+                    LootMakerAuthoring.SetCategoryWeight(_table, _normal, "Passive", 30);
+                    Check(Mathf.Abs(_table.GetCategorySelection(_normal).CategoryPercent("Armor") - 70) < .001f, "70/30 category chance preview");
+                    Click("LootItems/CollapseCategories"); break;
+                case 2:
+                    Check(!RowVisible(0) && !RowVisible(1) && !RowVisible(2), "item foldouts still collapse");
+                    Check(Controls.ContainsKey("LootItems/CategoryWeight/Normal/Armor"), "category weight remains available with items folded");
+                    Check(Mathf.Abs(_table.GetEffectiveItemPercent(_normal, _normal.items[1], _box.RarityWeights) - 35) < .001f, "item preview multiplies category and item chance");
+                    Click("LootItems/CategoryChances/Normal"); break;
+                case 3:
+                    Check(_table.Pool.FindCategorySettings(PlayerShopItemRarity.Normal)?.useCustomCategoryWeights == false, "Auto toggle restores legacy probability mode");
+                    Check(Mathf.Abs(_table.GetCategorySelection(_normal).CategoryPercent("Armor") - 200f / 3f) < .001f, "Auto computes original two-of-three marginal");
+                    Click("LootItems/CategoryChances/Normal"); break;
+                case 4:
+                    Check(_table.Pool.FindCategorySettings(PlayerShopItemRarity.Normal).GetWeight("Armor") == 70, "reenabling keeps authored category weights");
+                    _window.Close(); OpenWindow(); break;
+                case 5:
+                    Check(_table.Pool.FindCategorySettings(PlayerShopItemRarity.Normal).GetWeight("Armor") == 70, "window reopen keeps category setting");
+                    Check(_normal.items.Count == 3 && _normal.items.All(e => !e.useManualShare && e.minAmount == 1 && e.maxAmount == 1), "category editing does not rewrite items or quantities");
+                    Finish("COMPLETE: temporary memory/test assets only. Real box tables, items, scenes and prefabs were not modified/saved."); break;
+            }
+        }
+        catch (Exception ex) { Finish("FAIL " + ex); }
+    }
+    private static void Check(bool value, string label)
+    { if (!value) throw new Exception(label); Lines.Add("PASS " + label); _passed++; }
+    private static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        if (_window != null) _window.Close();
+        foreach (var obj in Temporary) if (obj != null) { Undo.ClearUndo(obj); Object.DestroyImmediate(obj); }
+        Temporary.Clear();
+        foreach (var pref in SavedPrefs)
+            if (pref.Value.exists) EditorPrefs.SetBool(pref.Key, pref.Value.value); else EditorPrefs.DeleteKey(pref.Key);
+        SavedPrefs.Clear();
+        if (_previous != null) _previous.Focus();
+        Lines.Add(result); Lines.Add(_passed + " checks passed");
+        Directory.CreateDirectory(Path.GetDirectoryName(Report)); File.WriteAllLines(Report, Lines);
+        if (result.StartsWith("COMPLETE")) Debug.Log("[Loot item sorting] " + _passed + " checks passed. " + Report);
+        else Debug.LogError("[Loot item sorting] " + result);
+    }
+}

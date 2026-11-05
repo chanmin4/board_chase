@@ -26,6 +26,10 @@ public sealed class GasMaskItemSO : ItemSO
     [SerializeField] private GasMaskTier _tier = GasMaskTier.Normal;
 
     [Header("Biochemical Gas")]
+    [SerializeField, Min(0)] private int _gasDefenseLevel = 1;
+    public int GasDefenseLevel => Mathf.Max(0, _gasDefenseLevel);
+    [SerializeField, Min(0f)] private float _infectionCapacityBonusPerDefenseLevel = 25f;
+    public float InfectionCapacityBonus => GasDefenseLevel * Mathf.Max(0f, _infectionCapacityBonusPerDefenseLevel);
     [Tooltip("Final multiplier applied to room-gas Infection while the filter has durability. Lower is better.")]
     [SerializeField, Range(0.01f, 1f)] private float _gasInfectionMultiplier = 0.65f;
 

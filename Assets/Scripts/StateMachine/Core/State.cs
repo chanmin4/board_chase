@@ -8,12 +8,30 @@ using VSplatter.StateMachine.ScriptableObjects;
 
 namespace VSplatter.StateMachine
 {
-	public class State
+	public class State : HfsmNode
 	{
 		internal StateSO _originSO;
 		internal StateMachine _stateMachine;
+        internal StateMachineContext _context;
 		internal StateTransition[] _transitions;
 		internal StateAction[] _actions;
+		private StateExitReason _selectedExitReason;
+
+		public override string Name => _originSO != null ? _originSO.name : "State";
+		public StateSO Definition => _originSO;
+		public override void Enter() => OnStateEnter();
+		public override void Tick(float deltaTime) => OnUpdate();
+		public override void Exit(StateExitReason reason)
+		{
+			if (_transitions != null) foreach (var transition in _transitions) transition?.OnStateExit();
+			if (_actions != null) foreach (var action in _actions) action?.OnStateExit(reason);
+		}
+		public override bool TryTransition(out HfsmTransition transition)
+		{
+			bool found = TryGetTransition(out var target);
+			transition = new HfsmTransition(target, _selectedExitReason);
+			return found;
+		}
 
 		internal State() { }
 
@@ -74,7 +92,10 @@ namespace VSplatter.StateMachine
 			for (int i = 0; i < _transitions.Length; i++)
 			{
 				if (_transitions[i] != null && _transitions[i].TryGetTransiton(out state))
+				{
+					_selectedExitReason = _transitions[i].ExitReason;
 					break;
+				}
 			}
 
 			for (int i = 0; i < _transitions.Length; i++)

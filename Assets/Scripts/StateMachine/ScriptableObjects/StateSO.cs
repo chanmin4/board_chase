@@ -17,7 +17,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 		/// <summary>
 		/// Will create a new state or return an existing one inside <paramref name="createdInstances"/>.
 		/// </summary>
-		internal State GetState(StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances)
+		internal State GetState(StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances, StateMachineContext context = null)
 		{
 			if (createdInstances.TryGetValue(this, out var obj))
 				return (State)obj;
@@ -27,15 +27,16 @@ namespace VSplatter.StateMachine.ScriptableObjects
 
 			state._originSO = this;
 			state._stateMachine = stateMachine;
+            state._context = context ?? stateMachine?.Context;
 			state._transitions = new StateTransition[0];
-			state._actions = GetActions(_actions, stateMachine, createdInstances);
+			state._actions = GetActions(_actions, stateMachine, createdInstances, state._context);
 
 			return state;
 		}
 
 	// Purpose: Returns the current actions.
 	private static StateAction[] GetActions(StateActionSO[] scriptableActions,
-    StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances)
+    StateMachine stateMachine, Dictionary<ScriptableObject, object> createdInstances, StateMachineContext context)
 	{
 		if (scriptableActions == null || scriptableActions.Length == 0)
 			return new StateAction[0];
@@ -50,7 +51,7 @@ namespace VSplatter.StateMachine.ScriptableObjects
 				continue;
 			}
 
-			validActions.Add(scriptableActions[i].GetAction(stateMachine, createdInstances));
+			validActions.Add(scriptableActions[i].GetAction(stateMachine, createdInstances, context));
 		}
 
 		return validActions.ToArray();

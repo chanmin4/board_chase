@@ -31,7 +31,7 @@ public class PlayerInventoryUI : MonoBehaviour,
 
     [Header("Equipment Slots")]
     [SerializeField] private EquipmentInventoryArmorSlotUI _armorSlot;
-    [Tooltip("Dedicated Head / Gas Mask slot. Author it beside Armor in PlayerInventoryPanel. Existing prefabs receive a temporary runtime fallback until this is assigned.")]
+    [Tooltip("Pre-authored Head / Gas Mask equipment slot beside Armor. Runtime binds it but never creates a replacement slot.")]
     [SerializeField] private EquipmentInventoryGasMaskSlotUI _headSlot;
     [Tooltip("Dedicated Weapon Slot 1-2 widgets. These remain weapon-only and are not part of the usable quick-slot bindings.")]
     [SerializeField] private EquipmentInventoryWeaponSlotUI[] _weaponSlots;
@@ -49,7 +49,7 @@ public class PlayerInventoryUI : MonoBehaviour,
     [SerializeField] private InventoryItemSlotUI _inventorySlotPrefab;
     [SerializeField] private Transform _inventorySlotRoot;
     [SerializeField] private bool _hideInventorySlotPrefabOnAwake = true;
-    [Tooltip("Separates the always-available Pocket slots from the equipped-backpack Inventory slots.")]
+    [Tooltip("Separates Pocket slots from Inventory (four permanent slots plus equipped-backpack bonus slots).")]
     [SerializeField] private bool _useSeparatedPocketAndInventorySections = true;
 
     [Header("Context Menu")]
@@ -85,9 +85,12 @@ public class PlayerInventoryUI : MonoBehaviour,
     private RectTransform _inventoryScrollView;
     private TMP_Text _pocketSectionHeader;
     private TMP_Text _inventorySectionHeader;
-    private Vector2 _inventorySlotCellSize = new(120f, 120f);
-    private Vector2 _inventorySlotSpacing = new(6f, 0f);
-    private int _inventorySlotColumnCount = 4;
+    private string _inventorySectionTitle;
+    private float _displayedCarryWeight = -1f;
+    private float _displayedCarryCapacity = -1f;
+    private Vector2 _inventorySlotCellSize = new(InventorySplitLayout.CellSize, InventorySplitLayout.CellSize);
+    private Vector2 _inventorySlotSpacing = new(InventorySplitLayout.CellGap, InventorySplitLayout.CellGap);
+    private int _inventorySlotColumnCount = InventorySplitLayout.Columns;
     public PlayerInventoryRuntime InventoryRuntime => _inventoryRuntime;
     public InventoryItemSlotUI InventorySlotTemplate => _inventorySlotPrefab;
     public PlayerInventoryInteractionMode InteractionMode => _interactionMode;
@@ -117,6 +120,8 @@ public class PlayerInventoryUI : MonoBehaviour,
         InitializeStaticSlots();
         EnsurePassiveSlots();
         HideSlotTemplateIfNeeded();
+        if (GetComponent<PlayerRecyclingPanelUI>() == null)
+            gameObject.AddComponent<PlayerRecyclingPanelUI>().Initialize(this);
     }
 
     // Purpose: Reapplies the authored compact stack when this panel is edited inside Canvas-GamePlay.
@@ -736,7 +741,25 @@ public class PlayerInventoryUI : MonoBehaviour,
     // Purpose: Handles the incoming passive slot right clicked request or event.
     public void HandlePassiveSlotRightClicked(int passiveSlotIndex)
     {
-        HandlePassiveSlotLeftClicked(passiveSlotIndex);
+        if (_passiveRuntime == null || _inventoryRuntime == null || _contextMenu == null ||
+            !_passiveRuntime.TryGetEquippedPassive(passiveSlotIndex, out var passive)) return;
+        for (int i = 0; i < _inventoryRuntime.Items.Count; i++)
+            if (_inventoryRuntime.Items[i]?.Item == passive)
+            {
+                _contextMenu.ShowInventoryItem(this, i, passive, 1,
+                    UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.position.ReadValue() : Vector2.zero);
+                break;
+            }
+    }
+
+    public void HandlePassiveModuleAction(int inventoryIndex, bool reroll)
+    {
+        if (_inventoryRuntime == null) return;
+        string message;
+        bool success = reroll ? _inventoryRuntime.TryRerollPassive(inventoryIndex, out message)
+            : _inventoryRuntime.TryDismantlePassive(inventoryIndex, out message);
+        UIAudio.ReportResult(success, UIAudioCueType.InventoryMove);
+        RaiseMessage(message);
     }
 
     // Purpose: Handles the incoming ammo slot dropped on inventory request or event.
@@ -1200,7 +1223,7 @@ public class PlayerInventoryUI : MonoBehaviour,
             if (slot == null)
                 continue;
 
-            bool unlocked = i < unlockedCount;
+            bool unlocked = _passiveRuntime != null ? _passiveRuntime.IsSlotUnlocked(i) : i < 2;
             PassiveItemSO item = null;
 
             if (unlocked && _passiveRuntime != null)
@@ -1212,88 +1235,41 @@ public class PlayerInventoryUI : MonoBehaviour,
     }
 
     /// <summary>
-    /// Keeps the player panel as one compact vertical stack: Player header,
-    /// Passive row, Equipment, Pocket, then Backpack Inventory. This does not
-    /// create slots or add Inspector wiring; it only arranges the authored roots
-    /// so the same panel can occupy the equal-width player column in Loot mode.
+    /// Keeps the approved split layout: authored passives/equipment left, six-column
+    /// pocket/inventory right. The inventory viewport shows five rows, not five rows of new capacity.
     /// </summary>
     public void ApplyCompactPanelLayout()
     {
-        RectTransform panelRoot = transform as RectTransform;
-        RectTransform playerSection = FindDirectChildRect(transform, "PlayerInventorySection");
-        RectTransform passiveSection = FindDirectChildRect(transform, "PassiveSection");
-
-        if (panelRoot == null || playerSection == null)
-            return;
-
-        // The PlayerInventorySection is the full-size visual surface. Keep it
-        // behind PassiveSection so the latter is never covered by this panel's
-        // backdrop in the shared Loot workspace.
-        playerSection.SetAsFirstSibling();
-        StretchRect(playerSection, Vector2.zero, Vector2.zero);
-
-        RectTransform headerSection = FindDirectChildRect(playerSection, "HeaderSection");
-        RectTransform inventoryArea = FindDirectChildRect(playerSection, "InventoryArea");
-        const float outerInset = 24f;
-        const float headerTopInset = 18f;
-        const float headerHeight = 54f;
-        const float passiveHeight = 128f;
-        const float equipmentHeight = 146f;
-        const float sectionGap = 10f;
-
-        // InventoryArea owns the one and only Player-panel backdrop. It must
-        // be the first child, otherwise its Image renders in front of the
-        // title, passive, and equipment controls.
-        inventoryArea?.SetAsFirstSibling();
-        AnchorTopRect(headerSection, headerTopInset, headerHeight, outerInset);
-        StretchRect(inventoryArea, Vector2.zero, Vector2.zero);
-
-        if (passiveSection != null)
+        var panelRoot=transform as RectTransform;
+        var playerSection=FindDirectChildRect(transform,"PlayerInventorySection");
+        var passiveSection=FindDirectChildRect(transform,"PassiveSection");
+        if(panelRoot==null||playerSection==null)return;
+        panelRoot.sizeDelta=InventorySplitLayout.PanelSize;
+        playerSection.SetAsFirstSibling();StretchRect(playerSection,Vector2.zero,Vector2.zero);
+        var area=FindDirectChildRect(playerSection,"InventoryArea");
+        area?.SetAsFirstSibling();StretchRect(area,Vector2.zero,Vector2.zero);
+        var header=FindDirectChildRect(playerSection,"HeaderSection");
+        AnchorTopRect(header,18f,54f,InventorySplitLayout.Outer);
+        InventorySplitLayout.Box(passiveSection,24f,84f,260f,InventorySplitLayout.PassiveHeight);
+        if(passiveSection!=null)
         {
             passiveSection.SetAsLastSibling();
-            AnchorTopRect(
-                passiveSection,
-                headerTopInset + headerHeight + sectionGap,
-                passiveHeight,
-                outerInset);
-
-            RectTransform passiveTitle = FindDirectChildRect(passiveSection, "PassiveTitle");
-            RectTransform passiveSlotRoot = FindDirectChildRect(passiveSection, "PassiveSection");
-            AnchorTopRect(passiveTitle, 0f, 24f, 0f);
-            StretchRect(passiveSlotRoot, new Vector2(10f, 8f), new Vector2(-10f, -28f));
-
-            if (passiveSlotRoot != null && passiveSlotRoot.TryGetComponent(out HorizontalLayoutGroup layout))
-            {
-                layout.childAlignment = TextAnchor.MiddleCenter;
-                layout.spacing = 8f;
-                layout.childControlWidth = true;
-                layout.childControlHeight = true;
-                layout.childForceExpandWidth = true;
-                layout.childForceExpandHeight = true;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(passiveSlotRoot);
-            }
+            AnchorTopRect(FindDirectChildRect(passiveSection,"PassiveTitle"),0f,28f,0f);
+            var row=FindDirectChildRect(passiveSection,"PassiveSection");
+            StretchRect(row,new Vector2(0f,8f),new Vector2(0f,-28f));
+            if(row!=null&&row.TryGetComponent(out HorizontalLayoutGroup layout))layout.enabled=false;
+            if(_passiveSlots!=null)for(int i=0;i<_passiveSlots.Length;i++)InventorySplitLayout.PassiveSlot(_passiveSlots[i],i);
         }
-
-        RectTransform equipmentSection = inventoryArea != null
-            ? FindDirectChildRect(inventoryArea, "EquipmentSection")
-            : null;
-        AnchorTopRect(
-            equipmentSection,
-            headerTopInset + headerHeight + sectionGap + passiveHeight + sectionGap,
-            equipmentHeight,
-            outerInset);
-        RectTransform equipmentHeader = FindDirectChildRect(equipmentSection, "Header");
-        RectTransform equipmentBody = FindDirectChildRect(equipmentSection, "Body");
-        AnchorTopRect(equipmentHeader, 0f, 24f, 0f);
-        StretchRect(equipmentBody, Vector2.zero, new Vector2(0f, -24f));
-        ConfigureEquipmentRow(equipmentBody);
-
-        RefreshInventorySectionLayout(
-            headerTopInset + headerHeight + sectionGap + passiveHeight + sectionGap,
-            equipmentHeight,
-            outerInset);
-
-        Canvas.ForceUpdateCanvases();
+        var equipment=FindDirectChildRect(area,"EquipmentSection");
+        InventorySplitLayout.Box(equipment,24f,InventorySplitLayout.EquipmentTop,260f,InventorySplitLayout.EquipmentHeight);
+        AnchorTopRect(FindDirectChildRect(equipment,"Header"),0f,28f,0f);
+        var body=FindDirectChildRect(equipment,"Body");
+        StretchRect(body,Vector2.zero,new Vector2(0f,-28f));
+        InventorySplitLayout.EquipmentBody(body);
+        InventorySplitLayout.EquipmentSlot(_armorSlot,0);InventorySplitLayout.EquipmentSlot(_headSlot,1);
+        if(_weaponSlots!=null)for(int i=0;i<_weaponSlots.Length;i++)InventorySplitLayout.EquipmentSlot(_weaponSlots[i],2+i);
+        if(_ammoSlots!=null)for(int i=0;i<_ammoSlots.Length;i++)InventorySplitLayout.EquipmentSlot(_ammoSlots[i],4+i);
+        RefreshInventorySectionLayout();
     }
 
     // Purpose: Locates a directly authored RectTransform without adding serialized UI refs.
@@ -1326,20 +1302,6 @@ public class PlayerInventoryUI : MonoBehaviour,
         rect.pivot = new Vector2(0.5f, 1f);
         rect.anchoredPosition = new Vector2(0f, -topInset);
         rect.sizeDelta = new Vector2(-sideInset * 2f, height);
-    }
-
-    // Purpose: Keeps the seven player equipment slots in one authored row:
-    // Armor, Head, two Weapons, then the three Quick Slots.
-    private static void ConfigureEquipmentRow(RectTransform body)
-    {
-        if (body == null || !body.TryGetComponent(out GridLayoutGroup grid))
-            return;
-
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = 7;
-        grid.cellSize = new Vector2(88f, 112f);
-        grid.spacing = new Vector2(8f, 0f);
-        grid.childAlignment = TextAnchor.UpperLeft;
     }
 
     // Purpose: Ensures inventory slots is ready before the workflow continues.
@@ -1390,9 +1352,9 @@ public class PlayerInventoryUI : MonoBehaviour,
 
         if (_inventorySlotRoot.TryGetComponent(out GridLayoutGroup authoredGrid))
         {
-            _inventorySlotCellSize = authoredGrid.cellSize;
-            _inventorySlotSpacing = new Vector2(authoredGrid.spacing.x, Mathf.Max(8f, authoredGrid.spacing.y));
-            _inventorySlotColumnCount = Mathf.Max(1, authoredGrid.constraintCount);
+            _inventorySlotCellSize = new Vector2(InventorySplitLayout.CellSize, InventorySplitLayout.CellSize);
+            _inventorySlotSpacing = new Vector2(InventorySplitLayout.CellGap, InventorySplitLayout.CellGap);
+            _inventorySlotColumnCount = InventorySplitLayout.Columns;
             authoredGrid.cellSize = _inventorySlotCellSize;
             authoredGrid.spacing = _inventorySlotSpacing;
             authoredGrid.childAlignment = TextAnchor.UpperLeft;
@@ -1452,10 +1414,10 @@ public class PlayerInventoryUI : MonoBehaviour,
         if (header == null)
             return;
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3; i++)
         {
             bool rarity = i == 1;
-            string buttonName = rarity ? "SortRarity" : "SortCompact";
+            string buttonName = i == 2 ? "SortCategory" : rarity ? "SortRarity" : "SortCompact";
             Transform existing = header.Find(buttonName);
             Button button = existing != null ? existing.GetComponent<Button>() : null;
             if (button == null) continue;
@@ -1464,19 +1426,24 @@ public class PlayerInventoryUI : MonoBehaviour,
             // Only presentation/state is refreshed here, including after domain reload.
             TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
             if (label != null)
-                label.text = UIRuntimeLocalization.Get("UI_Inventory",
+                label.text = i == 2 ? "분류" : UIRuntimeLocalization.Get("UI_Inventory",
                     rarity ? "Inventory_SortRarity" : "Inventory_Compact", rarity ? "Rarity" : "Compact");
             button.interactable = _interactionMode == PlayerInventoryInteractionMode.Normal;
         }
     }
 
     public void SortPlayerInventory(bool byRarity)
+        => SortPlayerInventoryMode(byRarity ? InventorySortMode.Rarity : InventorySortMode.Compact);
+
+    public void SortPlayerInventoryByCategory() => SortPlayerInventoryMode(InventorySortMode.Category);
+
+    private void SortPlayerInventoryMode(InventorySortMode mode)
     {
         if (_inventoryRuntime == null || _interactionMode != PlayerInventoryInteractionMode.Normal ||
             InventoryDragContext.HasPayload) return;
         _contextMenu?.Hide();
         ClearSelectedItemSelection();
-        if (_inventoryRuntime.SortInventory(byRarity)) SaveSystem.Active?.TrySaveRunDataToDisk();
+        if (_inventoryRuntime.SortInventory(mode)) SaveSystem.Active?.TrySaveRunDataToDisk();
     }
 
     // Purpose: Hides dynamic storage objects from older panel versions so they cannot overlap the authored section layout.
@@ -1504,6 +1471,9 @@ public class PlayerInventoryUI : MonoBehaviour,
         TMP_Text authoredTitle = headerRoot != null
             ? headerRoot.GetComponentInChildren<TMP_Text>(true)
             : null;
+        if(headerRoot!=null)
+            foreach(var label in headerRoot.GetComponentsInChildren<TMP_Text>(true))
+                if(label.name is "PocketTitle" or "InventoryTitle") { authoredTitle=label;break; }
 
         if (authoredTitle != null)
         {
@@ -1550,42 +1520,18 @@ public class PlayerInventoryUI : MonoBehaviour,
     // Purpose: Resolves the pre-authored Pocket grid or creates a safe fallback for panels created before that child existed.
     private RectTransform FindOrCreatePocketSlotGrid(RectTransform pocketSection)
     {
-        Transform existingGrid = pocketSection.Find("PocketGrid");
-
-        if (existingGrid is RectTransform existingRect)
-            return existingRect;
-
-        if (!Application.isPlaying)
-            return null;
-
-        GameObject gridObject = new(
-            "PocketGrid",
-            typeof(RectTransform),
-            typeof(GridLayoutGroup));
-        gridObject.layer = gameObject.layer;
-        gridObject.transform.SetParent(pocketSection, false);
-
-        RectTransform gridTransform = (RectTransform)gridObject.transform;
-        gridTransform.anchorMin = Vector2.zero;
-        gridTransform.anchorMax = Vector2.one;
-        gridTransform.offsetMin = new Vector2(12f, 8f);
-        gridTransform.offsetMax = new Vector2(-12f, -28f);
-
-        ConfigureStorageGrid(gridTransform);
-        return gridTransform;
+        // Authored in the prefab. Never create a second runtime pocket UI.
+        return pocketSection.Find("PocketScrollView/Viewport/PocketGrid") as RectTransform
+            ?? pocketSection.Find("PocketGrid") as RectTransform;
     }
 
-    // Purpose: Applies the same left-aligned four-column visual rules to Pocket slots as the authored Inventory grid.
+    // Purpose: Applies the same compact six-column geometry to both storage grids.
     private void ConfigureStorageGrid(RectTransform gridTransform)
     {
-        if (gridTransform == null || !gridTransform.TryGetComponent(out GridLayoutGroup grid))
-            return;
-
-        grid.cellSize = _inventorySlotCellSize;
-        grid.spacing = _inventorySlotSpacing;
-        grid.childAlignment = TextAnchor.UpperLeft;
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = _inventorySlotColumnCount;
+        _inventorySlotCellSize=new Vector2(InventorySplitLayout.CellSize,InventorySplitLayout.CellSize);
+        _inventorySlotSpacing=new Vector2(InventorySplitLayout.CellGap,InventorySplitLayout.CellGap);
+        _inventorySlotColumnCount=InventorySplitLayout.Columns;
+        InventorySplitLayout.Grid(gridTransform);
     }
 
     // Purpose: Moves one visual slot into its Pocket or equipped-backpack UI section without changing its absolute inventory index.
@@ -1603,91 +1549,49 @@ public class PlayerInventoryUI : MonoBehaviour,
     }
 
     // Purpose: Sizes and vertically stacks the authored Equipment, Pocket, and equipped-backpack Inventory sections.
-    private void RefreshInventorySectionLayout(
-        float equipmentTopInset = 0f,
-        float explicitEquipmentHeight = -1f,
-        float sideInset = 0f)
+    private void RefreshInventorySectionLayout(float equipmentTopInset=-1f,float explicitEquipmentHeight=-1f,float sideInset=-1f)
     {
-        if (!_useSeparatedPocketAndInventorySections ||
-            _pocketSectionHeader == null ||
-            _pocketSlotGrid == null ||
-            _inventorySectionHeader == null ||
-            _pocketSection == null ||
-            _inventorySection == null)
+        if(!_useSeparatedPocketAndInventorySections||_pocketSection==null||_inventorySection==null||
+            _pocketSlotGrid==null||_pocketSectionHeader==null||_inventorySectionHeader==null)return;
+        float width=Mathf.Max(0f,((RectTransform)transform).rect.width-InventorySplitLayout.StorageLeft-InventorySplitLayout.Outer);
+        _pocketSection.gameObject.SetActive(true);_inventorySection.gameObject.SetActive(true);
+        _pocketSectionHeader.text=UIRuntimeLocalization.Get("UI_Inventory","Inventory_Pocket","Pocket");
+        _inventorySectionTitle=UIRuntimeLocalization.Get("UI_Inventory","Inventory_Title","Inventory");
+        RefreshCarryWeightHeader(force: true);
+        InventorySplitLayout.Box(_pocketSection,InventorySplitLayout.StorageLeft,InventorySplitLayout.ContentTop,width,InventorySplitLayout.PocketHeight);
+        InventorySplitLayout.Box(_inventorySection,InventorySplitLayout.StorageLeft,InventorySplitLayout.InventoryTop,width,InventorySplitLayout.InventoryHeight);
+        AnchorTopRect(_pocketSection.Find("Header") as RectTransform,0f,28f,0f);
+        AnchorTopRect(_inventorySection.Find("Header") as RectTransform,0f,28f,0f);
+        var pocketScroll=_pocketSection.Find("PocketScrollView") as RectTransform;
+        InventorySplitLayout.Scroll(pocketScroll,_pocketSlotGrid);
+        InventorySplitLayout.Scroll(_inventoryScrollView,_inventorySlotRoot as RectTransform);
+    }
+
+    private void LateUpdate()
+    {
+        if (_useSeparatedPocketAndInventorySections)
+            RefreshCarryWeightHeader();
+    }
+
+    private void RefreshCarryWeightHeader(bool force = false)
+    {
+        if (_inventorySectionHeader == null || _inventorySectionTitle == null) return;
+
+        if (_inventoryRuntime == null)
         {
+            if (force || _displayedCarryCapacity >= 0f) _inventorySectionHeader.text = _inventorySectionTitle;
+            _displayedCarryCapacity = -1f;
             return;
         }
 
-        // Scene editing has no PlayerInventoryRuntime. Keep the authored
-        // preview representative of the starting loadout instead of leaving
-        // stale roots from an earlier runtime layout in place.
-        int pocketCapacity = _inventoryRuntime != null
-            ? _inventoryRuntime.PocketCapacity
-            : 5;
-        int backpackCapacity = _inventoryRuntime != null
-            ? _inventoryRuntime.BackpackCapacity
-            : 8;
-        bool hasBackpack = _inventoryRuntime == null ||
-                           (_inventoryRuntime.HasEquippedBackpack && backpackCapacity > 0);
-        _pocketSectionHeader.text = UIRuntimeLocalization.Get("UI_Inventory", "Inventory_Pocket", "Pocket");
-        _inventorySectionHeader.text = UIRuntimeLocalization.Get("UI_Inventory", "Inventory_Title", "Inventory");
-        _pocketSection.gameObject.SetActive(true);
-        _inventorySection.gameObject.SetActive(hasBackpack);
+        PlayerCarryLoad load = _inventoryRuntime.CarryLoad;
+        if (!force && _displayedCarryWeight == load.WeightKg && _displayedCarryCapacity == load.CapacityKg) return;
+        _displayedCarryWeight = load.WeightKg;
+        _displayedCarryCapacity = load.CapacityKg;
 
-        const float headerHeight = 24f;
-        const float sectionGap = 10f;
-        float pocketGridHeight = GetStorageGridHeight(pocketCapacity);
-        float pocketSectionHeight = headerHeight + pocketGridHeight + 16f;
-        RectTransform equipmentSection = _pocketSection.parent != null
-            ? _pocketSection.parent.Find("EquipmentSection") as RectTransform
-            : null;
-        float equipmentSectionHeight = explicitEquipmentHeight > 0f
-            ? explicitEquipmentHeight
-            : equipmentSection != null
-                ? equipmentSection.rect.height
-                : 200f;
-
-        AnchorTopRect(
-            _pocketSection,
-            equipmentTopInset + equipmentSectionHeight + sectionGap,
-            pocketSectionHeight,
-            sideInset);
-        _pocketSlotGrid.anchorMin = Vector2.zero;
-        _pocketSlotGrid.anchorMax = Vector2.one;
-        _pocketSlotGrid.offsetMin = new Vector2(12f, 8f);
-        _pocketSlotGrid.offsetMax = new Vector2(-12f, -(headerHeight + 4f));
-
-        if (!hasBackpack)
-            return;
-
-        float inventoryGridHeight = GetStorageGridHeight(backpackCapacity);
-        float inventoryVisibleHeight = Mathf.Clamp(inventoryGridHeight, _inventorySlotCellSize.y, 320f);
-        float inventorySectionHeight = headerHeight + inventoryVisibleHeight + 16f;
-        AnchorTopRect(
-            _inventorySection,
-            equipmentTopInset + equipmentSectionHeight + sectionGap + pocketSectionHeight + sectionGap,
-            inventorySectionHeight,
-            sideInset);
-        ConfigureInventoryScrollView(headerHeight);
-    }
-
-    // Purpose: Keeps the authored backpack scroll viewport inside the visible Inventory section beneath its header bar.
-    private void ConfigureInventoryScrollView(float headerHeight)
-    {
-        if (_inventoryScrollView == null)
-            return;
-
-        _inventoryScrollView.anchorMin = Vector2.zero;
-        _inventoryScrollView.anchorMax = Vector2.one;
-        _inventoryScrollView.offsetMin = new Vector2(12f, 8f);
-        _inventoryScrollView.offsetMax = new Vector2(-12f, -(headerHeight + 4f));
-    }
-
-    // Purpose: Calculates the explicit height for one four-column inventory storage grid.
-    private float GetStorageGridHeight(int slotCount)
-    {
-        int rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(0, slotCount) / (float)_inventorySlotColumnCount));
-        return rows * _inventorySlotCellSize.y + Mathf.Max(0, rows - 1) * _inventorySlotSpacing.y;
+        string color = load.Ratio >= 1f ? "#FF7979" : load.Ratio >= .9f ? "#FFC36B" :
+            load.Ratio >= .7f ? "#FFE78C" : "#C4F5FF";
+        _inventorySectionHeader.text = $"{_inventorySectionTitle}  <color={color}>{load.WeightKg:0.##}/{load.CapacityKg:0.##} kg</color>";
     }
 
     // Purpose: Names instantiated slots by their owning storage surface for easy hierarchy inspection.

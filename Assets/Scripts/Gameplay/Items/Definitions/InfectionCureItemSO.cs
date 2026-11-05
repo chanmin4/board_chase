@@ -1,7 +1,6 @@
 /*
  * Role hierarchy: Gameplay > Items > Definitions
- * Primary responsibility: Defines an emergency consumable that reduces the
- * player's personal Infection after its normal use/cast duration completes.
+ * Primary responsibility: Separates preventive gauge treatment from maximum-health erosion recovery.
  * Execution boundary: Runtime (Assembly-CSharp)
  */
 
@@ -12,15 +11,18 @@ using UnityEngine;
     menuName = "Game/Character Item/Consumable/Infection Cure")]
 public sealed class InfectionCureItemSO : MedicalItemSO
 {
-    [Header("Emergency Infection Recovery")]
-    [Tooltip("Personal Infection removed after the use cast completes. This item is not consumed when Infection is already zero.")]
+    public enum MedicineKind { ExposureAmpoule, MaximumHealthSyringe }
+    [SerializeField] private MedicineKind _medicineKind;
+    public bool IsSyringe => _medicineKind == MedicineKind.MaximumHealthSyringe;
+    [Header("Infection treatment")]
+    [Tooltip("Ampoule: total partial-gauge recovery over its duration (after the recovery delay). Syringe: maximum-health erosion restored immediately.")]
     [SerializeField, Min(1f)] private float _infectionRecoveryAmount = 45f;
 
-    [Tooltip("Emergency carry limit. One keeps the cure as a deliberate panic tool instead of a stackable heal.")]
-    [SerializeField, Min(1)] private int _emergencyCarryLimit = 1;
-
     public float InfectionRecoveryAmount => Mathf.Max(1f, _infectionRecoveryAmount);
-    public override int MaxOwnedAmount => Mathf.Max(1, _emergencyCarryLimit);
-    public override int MaxStack => 1;
+    [SerializeField, Min(0.1f)] private float _infectionRecoveryDurationSeconds = 15f;
+    public float InfectionRecoveryDurationSeconds => Mathf.Max(0.1f, _infectionRecoveryDurationSeconds);
+    public float InfectionRecoveryPerSecond => InfectionRecoveryAmount / InfectionRecoveryDurationSeconds;
+    [SerializeField, Range(0f, 1f)] private float _exposureGainMultiplier = .5f;
+    public float ExposureGainMultiplier => Mathf.Clamp01(_exposureGainMultiplier);
     public override bool HasUseEffect => base.HasUseEffect || InfectionRecoveryAmount > 0f;
 }

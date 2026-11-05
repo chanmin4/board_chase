@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d1e735e40fb4bd9a5cf791e3c62a19f, type: 3}
+  m_Name: RaidEmergencyShopConfig
+  m_EditorClassIdentifier:
+  _configId: raid_emergency_shop
+  _bulletOfferCount: 2
+  _itemOfferCount: 3
+  _allowDuplicateBulletOffers: 0
+  _allowDuplicateItemOffers: 0
+  _restockIntervalSeconds: 0
+  _defaultCurrencyItem: {fileID: 11400000, guid: fcde5c1d66f82e049afe478ed22d6fee, type: 2}
+  _rerollCost: 0
+  _sellPriceRate: 0.5
+  _armorRepairPriceRate: 0.5
+  _allowReroll: 0
+  _products:
+  - _productId: light_ammo_1
+    _item: {fileID: 11400000, guid: d98829dc5a864e14da9d9c47117c0bce, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 1
+    _stock: 2
+    _bundleAmount: 30
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: light_ammo_2
+    _item: {fileID: 11400000, guid: 41ba073e98c29c0d44855bfb100301b5, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 0.3
+    _stock: 1
+    _bundleAmount: 30
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: medium_ammo_1
+    _item: {fileID: 11400000, guid: d328e95bc2be61d991865dbf061084c6, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 1
+    _stock: 2
+    _bundleAmount: 30
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: heavy_ammo_1
+    _item: {fileID: 11400000, guid: b22f90c9827d45e3a7630b88be30b2d1, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 1
+    _stock: 2
+    _bundleAmount: 20
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: sniper_ammo_1
+    _item: {fileID: 11400000, guid: 260cdf44e8176ca64e12516f48e3f0a3, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 1
+    _stock: 2
+    _bundleAmount: 10
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: bandage_1
+    _item: {fileID: 11400000, guid: 8ee950e715de48f6a52fc6e9541cca6e, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 2
+    _stock: 2
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: bandage_2
+    _item: {fileID: 11400000, guid: fb53c6fdd30b2224eb5adb1a2b125ff5, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 0.3
+    _stock: 1
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: armor_1
+    _item: {fileID: 11400000, guid: 159ce08102ed3294a962512401526ee2, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 1
+    _stock: 1
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: armor_3_rare
+    _item: {fileID: 11400000, guid: c1d9900155203f9489b09c1358be0488, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 0.05
+    _stock: 1
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: battery_rare
+    _item: {fileID: 11400000, guid: 4d7ce837411843d3b81e28192bd8d29a, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 0.08
+    _stock: 1
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: key_tool
+    _item: {fileID: 11400000, guid: f6d0a7eb8e4a4eb1a4f6f02fbe64021a, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 0.5
+    _stock: 1
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  _unlockNodes: []

@@ -150,6 +150,26 @@ public class EscPauseMenuController : MonoBehaviour
 
         if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame)
             return;
+        HandleEscapePressed();
+    }
+
+    // Gameplay popup dismissal precedes Pause. Pause submenus retain their existing back order.
+    public void HandleEscapePressed()
+    {
+        if (UIEscapeRouter.IsConsumed) return;
+        if (!_isOpen && !_confirmationOpen)
+        {
+            if (UIEscapeRouter.TryCloseTopPopup()) return;
+            if (_overlayManager == null)
+                _overlayManager = FindFirstObjectByType<UIOverlayManager>();
+            if (_overlayManager != null && _overlayManager.isActiveAndEnabled && _overlayManager.HasOpenOverlays)
+            {
+                UIEscapeRouter.TryConsume();
+                _overlayManager.TryCloseTopOverlay();
+                return;
+            }
+        }
+        if (!UIEscapeRouter.TryConsume()) return;
         if (_confirmationOpen)
         {
             HideConfirmationPopup();

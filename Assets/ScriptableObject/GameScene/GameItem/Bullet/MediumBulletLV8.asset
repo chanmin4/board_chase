@@ -32,10 +32,11 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 0
+  _rarity: 2
   _purchasePrice: 10
   _worldVisualPrefab: {fileID: 7611937310320503209, guid: 5393e4be23ba4108c398398d091adfc0, type: 3}
-  _maxStack: 120
+  _maxStack: 60
+  _maxOwnedAmount: 0
   bulletId: mediumbullet_lv8
   displayName: MediumBulletLV8
   projectilePrefab: {fileID: 7611937310320503209, guid: 5393e4be23ba4108c398398d091adfc0, type: 3}
@@ -65,7 +66,6 @@ MonoBehaviour:
   _tier: 8
   _healthDamage: 30
   _infectionDamage: 10
-  _markAmount: 25
   references:
     version: 2
     RefIds: []

@@ -273,6 +273,10 @@ public sealed class PlayerStatsStatusDetailPanelUI : MonoBehaviour
                 polarity,
                 effectName,
                 active.RemainingSeconds);
+            if (definition != null && definition.PersistentStacks)
+                row.Title.text = $"{polarity}  {effectName} · {active.Stacks} 스택 · 치료까지 지속";
+            if (definition is InfectionAggravationStatusSO aggravation)
+                row.Title.text = $"{polarity}  감염악화 · {active.Stacks} 스택 · 원형 {active.Gauge:0.#}/{aggravation.Settings.baseGaugeCapacity:0.#}";
             row.Title.color = definition != null && definition.IsBuff
                 ? new Color(0.43f, 1f, 0.64f, 1f)
                 : new Color(1f, 0.58f, 0.45f, 1f);

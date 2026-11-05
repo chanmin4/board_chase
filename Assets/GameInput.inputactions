@@ -115,6 +115,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Missions",
+                    "type": "Button",
+                    "id": "029f83ab-c2e7-4a9b-b02d-8956c072fa45",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "MeleeAttack",
                     "type": "Button",
                     "id": "12a69bea-e68c-49ad-b442-368d55c655ec",
@@ -386,6 +395,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Map",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b61e7722-9cf8-4f39-b3f8-cc7be6c1d2bf",
+                    "path": "<Keyboard>/j",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Missions",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

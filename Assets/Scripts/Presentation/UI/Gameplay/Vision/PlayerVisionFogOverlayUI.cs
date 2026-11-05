@@ -26,6 +26,7 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
     private static readonly int WorldCameraForwardId = Shader.PropertyToID("_WorldCameraForward");
     private static readonly int CameraProjectionId = Shader.PropertyToID("_CameraProjection");
     private static readonly int ArcCosId = Shader.PropertyToID("_ArcCos");
+    private static readonly int NearArcId = Shader.PropertyToID("_NearArc");
     private static readonly int UseForwardArcId = Shader.PropertyToID("_UseForwardArc");
     private static readonly int SoftnessWorldId = Shader.PropertyToID("_SoftnessWorld");
     private static readonly int OcclusionDistancesId = Shader.PropertyToID("_OcclusionDistances");
@@ -49,6 +50,13 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
     [SerializeField] private WorldCameraEventChannelSO _worldCameraReadyChannel;
 
     [Header("Fog")]
+    [Header("시야 테두리 · 정조준 강조")]
+    [SerializeField] private bool _showVisionBorder = true;
+    [SerializeField] private Color _normalBorder = new Color(0.15f, 0.65f, 0.7f, 0.25f);
+    [SerializeField] private Color _aimBorder = new Color(0.4f, 0.95f, 1f, 0.65f);
+    [SerializeField, Min(0.1f)] private float _borderWidthPixels = 2f;
+    [SerializeField, Range(0f, 0.8f)] private float _aimExtraFogAlpha = 0.18f;
+    private PlayerAimController _presentationAim;
     [SerializeField] private Color _fogColor = new Color(0f, 0f, 0f, 0.55f);
     [Tooltip("Visual width in screen pixels of the outer transition. MaxRange and VisionRange boundaries remain centered inside this soft edge.")]
     [SerializeField, Min(0f)] private float _edgeSoftnessPixels = 80f;
@@ -90,6 +98,7 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
     private Vector3 _sampledEyePositionWorld;
     private float _sampledMaximumVisionRange;
     private int _sampledBlockerMask;
+    private int _sampledOccluderRevision = -1;
     private int _sampledOcclusionCount;
     private bool _sampledUseOcclusion;
     private bool _hasOcclusionSample;
@@ -150,6 +159,10 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
         }
 
         SetImageVisible(true);
+        // Do not change combat Update ordering. Only the rendered cursor/vision
+        // needs the final camera pose for this frame.
+        if (_viewer is PlayerShooterVisionController playerVision)
+            playerVision.RefreshPresentationAimPoint();
         UpdateFogMaterial();
     }
 
@@ -179,6 +192,8 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
             currentVisionOriginWorld,
             currentEyePositionWorld);
         Vector3 centerScreen = _worldCamera.WorldToScreenPoint(centerWorld);
+        _viewer.PublishPresentationOcclusion(centerWorld, maximumVisionRange, _occlusionDistances,
+            Mathf.Clamp(_occlusionAngularSamples, 32, MaxOcclusionSamples), _occlusionSafetyBiasWorld);
 
         if (centerScreen.z <= 0f)
         {
@@ -200,6 +215,13 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
         float softnessWorld = ResolveWorldDistanceForPixels(centerWorld, _edgeSoftnessPixels);
         float occlusionSoftnessWorld = ResolveWorldDistanceForPixels(centerWorld, _occlusionEdgeSoftnessPixels);
         Color resolvedFogColor = _fogColor;
+        if (_presentationAim == null) _presentationAim = EntityComponentResolver.Resolve<PlayerAimController>(_viewer);
+        float aimBlend = _presentationAim != null ? _presentationAim.Aim01 : 0f;
+        resolvedFogColor.a = Mathf.Clamp01(resolvedFogColor.a + _aimExtraFogAlpha * aimBlend);
+        Color border = Color.Lerp(_normalBorder, _aimBorder, aimBlend);
+        if (!_showVisionBorder) border.a = 0f;
+        _runtimeMaterial.SetColor("_BorderColor", border);
+        _runtimeMaterial.SetFloat("_BorderWidthWorld", ResolveWorldDistanceForPixels(centerWorld, _borderWidthPixels));
         resolvedFogColor.a = Mathf.Clamp01(
             resolvedFogColor.a *
             SectorRoomTraitRuntime.CurrentPlayerFogAlphaMultiplier);
@@ -225,6 +247,8 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
             _viewer.ForwardArcAngle < 359.9f;
 
         _runtimeMaterial.SetFloat(ArcCosId, Mathf.Cos(_viewer.ForwardArcAngle * 0.5f * Mathf.Deg2Rad));
+        bool widenedCone = _viewer.TryGetForwardConeSides(out float sideSlope, out float sideIntercept);
+        _runtimeMaterial.SetVector(NearArcId, new Vector4(sideSlope, sideIntercept, widenedCone ? 1f : 0f, 0f));
         _runtimeMaterial.SetFloat(UseForwardArcId, useForwardArc ? 1f : 0f);
         _runtimeMaterial.SetFloat(SoftnessWorldId, softnessWorld);
         _runtimeMaterial.SetFloat(OcclusionSampleCountId, Mathf.Clamp(_occlusionAngularSamples, 32, MaxOcclusionSamples));
@@ -306,6 +330,7 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
             _sampledOcclusionCount != sampleCount ||
             _sampledUseOcclusion != useOcclusion ||
             _sampledBlockerMask != blockerMask ||
+            _sampledOccluderRevision != VisionOccluder.Revision ||
             !Mathf.Approximately(_sampledMaximumVisionRange, maximumVisionRange);
         bool stationaryRefreshDue = Time.unscaledTime >= _nextOcclusionRefreshTime;
 
@@ -319,6 +344,7 @@ public class PlayerVisionFogOverlayUI : MonoBehaviour
         _sampledEyePositionWorld = currentEyePositionWorld;
         _sampledMaximumVisionRange = maximumVisionRange;
         _sampledBlockerMask = blockerMask;
+        _sampledOccluderRevision = VisionOccluder.Revision;
         _sampledOcclusionCount = sampleCount;
         _sampledUseOcclusion = useOcclusion;
         _hasOcclusionSample = true;

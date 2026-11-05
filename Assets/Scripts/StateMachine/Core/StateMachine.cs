@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace VSplatter.StateMachine
 {
-    public class StateMachine : MonoBehaviour
+    public class StateMachine : MonoBehaviour, IHfsmScope
     {
         [Tooltip("Set the initial state of this StateMachine")]
         [SerializeField] private ScriptableObjects.TransitionTableSO _transitionTableSO = default;
@@ -28,66 +28,87 @@ namespace VSplatter.StateMachine
 
         private readonly Dictionary<Type, Component> _cachedComponents = new Dictionary<Type, Component>();
         internal State _currentState;
-        private bool _hasEnteredCurrentState;
+        private readonly HfsmRuntime _runtime = new();
+        private bool _runtimeConnected;
+        private bool _transitionInProgress;
         private ScriptableObjects.StateSO _previousStateSO;
         private float _currentStateEnteredTime;
         private int _lastTransitionFrame = -1;
+        private StateMachineContext _context;
+
+        public StateMachineContext Context => _context ??= new StateMachineContext(this, this);
+        public virtual string Label => _transitionTableSO != null ? _transitionTableSO.name : name;
+        public virtual int Level => 1;
+        public bool IsScopeActive => isActiveAndEnabled && !_runtime.IsSuspended;
+        internal virtual ScriptableObjects.StateSO EntryOverride => null;
+        protected void SetTransitionTable(ScriptableObjects.TransitionTableSO table) => _transitionTableSO = table;
 
         public ScriptableObjects.StateSO CurrentStateSO => _currentState?._originSO;
         public ScriptableObjects.StateSO PreviousStateSO => _previousStateSO;
         public float CurrentStateEnteredTime => _currentStateEnteredTime;
         public float CurrentStateElapsedSeconds => Mathf.Max(0f, Time.time - _currentStateEnteredTime);
         public int LastTransitionFrame => _lastTransitionFrame;
+        public virtual ScriptableObjects.TransitionTableSO Table => _transitionTableSO;
+        public HfsmRuntime Runtime => _runtime;
 
         private string DebugOwnerName =>
             string.IsNullOrWhiteSpace(_debugOwnerLabel) ? gameObject.name : _debugOwnerLabel;
 
         // Purpose: Caches the component references required before runtime initialization.
-        private void Awake()
+        protected virtual void Awake()
         {
             ResetToInitialState(false);
         }
 
-#if UNITY_EDITOR
         // Purpose: Activates runtime subscriptions and refreshes the enabled state.
-        private void OnEnable()
+        protected virtual void OnEnable()
         {
+            _runtime.Resume();
+#if UNITY_EDITOR
             UnityEditor.AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
+#endif
         }
 
+#if UNITY_EDITOR
         // Purpose: Responds to the after assembly reload callback.
         private void OnAfterAssemblyReload()
         {
             ResetToInitialState(false);
         }
-
-        // Purpose: Releases active subscriptions and transient state while disabled.
-        private void OnDisable()
-        {
-            UnityEditor.AssemblyReloadEvents.afterAssemblyReload -= OnAfterAssemblyReload;
-        }
 #endif
 
+        // Purpose: Releases active subscriptions and transient state while disabled.
+        protected virtual void OnDisable()
+        {
+            // Compatibility: enabled=false historically paused without Exit or re-entry.
+            _runtime.Suspend();
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.afterAssemblyReload -= OnAfterAssemblyReload;
+#endif
+        }
+
         // Purpose: Completes initialization after scene dependencies are ready.
-        private void Start()
+        protected virtual void Start()
         {
             EnterCurrentState();
         }
 
         // Purpose: Performs the reset to initial state workflow for this component.
-        public void ResetToInitialState(bool enterImmediately = true, bool exitCurrentState = false)
+        public virtual void ResetToInitialState(bool enterImmediately = true, bool exitCurrentState = false)
         {
-            if (exitCurrentState && _hasEnteredCurrentState && _currentState != null)
-                _currentState.OnStateExit();
-
+            ConnectRuntime();
+            // Exit before building new action instances, matching the original reset order.
+            if (exitCurrentState) _runtime.Stop(StateExitReason.Reset);
             _currentState = _transitionTableSO.GetInitialState(this);
-            _hasEnteredCurrentState = false;
+            _runtime.Reset(_currentState, false);
+            _transitionInProgress = false;
             _previousStateSO = null;
             _currentStateEnteredTime = Time.time;
             _lastTransitionFrame = Time.frameCount;
 
 #if UNITY_EDITOR
-            _debugger.Awake(this);
+            Context.Debugger = _debugger ??= new Debugging.StateMachineDebugger();
+            _debugger.Awake(Context);
 #endif
 
             if (enterImmediately && isActiveAndEnabled)
@@ -97,19 +118,40 @@ namespace VSplatter.StateMachine
         // Purpose: Enters the current state state or area.
         private void EnterCurrentState()
         {
-            if (_hasEnteredCurrentState || _currentState == null)
-                return;
-
-            _currentState.OnStateEnter();
-            _hasEnteredCurrentState = true;
-
-            if (_logStateChanges && _logInitialState)
-            {
-                Debug.Log(
-                    $"[StateMachine] owner={DebugOwnerName}, machine={GetType().Name}, start={GetStateName(_currentState)}, frame={Time.frameCount}",
-                    this);
-            }
+            if (_currentState != null) _runtime.Enter();
         }
+
+        private void ConnectRuntime()
+        {
+            if (_runtimeConnected) return;
+            _runtimeConnected = true;
+            _runtime.Transitioning += (previous, next, reason) =>
+            {
+                _previousStateSO = (previous as State)?._originSO;
+                _transitionInProgress = true;
+            };
+            _runtime.Entering += node =>
+            {
+                _currentState = node as State;
+                if (_transitionInProgress)
+                {
+                    _currentStateEnteredTime = Time.time;
+                    _lastTransitionFrame = Time.frameCount;
+                }
+                else if (_logStateChanges && _logInitialState)
+                    Debug.Log($"[StateMachine] owner={DebugOwnerName}, machine={GetType().Name}, start={node.Name}, frame={Time.frameCount}", this);
+            };
+            _runtime.Transitioned += (previous, next, reason) =>
+            {
+                _transitionInProgress = false;
+                if (_logStateChanges)
+                    Debug.Log($"[StateMachine] owner={DebugOwnerName}, machine={GetType().Name}, {previous?.Name} -> {next?.Name}, frame={Time.frameCount}", this);
+            };
+        }
+
+        /// <summary>Explicit cancellation, unlike legacy enabled=false (suspend).</summary>
+        public virtual void StopMachine(StateExitReason reason = StateExitReason.Stopped)
+        { _runtime.Stop(reason); _currentState = null; enabled = false; }
 
         public new bool TryGetComponent<T>(out T component) where T : Component
         {
@@ -162,7 +204,7 @@ namespace VSplatter.StateMachine
         }
 
         // Purpose: Processes this component's per-frame runtime work.
-        private void Update()
+        protected virtual void Update()
         {
             if (_currentState == null)
             {
@@ -171,37 +213,7 @@ namespace VSplatter.StateMachine
                 return;
             }
 
-            EnterCurrentState();
-
-            if (_currentState.TryGetTransition(out var transitionState))
-                Transition(transitionState);
-
-            _currentState.OnUpdate();
-        }
-
-        // Purpose: Performs the transition workflow for this component.
-        private void Transition(State transitionState)
-        {
-            string previousStateName = GetStateName(_currentState);
-            string nextStateName = GetStateName(transitionState);
-            _previousStateSO = _currentState?._originSO;
-
-            if (_hasEnteredCurrentState)
-                _currentState.OnStateExit();
-
-            _currentState = transitionState;
-            _hasEnteredCurrentState = false;
-            _currentStateEnteredTime = Time.time;
-            _lastTransitionFrame = Time.frameCount;
-
-            EnterCurrentState();
-
-            if (_logStateChanges)
-            {
-                Debug.Log(
-                    $"[StateMachine] owner={DebugOwnerName}, machine={GetType().Name}, {previousStateName} -> {nextStateName}, frame={Time.frameCount}",
-                    this);
-            }
+            _runtime.Tick(Time.deltaTime);
         }
 
         // Purpose: Returns the current state name.

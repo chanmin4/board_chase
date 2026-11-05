@@ -9,37 +9,33 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 99ca85af63a94240aa97cd468d889997, type: 3}
+  m_Script: {fileID: 11500000, guid: 84f6310988464062bc8bf5b6ba2cf59a, type: 3}
   m_Name: MagazineMiddle
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   _guid: a0d6f256834e65743803b8f79c868670
   _name:
     m_TableReference:
       m_TableCollectionName: GUID:2432e5d59ba4d8f4dbf84e68b4e04bf4
     m_TableEntryReference:
       m_KeyId: 54795395072
-      m_Key: 
+      m_Key:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   _previewImage: {fileID: 21300000, guid: 90a94251bf0628f4f932adaa74d54fdf, type: 3}
   _description:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName:
     m_TableEntryReference:
       m_KeyId: 0
-      m_Key: 
+      m_Key:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   _rarity: 1
   _worldItemPrefab: {fileID: 6859558026960218606, guid: 72d067b7a3262a3418128d273646e607, type: 3}
-  _allowDuplicatePickup: 0
-  _statModifiers:
-  - stat: 4
-    type: 0
-    value: 2
-  _featureFlags: []
+  _valuableCategoryId: military
+  _wasPassive: 1
   references:
     version: 2
     RefIds: []

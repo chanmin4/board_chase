@@ -12,7 +12,7 @@ public struct PlayerWeaponStats
 {
     public float attackDamage;
     public float meleeDamage;
-    public float namedBossDamageMultiplier;
+    [HideInInspector] public float namedBossDamageMultiplier; // Legacy snapshot data only.
 
     public float maxRange;
 
@@ -20,16 +20,16 @@ public struct PlayerWeaponStats
 
     public float reloadDurationSeconds;
     public int magazineSize;
-    public float paintMarkDamage;
-    public float infectionDamage;
-    public int penetrationClass;
+    [HideInInspector] public float paintMarkDamage;
+    [HideInInspector] public float infectionDamage;
+    public float penetrationClass;
 }
 
 
 [Serializable]
 public struct PlayerPaintStats
 {
-    public float occupationWinThreshold;
+    [HideInInspector] public float occupationWinThreshold;
 }
 
 [Serializable]
@@ -60,18 +60,22 @@ public struct PlayerVisionStats
 public struct PlayerAimStats
 {
     public float aimSpeed;
-    public float aimRangeMultiplier;
-    public float aimMoveSpeedMultiplier;
+    public float aimingMoveSpeedMultiplier;
+    public float shotKickDistance;
+    public float maximumShotKickDistance;
+    public float shotKickRecoveryPerSecond;
+    [HideInInspector] public float aimRangeMultiplier;
+    [HideInInspector] public float aimMoveSpeedMultiplier;
     public float hipFireSpreadAngleDeg;
     public float aimSpreadAngleDeg;
-    public float recoilAngleDeg;
-    public float recoilRecoverySpeedDegPerSecond;
-    public float recoilForwardDistancePerShot;
-    public float recoilSideDistancePerShot;
-    public float maxRecoilDistance;
-    public float recoilDistanceRecoveryPerSecond;
-    public float hipFireSpreadRadius;
-    public float aimSpreadRadius;
+    [HideInInspector] public float recoilAngleDeg;
+    [HideInInspector] public float recoilRecoverySpeedDegPerSecond;
+    [HideInInspector] public float recoilForwardDistancePerShot;
+    [HideInInspector] public float recoilSideDistancePerShot;
+    [HideInInspector] public float maxRecoilDistance;
+    [HideInInspector] public float recoilDistanceRecoveryPerSecond;
+    [HideInInspector] public float hipFireSpreadRadius;
+    [HideInInspector] public float aimSpreadRadius;
 }
 
 [Serializable]
@@ -95,7 +99,7 @@ public struct PlayerFeatureFlags
 public struct PlayerStatsSnapshot
 {
     public PlayerWeaponStats weapon;
-    public PlayerPaintStats paint;
+    [HideInInspector] public PlayerPaintStats paint;
     public PlayerMovementStats movement;
     public PlayerSurvivalStats survival;
     public PlayerVisionStats vision;

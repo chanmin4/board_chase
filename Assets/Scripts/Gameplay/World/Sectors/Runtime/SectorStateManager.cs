@@ -339,6 +339,21 @@ public class SectorStateManager : MonoBehaviour
                 SetSectorOpened(sector);
         }
 
+        // The start hatch never runs a combat-completion event. Apply its clear
+        // state to the layout and open only its authored, unlocked exits before
+        // publishing readiness / rebuilding portal availability.
+        if (StartSector != null)
+        {
+            if (_roomBySector.TryGetValue(StartSector, out StageRoomNode startRoom))
+            {
+                startRoom.isCleared = true;
+                startRoom.isRevealed = true;
+                startRoom.isLocked = false;
+                startRoom.isOpened = true;
+            }
+            OpenAdjacentSectors(StartSector);
+        }
+
         BroadcastGeneratedStartSectorReady();
         RefreshRuntimeSectorStates();
     }
@@ -479,6 +494,9 @@ public class SectorStateManager : MonoBehaviour
         CurrentSector = sector;
         SectorRoomTraitRuntime.SetCurrentPlayerSector(CurrentSector);
         RevealSector(sector);
+        GameProgressionRuntime.EnterSector(sector);
+        if (SectorTravelRulesSO.Active?.travel.freeSectorTravel == true && IsManagedSector(sector))
+            OpenAdjacentSectors(sector);
         OpenAdjacentSectorsForFreePassNormalSector(sector);
         CompleteNonCombatSectorOnEntry(sector);
         RefreshRuntimeSectorStates();

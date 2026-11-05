@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4317d275e6644548bc87f6e1a1270021, type: 3}
+  m_Name: ShooterCommonRules
+  m_EditorClassIdentifier:
+  _locomotion:
+    enabled: 1
+    walkSpeedMultiplier: 1
+    sprintSpeedMultiplier: 1.5
+    sprintCostPerSecond: 20
+    dashCost: 50
+    recoveryPerSecond: 15
+    recoveryDelay: 2
+    exhaustionThreshold: 0.1
+  _aimFeedback:
+    maximumHitKickDistance: 2
+    hitKickRecoveryPerSecond: 2.5
+    shotKickDistance: 0.35
+    hitKickDistance: 0.65
+    maximumKickDistance: 2
+    recoveryPerSecond: 2.5
+    enemyHitInaccuracySeconds: 0.35
+    enemyHitExtraSpreadDegrees: 8
+  _enemyVision:
+    _visionRange: 70
+    _closeVisionRadius: 7.5
+    _useLineOfSight: 1
+    _lineOfSightBlockerMask:
+      serializedVersion: 2
+      m_Bits: 2176
+    _eyeHeight: 1
+    _targetHeight: 1
+    _useForwardArc: 1
+    _baseArcAngle: 60
+    _aimArcAngleMultiplier: 1
+    _nearForwardArcExtraAngle: 60
+  _normalArmorDropDurability: {x: 350, y: 500}
+  _bossArmorDropDurability: {x: 500, y: 650}

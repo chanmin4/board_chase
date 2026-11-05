@@ -38,7 +38,7 @@ public sealed class InfectionInjectionBulletSO : SpecialBulletSO
     // Purpose: Resolves the damage target mask needed by this component.
     public override LayerMask ResolveDamageTargetMask(ShooterFaction faction)
     {
-        return faction == ShooterFaction.Enemy
+        return faction != ShooterFaction.Player
             ? _enemyDamageableTargetMask
             : _playerDamageableTargetMask;
     }
@@ -137,6 +137,6 @@ public sealed class InfectionInjectionBulletSO : SpecialBulletSO
             return ShooterFaction.Player;
         }
 
-        return ShooterFaction.Enemy;
+        return ShooterFactionUtility.Resolve(root);
     }
 }

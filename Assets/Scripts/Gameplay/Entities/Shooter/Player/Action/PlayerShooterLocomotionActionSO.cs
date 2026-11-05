@@ -75,6 +75,7 @@ public class PlayerShooterLocomotionAction : ShooterLocomotionActionBase
         SetFootTrailByPlanarMotion(input);
 
         float speed = ResolveMoveSpeed();
+        if (_playerCharacter.Stamina != null) speed *= _playerCharacter.Stamina.SpeedMultiplier;
 
         _playerCharacter.movementVector.x = input.x * speed;
         _playerCharacter.movementVector.y = _originSO.DownwardVelocity;
@@ -114,6 +115,6 @@ public class PlayerShooterLocomotionAction : ShooterLocomotionActionBase
         if (_characterController == null || !_characterController.enabled)
             return;
 
-        _characterController.Move(velocity * Time.deltaTime);
+        ShooterBodyCollisionMotor.MoveWithBodyBlocking(_characterController, velocity * Time.deltaTime);
     }
 }

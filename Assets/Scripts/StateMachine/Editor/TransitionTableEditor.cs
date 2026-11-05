@@ -55,6 +55,12 @@ namespace VSplatter.StateMachine.Editor
 		internal void Reset()
 		{
 			serializedObject.Update();
+			if (((TransitionTableSO)target).Transitions.Any(r => r.UseSharedRule))
+			{
+				// Old editor owns inline fields only. Do not display/edit stale snapshots or auto-delete usages.
+				_fromStates = new List<Object>(); _transitionsByFromStates = new List<List<TransitionDisplayHelper>>(); _toggledIndex = -1;
+				return;
+			}
 			var toggledState = _toggledIndex > -1 ? _fromStates[_toggledIndex] : null;
 			_transitions = serializedObject.FindProperty("_transitions");
 			GroupByFromState();
@@ -64,6 +70,12 @@ namespace VSplatter.StateMachine.Editor
 		// Purpose: Responds to the inspector gui callback.
 		public override void OnInspectorGUI()
 		{
+			if (((TransitionTableSO)target).Transitions.Any(r => r.UseSharedRule))
+			{
+				EditorGUILayout.HelpBox("이 테이블은 공유 전환 규칙을 사용합니다. HFSM 창에서 공유 규칙·적용 상태·실제 검사 순서를 함께 편집하세요. 기존 직접 작성 필드는 이전 스냅샷이며 공유 중에는 사용하지 않습니다.", MessageType.Info);
+				if (GUILayout.Button("HFSM에서 규칙 / 검사 순서 편집")) HFSMTransitionGraphWindow.OpenTable((TransitionTableSO)target);
+				return;
+			}
 			if (!_displayStateEditor)
 				TransitionTableGUI();
 			else
@@ -97,6 +109,11 @@ namespace VSplatter.StateMachine.Editor
 		// Purpose: Performs the transition table gui workflow for this component.
 		private void TransitionTableGUI()
 		{
+			serializedObject.Update();
+			EditorGUI.BeginChangeCheck();
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("_initialState"), new GUIContent("Explicit Entry"));
+			if (EditorGUI.EndChangeCheck()) serializedObject.ApplyModifiedProperties();
+			EditorGUILayout.HelpBox("For hierarchy, priorities and exit reasons use Tools > Authoring > HFSM Transition Graph. Equal priorities use authored row order. Empty conditions do not fire unless Always is enabled.", MessageType.None);
 			Separator();
 			EditorGUILayout.HelpBox("Click on any State's name to see the Transitions it contains, or click the Pencil/Wrench icon to see its Actions.", MessageType.Info);
 			Separator();
@@ -114,7 +131,7 @@ namespace VSplatter.StateMachine.Editor
 				{
 					BeginVertical();
 					string label = transitions[0].SerializedTransition.FromState.objectReferenceValue.name;
-					if (i == 0)
+					if (((TransitionTableSO)target).InitialState == transitions[0].SerializedTransition.FromState.objectReferenceValue)
 						label += " (Initial State)";
 
 					headerRect.height = EditorGUIUtility.singleLineHeight;

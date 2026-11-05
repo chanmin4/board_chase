@@ -119,7 +119,9 @@ MonoBehaviour:
     _stock: 1
     _bundleAmount: 1
     _priceOverride: -1
-    _tradeRequirements: []
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: 1d3963dc1de84d7abb57fbeafaf93a8d, type: 2}
+      _amount: 2
   - _productId: item_04
     _item: {fileID: 11400000, guid: 230c8be8617d92c43a117bb58307dba0, type: 2}
     _availableByDefault: 1
@@ -151,7 +153,9 @@ MonoBehaviour:
     _stock: 1
     _bundleAmount: 1
     _priceOverride: -1
-    _tradeRequirements: []
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: 14c4555abffe422597676ebf2c655f3c, type: 2}
+      _amount: 2
   - _productId: item_08
     _item: {fileID: 11400000, guid: 953b3e96e1249f04ba6ae9889204a5b9, type: 2}
     _availableByDefault: 1
@@ -159,7 +163,9 @@ MonoBehaviour:
     _stock: 1
     _bundleAmount: 1
     _priceOverride: -1
-    _tradeRequirements: []
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: 393a15331abe69e4cabc4b025c46b69b, type: 2}
+      _amount: 2
   - _productId: item_09
     _item: {fileID: 11400000, guid: d93a905ffabdc5843b630c27dfe3a658, type: 2}
     _availableByDefault: 1
@@ -175,7 +181,9 @@ MonoBehaviour:
     _stock: 1
     _bundleAmount: 1
     _priceOverride: -1
-    _tradeRequirements: []
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: d63212eff3b522445b52fbc4a897b673, type: 2}
+      _amount: 2
   - _productId: item_11
     _item: {fileID: 11400000, guid: 88b4646e4c72a74469234aa182af2abb, type: 2}
     _availableByDefault: 1
@@ -183,7 +191,9 @@ MonoBehaviour:
     _stock: 1
     _bundleAmount: 1
     _priceOverride: -1
-    _tradeRequirements: []
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: 2a26d19e459447788d8bc8941260b528, type: 2}
+      _amount: 2
   - _productId: item_12
     _item: {fileID: 11400000, guid: 5d0ba4acbf3961243bb78c0c3667626d, type: 2}
     _availableByDefault: 1
@@ -191,7 +201,9 @@ MonoBehaviour:
     _stock: 1
     _bundleAmount: 1
     _priceOverride: -1
-    _tradeRequirements: []
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: 0a71671abdcd4d50a5a5762384858b4f, type: 2}
+      _amount: 2
   - _productId: item_13
     _item: {fileID: 11400000, guid: 560dcc3dd9514124cb3b8cc451f0b4c0, type: 2}
     _availableByDefault: 1
@@ -226,15 +238,23 @@ MonoBehaviour:
     _tradeRequirements: []
   - _productId: infection_cure
     _item: {fileID: 11400000, guid: c2a00000000000000000000000000001, type: 2}
-    _availableByDefault: 0
+    _availableByDefault: 1
     _offerWeight: 0.65
-    _stock: 1
+    _stock: 30
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements: []
+  - _productId: infection_suppressant
+    _item: {fileID: 11400000, guid: c2a00000000000000000000000000002, type: 2}
+    _availableByDefault: 1
+    _offerWeight: 1
+    _stock: 30
     _bundleAmount: 1
     _priceOverride: -1
     _tradeRequirements: []
   - _productId: gas_mask_normal
     _item: {fileID: 11400000, guid: c1a00000000000000000000000000001, type: 2}
-    _availableByDefault: 0
+    _availableByDefault: 1
     _offerWeight: 0.5
     _stock: 1
     _bundleAmount: 1
@@ -288,6 +308,18 @@ MonoBehaviour:
     _bundleAmount: 1
     _priceOverride: 120
     _tradeRequirements: []
+  - _productId: passive_penetration_barter
+    _item: {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+    _availableByDefault: 0
+    _offerWeight: 1
+    _stock: 1
+    _bundleAmount: 1
+    _priceOverride: -1
+    _tradeRequirements:
+    - _item: {fileID: 11400000, guid: d0f0483e80edc54a423e39d7447f7e64, type: 2}
+      _amount: 2
+    - _item: {fileID: 11400000, guid: 14c4555abffe422597676ebf2c655f3c, type: 2}
+      _amount: 1
   _unlockNodes:
   - _nodeId: key_normal_purchase
     _displayName: Normal Key Permit
@@ -296,6 +328,7 @@ MonoBehaviour:
     _prerequisiteNodeIds: []
     _unlockedProductIds:
     - key_normal
+    - passive_penetration_barter
   - _nodeId: key_rare_purchase
     _displayName: Rare Key Permit
     _description: Granted by the Stage 2 main quest. Unlocks Rare Key purchases at

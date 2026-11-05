@@ -6,6 +6,7 @@
 
 // Assets/Scripts/GameScene/SpawnSystem.cs
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class SpawnSystem : MonoBehaviour
 {
@@ -24,6 +25,7 @@ public class SpawnSystem : MonoBehaviour
     
     [Header("Scene Refs")]
     [SerializeField] private Transform _projectilesRoot = default;
+    [SerializeField] private CameraManager _cameraManager;
 
     [Header("Placement")]
     [SerializeField] private bool _parentPlayerToCurrentSector = true;
@@ -94,6 +96,9 @@ public class SpawnSystem : MonoBehaviour
         if (_playerTransformAnchor != null)
             _playerTransformAnchor.Provide(_spawnedPlayer);
 
+        MovePlayerToOwningScene(startSector != null ? startSector.gameObject.scene : gameObject.scene);
+        BindPlayerCamera();
+
         if (_inputReader != null)
             _inputReader.EnableGameplayInput();
     }
@@ -147,12 +152,34 @@ public class SpawnSystem : MonoBehaviour
         if (_parentPlayerToCurrentSector)
             _spawnedPlayer.SetParent(parent, worldPositionStays: true);
 
+        MovePlayerToOwningScene(target.gameObject.scene);
+
         _spawnedPlayer.SetPositionAndRotation(
             ResolveSpawnPosition(target, controller),
             target.rotation);
 
         if (controller != null)
             controller.enabled = true;
+
+        BindPlayerCamera();
+    }
+
+    // Ownership follows the current room even when parenting is disabled in the Inspector.
+    private void MovePlayerToOwningScene(Scene scene)
+    {
+        if (_spawnedPlayer == null || !scene.IsValid() || !scene.isLoaded ||
+            _spawnedPlayer.gameObject.scene == scene) return;
+        Transform previousParent = _spawnedPlayer.parent;
+        _spawnedPlayer.SetParent(null, true);
+        SceneManager.MoveGameObjectToScene(_spawnedPlayer.gameObject, scene);
+        if (previousParent != null && previousParent.gameObject.scene == scene)
+            _spawnedPlayer.SetParent(previousParent, true);
+    }
+
+    private void BindPlayerCamera()
+    {
+        if (_cameraManager == null) _cameraManager = FindFirstObjectByType<CameraManager>();
+        if (_cameraManager != null) _cameraManager.SetFollowTarget(_spawnedPlayer, instant: true);
     }
     // Purpose: Resolves the spawn position needed by this component.
     private Vector3 ResolveSpawnPosition(Transform target, CharacterController controller)

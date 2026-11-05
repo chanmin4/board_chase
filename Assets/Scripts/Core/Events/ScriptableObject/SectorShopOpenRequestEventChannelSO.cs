@@ -16,18 +16,20 @@ public readonly struct SectorShopOpenRequest
     public readonly IReadOnlyList<PlayerShopOffer> offers;
     public readonly ShopConfigSO config;
     public readonly bool allowReroll;
+    public readonly SectorShop station;
 
     public SectorShopOpenRequest(
         IReadOnlyList<PlayerShopOffer> bulletOffers,
         IReadOnlyList<PlayerShopOffer> itemOffers,
         ShopConfigSO config,
-        bool allowReroll)
+        bool allowReroll, SectorShop station = null)
     {
         this.bulletOffers = bulletOffers ?? Array.Empty<PlayerShopOffer>();
         this.itemOffers = itemOffers ?? Array.Empty<PlayerShopOffer>();
         this.offers = BuildMergedOffers(this.bulletOffers, this.itemOffers);
         this.config = config;
         this.allowReroll = allowReroll;
+        this.station = station;
     }
 
     public SectorShopOpenRequest(
@@ -45,6 +47,7 @@ public readonly struct SectorShopOpenRequest
         this.offers = offers ?? Array.Empty<PlayerShopOffer>();
         this.config = config;
         this.allowReroll = allowReroll;
+        this.station = null;
     }
 
     // Purpose: Builds the merged offers from the current authored data.

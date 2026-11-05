@@ -13,7 +13,7 @@ public sealed class UnarmedAttackProfileSO : ScriptableObject, IMeleeAttackProfi
 {
     [Header("Damage")]
     [SerializeField, Min(0f)] private float _damage = 5f;
-    [SerializeField, Min(0)] private int _penetrationClass;
+    [SerializeField, Min(0)] private float _penetrationClass;
     [SerializeField, Min(0f)] private float _armorHealthDurabilityLossMultiplier = 1f;
 
     [Header("Shape")]
@@ -38,7 +38,7 @@ public sealed class UnarmedAttackProfileSO : ScriptableObject, IMeleeAttackProfi
 
     public string ProfileName => name;
     public float Damage => Mathf.Max(0f, _damage);
-    public int PenetrationClass => Mathf.Max(0, _penetrationClass);
+    public float PenetrationClass => Mathf.Max(0, _penetrationClass);
     public float ArmorHealthDurabilityLossMultiplier => Mathf.Max(0f, _armorHealthDurabilityLossMultiplier);
     public float Range => Mathf.Max(0.01f, _range);
     public float ArcAngle => Mathf.Clamp(_arcAngle, 1f, 180f);
@@ -54,7 +54,7 @@ public sealed class UnarmedAttackProfileSO : ScriptableObject, IMeleeAttackProfi
     // Purpose: Resolves the damage target mask needed by this component.
     public LayerMask ResolveDamageTargetMask(ShooterFaction faction)
     {
-        return faction == ShooterFaction.Enemy
+        return faction != ShooterFaction.Player
             ? _enemyDamageTargetMask
             : _playerDamageTargetMask;
     }

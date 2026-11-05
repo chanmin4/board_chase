@@ -1,0 +1,18 @@
+using System.IO;
+using UnityEditor;
+
+// Archived explicit Refresh runner. To rerun, place in Assets/Editor temporarily
+// and use a fresh HfsmGraphUiVerificationRunner.Report path first. Remove after checking.
+// Tests use a separate window; no global Undo or production asset/scene save.
+[InitializeOnLoad]
+internal static class HfsmGraphUiVerificationOnce
+{
+    static HfsmGraphUiVerificationOnce() { EditorApplication.delayCall += TryRun; }
+    private static void TryRun()
+    {
+        if (File.Exists(HfsmGraphUiVerificationRunner.Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode)
+        { EditorApplication.delayCall += TryRun; return; }
+        HfsmGraphUiVerificationRunner.Run();
+    }
+}

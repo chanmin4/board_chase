@@ -186,6 +186,7 @@ public class PlayerShopItemUI : MonoBehaviour
         {
             _bulletIcon.sprite = _offer.Icon;
             _bulletIcon.enabled = _bulletIcon.sprite != null;
+            ModuleRuneView.Bind(_bulletIcon, _offer.Item);
         }
 
         if (_nameText != null)
@@ -220,6 +221,7 @@ public class PlayerShopItemUI : MonoBehaviour
         {
             _bulletIcon.sprite = null;
             _bulletIcon.enabled = false;
+            ModuleRuneView.Bind(_bulletIcon, null);
         }
 
         if (_nameText != null)
@@ -478,6 +480,7 @@ public class PlayerShopItemUI : MonoBehaviour
     // Purpose: Returns the current rarity color.
     private Color GetRarityColor(PlayerShopItemRarity rarity)
     {
+        if(ItemRarityStyleSO.Active!=null)return ItemRarityStyleSO.Active.RarityColor(rarity);
         return rarity switch
         {
             PlayerShopItemRarity.Rare => _rareColor,

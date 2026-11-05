@@ -11,7 +11,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-public sealed class AudioCueLibraryWindow : EditorWindow
+public sealed partial class AudioCueLibraryWindow : EditorWindow
 {
     private const string DefaultLibraryPath = "Assets/ScriptableObject/Audio/AudioCueLibrary.asset";
     private const string DefaultCueRootDirectory = "Assets/ScriptableObject/Audio/AudioCue";
@@ -23,6 +23,8 @@ public sealed class AudioCueLibraryWindow : EditorWindow
 
     private AudioCueLibrarySO _library;
     private AudioCueSO _selectedCue;
+    private MakerSelectionUiState _cueSelectionUi;
+    private MakerSelectionUiState CueSelectionUi => _cueSelectionUi ??= new MakerSelectionUiState();
     private Vector2 _browserScroll;
     private Vector2 _cueScroll;
     private Vector2 _detailScroll;
@@ -42,7 +44,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     public static void Open()
     {
         AudioCueLibraryWindow window = GetWindow<AudioCueLibraryWindow>("Audio Cue Library");
-        window.minSize = new Vector2(1180f, 640f);
+        window.minSize = new Vector2(1100f, 640f);
         window.RefreshCatalog();
         window.Show();
     }
@@ -51,6 +53,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     private void OnEnable()
     {
         ResolveDefaultLibrary();
+        InitializeWorkspace();
         RefreshCatalog();
     }
 
@@ -72,21 +75,21 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     {
         AuthoringWorkspaceUi.DrawHeader(
             "Audio Cue Library",
-            "Owner: Audio",
-            "Create reusable sound intents here; gameplay and UI reference the finished AudioCueSO.",
-            "1 Library",
-            "2 Create Cue",
-            "3 Add Clips",
-            "4 Routing",
-            "5 Sync / Validate");
-        DrawToolbar();
+            "오디오 SO 편집",
+            "Cue 원본 데이터를 직접 편집합니다. 클립·분류·재생 설정을 정리하고 선택한 SO만 저장합니다.",
+            "1 분류 선택", "2 Cue 선택 / 생성", "3 클립 · 재생 편집", "4 선택 SO 저장");
+        HandleWorkspaceKeys();
+        DrawWorkspaceToolbar();
         DrawValidationSummary();
+        if (!CanAuthor) EditorGUILayout.HelpBox("Play Mode / 컴파일 중에는 원본 SO 편집이 잠깐 잠깁니다. 분류·검색·미리듣기는 사용할 수 있습니다.", MessageType.Info);
 
-        float workspaceHeight = Mathf.Max(400f, position.height - 154f);
+        float workspaceHeight = Mathf.Max(330f, position.height - (CanAuthor ? 175f : 218f));
         EditorGUILayout.BeginHorizontal(GUILayout.Height(workspaceHeight));
-        DrawCategoryBrowser(workspaceHeight);
-        DrawCueList(workspaceHeight);
-        DrawSelectedCue(workspaceHeight);
+        DrawDetailedCategoryBrowser(workspaceHeight);
+        DrawWorkspaceSplitter(false);
+        DrawIntuitiveCueList(workspaceHeight);
+        DrawWorkspaceSplitter(true);
+        DrawIntuitiveSelectedCue(workspaceHeight);
         EditorGUILayout.EndHorizontal();
     }
 
@@ -149,6 +152,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
         _newCueName = name;
         _newCueCategory = category;
         _newCueLooping = looping;
+        _newCueSubcategory = "";
     }
 
     // Purpose: Draws the toolbar authoring UI.
@@ -204,11 +208,11 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     {
         if (_validationIssues.Count == 0)
         {
-            EditorGUILayout.LabelField($"Cue catalogue check: {_allCues.Count} cue assets, no basic issues found.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"Cue {_allCues.Count}개 · Ctrl+S 저장 / Ctrl+D 복사 / Delete 삭제", EditorStyles.miniLabel);
             return;
         }
 
-        EditorGUILayout.HelpBox($"Cue catalogue check found {_validationIssues.Count} issue(s). Select a cue to inspect it.", MessageType.Warning);
+        EditorGUILayout.HelpBox($"확인할 데이터 {_validationIssues.Count}개 · 해당 Cue를 선택하면 상세 내용이 표시됩니다.", MessageType.Warning);
     }
 
     // Purpose: Draws the category browser authoring UI.
@@ -303,7 +307,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     private void DrawCueCardGrid()
     {
         const float cardWidth = 172f;
-        int columnCount = Mathf.Max(1, Mathf.FloorToInt(Mathf.Max(250f, position.width - 640f) / cardWidth));
+        int columnCount = Mathf.Max(1, Mathf.FloorToInt(Mathf.Max(172f, position.width - _categoryWidth - _detailWidth - 50f) / cardWidth));
 
         for (int rowStart = 0; rowStart < _filteredCues.Count; rowStart += columnCount)
         {
@@ -345,31 +349,31 @@ public sealed class AudioCueLibraryWindow : EditorWindow
         Rect categoryRect = new Rect(card.x + 58f, card.y + 30f, card.width - 67f, 16f);
         Rect summaryRect = new Rect(card.x + 10f, card.y + 59f, card.width - 20f, 16f);
         Rect statusRect = new Rect(card.x + 10f, card.y + 79f, card.width - 20f, 17f);
-        string clipSummary = needsClips ? "Needs playable clip" : $"{cue.ClipCount} playable clip(s)";
+        string clipSummary = needsClips ? "클립 없음" : $"클립 {cue.ClipCount}개 · {(cue.looping ? "반복" : "단발")}";
         string registration = _library == null
-            ? "No library selected"
-            : isUnregistered ? "Not registered" : "Registered";
+            ? "라이브러리 미선택"
+            : isUnregistered ? "미등록" : "등록됨";
 
         GUI.DrawTexture(previewRect, preview, ScaleMode.ScaleToFit, true);
-        GUI.Label(titleRect, cue.name, EditorStyles.boldLabel);
-        GUI.Label(categoryRect, cue.Category.ToString(), EditorStyles.miniLabel);
+        GUI.Label(titleRect, new GUIContent((EditorUtility.IsDirty(cue) ? "● " : "") + cue.name, cue.name), EditorStyles.boldLabel);
+        GUI.Label(categoryRect, new GUIContent(GetEffectiveSubcategory(cue), CategoryLabel(cue.Category)), EditorStyles.miniLabel);
         GUI.Label(summaryRect, clipSummary, EditorStyles.miniLabel);
         EditorGUI.DrawRect(statusRect, isUnregistered || needsClips
             ? new Color(0.42f, 0.20f, 0.08f, 0.72f)
             : new Color(0.08f, 0.34f, 0.27f, 0.72f));
-        GUI.Label(statusRect, $"Library: {registration}", EditorStyles.miniLabel);
+        GUI.Label(statusRect, registration, EditorStyles.miniLabel);
+        HandleCueContextMenu(card, cue);
 
         if (GUI.Button(card, GUIContent.none, GUIStyle.none))
         {
-            _selectedCue = cue;
-            _hasSearchedUsage = false;
-            _showCreateCuePanel = false;
+            SelectCue(cue);
         }
     }
 
     // Purpose: Draws the selected cue authoring UI.
     private void DrawSelectedCue(float workspaceHeight)
     {
+        CueSelectionUi.Synchronize(_selectedCue, _showCreateCuePanel ? "create" : "edit");
         EditorGUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(390f), GUILayout.Height(workspaceHeight));
         EditorGUILayout.LabelField(_showCreateCuePanel ? "3. CUE INSPECTOR  |  NEW" : "3. CUE INSPECTOR", EditorStyles.boldLabel);
 
@@ -477,7 +481,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
 
         serializedCue.ApplyModifiedProperties();
         EditorUtility.SetDirty(_selectedCue);
-        AssetDatabase.SaveAssets();
+        AssetDatabase.SaveAssetIfDirty(_selectedCue);
         RefreshCatalog();
     }
 
@@ -489,7 +493,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
             return;
 
         EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("Validation", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("데이터 확인", EditorStyles.boldLabel);
         for (int i = 0; i < issues.Count; i++)
             EditorGUILayout.HelpBox(issues[i], MessageType.Warning);
     }
@@ -498,7 +502,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     private void RefreshCatalog()
     {
         _allCues.Clear();
-        string[] guids = AssetDatabase.FindAssets("t:AudioCueSO");
+        string[] guids = AssetDatabase.FindAssets("t:AudioCueSO", new[] { "Assets" });
 
         for (int i = 0; i < guids.Length; i++)
         {
@@ -508,7 +512,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
                 _allCues.Add(cue);
         }
 
-        _allCues.Sort((left, right) => string.Compare(left.name, right.name, StringComparison.OrdinalIgnoreCase));
+        _allCues.Sort((left, right) => CueNameComparer.Compare(left.name, right.name));
         RebuildFilteredCues();
         ValidateCatalog();
         Repaint();
@@ -529,6 +533,8 @@ public sealed class AudioCueLibraryWindow : EditorWindow
 
             if (selectedCategory.HasValue && cue.Category != selectedCategory.Value)
                 continue;
+            if (!string.IsNullOrEmpty(_subcategoryFilter) && GetEffectiveSubcategory(cue) != _subcategoryFilter)
+                continue;
 
             if (_missingClipOnly && cue.HasPlayableClip)
                 continue;
@@ -539,11 +545,13 @@ public sealed class AudioCueLibraryWindow : EditorWindow
             if (!string.IsNullOrWhiteSpace(search) &&
                 cue.name.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 &&
                 (cue.CueId ?? string.Empty).IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 &&
-                (cue.AuthoringNotes ?? string.Empty).IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0)
+                (cue.AuthoringNotes ?? string.Empty).IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 &&
+                !CueMatchesExtendedSearch(cue, search))
                 continue;
 
             _filteredCues.Add(cue);
         }
+        SortFilteredCues();
     }
 
     // Purpose: Counts the available cues.
@@ -618,17 +626,17 @@ public sealed class AudioCueLibraryWindow : EditorWindow
                 continue;
 
             if (!cue.HasPlayableClip)
-                _validationIssues.Add($"{cue.name}: no playable AudioClip is assigned.");
+                _validationIssues.Add($"{cue.name}: 재생 가능한 AudioClip이 없습니다.");
 
             if (string.IsNullOrWhiteSpace(cue.CueId))
-                _validationIssues.Add($"{cue.name}: Cue ID is missing. Re-select or edit the asset to run OnValidate.");
+                _validationIssues.Add($"{cue.name}: Cue ID가 없습니다. 에셋을 다시 선택하거나 편집해 자동 ID 생성을 실행하세요.");
             else if (cueIds.TryGetValue(cue.CueId, out AudioCueSO existing))
-                _validationIssues.Add($"Duplicate Cue ID: {existing.name} and {cue.name}.");
+                _validationIssues.Add($"Cue ID 중복: {existing.name} / {cue.name}.");
             else
                 cueIds.Add(cue.CueId, cue);
 
             if (_library != null && !_library.Contains(cue))
-                _validationIssues.Add($"{cue.name}: not registered in the selected Audio Cue Library.");
+                _validationIssues.Add($"{cue.name}: 선택한 Audio Cue Library에 등록되지 않았습니다.");
         }
     }
 
@@ -653,11 +661,13 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Creates the library owned by this workflow.
     private void CreateLibrary()
     {
+        if (!CanAuthor) return;
         EnsureDirectory(DefaultLibraryPath);
         string path = AssetDatabase.GenerateUniqueAssetPath(DefaultLibraryPath);
         _library = CreateInstance<AudioCueLibrarySO>();
         AssetDatabase.CreateAsset(_library, path);
-        AssetDatabase.SaveAssets();
+        SetCreatedAssetGuid(_library);
+        AssetDatabase.SaveAssetIfDirty(_library);
         Selection.activeObject = _library;
         SyncLibrary();
     }
@@ -665,6 +675,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Creates the cue owned by this workflow.
     private void CreateCue()
     {
+        if (!CanAuthor || string.IsNullOrWhiteSpace(_newCueName)) return;
         string directory = GetCueDirectory(_newCueCategory);
         EnsureDirectory(directory + "/AudioCue.asset");
         string assetName = SanitizeAssetName(_newCueName, "NewAudioCue");
@@ -673,19 +684,23 @@ public sealed class AudioCueLibraryWindow : EditorWindow
         SerializedObject serializedCue = new(cue);
         serializedCue.FindProperty("_cueId").stringValue = Guid.NewGuid().ToString("N");
         serializedCue.FindProperty("_category").enumValueIndex = (int)_newCueCategory;
+        serializedCue.FindProperty("_subcategory").stringValue = _newCueSubcategory.Trim();
         serializedCue.FindProperty("_defaultPlaybackConfiguration").objectReferenceValue = _newCuePlaybackRule;
         serializedCue.FindProperty("looping").boolValue = _newCueLooping;
         serializedCue.ApplyModifiedPropertiesWithoutUndo();
         AssetDatabase.CreateAsset(cue, path);
-        AssetDatabase.SaveAssets();
-        _selectedCue = cue;
+        SetCreatedAssetGuid(cue);
+        AssetDatabase.SaveAssetIfDirty(cue);
+        SelectCue(cue);
         _categoryIndex = (int)_newCueCategory + 1;
+        _subcategoryFilter = "";
+        _search = "";
         _missingClipOnly = false;
         _notRegisteredOnly = false;
         Selection.activeObject = cue;
         RefreshCatalog();
-        if (_library != null)
-            SyncLibrary();
+        RegisterCue(cue);
+        ValidateCatalog();
 
         _showCreateCuePanel = false;
     }
@@ -693,6 +708,13 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Begins the create cue workflow.
     private void BeginCreateCue()
     {
+        if (!CanAuthor) return;
+        _newCueCategory = _categoryIndex > 0 ? (AudioCueCategory)(_categoryIndex - 1) : AudioCueCategory.Uncategorized;
+        _newCueSubcategory = _subcategoryFilter;
+        _newCueName = "NewAudioCue";
+        _newCueLooping = _newCueCategory == AudioCueCategory.Music || _newCueCategory == AudioCueCategory.Ambience;
+        _newCuePlaybackRule = null;
+        CueSelectionUi.SelectionClicked();
         _showCreateCuePanel = true;
         _selectedCue = null;
         _hasSearchedUsage = false;
@@ -701,37 +723,36 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Performs the duplicate selected cue workflow for this component.
     private void DuplicateSelectedCue()
     {
-        if (_selectedCue == null)
+        if (!CanAuthor || _selectedCue == null)
             return;
 
         string sourcePath = AssetDatabase.GetAssetPath(_selectedCue);
         string directory = Path.GetDirectoryName(sourcePath)?.Replace('\\', '/') ?? GetCueDirectory(_selectedCue.Category);
         string path = AssetDatabase.GenerateUniqueAssetPath($"{directory}/{_selectedCue.name}_Copy.asset");
-        if (!AssetDatabase.CopyAsset(sourcePath, path))
-        {
-            ShowNotification(new GUIContent("Could not duplicate the selected Audio Cue."));
-            return;
-        }
-
-        AudioCueSO duplicate = AssetDatabase.LoadAssetAtPath<AudioCueSO>(path);
-        if (duplicate == null)
-            return;
+        // Include current unsaved SO edits without saving or overwriting the source.
+        AudioCueSO duplicate = Instantiate(_selectedCue);
+        duplicate.name = Path.GetFileNameWithoutExtension(path);
 
         SerializedObject serializedCue = new(duplicate);
         serializedCue.FindProperty("_cueId").stringValue = Guid.NewGuid().ToString("N");
         serializedCue.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(duplicate);
-        AssetDatabase.SaveAssets();
+        AssetDatabase.CreateAsset(duplicate, path);
+        SetCreatedAssetGuid(duplicate);
+        AssetDatabase.SaveAssetIfDirty(duplicate);
 
-        _selectedCue = duplicate;
+        SelectCue(duplicate);
         _showCreateCuePanel = false;
         _newCueName = duplicate.name;
+        _categoryIndex = (int)duplicate.Category + 1;
+        _subcategoryFilter = ""; _search = ""; _missingClipOnly = false; _notRegisteredOnly = false;
         RefreshCatalog();
-        if (_library != null)
-            SyncLibrary();
+        RegisterCue(duplicate);
+        ValidateCatalog();
 
         Selection.activeObject = duplicate;
         EditorGUIUtility.PingObject(duplicate);
+        ShowNotification(new GUIContent("복사 완료 · 새 Cue ID / 기존 클립과 재생 설정 참조는 유지"));
+        GUIUtility.ExitGUI();
     }
 
     // Purpose: Normalizes asset name to a safe authored value.
@@ -767,7 +788,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Synchronizes library with the current source state.
     private void SyncLibrary()
     {
-        if (_library == null)
+        if (!CanAuthor || _library == null)
             return;
 
         SerializedObject serializedLibrary = new(_library);
@@ -778,7 +799,7 @@ public sealed class AudioCueLibraryWindow : EditorWindow
 
         serializedLibrary.ApplyModifiedProperties();
         EditorUtility.SetDirty(_library);
-        AssetDatabase.SaveAssets();
+        AssetDatabase.SaveAssetIfDirty(_library);
         RebuildFilteredCues();
         ValidateCatalog();
     }
@@ -786,16 +807,22 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Finds the requested usage paths.
     private void FindUsagePaths()
     {
+        if (_selectedCue == null) return;
         _usagePaths.Clear();
-        _hasSearchedUsage = true;
+        _hasSearchedUsage = false;
         string cuePath = AssetDatabase.GetAssetPath(_selectedCue);
         if (string.IsNullOrWhiteSpace(cuePath))
             return;
 
-        string[] allAssetPaths = AssetDatabase.GetAllAssetPaths();
+        string[] allAssetPaths = AssetDatabase.FindAssets("t:Prefab t:Scene t:ScriptableObject", new[] { "Assets" });
+        bool complete = true;
+        try
+        {
         for (int i = 0; i < allAssetPaths.Length; i++)
         {
-            string path = allAssetPaths[i];
+            string path = AssetDatabase.GUIDToAssetPath(allAssetPaths[i]);
+            if (i % 25 == 0 && EditorUtility.DisplayCancelableProgressBar("Cue 직접 참조 검색", path, i / (float)Mathf.Max(1, allAssetPaths.Length)))
+            { complete = false; break; }
             if (path == cuePath || !IsReferenceSearchPath(path))
                 continue;
 
@@ -809,6 +836,11 @@ public sealed class AudioCueLibraryWindow : EditorWindow
                 }
             }
         }
+        }
+        finally { EditorUtility.ClearProgressBar(); }
+        _hasSearchedUsage = complete;
+        _usagePaths.Sort(StringComparer.Ordinal);
+        if (!complete) ShowNotification(new GUIContent("검색 취소 · 불완전한 참조 결과는 표시하지 않습니다."));
     }
 
     // Purpose: Checks whether reference search path is currently true.
@@ -830,17 +862,18 @@ public sealed class AudioCueLibraryWindow : EditorWindow
     // Purpose: Performs the preview cue workflow for this component.
     private static void PreviewCue(AudioCueSO cue)
     {
-        AudioClip[] clips = cue.GetClips();
-        for (int i = 0; i < clips.Length; i++)
+        if (cue == null) return;
+        // Preview must not advance runtime sequencing or UnityEngine.Random while playing.
+        var clips = new List<AudioClip>();
+        var data = new SerializedObject(cue);
+        var groups = data.FindProperty("_audioClipGroups");
+        for (int g = 0; g < groups.arraySize; g++)
         {
-            if (clips[i] == null)
-                continue;
-
-            Type audioUtil = typeof(AudioImporter).Assembly.GetType("UnityEditor.AudioUtil");
-            MethodInfo method = audioUtil?.GetMethod("PlayPreviewClip", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(AudioClip), typeof(int), typeof(bool) }, null);
-            method?.Invoke(null, new object[] { clips[i], 0, false });
-            return;
+            var values = groups.GetArrayElementAtIndex(g).FindPropertyRelative("audioClips");
+            for (int i = 0; i < values.arraySize; i++)
+                if (values.GetArrayElementAtIndex(i).objectReferenceValue is AudioClip clip) clips.Add(clip);
         }
+        if (clips.Count > 0) PreviewAudioClip(clips[new System.Random().Next(clips.Count)]);
     }
 
     // Purpose: Stops the active preview behavior.

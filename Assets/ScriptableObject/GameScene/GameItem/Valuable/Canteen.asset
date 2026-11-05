@@ -11,6 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 84f6310988464062bc8bf5b6ba2cf59a, type: 3}
   m_Name: Canteen
+  _valuableCategoryId: household
   m_EditorClassIdentifier: 
   _guid: dd3db0d39c9b4eaf8dc879dd38b27b43
   _name:
@@ -32,10 +33,10 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 0
+  _rarity: 1
   _purchasePrice: 180
   _worldVisualPrefab: {fileID: 6704128390209668359, guid: d59c9a34d4edbeb46a77b869dfdd0fae, type: 3}
-  _maxStack: 10
+  _maxStack: 1
   _maxOwnedAmount: 0
   references:
     version: 2

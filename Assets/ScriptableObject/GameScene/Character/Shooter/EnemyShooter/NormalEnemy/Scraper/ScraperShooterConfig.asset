@@ -15,8 +15,11 @@ MonoBehaviour:
   _initialHealth: 100
   _moveSpeed: 16
   _baseArmorClass: 0
+  _passiveSlotCount: 2
+  _passiveMinimumRarity: 0
+  _passiveMaximumRarity: 0
   _paintMark:
-    _usePaintMark: 1
+    _usePaintMark: 0
     _markAmountPerStack: 100
     _maxVaccineMarkStacks: 3
     _maxVirusMarkStacks: 3
@@ -36,7 +39,9 @@ MonoBehaviour:
     _eyeHeight: 1
     _targetHeight: 0.8
     _useForwardArc: 1
-    _baseArcAngle: 90
+    _baseArcAngle: 60
+    _nearForwardArcExtraAngle: 60
+    _nearForwardBlendDistance: 22.5
     _aimArcAngleMultiplier: 0.65
   _infection:
     _infectionDamageOverTimeMultiplier: 1
@@ -47,6 +52,40 @@ MonoBehaviour:
   _armor:
     _healthDurabilityLossMultiplier: 1
     _infectionDurabilityLossMultiplier: 0.5
+  _commonRules: {fileID: 11400000, guid: 972d770ca5ce41c382dfaf8a5f9f1023, type: 2}
+  _maximumStamina: 400
+  _overrideCommonLocomotion: 0
+  _overrideCommonAimFeedback: 0
+  _inventory:
+    _pocketCapacity: 2
+    _baseInventoryCapacity: 4
+  _dash:
+    useMoveSpeedBasedDash: 1
+    speedMultiplier: 1.8
+    fixedSpeed: 20
+    durationSeconds: 0.3
+    cooldownSeconds: 10
+    distanceMultiplier: 1.3
+    useForwardWhenNoMovementInput: 1
+    rotateTowardDashDirection: 1
+    useVisualLean: 1
+    visualLeanEuler: {x: 18, y: 0, z: 0}
+    visualLeanInSpeed: 18
+    visualLeanOutSpeed: 12
+  _locomotion:
+    enabled: 1
+    maximumStamina: 200
+    enemyPoolMultiplier: 2
+    walkSpeedMultiplier: 1
+    sprintSpeedMultiplier: 1.5
+    sprintCostPerSecond: 15
+    dashCost: 40
+    recoveryPerSecond: 15
+    recoveryDelay: 0.75
+    exhaustionThreshold: 0.1
+    enemyCanSprint: 1
+    enemySprintStartDistance: 12
+    enemySprintStopDistance: 8
   _shooter:
     _healthDamageCoefficient: 1
     _infectionDamageCoefficient: 1
@@ -95,11 +134,22 @@ MonoBehaviour:
       _clampToScreen: 1
       _screenEdgePadding: 24
   _enemyRole: 0
+  _faction: 1
   _fsmArchetype: 0
+  _useIndividualTargetDetection: 0
   _enemyShooterPrefab: {fileID: 4424562719809715450, guid: 9f02a2e133984c5c91be6c7a10010003, type: 3}
+  _spawnLookMode: 2
+  _fixedSpawnLook: {fileID: 0}
+  _spawnLookPool: {fileID: 11400000, guid: 12f28642e7e10854bb74924c8ced9b86, type: 2}
+  _stageLoadouts:
+  - stage: 2
+    loadout: {fileID: 11400000, guid: d2a4b6c8e0f14931a2b3c4d5e6f70025, type: 2}
+  - stage: 3
+    loadout: {fileID: 11400000, guid: d3a4b6c8e0f14931a2b3c4d5e6f70044, type: 2}
   _alertOnDamaged: 1
   _targetSearchInterval: 0.6
-  _targetMemorySeconds: 10
+  _targetMemorySeconds: 15
+  _alertReactionMultiplier: 0.5
   _targetLockMinSeconds: 2
   _chaseLastKnownPosition: 1
   _lastKnownInvestigationSeconds: 6
@@ -124,10 +174,10 @@ MonoBehaviour:
   _burstCooldownSeconds: 1.4
   _attackPreferredDistance: 42
   _attackStrafeDistance: 2
-  _useTacticalIntent: 0
-  _useCoverTactics: 0
-  _useDuelToken: 0
-  _useFlankingTactics: 0
+  _useTacticalIntent: 1
+  _useCoverTactics: 1
+  _useDuelToken: 1
+  _useFlankingTactics: 1
   _coverSearchRadius: 16
   _coverHideSeconds: 0.55
   _coverPeekSeconds: 0.8
@@ -135,8 +185,8 @@ MonoBehaviour:
   _tacticalIntentRefreshInterval: 0.4
   _tacticalFlankDistance: 6
   _tacticalFlankAngleDegrees: 45
-  _patrolRadius: 18
-  _patrolIdleSeconds: 3
+  _patrolRadius: 27
+  _patrolIdleSeconds: 2.25
   _patrolDestinationRefreshInterval: 1.25
   _patrolArriveDistance: 0.5
   _navMeshSampleDistance: 3
@@ -167,6 +217,7 @@ MonoBehaviour:
   _throwableMinRange: 8
   _throwableMaxRange: 35
   _throwableRecentlyKnownSeconds: 3
+  _throwableBlockedFireSeconds: 1.5
   _throwablePreferWhenNoLineOfSight: 1
   _throwableBlockWhenCanAttack: 1
   _throwableActionSeconds: 0.8

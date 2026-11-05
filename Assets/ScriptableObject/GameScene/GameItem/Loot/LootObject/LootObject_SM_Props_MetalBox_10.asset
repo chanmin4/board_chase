@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_SM_Props_MetalBox_10
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: 8267b86738b667144ade5d97d243fc2b, type: 3}
-  _displayName: Metal Box 10
+  _worldPrefab: {fileID: 7848241509655168276, guid: 8267b86738b667144ade5d97d243fc2b, type: 3}
+  _displayName: LargeMetalBox02
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: 1e0911382114414186297fd059a69b6e, type: 2}
-  _lootTable: {fileID: 11400000, guid: b3300000000000000000000000000019, type: 2}
+  _sizeClass: 0
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 1
+  _maxGeneratedSlots: 1
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 6
+    legendary: 1
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 7
+  _lootTable: {fileID: 11400000, guid: 0f145038eac025c4fa9c5abdfccafbc4, type: 2}
+  references:
+    version: 2
+    RefIds: []

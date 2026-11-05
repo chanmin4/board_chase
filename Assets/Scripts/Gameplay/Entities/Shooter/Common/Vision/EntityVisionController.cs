@@ -4,6 +4,8 @@
  * Execution boundary: Runtime (Assembly-CSharp)
  */
 
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -40,10 +42,47 @@ public class EntityVisionController : MonoBehaviour
     private bool _lastCheckInsideForwardArc;
     private bool _lastCheckHasLineOfSight;
     private Collider _lastLineOfSightBlocker;
+    private RaycastHit[] _visionHits = new RaycastHit[32];
+    private readonly Dictionary<Collider, bool> _transparentColliders = new();
+    private int _occluderRevision = -1;
 
     public Transform Origin => _origin != null ? _origin : transform;
     public Transform VisualOrigin => _range != null && _range.RangeOrigin != null ? _range.RangeOrigin : Origin;
     public Vector3 EyePosition => VisualOrigin.position + Vector3.up * EyeHeight;
+
+    private float[] _presentationDistances;
+    private int _presentationDistanceCount;
+    private Vector3 _presentationOrigin;
+    private float _presentationMaximumRange;
+    private float _presentationSafetyBias;
+
+    // The fog owns this reusable buffer. Mini-map presentation consumes it;
+    // gameplay LOS remains independent and never reads a visual approximation.
+    public void PublishPresentationOcclusion(Vector3 origin, float maximumRange,
+        float[] distances, int count, float safetyBias)
+    {
+        _presentationOrigin = origin;
+        _presentationMaximumRange = maximumRange;
+        _presentationDistances = distances;
+        _presentationDistanceCount = Mathf.Min(count, distances?.Length ?? 0);
+        _presentationSafetyBias = Mathf.Max(0, safetyBias);
+    }
+
+    public bool TryGetPresentationVisibleDistance(Vector3 origin, Vector3 direction, float range, out float distance)
+    {
+        distance = 0;
+        if (_presentationDistanceCount < 2 || _presentationDistances == null ||
+            (origin - _presentationOrigin).sqrMagnitude > .01f || range > _presentationMaximumRange + .01f)
+            return false;
+        float angle = Mathf.Repeat(Mathf.Atan2(direction.z, direction.x) / (Mathf.PI * 2f), 1f);
+        float position = angle * _presentationDistanceCount;
+        int a = Mathf.FloorToInt(position) % _presentationDistanceCount;
+        int b = (a + 1) % _presentationDistanceCount;
+        float first = _presentationDistances[a], second = _presentationDistances[b];
+        float bias = Mathf.Min(first, second) < _presentationMaximumRange - .0001f ? _presentationSafetyBias : 0;
+        distance = Mathf.Clamp(Mathf.Lerp(first, second, Mathf.SmoothStep(0, 1, position - Mathf.Floor(position))) - bias, 0, range);
+        return true;
+    }
 
     public float VisionRange => ResolveVisionRange();
     public float CloseVisionRadius => ResolveCloseVisionRadius();
@@ -51,8 +90,29 @@ public class EntityVisionController : MonoBehaviour
     public bool UsesForwardArc => ResolveSettings() != null && ResolveSettings().UseForwardArc;
     public float EyeHeight => ResolveSettings() != null ? ResolveSettings().EyeHeight : 0f;
     public float TargetHeight => ResolveSettings() != null ? ResolveSettings().TargetHeight : 0f;
-    public LayerMask LineOfSightBlockerMask => ResolveSettings() != null ? ResolveSettings().LineOfSightBlockerMask : 0;
+    public LayerMask LineOfSightBlockerMask
+    {
+        get
+        {
+            var settings = ResolveSettings();
+            int authored = settings != null ? settings.LineOfSightBlockerMask.value : 0;
+            // Preserve configs that intentionally disable LOS with an empty mask.
+            // Explicit ON objects may use any physical collision layer.
+            return authored != 0 ? authored | VisionOccluder.ActiveLayerMask : 0;
+        }
+    }
     public float ForwardArcAngle => ResolveForwardArcAngle();
+    public float NearForwardArcExtraAngle
+    {
+        get
+        {
+            var settings = ResolveSettings();
+            float angle = ForwardArcAngle;
+            if (settings == null || angle >= 180f || VisionRange <= CloseVisionRadius || CloseVisionRadius <= 0f) return 0f;
+            return Mathf.Max(0f, Mathf.Min(179f - angle, settings.NearForwardArcExtraAngle *
+                Mathf.Clamp01(angle / settings.BaseArcAngle)));
+        }
+    }
     public Vector3 ForwardDirection => ResolveForwardDirection();
     public Vector3 LastCheckedWorldPoint => _lastCheckedWorldPoint;
     public float LastCheckedPlanarDistance => _lastCheckedPlanarDistance;
@@ -188,7 +248,7 @@ public class EntityVisionController : MonoBehaviour
         if (distance <= 0.001f)
             return true;
 
-        if (!Physics.Raycast(
+        if (!TryRaycastVisionBlocker(
                 start,
                 toTarget / distance,
                 out RaycastHit hit,
@@ -233,7 +293,7 @@ public class EntityVisionController : MonoBehaviour
 
         flatWorldDirection.Normalize();
 
-        return Physics.Raycast(
+        return TryRaycastVisionBlocker(
             eyePosition,
             flatWorldDirection,
             out RaycastHit hit,
@@ -242,6 +302,52 @@ public class EntityVisionController : MonoBehaviour
             _triggerInteraction)
             ? Mathf.Clamp(hit.distance, 0f, maxDistance)
             : maxDistance;
+    }
+
+    // Physics layers still own movement/bullet collision. Searchable objects are
+    // not walls for vision, even when an authored prefab uses SectorStructure.
+    private bool IsVisionTransparent(Collider collider)
+    {
+        if (collider == null) return true;
+        if (_occluderRevision != VisionOccluder.Revision)
+        {
+            _occluderRevision = VisionOccluder.Revision;
+            _transparentColliders.Clear();
+        }
+        if (_transparentColliders.TryGetValue(collider, out bool transparent)) return transparent;
+        transparent = !VisionOccluder.BlocksSight(collider);
+        if (_transparentColliders.Count >= 1024) _transparentColliders.Clear();
+        _transparentColliders[collider] = transparent;
+        return transparent;
+    }
+
+    private bool TryRaycastVisionBlocker(Vector3 origin, Vector3 direction,
+        out RaycastHit blocker, float distance, LayerMask mask, QueryTriggerInteraction triggers)
+    {
+        // The ordinary wall-only case keeps its single closest-hit query.
+        if (!Physics.Raycast(origin, direction, out blocker, distance, mask, triggers)) return false;
+        if (!IsVisionTransparent(blocker.collider)) return true;
+
+        // Do not stop at a chest: a real wall behind it must still block vision.
+        int count;
+        do
+        {
+            count = Physics.RaycastNonAlloc(origin, direction, _visionHits, distance, mask, triggers);
+            if (count < _visionHits.Length) break;
+            Array.Resize(ref _visionHits, _visionHits.Length * 2);
+        } while (true);
+        bool found = false;
+        float nearest = distance + 1f;
+        blocker = default;
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit hit = _visionHits[i];
+            if (hit.distance >= nearest || IsVisionTransparent(hit.collider)) continue;
+            blocker = hit;
+            nearest = hit.distance;
+            found = true;
+        }
+        return found;
     }
 
     // Purpose: Checks whether inside vision range is currently true.
@@ -382,10 +488,62 @@ public class EntityVisionController : MonoBehaviour
         if (forward.sqrMagnitude <= 0.0001f)
             return true;
 
+        if (TryGetForwardConeSides(out float slope, out float intercept))
+        {
+            forward.Normalize();
+            float longitudinal = Vector3.Dot(toTarget, forward);
+            float lateral = Mathf.Abs(toTarget.x * forward.z - toTarget.z * forward.x);
+            return longitudinal >= 0f && lateral <= longitudinal * slope + intercept;
+        }
         float arcAngle = ResolveForwardArcAngle();
         float angle = Vector3.Angle(forward.normalized, toTarget.normalized);
 
         return angle <= arcAngle * 0.5f;
+    }
+
+    public float GetForwardArcAngleAtDistance(float distance)
+    {
+        float baseAngle = ForwardArcAngle;
+        if (distance >= VisionRange || !TryGetForwardConeSides(out float slope, out float intercept)) return baseAngle;
+        float radius = Mathf.Max(distance, CloseVisionRadius);
+        float half = Mathf.Atan(slope) + Mathf.Asin(Mathf.Clamp01(
+            intercept / (radius * Mathf.Sqrt(1f + slope * slope))));
+        return Mathf.Clamp(half * Mathf.Rad2Deg * 2f, baseAngle, 179f);
+    }
+
+    /// <summary>Straight sides from the existing close-circle boundary to the original far arc endpoints.</summary>
+    public bool TryGetForwardConeSides(out float slope, out float intercept)
+    {
+        slope = intercept = 0f;
+        float extra = NearForwardArcExtraAngle;
+        if (!UsesForwardArc || extra <= 0f) return false;
+        float half = ForwardArcAngle * 0.5f * Mathf.Deg2Rad;
+        float joinHalf = Mathf.Min(89.5f * Mathf.Deg2Rad, half + extra * 0.5f * Mathf.Deg2Rad);
+        float joinForward = CloseVisionRadius * Mathf.Cos(joinHalf);
+        float joinSide = CloseVisionRadius * Mathf.Sin(joinHalf);
+        float farForward = VisionRange * Mathf.Cos(half);
+        float farSide = VisionRange * Mathf.Sin(half);
+        if (farForward <= joinForward + 0.001f || farSide <= joinSide) return false;
+        slope = (farSide - joinSide) / (farForward - joinForward);
+        intercept = joinSide - slope * joinForward;
+        return intercept > 0f;
+    }
+
+    // Analytical boundary for minimap/debug geometry, without physics or iterative searches.
+    public float GetForwardVisionDistance(Vector3 direction)
+    {
+        float range = VisionRange;
+        if (!UsesForwardArc) return range;
+        direction.y = 0f;
+        if (range <= 0f || direction.sqrMagnitude <= 0.0001f) return 0f;
+        float angle = Vector3.Angle(ForwardDirection, direction) * 2f;
+        float baseAngle = ForwardArcAngle;
+        if (angle <= baseAngle + 0.001f) return range;
+        if (!TryGetForwardConeSides(out float slope, out float intercept) ||
+            angle > GetForwardArcAngleAtDistance(CloseVisionRadius) + 0.001f) return 0f;
+        float half = angle * 0.5f * Mathf.Deg2Rad;
+        float denominator = Mathf.Sin(half) - slope * Mathf.Cos(half);
+        return denominator > 0f ? Mathf.Clamp(intercept / denominator, 0f, range) : range;
     }
 
     // Purpose: Resolves the forward arc angle needed by this component.
@@ -396,7 +554,7 @@ public class EntityVisionController : MonoBehaviour
         if (settings == null)
             return 360f;
 
-        float arcAngle = settings.BaseArcAngle;
+        float arcAngle = settings.BaseArcAngle+(_statsRuntime?.AdditionalStat(PlayerStatId.VisionArcBonus)??0);
         float aim01 = Mathf.Clamp01(ResolveAim01());
 
         float multiplier = Mathf.Lerp(
@@ -453,7 +611,7 @@ public class EntityVisionController : MonoBehaviour
     }
 
     // Purpose: Draws the forward arc authoring UI.
-    private static void DrawForwardArc(
+    private void DrawForwardArc(
         Vector3 center,
         Vector3 forward,
         float arcAngle,
@@ -466,21 +624,22 @@ public class EntityVisionController : MonoBehaviour
         forward.y = 0f;
         forward.Normalize();
 
-        float half = Mathf.Clamp(arcAngle, 1f, 360f) * 0.5f;
+        float half = GetForwardArcAngleAtDistance(CloseVisionRadius) * 0.5f;
         Vector3 left = Quaternion.AngleAxis(-half, Vector3.up) * forward;
         Vector3 right = Quaternion.AngleAxis(half, Vector3.up) * forward;
 
-        Gizmos.DrawLine(center, center + left * range);
-        Gizmos.DrawLine(center, center + right * range);
+        float inner = Mathf.Min(CloseVisionRadius, range);
+        Gizmos.DrawLine(center + left * inner, center + left * GetForwardVisionDistance(left));
+        Gizmos.DrawLine(center + right * inner, center + right * GetForwardVisionDistance(right));
 
-        Vector3 previous = center + left * range;
+        Vector3 previous = center + left * GetForwardVisionDistance(left);
 
         for (int i = 1; i <= segments; i++)
         {
             float t = i / (float)segments;
             float angle = Mathf.Lerp(-half, half, t);
             Vector3 dir = Quaternion.AngleAxis(angle, Vector3.up) * forward;
-            Vector3 next = center + dir * range;
+            Vector3 next = center + dir * GetForwardVisionDistance(dir);
 
             Gizmos.DrawLine(previous, next);
             previous = next;

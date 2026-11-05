@@ -23,6 +23,17 @@ public enum EnemyShooterAttackMovementMode
     MoveWhileFiring = 2
 }
 
+// Zero preserves all existing prefabs/assets without a migration.
+public enum ShooterSpawnLookMode { ExistingPrefab = 0, Fixed = 1, RandomPool = 2 }
+
+/// <summary>몹 정의는 하나만 유지한다. 스테이지에 따른 장비 차이는 Config 복제가 아닌 이 목록에 작성한다.</summary>
+[System.Serializable]
+public sealed class EnemyStageLoadout
+{
+    [Range(1, 5)] public int stage = 1;
+    public ShooterLoadoutTableSO loadout;
+}
+
 /// <summary>
 /// Authoring-only label for the shared Enemy Shooter FSM.
 ///
@@ -46,12 +57,44 @@ public enum EnemyShooterFsmArchetype
     menuName = "Game/Enemy/Shooter Config")]
 public class EnemyShooterConfigSO : ShooterStatConfigSO
 {
+    [Header("세력 · 역할과 독립")]
+    [SerializeField] private ShooterFaction _faction = ShooterFaction.Scraper;
+    public ShooterFaction Faction => _faction;
+
+    [Header("귀속 패시브 · 플레이어와 동일한 효과 규칙")]
+    [SerializeField, Range(1, 8)] private int _passiveSlotCount = 2;
+    [SerializeField] private PlayerShopItemRarity _passiveMinimumRarity;
+    [SerializeField] private PlayerShopItemRarity _passiveMaximumRarity;
+    public int PassiveSlotCount => Mathf.Clamp(_passiveSlotCount, 1, 8);
+    public PlayerShopItemRarity PassiveMinimumRarity => _passiveMinimumRarity;
+    public PlayerShopItemRarity PassiveMaximumRarity => _passiveMaximumRarity;
     [Header("Enemy")]
     [Tooltip("Common enemy identity, rewards, UI layout, and drop reward settings.")]
     [SerializeField] private EnemyCommonSettings _enemy = new();
 
     [Tooltip("Gameplay role used by encounter validation, boss-room completion, UI, and debugging. Standard Enemy covers Raider, Scraper, Agent, Butcher, and Punisher. This does not automatically change combat behavior.")]
     [SerializeField] private EnemyShooterRole _enemyRole = EnemyShooterRole.StandardEnemy;
+
+    [Header("시체 방탄 드롭 · 절대 내구도 (임시 밸런스)")]
+    [SerializeField] private bool _limitCorpseArmorDurability = true;
+    [SerializeField] private bool _overrideCommonArmorDrop;
+    [SerializeField, HideInInspector] private bool _overrideCommonArmorDropInitialized;
+    [SerializeField, HideInInspector] private Vector2 _normalArmorDropDurability = new Vector2(350f, 500f);
+    [SerializeField, HideInInspector] private Vector2 _bossArmorDropDurability = new Vector2(500f, 650f);
+    public bool LimitCorpseArmorDurability => _limitCorpseArmorDurability;
+    public Vector2 ArmorDropDurabilityRange => !_overrideCommonArmorDrop && CommonRules != null
+        ? (_enemyRole == EnemyShooterRole.Boss ? CommonRules.BossArmorDropDurability : CommonRules.NormalArmorDropDurability)
+        : (_enemyRole == EnemyShooterRole.Boss ? _bossArmorDropDurability : _normalArmorDropDurability);
+    public float ResolveDroppedArmorDurability(ArmorItemSO armor, float current, System.Random random)
+    {
+        if (armor == null) return -1f;
+        current = Mathf.Clamp(current, 0f, armor.MaxDurability);
+        if (!_limitCorpseArmorDurability) return current;
+        Vector2 range = ArmorDropDurabilityRange;
+        float minimum = Mathf.Clamp(Mathf.Min(range.x, range.y), 0f, armor.MaxDurability);
+        float maximum = Mathf.Clamp(Mathf.Max(range.x, range.y), minimum, armor.MaxDurability);
+        return Mathf.Min(current, Mathf.Lerp(minimum, maximum, (float)random.NextDouble()));
+    }
 
     [Header("Shared Shooter FSM")]
     [Tooltip("Authoring label only. All EnemyShooter prefab variants use Enemy_ShooterBase_Mode and Enemy_ShooterBase_Alive. Configure weapons and the capability toggles below to create the actual behavior; do not duplicate FSM tables for ordinary variants.")]
@@ -60,10 +103,41 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     [Header("Shared Target Detection")]
     [Tooltip("Off by default. When off, this Shooter uses the common 70m / 60-degree / structure-blocked target-detection shape so Scraper, Raider, Agent, guards, and bosses never silently fall back to the generic 12m vision defaults. Enable only for a deliberately exceptional enemy; the inherited Vision fields then become its runtime source.")]
     [SerializeField] private bool _useIndividualTargetDetection;
+    [SerializeField, HideInInspector] private bool _useIndividualTargetDetectionInitialized;
 
     [Header("Prefab")]
     [Tooltip("Enemy shooter prefab spawned by sector enemy spawners.")]
     [SerializeField] private EnemyShooter _enemyShooterPrefab;
+
+    [Header("Spawn Appearance (visual only)")]
+    [SerializeField] private ShooterSpawnLookMode _spawnLookMode;
+    [SerializeField] private ShooterCustomizeSO _fixedSpawnLook;
+    [SerializeField] private ShooterCustomizePoolSO _spawnLookPool;
+
+    [Header("Stage Equipment (same enemy, optional)")]
+    [Tooltip("Only equipment changes by stage. Stats, AI and spawn appearances always use this one config. Unlisted stages use the base Loadout Table.")]
+    [SerializeField] private EnemyStageLoadout[] _stageLoadouts = System.Array.Empty<EnemyStageLoadout>();
+
+    public ShooterLoadoutTableSO ResolveLoadoutTable(int stage)
+    {
+        if (stage >= 1 && stage <= 5 && _stageLoadouts != null)
+            foreach (var entry in _stageLoadouts)
+                if (entry != null && entry.stage == stage && entry.loadout != null) return entry.loadout;
+        return LoadoutTable;
+    }
+
+    public ShooterSpawnLookMode SpawnLookMode => _spawnLookMode;
+    public ShooterCustomizeSO FixedSpawnLook => _fixedSpawnLook;
+    public ShooterCustomizePoolSO SpawnLookPool => _spawnLookPool;
+    public bool AllowsRandomSpawnLook => EnemyRole != EnemyShooterRole.Boss && EnemyRole != EnemyShooterRole.NamedEnemy;
+
+    /// <summary>Null means retain the prefab appearance; never changes stats, equipment or colliders.</summary>
+    public ShooterCustomizeSO PickSpawnLook()
+    {
+        if (_spawnLookMode == ShooterSpawnLookMode.ExistingPrefab) return null;
+        if (_spawnLookMode == ShooterSpawnLookMode.Fixed || !AllowsRandomSpawnLook) return _fixedSpawnLook;
+        return _spawnLookPool != null ? _spawnLookPool.GetRandom() : null;
+    }
 
     [Header("Awareness")]
     [Tooltip("If true, this shooter becomes alerted when damaged by the player.")]
@@ -74,6 +148,8 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
 
     [Tooltip("How long this shooter remembers the last seen player position after losing sight. Twenty seconds is the intended baseline for a tactical hold-angle standoff.")]
     [SerializeField, Min(0f)] private float _targetMemorySeconds = 20f;
+    [Tooltip("경계 중 / 추적 재발견 시 반응 대기 배율. 이 적 SO의 값만 사용합니다.")]
+    [SerializeField, Min(0f)] private float _alertReactionMultiplier = .5f;
 
     [Tooltip("Minimum seconds this shooter keeps a player target after acquiring it. During this lock, occlusion can keep chase alive, but shooting still requires current vision.")]
     [SerializeField, Min(0f)] private float _targetLockMinSeconds = 5f;
@@ -153,6 +229,22 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     [Tooltip("Short NavMesh strafe/reposition distance used between attack bursts.")]
     [SerializeField, Min(0f)] private float _attackStrafeDistance = 3f;
 
+    [Header("Combat Stuck Recovery / 전투 이동 끼임 복구")]
+    [Tooltip("실제 몸의 위치가 바뀌지 않는 전투 이동을 감시합니다. 워프나 충돌 무시는 하지 않습니다.")]
+    [SerializeField] private bool _useCombatStuckRecovery = true;
+
+    [Tooltip("이 시간 동안 실제 위치 변화가 최소 이동량보다 작으면 공격 조건을 재평가하고 짧은 우회 이동을 시도합니다.")]
+    [SerializeField, Min(0.25f)] private float _combatStuckSeconds = 1.25f;
+
+    [Tooltip("NavMesh 속도가 아니라 실제 몸이 이 거리 이상 이동해야 진행한 것으로 판정합니다.")]
+    [SerializeField, Min(0.01f)] private float _combatStuckMinimumProgress = 0.2f;
+
+    [Tooltip("끼임 복구 시 옆/뒤로 이동할 거리입니다. 몸 반경에 비해 너무 작으면 자동으로 늘립니다.")]
+    [SerializeField, Min(0.25f)] private float _combatStuckStepDistance = 2f;
+
+    [Tooltip("우회 목적지를 유지하는 시간입니다. 도착하거나 직접 공격 조건이 열리면 일찍 종료합니다.")]
+    [SerializeField, Min(0.25f)] private float _combatStuckStepSeconds = 1.25f;
+
     [Header("Tactical Intent")]
     [Tooltip("Enables optional cover, hold-angle, and flank movement. Keep this disabled for simple low-difficulty shooters; use stats, weapons, and these flags instead of separate enemy behavior classes.")]
     [SerializeField] private bool _useTacticalIntent;
@@ -190,10 +282,10 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
 
     [Header("Patrol")]
     [Tooltip("Random patrol radius around the spawn/home position. Set 0 to effectively disable random patrol movement.")]
-    [SerializeField, Min(0f)] private float _patrolRadius = 8f;
+    [SerializeField, Min(0f)] private float _patrolRadius = 12f;
 
-    [Tooltip("Idle wait after reaching a patrol destination before choosing the next patrol point. Enemy shooters enforce at least 3 seconds so patrol does not become continuous movement.")]
-    [SerializeField, Min(3f)] private float _patrolIdleSeconds = 3f;
+    [Tooltip("순찰 목적지 도착 후 대기 시간. 전역 보정 없이 이 값을 그대로 사용합니다.")]
+    [SerializeField, Min(.5f)] private float _patrolIdleSeconds = 2.25f;
 
     [Tooltip("Minimum interval before a patrol destination can be refreshed. Patrol still waits at the destination using Patrol Idle Seconds.")]
     [SerializeField, Min(0.05f)] private float _patrolDestinationRefreshInterval = 1.25f;
@@ -293,14 +385,15 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     [Tooltip("Maximum target distance for throwing. 0 disables the upper limit.")]
     [SerializeField, Min(0f)] private float _throwableMaxRange = 35f;
 
-    [Tooltip("Target must have been seen or locked within this many seconds to allow a throw.")]
+    [Tooltip("최근 직접 목격한 위치를 투척 목표로 사용할 수 있는 시간(초). 보이지 않는 타겟의 현재 위치를 따라 던지지 않습니다.")]
     [SerializeField, Min(0f)] private float _throwableRecentlyKnownSeconds = 3f;
 
-    [Tooltip("If true, throwing is preferred when the target is not currently visible or cannot be shot directly.")]
-    [SerializeField] private bool _throwablePreferWhenNoLineOfSight = true;
+    [Tooltip("투척 판단 대기 시간(초). 직접 목격한 적의 시야/총구 경로가 이 시간 동안 연속해서 막혔을 때만 투척 후보가 됩니다. 사격각이 열리면 초기화됩니다. 최근 목격 유효 시간보다 짧게 설정하세요. 선제 투척은 하지 않습니다.")]
+    [SerializeField, Min(0.1f)] private float _throwableBlockedFireSeconds = 1.5f;
 
-    [Tooltip("If true, do not throw while regular shooting is already possible.")]
-    [SerializeField] private bool _throwableBlockWhenCanAttack = true;
+    // 기존 작성 데이터/외부 코드 호환용. 새 전술 정책은 두 값과 무관하게 열린 사격각에서 항상 투척을 금지합니다.
+    [SerializeField, HideInInspector] private bool _throwablePreferWhenNoLineOfSight = true;
+    [SerializeField, HideInInspector] private bool _throwableBlockWhenCanAttack = true;
 
     [Tooltip("Seconds the throwable FSM state stays active after the throw. This creates a short weapon-switch/recovery delay.")]
     [SerializeField, Min(0.01f)] private float _throwableActionSeconds = 0.8f;
@@ -308,7 +401,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     [Tooltip("Extra safety distance added to explosion radius when checking if the enemy is too close to the planned throw point.")]
     [SerializeField, Min(0f)] private float _throwableSelfSafetyPadding = 1f;
 
-    [Tooltip("Layers treated as allies for grenade safety checks. If empty, ally overlap is ignored. Usually set this to Enemy.")]
+    [Tooltip("투척 시 아군 안전 검사 레이어. 비어 있으면 Enemy 레이어를 자동 사용합니다. 검사 레이어를 찾을 수 없으면 안전을 보장할 수 없어 투척을 막습니다.")]
     [SerializeField] private LayerMask _throwableAllySafetyMask = 0;
 
     [Tooltip("Extra radius added to the grenade explosion radius when checking nearby allies. Use a small value to avoid edge-case friendly hits.")]
@@ -333,13 +426,13 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     [SerializeField, Range(0f, 1f)] private float _dashHealthNormalizedThreshold = 0.35f;
 
     [Tooltip("Cooldown between defensive dashes.")]
-    [SerializeField, Min(0f)] private float _dashCooldownSeconds = 4f;
+    [SerializeField, HideInInspector, Min(0f)] private float _dashCooldownSeconds = 4f;
 
     [Tooltip("How long one defensive dash lasts.")]
-    [SerializeField, Min(0.01f)] private float _dashDurationSeconds = 0.18f;
+    [SerializeField, HideInInspector, Min(0.01f)] private float _dashDurationSeconds = 0.18f;
 
     [Tooltip("Movement speed used during defensive dash.")]
-    [SerializeField, Min(0f)] private float _dashSpeed = 14f;
+    [SerializeField, HideInInspector, Min(0f)] private float _dashSpeed = 14f;
 
     [Tooltip("If true, dash direction is away from the current target. If false, the dash controller can choose a fallback direction.")]
     [SerializeField] private bool _dashAwayFromTarget = true;
@@ -353,7 +446,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public override EntityVisionSettings Vision =>
         _useIndividualTargetDetection
             ? base.Vision
-            : SharedTargetDetectionVision;
+            : CommonRules != null ? CommonRules.EnemyVision : SharedTargetDetectionVision;
 
     private static readonly EntityVisionSettings SharedTargetDetectionVision =
         EntityVisionSettings.CreateSharedEnemyShooterDetection();
@@ -388,6 +481,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public bool AlertOnDamaged => _alertOnDamaged;
     public float TargetSearchInterval => Mathf.Max(0.05f, _targetSearchInterval);
     public float TargetMemorySeconds => Mathf.Max(0f, _targetMemorySeconds);
+    public float AlertReactionMultiplier => Mathf.Max(0f, _alertReactionMultiplier);
     public float TargetLockMinSeconds => Mathf.Max(0f, _targetLockMinSeconds);
     public bool ChaseLastKnownPosition => _chaseLastKnownPosition;
     public float LastKnownInvestigationSeconds => Mathf.Max(0f, _lastKnownInvestigationSeconds);
@@ -397,6 +491,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public float SoundStimulusDuplicateCooldown => Mathf.Max(0f, _soundStimulusDuplicateCooldown);
 
     public float AttackStartRange => MaxRange;
+    public bool UseWeaponRangeAsAttackKeepRange => _useMaxRangeAsAttackKeepRange;
     public float AttackKeepRange => _useMaxRangeAsAttackKeepRange ? MaxRange : Mathf.Max(0f, _attackKeepRange);
     public bool UsePreferredRangeBeforeStationaryAttack => _usePreferredRangeBeforeStationaryAttack;
     public float StationaryAttackKeepRangePadding => Mathf.Max(0f, _stationaryAttackKeepRangePadding);
@@ -404,7 +499,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public float ChaseStoppingDistance =>
         _chaseStoppingDistance > 0f
             ? _chaseStoppingDistance
-            : Mathf.Min(AttackStartRange, 8f);
+            : 8f;
 
     public float ChaseLoseRange => Mathf.Max(0f, _chaseLoseRange);
 
@@ -425,6 +520,11 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public float BurstCooldownSeconds => Mathf.Max(0f, _burstCooldownSeconds);
     public float AttackPreferredDistance => Mathf.Max(0f, _attackPreferredDistance);
     public float AttackStrafeDistance => Mathf.Max(0f, _attackStrafeDistance);
+    public bool UseCombatStuckRecovery => _useCombatStuckRecovery;
+    public float CombatStuckSeconds => Mathf.Max(0.25f, _combatStuckSeconds);
+    public float CombatStuckMinimumProgress => Mathf.Max(0.01f, _combatStuckMinimumProgress);
+    public float CombatStuckStepDistance => Mathf.Max(0.25f, _combatStuckStepDistance);
+    public float CombatStuckStepSeconds => Mathf.Max(0.25f, _combatStuckStepSeconds);
     public bool UseTacticalIntent => _useTacticalIntent;
     public bool UseCoverTactics => _useTacticalIntent && _useCoverTactics;
     public bool UseDuelToken => _useTacticalIntent && _useDuelToken;
@@ -438,7 +538,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public float TacticalFlankAngleDegrees => Mathf.Clamp(_tacticalFlankAngleDegrees, 10f, 85f);
 
     public float PatrolRadius => Mathf.Max(0f, _patrolRadius);
-    public float PatrolIdleSeconds => Mathf.Max(3f, _patrolIdleSeconds);
+    public float PatrolIdleSeconds => Mathf.Max(.5f, _patrolIdleSeconds);
     public float PatrolDestinationRefreshInterval => Mathf.Max(0.05f, _patrolDestinationRefreshInterval);
     public float PatrolArriveDistance => Mathf.Max(0f, _patrolArriveDistance);
     public float NavMeshSampleDistance => Mathf.Max(0f, _navMeshSampleDistance);
@@ -473,6 +573,7 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public float ThrowableMinRange => Mathf.Max(0f, _throwableMinRange);
     public float ThrowableMaxRange => Mathf.Max(0f, _throwableMaxRange);
     public float ThrowableRecentlyKnownSeconds => Mathf.Max(0f, _throwableRecentlyKnownSeconds);
+    public float ThrowableBlockedFireSeconds => Mathf.Max(0.1f, _throwableBlockedFireSeconds);
     public bool ThrowablePreferWhenNoLineOfSight => _throwablePreferWhenNoLineOfSight;
     public bool ThrowableBlockWhenCanAttack => _throwableBlockWhenCanAttack;
     public float ThrowableActionSeconds => Mathf.Max(0.01f, _throwableActionSeconds);
@@ -485,15 +586,18 @@ public class EnemyShooterConfigSO : ShooterStatConfigSO
     public float DashChanceOnIncomingProjectile => Mathf.Clamp01(_dashChanceOnIncomingProjectile);
     public bool DashWhenHealthBelowThreshold => _dashWhenHealthBelowThreshold;
     public float DashHealthNormalizedThreshold => Mathf.Clamp01(_dashHealthNormalizedThreshold);
-    public float DashCooldownSeconds => Mathf.Max(0f, _dashCooldownSeconds);
-    public float DashDurationSeconds => Mathf.Max(0.01f, _dashDurationSeconds);
-    public float DashSpeed => Mathf.Max(0f, _dashSpeed);
+    public float DashDurationSeconds => Mathf.Max(0.01f, Dash.durationSeconds);
+    public float DashSpeed => Dash.useMoveSpeedBasedDash
+        ? Mathf.Max(0f, MoveSpeed * Dash.speedMultiplier) : Mathf.Max(0f, Dash.fixedSpeed);
     public bool DashAwayFromTarget => _dashAwayFromTarget;
 
     // Purpose: Performs the pick enemy loadout workflow for this component.
-    public EnemyShooterLoadout PickEnemyLoadout()
+    public EnemyShooterLoadout PickEnemyLoadout() => PickEnemyLoadout(0);
+
+    public EnemyShooterLoadout PickEnemyLoadout(int stage)
     {
-        return TryRollLoadout(out ShooterLoadoutSnapshot snapshot)
+        var table = ResolveLoadoutTable(stage);
+        return table != null && table.TryRoll(out ShooterLoadoutSnapshot snapshot)
             ? snapshot.ToEnemyShooterLoadout()
             : new EnemyShooterLoadout(
                 System.Array.Empty<ShooterLoadoutWeaponStack>(),

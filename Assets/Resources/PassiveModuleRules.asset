@@ -1,0 +1,100 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac221026000000000000000000000384, type: 3}
+  m_Name: PassiveModuleRules
+  m_EditorClassIdentifier:
+  homeOnlyPassiveChanges: 0
+  combatSlotLevels: 01000000050000000a0000000f000000
+  survivalSlotLevels: 01000000070000000c00000012000000
+  combatEffectMultiplier: 1.5
+  survivalEffectMultiplier: 1.5
+  changeCooldownSeconds: 10
+  unifiedModule: {fileID: 11400000, guid: ac2210260000000000000000000000c8, type: 2}
+  drawCountLevels: 010000000a00000014000000
+  startingPool:
+  - {fileID: 11400000, guid: c0261026000000000000000000000107, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010c, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010b, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000112, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000100, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000111, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000110, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010f, type: 2}
+  - {fileID: 11400000, guid: 8ed964a2391747f6b391fe8db1a98c23, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000104, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000103, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000108, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000106, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000113, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000109, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000105, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010e, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010a, type: 2}
+  startingDraws:
+  - label: 저등급
+    enabled: 0
+    requiredLevel: 1
+    moduleCost: 10
+    rarityWeights: [80, 20, 0, 0, 0]
+  - label: 중등급
+    enabled: 0
+    requiredLevel: 10
+    moduleCost: 25
+    rarityWeights: [50, 35, 15, 0, 0]
+  - label: 고등급 · 데모 제외
+    enabled: 0
+    requiredLevel: 20
+    moduleCost: 50
+    rarityWeights: [35, 30, 25, 10, 0]
+  recyclingSeconds: 30
+  enemyPool:
+  - {fileID: 11400000, guid: c0261026000000000000000000000113, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000100, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000101, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000103, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000104, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000105, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000106, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000107, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000108, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000109, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010a, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010b, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010c, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010d, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010e, type: 2}
+  - {fileID: 11400000, guid: c026102600000000000000000000010f, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000110, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000111, type: 2}
+  - {fileID: 11400000, guid: c0261026000000000000000000000112, type: 2}
+  tiers:
+  - rarity: 0
+    parts: {fileID: 11400000, guid: ac2210260000000000000000000000c8, type: 2}
+    rerollCost: 1
+    moduleYield: 1
+  - rarity: 1
+    parts: {fileID: 11400000, guid: ac2210260000000000000000000000c9, type: 2}
+    rerollCost: 1
+    moduleYield: 3
+  - rarity: 3
+    parts: {fileID: 11400000, guid: ac2210260000000000000000000000cb, type: 2}
+    rerollCost: 1
+    moduleYield: 8
+  - rarity: 2
+    parts: {fileID: 11400000, guid: ac2210260000000000000000000000ca, type: 2}
+    rerollCost: 1
+    moduleYield: 15
+  - rarity: 4
+    parts: {fileID: 11400000, guid: ac2210260000000000000000000000cc, type: 2}
+    rerollCost: 1
+    moduleYield: 25

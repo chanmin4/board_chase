@@ -177,6 +177,12 @@ public sealed class StatusEffectIconStripUI : MonoBehaviour
 
             if (definition == null)
                 continue;
+            if (definition is InfectionAggravationStatusSO)
+            {
+                if (_runtime.GetComponent<PlayerShooterInfection>() == null)
+                    _spawnedIcons.Add(InfectionAggravationGaugeUI.Create((RectTransform)transform, _runtime, _iconSize));
+                continue;
+            }
 
             SpawnIcon(definition);
         }
@@ -278,6 +284,12 @@ public sealed class StatusEffectIconStripUI : MonoBehaviour
             DrawRect(pixels, size, 20, 14, 3, 9, dark);
             DrawRect(pixels, size, 22, 21, 1, 5, dark);
             DrawRect(pixels, size, 26, 21, 1, 5, dark);
+        }
+        else if (kind == StatusEffectIconKind.InfectionAggravation)
+        {
+            DrawDisc(pixels, size, 16, 16, 8, dark);
+            DrawRect(pixels, size, 14, 9, 4, 9, foreground);
+            DrawRect(pixels, size, 14, 21, 4, 3, foreground);
         }
         else if (kind == StatusEffectIconKind.InfectionRecoveryDown)
         {

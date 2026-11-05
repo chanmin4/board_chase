@@ -26,7 +26,7 @@ public class SceneLoader : MonoBehaviour
     [Tooltip("The generated combat location. HomeScene is mounted before this scene so the authored Hideout is ready when StageProgressionManager initializes.")]
     [SerializeField] private GameSceneSO _runScene = default;
 
-    [Tooltip("Static authored HomeSector scene. It stays mounted while RUNScene is active and becomes the active scene when the player returns home.")]
+    [Tooltip("Authored HomeSector scene. Unloaded after deployment and reloaded before returning home; RUNScene managers remain alive.")]
     [SerializeField] private GameSceneSO _homeScene = default;
 
     [SerializeField] private string _homeSceneName = "HomeScene";
@@ -65,7 +65,11 @@ public class SceneLoader : MonoBehaviour
     [SerializeField, Min(1)] private int _requiredStableRuntimeReadyFrames = 2;
 
     [Tooltip("맵, 컨텐츠, 시스템 또는 플레이어 준비가 이 시간 안에 끝나지 않으면 로딩 화면을 유지하고 Console에 원인을 남깁니다.")]
-    [SerializeField, Min(1f)] private float _runtimeReadinessTimeoutSeconds = 12f;
+    [SerializeField, Min(1f)] private float _runtimeReadinessTimeoutSeconds = 20f;
+    [Tooltip("준비 상태에 처음 도달한 뒤 연속 준비 프레임 확인에 주는 추가 유예시간입니다. 준비 실패를 무시하고 로딩을 열지는 않습니다.")]
+    [SerializeField, Min(0.1f)] private float _runtimeReadinessGraceSeconds = 3f;
+    [Tooltip("5초마다 대기 조건을 기록하고, 준비 완료 시 경과 시간을 기록합니다. 타임아웃 상세 오류는 이 옵션과 무관하게 출력됩니다.")]
+    [SerializeField] private bool _logRuntimeReadinessDiagnostics = true;
 
     [Header("Gameplay Start Gate")]
     [Tooltip("Gameplay Location 로드가 끝나도 즉시 시작하지 않고 Click/Touch 확인을 기다립니다.")]
@@ -122,6 +126,11 @@ public class SceneLoader : MonoBehaviour
     private bool _pausedByLoadingGate;
     private bool _homeEnvironmentLoadInProgress;
     private Action _homeEnvironmentReadyCallbacks;
+    private bool _homeEnvironmentUnloadInProgress;
+    private bool _homeLoadAfterUnload;
+    private Coroutine _homeTransitionRoutine;
+
+    public bool IsHomeEnvironmentUnloading => _homeEnvironmentUnloadInProgress;
 
     public bool IsWaitingForStartConfirmation => _waitingForStartConfirmation;
 
@@ -473,6 +482,13 @@ public class SceneLoader : MonoBehaviour
             return;
         }
 
+        if (_homeEnvironmentUnloadInProgress)
+        {
+            if (onReady != null) _homeEnvironmentReadyCallbacks += onReady;
+            _homeLoadAfterUnload = true;
+            return;
+        }
+
         if (IsHomeEnvironmentLoaded())
         {
             onReady?.Invoke();
@@ -501,6 +517,7 @@ public class SceneLoader : MonoBehaviour
         if (handle.Status != AsyncOperationStatus.Succeeded)
         {
             Debug.LogError("[SceneLoader] Failed to load the authored HomeScene environment.", this);
+            if (_homeTransitionRoutine != null) return; // The return gate handles failure without uncovering gameplay.
             _isLoading = false;
             SetLoadingScreenVisible(false);
             return;
@@ -517,22 +534,117 @@ public class SceneLoader : MonoBehaviour
     }
 
     // Purpose: Performs the unload home environment workflow for this component.
-    private void UnloadHomeEnvironment()
+    private void UnloadHomeEnvironment(bool preservePlayer = false)
     {
-        if (!IsHomeEnvironmentLoaded())
+        if (_homeEnvironmentUnloadInProgress || !IsHomeEnvironmentLoaded())
             return;
+
+        _homeEnvironmentUnloadInProgress = true;
+        StartCoroutine(UnloadHomeEnvironmentRoutine(preservePlayer));
+    }
+
+    private IEnumerator UnloadHomeEnvironmentRoutine(bool preservePlayer)
+    {
+        Scene home = SceneManager.GetSceneByName(_homeSceneName);
+        if (preservePlayer && !CanUnloadHomeEnvironment(home, FindObjectsByType<PlayerCharacter>(FindObjectsInactive.Include, FindObjectsSortMode.None)))
+        {
+            _homeEnvironmentUnloadInProgress = false;
+            Debug.LogError("[SceneLoader] Home unload refused: move the live player to RUNScene first.", this);
+            yield break;
+        }
 
         if (_homeEnvironmentLoadingOpHandle.IsValid() &&
             _homeEnvironmentLoadingOpHandle.Status == AsyncOperationStatus.Succeeded)
         {
-            Addressables.UnloadSceneAsync(_homeEnvironmentLoadingOpHandle, true);
+            var operation = Addressables.UnloadSceneAsync(_homeEnvironmentLoadingOpHandle, true);
+            yield return operation;
         }
         else
         {
-            SceneManager.UnloadSceneAsync(_homeSceneName);
+            yield return SceneManager.UnloadSceneAsync(_homeSceneName);
         }
 
         _homeEnvironmentLoadingOpHandle = default;
+        _homeEnvironmentUnloadInProgress = false;
+        if (_homeLoadAfterUnload)
+        {
+            _homeLoadAfterUnload = false;
+            EnsureHomeEnvironmentLoaded(null);
+        }
+    }
+
+    public static bool CanUnloadHomeEnvironment(Scene home, PlayerCharacter[] players)
+    {
+        if (!home.IsValid() || !home.isLoaded) return false;
+        foreach (var player in players)
+            if (player != null && player.gameObject.scene == home) return false;
+        return true;
+    }
+
+    public void ReleaseHomeEnvironmentForRun()
+    {
+        SectorStateManager states = FindFirstObjectByType<SectorStateManager>();
+        if (states == null || states.CurrentSector == null || !states.IsManagedSector(states.CurrentSector) ||
+            states.CurrentSector.gameObject.scene.name == _homeSceneName) return;
+        UnloadHomeEnvironment(preservePlayer: true);
+    }
+
+    private bool HasReleasedHomeForRun()
+    {
+        SectorStateManager states = FindFirstObjectByType<SectorStateManager>();
+        return states == null || states.CurrentSector == null || !states.IsManagedSector(states.CurrentSector) ||
+            !IsHomeEnvironmentLoaded();
+    }
+
+    // Return uses the existing loading overlay, but does not require another start-confirmation click.
+    public bool RequestHomeTransition(Func<bool> enterHome, Action<bool> completed)
+    {
+        if (_isLoading || _homeTransitionRoutine != null || enterHome == null || _homeScene == null ||
+            _loadingGroup == null) return false;
+        _homeTransitionRoutine = StartCoroutine(HomeTransitionRoutine(enterHome, completed));
+        return true;
+    }
+
+    private IEnumerator HomeTransitionRoutine(Func<bool> enterHome, Action<bool> completed)
+    {
+        _isLoading = true;
+        _inputReader?.DisableAllInput();
+        AcquireLoadingPause();
+        SetLoadingMessage(_loadingText);
+        SetLoadingScreenVisible(true);
+        yield return null;
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(1f, _runtimeReadinessTimeoutSeconds);
+        while (_homeEnvironmentUnloadInProgress && Time.realtimeSinceStartup < deadline) yield return null;
+        if (_homeEnvironmentUnloadInProgress)
+        {
+            HandleRuntimeReadinessFailure("waiting for HomeScene unload");
+            _homeTransitionRoutine = null;
+            completed?.Invoke(false);
+            yield break;
+        }
+        EnsureHomeEnvironmentLoaded(null);
+        deadline = Time.realtimeSinceStartup + Mathf.Max(1f, _runtimeReadinessTimeoutSeconds);
+        while (_homeEnvironmentLoadInProgress && Time.realtimeSinceStartup < deadline) yield return null;
+        bool entered = false;
+        try { if (!_homeEnvironmentLoadInProgress && IsHomeEnvironmentLoaded() && HasActivePlayer()) entered = enterHome(); }
+        catch (Exception error) { Debug.LogException(error, this); }
+        if (!entered)
+        {
+            HandleRuntimeReadinessFailure("return to HomeScene");
+            _homeTransitionRoutine = null;
+            completed?.Invoke(false);
+            yield break;
+        }
+        SetLoadingMessage(_cameraLoadingText);
+        yield return new WaitForEndOfFrame();
+        SnapCameraToPlayer();
+        yield return new WaitForEndOfFrame();
+        ReleaseLoadingPause();
+        SetLoadingScreenVisible(false);
+        _isLoading = false;
+        _homeTransitionRoutine = null;
+        completed?.Invoke(true);
+        _inputReader?.EnableGameplayInput();
     }
 
     // Purpose: Responds to the new scene loaded callback.
@@ -575,7 +687,8 @@ public class SceneLoader : MonoBehaviour
             yield return WaitForRuntimeReadiness(
                 requirePlayer: false,
                 context: "initial scene load",
-                completed: result => runtimeReady = result);
+                completed: result => runtimeReady = result,
+                allowInitialHideout: true);
 
             if (!runtimeReady)
             {
@@ -611,6 +724,10 @@ public class SceneLoader : MonoBehaviour
             yield return new WaitForEndOfFrame();
             SnapCameraToPlayer();
             yield return new WaitForEndOfFrame();
+            ReleaseHomeEnvironmentForRun();
+            while (_homeEnvironmentUnloadInProgress) yield return null;
+            if (!HasReleasedHomeForRun())
+            { HandleRuntimeReadinessFailure("initial raid HomeScene unload"); yield break; }
         }
 
         if (_showLoadingScreen)
@@ -733,6 +850,15 @@ public class SceneLoader : MonoBehaviour
             yield break;
         }
 
+        ReleaseHomeEnvironmentForRun();
+        while (_homeEnvironmentUnloadInProgress) yield return null;
+        if (!HasReleasedHomeForRun())
+        {
+            HandleRuntimeReadinessFailure("deployment HomeScene unload");
+            _stageTransitionRoutine = null;
+            yield break;
+        }
+
         SetLoadingMessage(_cameraLoadingText);
         yield return new WaitForEndOfFrame();
         SnapCameraToPlayer();
@@ -781,27 +907,46 @@ public class SceneLoader : MonoBehaviour
             cameraManager.SnapToTarget();
     }
 
-    // Purpose: Waits until the generated map, synchronous content placement, and sector runtime registration are all valid.
+    // Purpose: Waits for the selected initial environment or a generated deployment map.
     private IEnumerator WaitForRuntimeReadiness(
         bool requirePlayer,
         string context,
-        Action<bool> completed)
+        Action<bool> completed,
+        bool allowInitialHideout = false)
     {
-        float deadline = Time.realtimeSinceStartup + Mathf.Max(1f, _runtimeReadinessTimeoutSeconds);
+        float started = Time.realtimeSinceStartup;
+        float timeout = Mathf.Max(1f, _runtimeReadinessTimeoutSeconds);
+        float deadline = started + timeout;
+        float lastPoll = started;
+        float longestPollGap = 0f;
+        float nextProgressLog = started + 5f;
+        string lastNotReadyReason = "No unready condition observed.";
 
         SetLoadingMessage(_mapLoadingText);
-
-        while (!HasGeneratedMapReady(out _))
+        while (true)
         {
-            if (Time.realtimeSinceStartup >= deadline)
+            float now = Time.realtimeSinceStartup;
+            longestPollGap = Mathf.Max(longestPollGap, now - lastPoll);
+            lastPoll = now;
+            bool environmentReady = HasRuntimeEnvironmentReady(
+                FindAnyObjectByType<SectorStateManager>(),
+                FindAnyObjectByType<StageProgressionManager>(FindObjectsInactive.Include),
+                allowInitialHideout, out _, out string reason);
+            if (environmentReady) break;
+            lastNotReadyReason = reason;
+            LogReadinessWait(context, "environment", now - started, reason, ref nextProgressLog);
+            if (now >= deadline)
             {
-                ReportRuntimeReadinessTimeout(context, requirePlayer);
+                ReportRuntimeReadinessTimeout(context, requirePlayer, allowInitialHideout,
+                    "environment", now - started, 0, 0, lastNotReadyReason, longestPollGap);
                 completed?.Invoke(false);
                 yield break;
             }
-
             yield return null;
         }
+        float environmentElapsed = Time.realtimeSinceStartup - started;
+        if (_logRuntimeReadinessDiagnostics)
+            Debug.Log($"[SceneLoader] Environment ready. context={context}, elapsed={environmentElapsed:0.000}s", this);
 
         // SectorContentSlotSpawner.Populate is synchronous. One rendered frame
         // here lets every newly-instantiated loot/content prefab complete Awake
@@ -812,24 +957,49 @@ public class SceneLoader : MonoBehaviour
         SetLoadingMessage(_systemLoadingText);
         int stableFrames = 0;
         int requiredFrames = Mathf.Max(1, _requiredStableRuntimeReadyFrames);
+        float systemStarted = Time.realtimeSinceStartup;
+        // Give content's first rendered frame a fresh, bounded stabilization window.
+        float stabilizationDeadline = Mathf.Max(deadline,
+            systemStarted + Mathf.Max(0.1f, _runtimeReadinessGraceSeconds));
+        bool grantedReadyGrace = false;
+        int stableResets = 0;
 
         while (stableFrames < requiredFrames)
         {
-            if (IsGameplayRuntimeReady(requirePlayer, out _))
+            float now = Time.realtimeSinceStartup;
+            longestPollGap = Mathf.Max(longestPollGap, now - lastPoll);
+            lastPoll = now;
+            bool ready = IsGameplayRuntimeReady(requirePlayer, allowInitialHideout, out string reason);
+            if (ready)
             {
+                // Grant only once, never extend indefinitely when readiness flaps.
+                if (!grantedReadyGrace)
+                {
+                    grantedReadyGrace = true;
+                    stabilizationDeadline = Mathf.Max(stabilizationDeadline,
+                        now + Mathf.Max(0.1f, _runtimeReadinessGraceSeconds));
+                }
                 stableFrames++;
             }
             else
             {
+                if (stableFrames > 0) stableResets++;
                 stableFrames = 0;
+                lastNotReadyReason = reason;
             }
 
             if (stableFrames >= requiredFrames)
                 break;
 
-            if (Time.realtimeSinceStartup >= deadline)
+            string waitingReason = ready
+                ? $"Runtime is ready; confirming consecutive frames {stableFrames}/{requiredFrames}."
+                : reason;
+            LogReadinessWait(context, "stabilization", now - started, waitingReason, ref nextProgressLog);
+            if (now >= stabilizationDeadline)
             {
-                ReportRuntimeReadinessTimeout(context, requirePlayer);
+                ReportRuntimeReadinessTimeout(context, requirePlayer, allowInitialHideout,
+                    "stabilization", now - started, stableFrames, requiredFrames,
+                    lastNotReadyReason, longestPollGap, environmentElapsed, now - systemStarted, stableResets);
                 completed?.Invoke(false);
                 yield break;
             }
@@ -837,19 +1007,33 @@ public class SceneLoader : MonoBehaviour
             yield return null;
         }
 
+        if (_logRuntimeReadinessDiagnostics)
+            Debug.Log($"[SceneLoader] Runtime ready. context={context}, elapsed={Time.realtimeSinceStartup - started:0.000}s, " +
+                $"environment={environmentElapsed:0.000}s, stabilization={Time.realtimeSinceStartup - systemStarted:0.000}s, " +
+                $"stableFrames={stableFrames}/{requiredFrames}, stableResets={stableResets}, longestPollGap={longestPollGap:0.000}s", this);
         completed?.Invoke(true);
     }
 
     // Purpose: Waits for the player instance created by the scene-ready event before allowing camera setup.
     private IEnumerator WaitForPlayerReadiness(string context, Action<bool> completed)
     {
-        float deadline = Time.realtimeSinceStartup + Mathf.Max(1f, _runtimeReadinessTimeoutSeconds);
+        float started = Time.realtimeSinceStartup;
+        float deadline = started + Mathf.Max(1f, _runtimeReadinessTimeoutSeconds);
+        float nextProgressLog = started + 5f;
+        float lastPoll = started;
+        float longestPollGap = 0f;
 
         while (!HasActivePlayer())
         {
-            if (Time.realtimeSinceStartup >= deadline)
+            float now = Time.realtimeSinceStartup;
+            longestPollGap = Mathf.Max(longestPollGap, now - lastPoll);
+            lastPoll = now;
+            const string reason = "PlayerCharacter has not been spawned or is inactive.";
+            LogReadinessWait(context, "player spawn", now - started, reason, ref nextProgressLog);
+            if (now >= deadline)
             {
-                ReportRuntimeReadinessTimeout(context, requirePlayer: true);
+                ReportRuntimeReadinessTimeout(context, true, true, "player spawn",
+                    now - started, 0, 0, reason, longestPollGap);
                 completed?.Invoke(false);
                 yield break;
             }
@@ -860,11 +1044,73 @@ public class SceneLoader : MonoBehaviour
         completed?.Invoke(true);
     }
 
-    // Purpose: Checks whether the generated stage layout has a matching set of registered runtime sectors.
-    private static bool HasGeneratedMapReady(out string diagnostic)
+    // Home is accepted only after progression explicitly completed initial Home
+    // entry. A loaded HomeScene alone must never hide a failed raid build/resume.
+    private static bool HasRuntimeEnvironmentReady(
+        SectorStateManager sectorStateManager,
+        StageProgressionManager progression,
+        bool allowInitialHideout,
+        out bool usesHideout,
+        out string diagnostic)
     {
-        SectorStateManager sectorStateManager = FindAnyObjectByType<SectorStateManager>();
+        usesHideout = false;
 
+        if (allowInitialHideout && progression != null)
+        {
+            if (!progression.isActiveAndEnabled || !progression.IsInitialRuntimePrepared)
+            {
+                diagnostic = string.IsNullOrEmpty(progression.InitialRuntimePreparationFailure)
+                    ? "StageProgressionManager is still preparing initial Home/raid entry."
+                    : progression.InitialRuntimePreparationFailure;
+                return false;
+            }
+
+            usesHideout = !progression.InitialEntryRequiresGeneratedMap;
+            if (usesHideout)
+                return HasPreparedHideoutReady(sectorStateManager, progression.InitialHideoutSector, out diagnostic);
+        }
+
+        return HasGeneratedMapReady(sectorStateManager, out diagnostic);
+    }
+
+    private static bool HasPreparedHideoutReady(
+        SectorStateManager sectorStateManager, SectorRuntime hideoutSector, out string diagnostic)
+    {
+        if (sectorStateManager == null)
+        {
+            diagnostic = "SectorStateManager is missing.";
+            return false;
+        }
+
+        if (hideoutSector == null || sectorStateManager.CurrentSector != hideoutSector)
+        {
+            diagnostic = "Prepared Hideout has not been assigned as CurrentSector.";
+            return false;
+        }
+
+        if (!hideoutSector.gameObject.scene.isLoaded || !hideoutSector.isActiveAndEnabled)
+        {
+            diagnostic = "Prepared Hideout is not active in a loaded scene.";
+            return false;
+        }
+
+        HomeSector home = hideoutSector.GetComponent<HomeSector>();
+        HideoutRuntime hideout = hideoutSector.GetComponent<HideoutRuntime>();
+        if (home == null || !home.isActiveAndEnabled || home.SectorRuntime != hideoutSector ||
+            hideout == null || !hideout.isActiveAndEnabled || hideout.Sector != hideoutSector ||
+            !hideoutSector.IsOpened || !hideoutSector.IsCleared || hideoutSector.PlayerStartPoint == null)
+        {
+            diagnostic = "Authored HomeSector/Hideout runtime or spawn anchor is not prepared.";
+            return false;
+        }
+
+        diagnostic = string.Empty;
+        return true;
+    }
+
+    // Purpose: Checks whether the generated stage layout has matching registered runtime sectors.
+    private static bool HasGeneratedMapReady(SectorStateManager sectorStateManager, out string diagnostic)
+    {
         if (sectorStateManager == null)
         {
             diagnostic = "SectorStateManager is missing.";
@@ -908,15 +1154,28 @@ public class SceneLoader : MonoBehaviour
         return true;
     }
 
-    // Purpose: Checks that all generated rooms, runtime references, and optionally the player are available for gameplay.
-    private static bool IsGameplayRuntimeReady(bool requirePlayer, out string diagnostic)
+    // Purpose: Checks the chosen environment, runtime references, and optionally the player.
+    private static bool IsGameplayRuntimeReady(bool requirePlayer, bool allowInitialHideout, out string diagnostic)
     {
-        if (!HasGeneratedMapReady(out diagnostic))
+        return IsRuntimeReady(
+            FindAnyObjectByType<SectorStateManager>(),
+            FindAnyObjectByType<StageProgressionManager>(FindObjectsInactive.Include),
+            allowInitialHideout, requirePlayer, HasActivePlayer(), out diagnostic);
+    }
+
+    private static bool IsRuntimeReady(
+        SectorStateManager sectorStateManager,
+        StageProgressionManager progression,
+        bool allowInitialHideout,
+        bool requirePlayer,
+        bool hasActivePlayer,
+        out string diagnostic)
+    {
+        if (!HasRuntimeEnvironmentReady(sectorStateManager, progression, allowInitialHideout,
+                out bool usesHideout, out diagnostic))
             return false;
 
-        SectorStateManager sectorStateManager = FindAnyObjectByType<SectorStateManager>();
-
-        if (sectorStateManager.StartSector == null)
+        if (!usesHideout && sectorStateManager.StartSector == null)
         {
             diagnostic = "StartSector has not been registered.";
             return false;
@@ -928,7 +1187,7 @@ public class SceneLoader : MonoBehaviour
             return false;
         }
 
-        for (int i = 0; i < sectorStateManager.Sectors.Count; i++)
+        for (int i = 0; !usesHideout && i < sectorStateManager.Sectors.Count; i++)
         {
             SectorRuntime sector = sectorStateManager.Sectors[i];
 
@@ -945,7 +1204,7 @@ public class SceneLoader : MonoBehaviour
             }
         }
 
-        if (requirePlayer && !HasActivePlayer())
+        if (requirePlayer && !hasActivePlayer)
         {
             diagnostic = "PlayerCharacter has not been spawned or is inactive.";
             return false;
@@ -963,13 +1222,46 @@ public class SceneLoader : MonoBehaviour
     }
 
     // Purpose: Emits a targeted readiness timeout diagnostic while keeping the loading overlay active.
-    private void ReportRuntimeReadinessTimeout(string context, bool requirePlayer)
+    private void LogReadinessWait(string context, string phase, float elapsed, string reason, ref float nextLog)
     {
-        bool ready = IsGameplayRuntimeReady(requirePlayer, out string diagnostic);
+        if (!_logRuntimeReadinessDiagnostics || Time.realtimeSinceStartup < nextLog) return;
+        nextLog = Time.realtimeSinceStartup + 5f;
+        Debug.LogWarning($"[SceneLoader] Still waiting. context={context}, phase={phase}, elapsed={elapsed:0.000}s, " +
+            $"reason={reason}, timeScale={Time.timeScale:0.###}, editorFocused={Application.isFocused}", this);
+    }
 
+    private void ReportRuntimeReadinessTimeout(string context, bool requirePlayer, bool allowInitialHideout = false,
+        string phase = "runtime", float elapsedSeconds = -1f, int stableFrames = 0, int requiredFrames = 0,
+        string lastNotReadyReason = "Not recorded.", float longestPollGap = 0f,
+        float environmentSeconds = -1f, float stabilizationSeconds = -1f, int stableResets = 0)
+    {
+        bool ready = IsGameplayRuntimeReady(requirePlayer, allowInitialHideout, out string diagnostic);
+        string reason = ready
+            ? $"Runtime is ready now, but the wait expired before stable confirmation completed ({stableFrames}/{requiredFrames})."
+            : diagnostic;
+        var scenes = new System.Text.StringBuilder();
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene scene = SceneManager.GetSceneAt(i);
+            if (i > 0) scenes.Append(", ");
+            scenes.Append(scene.name).Append(scene.isLoaded ? " (loaded)" : " (loading)");
+        }
+        var sectors = FindAnyObjectByType<SectorStateManager>();
+        var progression = FindAnyObjectByType<StageProgressionManager>(FindObjectsInactive.Include);
         Debug.LogError(
-            $"[SceneLoader] Runtime readiness timed out. context={context}, " +
-            $"requirePlayer={requirePlayer}, ready={ready}, reason={diagnostic}",
+            $"[SceneLoader] Runtime readiness timed out. context={context}, phase={phase}, " +
+            $"requirePlayer={requirePlayer}, ready={ready}, reason={reason}\n" +
+            $"elapsed={elapsedSeconds:0.000}s, timeout={_runtimeReadinessTimeoutSeconds:0.###}s, grace={_runtimeReadinessGraceSeconds:0.###}s, " +
+            $"environment={environmentSeconds:0.000}s, stabilization={stabilizationSeconds:0.000}s, " +
+            $"stableFrames={stableFrames}/{requiredFrames}, stableResets={stableResets}, longestPollGap={longestPollGap:0.000}s\n" +
+            $"lastNotReadyReason={lastNotReadyReason}\n" +
+            $"scenes=[{scenes}], sectorManagerPresent={sectors != null}, registeredSectors={(sectors != null ? sectors.Sectors.Count : 0)}, " +
+            $"currentSector={(sectors != null && sectors.CurrentSector != null ? sectors.CurrentSector.name : "missing")}, " +
+            $"startSector={(sectors != null && sectors.StartSector != null ? sectors.StartSector.name : "missing")}, " +
+            $"initialPrepared={progression != null && progression.IsInitialRuntimePrepared}, " +
+            $"preparationFailure={(progression != null ? progression.InitialRuntimePreparationFailure : "StageProgressionManager missing")}, " +
+            $"playerActive={HasActivePlayer()}, timeScale={Time.timeScale:0.###}, focused={Application.isFocused}, frame={Time.frameCount}\n" +
+            "longestPollGap includes editor pauses, frame stalls and synchronous work; it is not a profiler attribution.",
             this);
     }
 

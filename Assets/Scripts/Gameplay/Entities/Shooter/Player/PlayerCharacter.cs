@@ -16,6 +16,11 @@ public class PlayerCharacter : MonoBehaviour
 
     private Vector2 _inputVector;
     private float _previousSpeed;
+    public ShooterStaminaRuntime Stamina { get; private set; }
+    private PlayerAimController _aim;
+    private PlayerConsumableUseRuntime _consumable;
+    private ShooterMeleeAttack _melee;
+    public bool IsSprinting => Stamina != null && Stamina.IsSprinting;
 
     [NonSerialized] public bool DashInput;
 
@@ -39,6 +44,11 @@ public class PlayerCharacter : MonoBehaviour
     private void Awake()
     {
         ShooterStuckRecovery.EnsureOn(this);
+        Stamina = ShooterStaminaRuntime.EnsureOn(this);
+        if (GetComponent<PlayerStaminaHUD>() == null) gameObject.AddComponent<PlayerStaminaHUD>();
+        _aim = EntityComponentResolver.Resolve<PlayerAimController>(this);
+        _consumable = EntityComponentResolver.Resolve<PlayerConsumableUseRuntime>(this);
+        _melee = EntityComponentResolver.Resolve<ShooterMeleeAttack>(this);
     }
 
     // Purpose: Responds to the controller collider hit callback.
@@ -50,6 +60,7 @@ public class PlayerCharacter : MonoBehaviour
     // Purpose: Activates runtime subscriptions and refreshes the enabled state.
     private void OnEnable()
     {
+        ShooterBodyCollisionMotor.RegisterBody(EntityComponentResolver.Resolve<CharacterController>(this));
         if (_inputReader == null)
             return;
 
@@ -81,6 +92,11 @@ public class PlayerCharacter : MonoBehaviour
     private void Update()
     {
         RecalculateMovement();
+        Stamina.SetSprintRequested(_inputReader != null && _inputReader.SprintInputHeld,
+            _inputVector.sqrMagnitude > 0.01f && !GameplayActionInputBlocker.IsMovementBlocked &&
+            (_aim == null || (!_aim.IsAiming && !_aim.IsAimTransitioning && !_aim.IsReloading)) &&
+            (_consumable == null || !_consumable.IsUsing) && (_melee == null || !_melee.IsAttacking));
+        isRunning = IsSprinting;
     }
 
     // Purpose: Performs the recalculate movement workflow for this component.
@@ -120,7 +136,8 @@ public class PlayerCharacter : MonoBehaviour
     // Purpose: Responds to the dash initiated callback.
     private void OnDashInitiated()
     {
-        DashInput = true;
+        // Reject this press, rather than buffering it until stamina later recovers above the start threshold.
+        DashInput = Stamina == null || Stamina.CanSpend;
     }
 
     // Purpose: Responds to the dash canceled callback.

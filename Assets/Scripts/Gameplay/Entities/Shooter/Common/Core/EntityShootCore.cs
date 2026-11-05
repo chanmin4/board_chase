@@ -17,9 +17,11 @@ public struct EntityShootStats
     public PaintMarkFaction hitMarkFaction;
     public float hitMarkAmount;
     public float infectionDamageOnHit;
-    public int penetrationClass;
+    public float penetrationClass;
     public float armorHealthDurabilityLossMultiplier;
     public float armorInfectionDurabilityLossMultiplier;
+    public Damageable headshotCandidate;
+    public float headshotDamageMultiplier;
 
     public EntityShootStats(
         float maxRange,
@@ -28,7 +30,7 @@ public struct EntityShootStats
         PaintMarkFaction hitMarkFaction,
         float hitMarkAmount,
         float infectionDamageOnHit,
-        int penetrationClass,
+        float penetrationClass,
         float armorHealthDurabilityLossMultiplier = 1f,
         float armorInfectionDurabilityLossMultiplier = 0.5f)
     {
@@ -41,6 +43,8 @@ public struct EntityShootStats
         this.penetrationClass = Mathf.Max(0, penetrationClass);
         this.armorHealthDurabilityLossMultiplier = Mathf.Max(0f, armorHealthDurabilityLossMultiplier);
         this.armorInfectionDurabilityLossMultiplier = Mathf.Max(0f, armorInfectionDurabilityLossMultiplier);
+        headshotCandidate = null;
+        headshotDamageMultiplier = 1f;
     }
 }
 
@@ -130,6 +134,7 @@ public abstract class EntityShootCore : MonoBehaviour
                 source,
                 soundStimulusEvent,
                 shootHitConfirmedEvent);
+            bullet.ConfigureHeadshot(stats.headshotCandidate, stats.headshotDamageMultiplier, weaponConfig);
 
             if (debugDraw)
             {

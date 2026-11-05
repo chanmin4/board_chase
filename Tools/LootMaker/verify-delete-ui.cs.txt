@@ -1,0 +1,130 @@
+// Manual regression probe: temporarily copy this file to Assets/Editor/LootDeleteUiProbe.cs
+// and Refresh, then remove the temporary script/meta after the report appears.
+// Uses an isolated editor window; only clicks Select / Delete review / Cancel.
+// Never confirms deletion, saves scenes, or rebinds authored records.
+// Report version is a run-once marker; use a fresh report name for an explicit new run.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
+
+[InitializeOnLoad]
+internal static class LootDeleteUiProbe
+{
+    const string Report = "Library/LootMakerAuthoring-20260929/delete-ui-probe-v2.txt";
+    static LootProgressionEditorWindow window;
+    static LootObjectSO safe;
+    static readonly Dictionary<string, Rect> rects = new();
+    static readonly List<string> lines = new();
+    static int phase, frames;
+    static double started;
+    static string lastState;
+    static readonly Dictionary<string, string> originalFiles = new();
+    static LootDeleteUiProbe() { EditorApplication.delayCall += Start; }
+    static object Read(string name) => typeof(LootProgressionEditorWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(window);
+    static void Set(string name, object value) => typeof(LootProgressionEditorWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(window, value);
+    static void Start()
+    {
+        if (File.Exists(Report)) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+        { EditorApplication.delayCall += Start; return; }
+        var medical = AssetDatabase.LoadAssetAtPath<LootObjectSO>("Assets/ScriptableObject/GameScene/Stage/RaidLoot/RaidContainer_Medical.asset");
+        safe = AssetDatabase.LoadAssetAtPath<LootObjectSO>("Assets/ScriptableObject/GameScene/Stage/RaidLoot/RaidContainer_Vault.asset");
+        if (medical == null || safe == null) { File.WriteAllText(Report, "Missing probe input"); return; }
+        foreach (var record in new[] { medical, safe }) Remember(AssetDatabase.GetAssetPath(record));
+        Remember(AssetDatabase.GetAssetPath(safe.WorldPrefab));
+        Remember(AssetDatabase.GetAssetPath(safe.LootTable));
+        for (int stage = 1; stage <= 5; stage++) Remember($"Assets/ScriptableObject/GameScene/Stage/Stage{stage}Definition.asset");
+        foreach (var test in typeof(LootMakerAuthoringTests).GetMethods())
+        {
+            if (!test.Name.StartsWith("DeletionReview")) continue;
+            var fixture = new LootMakerAuthoringTests();
+            try { fixture.Setup(); test.Invoke(fixture, null); lines.Add("PASS " + test.Name); }
+            catch (Exception ex) { lines.Add("FAIL " + test.Name + ": " + ex); }
+            finally { fixture.Cleanup(); }
+        }
+        window = ScriptableObject.CreateInstance<LootProgressionEditorWindow>();
+        window.titleContent = new GUIContent("Loot UI verification (read-only)");
+        window.position = new Rect(120, 100, 1268, 890);
+        window.GuiControlObserved = (name, rect) => rects[name] = rect;
+        Set("_showUnassignedVariants", true);
+        typeof(LootProgressionEditorWindow).GetMethod("SelectContainer", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(window, new object[] { medical });
+        window.ShowUtility();
+        started = EditorApplication.timeSinceStartup;
+        Save("Probe started");
+        EditorApplication.update += Tick;
+    }
+    static void Click(Rect rect)
+    {
+        window.SendEvent(new Event { type = EventType.MouseDown, button = 0, mousePosition = rect.center });
+        window.SendEvent(new Event { type = EventType.MouseUp, button = 0, mousePosition = rect.center });
+    }
+    static void Tick()
+    {
+        try
+        {
+            if (window == null) { Finish("Window closed"); return; }
+            if (EditorApplication.timeSinceStartup - started > 300) { Finish("TIMEOUT"); return; }
+            string state = "phase=" + phase + " pending=" + Read("_deletePending") + " queued=" + (Read("_deleteWork") != null) +
+                " review=" + Read("_deleteBox") + " usage=" + (Read("_deleteUsage") != null) + " error=" + Read("_deleteError");
+            if (state != lastState) { lastState = state; Save(state); }
+            window.Repaint();
+            if (++frames < 8) return;
+            frames = 0;
+            if (phase == 0 && rects.TryGetValue("Card:" + safe.name, out Rect card))
+            {
+                lines.Add("Safe card " + card);
+                Click(card);
+                lines.Add("Selection after card: " + Read("_selectedWorldLootObject"));
+                phase = 1;
+            }
+            else if (phase == 1 && rects.TryGetValue("Delete", out Rect button))
+            {
+                lines.Add("Delete button " + button);
+                Click(button);
+                lines.Add("Pending after Delete: " + Read("_deletePending"));
+                lines.Add("Selection after Delete: " + Read("_selectedWorldLootObject"));
+                phase = 2;
+            }
+            else if (phase == 2 && !(bool)Read("_deletePending") && rects.ContainsKey("DeleteCheckComplete"))
+            {
+                lines.Add("Delete box: " + Read("_deleteBox"));
+                lines.Add("Usage available: " + (Read("_deleteUsage") != null));
+                lines.Add("Delete panel painted: " + rects.ContainsKey("DeletePanel"));
+                var usage = (LootMakerDeletion.Usage)Read("_deleteUsage");
+                lines.Add("References=" + usage.References.Count + " blockers=" + usage.Blockers.Count);
+                foreach (string blocker in usage.Blockers) lines.Add("Blocker: " + blocker);
+                phase = 3;
+            }
+            else if (phase == 3 && rects.TryGetValue("DeleteCancel", out Rect cancel))
+            {
+                Click(cancel);
+                lines.Add("Cancel clears review: " + (Read("_deleteBox") == null));
+                Finish("PROBE COMPLETE - no deletion confirmed, no assets changed");
+            }
+        }
+        catch (Exception ex) { Finish(ex.ToString()); }
+    }
+    static void Finish(string result)
+    {
+        EditorApplication.update -= Tick;
+        lines.Add(result);
+        foreach (var pair in originalFiles) lines.Add((File.ReadAllText(pair.Key) == pair.Value ? "UNCHANGED " : "CHANGED ") + pair.Key);
+        Directory.CreateDirectory(Path.GetDirectoryName(Report));
+        File.WriteAllLines(Report, lines);
+        if (window != null) { window.GuiControlObserved = null; window.Close(); }
+    }
+    static void Remember(string path)
+    {
+        if (File.Exists(path)) originalFiles[path] = File.ReadAllText(path);
+        if (File.Exists(path + ".meta")) originalFiles[path + ".meta"] = File.ReadAllText(path + ".meta");
+    }
+    static void Save(string line)
+    {
+        lines.Add(DateTime.Now.ToString("HH:mm:ss") + " " + line);
+        Directory.CreateDirectory(Path.GetDirectoryName(Report));
+        File.WriteAllLines(Report, lines);
+    }
+}

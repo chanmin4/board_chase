@@ -321,7 +321,15 @@ internal sealed class ContentTemplateItemInspector : Editor
         ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_weaponViewLocalEulerAngles", "Hand Local Rotation");
         ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_weaponViewLocalScale", "Hand Local Scale");
 
-        ContentTemplateInspectorUi.DrawSection("3. Audio and Stat Changes");
+        if (target is RangedWeaponSO)
+        {
+            ContentTemplateInspectorUi.DrawSection("3. 무기 기본 성능", "플레이어와 적이 같은 원본을 사용합니다. 최종값은 장착 패시브/장비 보정을 더해 계산합니다.");
+            ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_combat", "사격 · 조준 · 발사 반동");
+            ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_weaponType", "무기 종류");
+            ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_damageMultiplier", "탄환 피해 배율");
+            ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_magazineSize", "무기 탄창 크기");
+        }
+        ContentTemplateInspectorUi.DrawSection("4. Audio and Stat Changes");
         ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_audioProfile", "Weapon Audio Profile");
         ContentTemplateInspectorUi.DrawProperty(serializedObject, drawn, "_statModifiers", "Stat Modifiers");
     }

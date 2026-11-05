@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 // Owns an isolated preview scene; never inserts preview objects into the user's open scene.
-public sealed class ShooterCustomizePreview : IDisposable
+public sealed partial class ShooterCustomizePreview : IDisposable
 {
     private PreviewRenderUtility _renderer;
     private ShooterCustomizeSO _applied;
@@ -26,7 +26,7 @@ public sealed class ShooterCustomizePreview : IDisposable
         return null;
     }
 
-    public void Build(GameObject source)
+    public void Build(GameObject source, GameObject character = null)
     {
         Dispose();
         if (source == null) return;
@@ -47,6 +47,7 @@ public sealed class ShooterCustomizePreview : IDisposable
         foreach (var collider in Root.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
         Rig = Root.GetComponent<ShooterVisualRig>() ?? Root.AddComponent<ShooterVisualRig>();
         Rig.AutoResolveReferences();
+        CaptureFittingBaseline(source, character);
         BodyHasCollider = Rig.BodyVisualRootContainsCollider;
         _applied = ScriptableObject.CreateInstance<ShooterCustomizeSO>();
         _applied.hideFlags = HideFlags.HideAndDontSave;
@@ -57,22 +58,10 @@ public sealed class ShooterCustomizePreview : IDisposable
     public void Apply(ShooterCustomizeDraft draft, bool showEquipment)
     {
         if (Rig == null) return;
-        if (_equipment != null) UnityEngine.Object.DestroyImmediate(_equipment);
-        _equipment = null;
-        Rig.ClearEquipmentOccupancy("CustomizePreview");
+        ClearFittingEquipment();
         draft.CaptureTo(_applied);
         Rig.ApplyCustomize(_applied);
-        if (showEquipment && draft.equipment != null && draft.equipmentPrefab != null)
-        {
-            Transform socket = Rig.ResolveSocket(draft.equipmentSocket);
-            if (socket != null)
-            {
-                _equipment = UnityEngine.Object.Instantiate(draft.equipmentPrefab, socket);
-                draft.equipmentPose.ApplyTo(_equipment.transform);
-                Rig.SetEquipmentOccupancy("CustomizePreview", draft.ResolvedEquipmentCoverage);
-                Rig.SetEquipmentFaceSlotOccupied("CustomizePreview", draft.equipmentSocket == ShooterVisualSocketId.Face);
-            }
-        }
+        ApplyFittingEquipment(draft, showEquipment);
         foreach (var behaviour in Root.GetComponentsInChildren<Behaviour>(true)) behaviour.enabled = false;
         foreach (var collider in Root.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
         UpdateBounds();
@@ -92,19 +81,26 @@ public sealed class ShooterCustomizePreview : IDisposable
 
     public void Frame() { FramingBounds = Bounds; }
 
+    public float ViewDistance(Rect rect, float zoom)
+    {
+        float radius = Mathf.Max(.2f, FramingBounds.extents.magnitude);
+        float aspect = Mathf.Max(1, rect.width) / Mathf.Max(1, rect.height);
+        float verticalHalfFov = 15 * Mathf.Deg2Rad;
+        float halfFov = Mathf.Min(verticalHalfFov, Mathf.Atan(Mathf.Tan(verticalHalfFov) * aspect));
+        // Leave room for live proportion edits without moving the camera on every slider tick.
+        return radius / Mathf.Sin(halfFov) * 1.35f / Mathf.Max(.1f, zoom);
+    }
+
     public Texture Render(Rect rect, Vector2 orbit, float zoom, Vector3 pivot)
     {
         if (_renderer == null || rect.width < 2 || rect.height < 2) return null;
         float radius = Mathf.Max(.2f, FramingBounds.extents.magnitude);
-        float aspect = rect.width / rect.height;
-        float verticalHalfFov = 15 * Mathf.Deg2Rad;
-        float halfFov = Mathf.Min(verticalHalfFov, Mathf.Atan(Mathf.Tan(verticalHalfFov) * aspect));
-        // Leave room for live proportion edits without moving the camera on every slider tick.
-        float distance = radius / Mathf.Sin(halfFov) * 1.35f / Mathf.Max(.1f, zoom);
+        float distance = ViewDistance(rect, zoom);
         Quaternion rotation = Quaternion.Euler(orbit.y, orbit.x, 0);
         _renderer.camera.transform.SetPositionAndRotation(pivot - rotation * Vector3.forward * distance, rotation);
-        _renderer.camera.nearClipPlane = Mathf.Max(.005f, distance - radius * 3);
-        _renderer.camera.farClipPlane = distance + radius * 10 + 10;
+        // A fly camera can move close to the character, unlike a fixed orbit camera.
+        _renderer.camera.nearClipPlane = .01f;
+        _renderer.camera.farClipPlane = Vector3.Distance(_renderer.camera.transform.position, FramingBounds.center) + radius * 10 + 10;
         _renderer.BeginPreview(rect, GUIStyle.none);
         Texture result;
         try { _renderer.Render(true, false); }
@@ -114,6 +110,7 @@ public sealed class ShooterCustomizePreview : IDisposable
 
     public void Dispose()
     {
+        ClearFittingEquipment();
         if (_renderer != null) _renderer.Cleanup();
         _renderer = null;
         if (_applied != null) UnityEngine.Object.DestroyImmediate(_applied);

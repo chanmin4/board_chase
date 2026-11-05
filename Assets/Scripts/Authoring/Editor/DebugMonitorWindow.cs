@@ -81,6 +81,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
     private string _search = string.Empty;
     private Vector2 _tableScroll;
     private Vector2 _detailScroll;
+    [SerializeField] private float _characterTableHeight;
     private int _selectedRowId = -1;
     private Transform _playerTransform;
     private SectorStateManager _sectorStateManager;
@@ -94,13 +95,13 @@ public sealed partial class DebugMonitorWindow : EditorWindow
     private string _stageDebugStatus = string.Empty;
     private MessageType _stageDebugStatusType = MessageType.None;
 
-    private GUIStyle _headerStyle;
-    private GUIStyle _cellStyle;
-    private GUIStyle _mutedCellStyle;
-    private GUIStyle _goodCellStyle;
-    private GUIStyle _warningCellStyle;
-    private GUIStyle _badCellStyle;
-    private GUIStyle _sceneLabelStyle;
+    [NonSerialized] private GUIStyle _headerStyle;
+    [NonSerialized] private GUIStyle _cellStyle;
+    [NonSerialized] private GUIStyle _mutedCellStyle;
+    [NonSerialized] private GUIStyle _goodCellStyle;
+    [NonSerialized] private GUIStyle _warningCellStyle;
+    [NonSerialized] private GUIStyle _badCellStyle;
+    [NonSerialized] private GUIStyle _sceneLabelStyle;
 
     [MenuItem("Tools/Debug/Debug Monitor")]
     // Purpose: Opens the window UI or workflow.
@@ -117,6 +118,8 @@ public sealed partial class DebugMonitorWindow : EditorWindow
     {
         EditorApplication.update += HandleEditorUpdate;
         SceneView.duringSceneGui += HandleSceneGUI;
+        SceneView.duringSceneGui += HandleLabSceneGUI;
+        SceneView.duringSceneGui += HandleColliderSceneGUI;
         _nextRefreshTime = 0d;
         RefreshRows();
     }
@@ -126,11 +129,17 @@ public sealed partial class DebugMonitorWindow : EditorWindow
     {
         EditorApplication.update -= HandleEditorUpdate;
         SceneView.duringSceneGui -= HandleSceneGUI;
+        SceneView.duringSceneGui -= HandleLabSceneGUI;
+        SceneView.duringSceneGui -= HandleColliderSceneGUI;
+        CombatPhysicsTrace.Enabled = false;
+        DestroyGameColliderOverlay();
+        VSplatter.StateMachine.Debugging.HfsmExecutionTrace.Enabled = false;
     }
 
     // Purpose: Handles the incoming editor update request or event.
     private void HandleEditorUpdate()
     {
+        UpdateGameColliderOverlay();
         if (!_autoRefresh || EditorApplication.timeSinceStartup < _nextRefreshTime)
             return;
 
@@ -147,15 +156,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
         EnsureStyles();
         DrawToolbar();
 
-        if (!EditorApplication.isPlaying)
-        {
-            EditorGUILayout.HelpBox(
-                "DebugMonitor는 PlayMode 런타임 값을 읽습니다. PlayMode에 들어가면 Player/Enemy가 자동으로 표시됩니다.",
-                MessageType.Info);
-            return;
-        }
-
-        DrawSummary();
+        if (EditorApplication.isPlaying) DrawSummary();
         DrawMonitorWorkspace();
     }
 
@@ -283,6 +284,9 @@ public sealed partial class DebugMonitorWindow : EditorWindow
         EditorGUILayout.LabelField(
             $"표시 {visible}  |  Player {players}  |  Enemy {enemies}  |  교전 {engaged}  |  Target 시야 확보 {seesTarget}  |  {sectorText}",
             EditorStyles.boldLabel);
+        var profile=SaveSystem.Active?.Profile.experience;
+        var pending=SaveSystem.Active?.RunData.experience;
+        EditorGUILayout.LabelField($"플레이어 Lv.{GameProgressionRuntime.Level} | 누적 XP {profile?.total??0} | 레이드 미정산 XP {pending?.pending??0} | 최근 정산 +{profile?.lastSettlementAmount??0}");
     }
 
     // Purpose: Draws the stage map debug authoring UI.
@@ -498,6 +502,9 @@ public sealed partial class DebugMonitorWindow : EditorWindow
         Vector3 preferred = sector.PlayerStartPoint != null
             ? sector.PlayerStartPoint.position
             : sector.GetWorldBounds().center;
+        var lockedArea = sector.InternalCombatArea;
+        if (lockedArea != null && lockedArea.IsBound && lockedArea.IsLocked)
+            preferred = lockedArea.PerimeterEntryPosition;
 
         if (!ShooterStuckRecovery.TryResolveSafePosition(
                 playerRoot,
@@ -579,12 +586,15 @@ public sealed partial class DebugMonitorWindow : EditorWindow
     // Purpose: Draws the table authoring UI.
     private void DrawTable()
     {
+        float maximumHeight = Mathf.Max(80f, position.height - 200f);
+        if (_characterTableHeight <= 0f)
+            _characterTableHeight = Mathf.Max(190f, position.height * 0.4f);
+        _characterTableHeight = Mathf.Clamp(_characterTableHeight, 80f, maximumHeight);
         _tableScroll = EditorGUILayout.BeginScrollView(
             _tableScroll,
             true,
             true,
-            GUILayout.MinHeight(190f),
-            GUILayout.MaxHeight(Mathf.Max(220f, position.height * 0.52f)));
+            GUILayout.Height(_characterTableHeight));
 
         DrawTableHeader();
 
@@ -597,6 +607,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
 
         GUILayout.Space(2f);
         EditorGUILayout.EndScrollView();
+        DrawPanelResizeGrip(ref _characterTableHeight, 80f, maximumHeight, "캐릭터 목록 / 상세 정보 · 위아래로 드래그");
     }
 
     // Purpose: Draws the table header authoring UI.
@@ -703,6 +714,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
 
         DrawStateMachineDetails(row);
+        DrawExecutionTrace(row);
         DrawSelectedEncounterDetails(row);
         DrawSelectedCombatTestControls(row);
         DrawSelectedCharacterRuntimeItems(row);
@@ -744,7 +756,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
                 $"{row.infection.NaturalRecoveryPerSecond:0.##}/s  x{row.infection.InfectionRecoveryMultiplier:0.##}");
         }
 
-        if (row.paintMark != null)
+        if (row.paintMark != null && row.paintMark.IsMarkEnabled)
         {
             DrawValue(
                 "Mark",
@@ -760,17 +772,24 @@ public sealed partial class DebugMonitorWindow : EditorWindow
                 "Ammo",
                 bullet != null
                     ? bullet.IsBasicAmmo
-                        ? $"{bullet.name} T{(int)bullet.Tier} / Pen {row.stats.ResolvePenetrationClass(bullet)}"
+                        ? $"{bullet.name} T{(int)bullet.Tier} / Pen {row.stats.ResolvePenetrationClass(bullet):0.###}"
                         : $"{bullet.name} / {bullet.GetType().Name}"
                     : "-");
             DrawValue(
                 "Final Shot",
                 bullet != null
                     ? bullet.IsBasicAmmo
-                        ? $"HP {row.stats.ResolveAttackDamage(bullet):0.##} / INF {row.stats.ResolveInfectionDamage(bullet):0.##} / MARK {row.stats.ResolvePaintMarkDamage(bullet):0.##}"
+                        ? $"HP {row.stats.ResolveAttackDamage(bullet):0.##} / INF {row.stats.ResolveInfectionDamage(bullet):0.##}"
                         : "Special-specific runtime"
                     : "-");
             DrawValue("Move Speed", $"{row.stats.MoveSpeed:0.##}");
+            if (row.stats.CurrentFirearm != null)
+            {
+                DrawValue("Weapon Stat Source", row.stats.CurrentFirearm.name);
+                DrawValue("Final Fire / Reload", $"{row.stats.ResolveShotsPerSecond(bullet):0.###}/s / {row.stats.ReloadDurationSeconds:0.###}s");
+                DrawValue("Final Aim / Spread", $"Aim {row.stats.AimSpeed:0.###} / Hip {row.stats.HipFireSpreadAngleDeg:0.###} / ADS {row.stats.AimSpreadAngleDeg:0.###}");
+                DrawValue("Final Shot Recoil", $"Kick {row.stats.ShotKickDistance:0.###} / Max {row.stats.MaximumShotKickDistance:0.###} / Recovery {row.stats.ShotKickRecoveryPerSecond:0.###}/s");
+            }
         }
 
         if (row.equipment != null)
@@ -822,8 +841,11 @@ public sealed partial class DebugMonitorWindow : EditorWindow
             DrawValue("Target 거리", row.combat.TargetPlanarDistance >= 0f ? $"{row.combat.TargetPlanarDistance:0.00}" : "-");
             DrawValue("시야 확보", row.combat.CanSeeTarget ? "Yes" : "No");
             DrawValue("Target Lock", row.combat.IsTargetLocked ? $"{row.combat.TargetLockRemaining:0.00}s" : "No");
-            DrawValue("공격 가능", row.combat.CanAttackTarget ? "Yes" : "No");
-            DrawValue("공격 판단", row.combat.AttackDebugStatus);
+            DrawValue("공격 상태 진입 가능 · AI 기록", row.combat.ObservedCanAttackFrame < 0 ? "미검사" : row.combat.ObservedCanAttackTarget ? "Yes" : "No");
+            DrawValue("공격 판단 · 마지막 평가 frame", row.combat.ObservedCanAttackFrame.ToString());
+            EditorGUILayout.LabelField("공격 판정 이유 · AI 기록", EditorStyles.miniBoldLabel);
+            EditorGUILayout.SelectableLabel(row.combat.ObservedAttackDecisionReason,
+                EditorStyles.wordWrappedLabel, GUILayout.MinHeight(32f));
             DrawValue("공격 범위", $"{row.combat.ActiveAttackRange:0.##} (Start {row.combat.AttackStartRange:0.##} / Keep {row.combat.AttackKeepRange:0.##})");
             DrawValue("Attack Phase", row.combat.AttackPhase.ToString());
             DrawValue("Burst Remaining", row.combat.BurstShotsRemaining.ToString());
@@ -881,6 +903,13 @@ public sealed partial class DebugMonitorWindow : EditorWindow
         DrawValue("Path Status", usable && agent.hasPath ? agent.pathStatus.ToString() : "-");
         DrawValue("남은 거리", usable && agent.hasPath ? $"{agent.remainingDistance:0.00}" : "-");
         DrawValue("Stopping", $"{agent.stoppingDistance:0.00}");
+        if (row.combat != null)
+        {
+            DrawValue("실제 위치 무진행", $"{row.combat.CombatStalledSeconds:0.00}s");
+            EditorGUILayout.LabelField("마지막 전투 끼임 복구", EditorStyles.miniBoldLabel);
+            EditorGUILayout.SelectableLabel(row.combat.NavigationRecoveryStatus,
+                EditorStyles.wordWrappedLabel, GUILayout.MinHeight(48f));
+        }
 
         EditorGUILayout.EndVertical();
     }
@@ -902,6 +931,17 @@ public sealed partial class DebugMonitorWindow : EditorWindow
             StateMachine machine = row.stateMachines[i];
             if (machine == null)
                 continue;
+            if (machine is VSplatter.StateMachine.HfsmStateMachine hfsm)
+            {
+                EditorGUILayout.LabelField("HFSM · 현재 실행 경로", hfsm.ActiveStatePath);
+                for (int scopeIndex = 0; scopeIndex < hfsm.ScopeCount; scopeIndex++)
+                {
+                    var scope = hfsm.GetScope(scopeIndex);
+                    EditorGUILayout.LabelField(scope.Level + "계층 · " + scope.Label,
+                        scope.IsScopeActive ? (scope.CurrentStateSO != null ? scope.CurrentStateSO.name : "<null>") + $" · {scope.CurrentStateElapsedSeconds:0.00}s" : "비활성");
+                }
+                continue;
+            }
 
             string current = machine.CurrentStateSO != null ? machine.CurrentStateSO.name : "<null>";
             string previous = machine.PreviousStateSO != null ? machine.PreviousStateSO.name : "-";
@@ -983,12 +1023,20 @@ public sealed partial class DebugMonitorWindow : EditorWindow
                     if (forward.sqrMagnitude > 0.0001f)
                     {
                         forward.Normalize();
-                        float angle = Mathf.Clamp(vision.ForwardArcAngle, 1f, 360f);
+                        float angle = vision.GetForwardArcAngleAtDistance(vision.CloseVisionRadius);
                         Vector3 left = Quaternion.AngleAxis(-angle * 0.5f, Vector3.up) * forward;
                         Vector3 right = Quaternion.AngleAxis(angle * 0.5f, Vector3.up) * forward;
-                        Handles.DrawWireArc(center, Vector3.up, left, angle, vision.VisionRange);
-                        Handles.DrawLine(center, center + left * vision.VisionRange);
-                        Handles.DrawLine(center, center + right * vision.VisionRange);
+                        float inner = Mathf.Min(vision.CloseVisionRadius, vision.VisionRange);
+                        Vector3 previous = center + left * vision.GetForwardVisionDistance(left);
+                        Handles.DrawLine(center + left * inner, previous);
+                        for (int i = 1; i <= 40; i++)
+                        {
+                            Vector3 direction = Quaternion.AngleAxis(Mathf.Lerp(-angle * 0.5f, angle * 0.5f, i / 40f), Vector3.up) * forward;
+                            Vector3 next = center + direction * vision.GetForwardVisionDistance(direction);
+                            Handles.DrawLine(previous, next);
+                            previous = next;
+                        }
+                        Handles.DrawLine(previous, center + right * inner);
                     }
                 }
                 else
@@ -1049,7 +1097,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
             _textBuilder.Append("\nGoal: ");
             _textBuilder.Append(row.combat.CurrentGoal);
             _textBuilder.Append(" | ");
-            _textBuilder.Append(row.combat.AttackDebugStatus);
+            _textBuilder.Append(row.combat.ObservedAttackStatus);
             _textBuilder.Append("\nDist ");
             _textBuilder.Append(row.combat.TargetPlanarDistance >= 0f
                 ? row.combat.TargetPlanarDistance.ToString("0.0")
@@ -1238,8 +1286,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
 
             builder.Append(effect.Definition.Id);
             builder.Append(' ');
-            builder.Append(effect.RemainingSeconds.ToString("0.0"));
-            builder.Append('s');
+            builder.Append(FormatDebugStatusEffect(effect));
         }
 
         return builder.Length > 0 ? builder.ToString() : "-";
@@ -1337,7 +1384,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
 
         return row.combat != null &&
                (ContainsIgnoreCase(row.combat.CurrentGoal.ToString(), query) ||
-                ContainsIgnoreCase(row.combat.AttackDebugStatus, query));
+                ContainsIgnoreCase(row.combat.ObservedAttackStatus, query));
     }
 
     // Purpose: Performs the contains ignore case workflow for this component.
@@ -1522,7 +1569,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
     private static string ResolveAttackStatus(CharacterRow row)
     {
         return row != null && row.combat != null
-            ? row.combat.AttackDebugStatus
+            ? row.combat.ObservedAttackStatus
             : "-";
     }
 
@@ -1532,7 +1579,7 @@ public sealed partial class DebugMonitorWindow : EditorWindow
         if (row == null || row.combat == null)
             return _mutedCellStyle;
 
-        string status = row.combat.AttackDebugStatus;
+        string status = row.combat.ObservedAttackStatus;
         if (status == "Ready" ||
             status == "Attacking" ||
             status == EnemyShooterAttackPhase.FiringBurst.ToString() ||

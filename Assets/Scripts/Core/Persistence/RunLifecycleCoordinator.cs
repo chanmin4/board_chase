@@ -185,6 +185,7 @@ public sealed class RunLifecycleCoordinator : MonoBehaviour
     // Purpose: Handles the incoming run started request or event.
     private void HandleRunStarted(int stageIndex)
     {
+        GameProgressionRuntime.BeginRun();
         _activeStageIndex = RunLifecyclePolicy.NormalizeActiveStageIndex(stageIndex);
         TransitionTo(RunLifecyclePhase.RunActive, $"Started Stage {_activeStageIndex}");
     }
@@ -202,6 +203,8 @@ public sealed class RunLifecycleCoordinator : MonoBehaviour
     {
         if (!RunLifecyclePolicy.CanProcessRunLoss(_phase))
             return;
+
+        GameProgressionRuntime.Settle(false);
 
         if (_clearPlayerInventoryOnRunLoss)
         {

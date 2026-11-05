@@ -11,6 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 84f6310988464062bc8bf5b6ba2cf59a, type: 3}
   m_Name: PipeRench
+  _valuableCategoryId: tools
   m_EditorClassIdentifier: 
   _guid: 7d47e454e28f4f809658e268183f89f2
   _name:
@@ -32,10 +33,10 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  _rarity: 3
+  _rarity: 1
   _purchasePrice: 12000
   _worldVisualPrefab: {fileID: 779572648878220470, guid: 711aa78b2dc287a48a876e2bb2e984b8, type: 3}
-  _maxStack: 2
+  _maxStack: 1
   _maxOwnedAmount: 0
   references:
     version: 2

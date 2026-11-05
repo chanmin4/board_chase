@@ -12,7 +12,10 @@ using UnityEngine;
 public class ShooterDashController : MonoBehaviour
 {
     [Header("Dash")]
-    [SerializeField] private DashConfigSO _config;
+    [SerializeField, HideInInspector] private DashConfigSO _config; // Old prefab reference, not a runtime source.
+    private static readonly ShooterDashSettings DefaultSettings = new();
+    public ShooterDashSettings Settings => _statsRuntime != null && _statsRuntime.DashSettings != null
+        ? _statsRuntime.DashSettings : DefaultSettings;
 
     [Header("Refs")]
     [SerializeField] private ShooterStatsRuntime _statsRuntime;
@@ -42,6 +45,7 @@ public class ShooterDashController : MonoBehaviour
     private bool _lastPublishedDashing;
     private Quaternion _baseLeanLocalRotation;
     private bool _hasBaseLeanLocalRotation;
+    private ShooterStaminaRuntime _stamina;
 
     public DashConfigSO Config => _config;
     public bool IsDashing => _isDashing;
@@ -54,7 +58,7 @@ public class ShooterDashController : MonoBehaviour
         CooldownDuration > 0f
             ? Mathf.Clamp01(CooldownRemaining / CooldownDuration)
             : 0f;
-    public virtual bool RotateTowardDashDirection => _config == null || _config.RotateTowardDashDirection;
+    public virtual bool RotateTowardDashDirection => Settings.rotateTowardDashDirection;
 
     public event Action DashStarted;
     public event Action DashFinished;
@@ -131,6 +135,8 @@ public class ShooterDashController : MonoBehaviour
         if (requestedDirection.sqrMagnitude <= 0.0001f)
             return false;
 
+        _stamina ??= ShooterStaminaRuntime.EnsureOn(this);
+        if (!_stamina.TrySpendDash()) return false;
         _dashDirection = requestedDirection.normalized;
         _isDashing = true;
         _elapsed = 0f;
@@ -193,13 +199,13 @@ public class ShooterDashController : MonoBehaviour
     // Purpose: Performs the use forward when no movement input workflow for this component.
     protected virtual bool UseForwardWhenNoMovementInput()
     {
-        return _config == null || _config.UseForwardWhenNoMovementInput;
+        return Settings.useForwardWhenNoMovementInput;
     }
 
     // Purpose: Resolves the dash duration needed by this component.
     protected virtual float ResolveDashDuration()
     {
-        return _config != null ? _config.DashDuration : 0.18f;
+        return Mathf.Max(0.01f, Settings.durationSeconds);
     }
 
     // Purpose: Resolves the dash cooldown needed by this component.
@@ -208,22 +214,22 @@ public class ShooterDashController : MonoBehaviour
         if (_statsRuntime != null)
             return Mathf.Max(0f, _statsRuntime.DashCooldownSeconds);
 
-        return _config != null ? _config.CooldownSeconds : 0f;
+        return Mathf.Max(0f, Settings.cooldownSeconds);
     }
 
     // Purpose: Resolves the dash speed needed by this component.
     protected virtual float ResolveDashSpeed()
     {
-        float fixedSpeed = _config != null ? _config.FixedDashSpeed : 14f;
+        float fixedSpeed = Mathf.Max(0f, Settings.fixedSpeed);
 
         if (_statsRuntime == null)
             return fixedSpeed;
 
-        if (_config != null && !_config.UseMoveSpeedBasedDash)
+        if (!Settings.useMoveSpeedBasedDash)
             return fixedSpeed;
 
         float moveSpeed = Mathf.Max(0.01f, _statsRuntime.MoveSpeed);
-        float dashMultiplier = _config != null ? Mathf.Max(0f, _config.DashSpeedMultiplier) : 2.5f;
+        float dashMultiplier = Mathf.Max(0f, Settings.speedMultiplier);
         float distanceMultiplier = Mathf.Max(0f, _statsRuntime.DashDistanceMultiplier);
 
         return moveSpeed * dashMultiplier * distanceMultiplier;
@@ -373,16 +379,14 @@ public class ShooterDashController : MonoBehaviour
         if (_leanTarget == null || !_hasBaseLeanLocalRotation)
             return;
 
-        bool useLean = _config == null || _config.UseDashVisualLean;
+        bool useLean = Settings.useVisualLean;
         bool isDashing = useLean && _isDashing;
 
-        Vector3 leanEuler = _config != null
-            ? _config.DashVisualLeanEuler
-            : new Vector3(18f, 0f, 0f);
+        Vector3 leanEuler = Settings.visualLeanEuler;
 
         float speed = isDashing
-            ? _config != null ? _config.DashVisualLeanInSpeed : 18f
-            : _config != null ? _config.DashVisualLeanOutSpeed : 12f;
+            ? Mathf.Max(0f, Settings.visualLeanInSpeed)
+            : Mathf.Max(0f, Settings.visualLeanOutSpeed);
 
         Quaternion targetRotation = isDashing
             ? _baseLeanLocalRotation * Quaternion.Euler(leanEuler)

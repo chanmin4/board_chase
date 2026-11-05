@@ -137,13 +137,15 @@ public class KnockbackReceiver : MonoBehaviour
     {
         if (_navMeshAgent != null && _navMeshAgent.isActiveAndEnabled && _navMeshAgent.isOnNavMesh)
         {
-            _navMeshAgent.Move(delta);
+            ShooterBodyCollisionMotor.Ensure(_navMeshAgent).CommitPlannedPosition(_navMeshAgent.transform.position + delta);
             return;
         }
 
+        // Enemy solid controllers may be added after this component's Awake.
+        if (_characterController == null) TryGetComponent(out _characterController);
         if (_characterController != null && _characterController.enabled)
         {
-            _characterController.Move(delta);
+            ShooterBodyCollisionMotor.MoveWithBodyBlocking(_characterController, delta);
             return;
         }
 

@@ -51,6 +51,7 @@ public class EnemyShooterCombatCondition : Condition
 {
     private EnemyShooterCombatConditionSO _origin;
     private EnemyShooterCombatController _combat;
+    private bool _investigationCompleted;
 
     // Purpose: Caches the component references required before runtime initialization.
     public override void Awake(StateMachine stateMachine)
@@ -59,14 +60,22 @@ public class EnemyShooterCombatCondition : Condition
         _combat = EnemyShooterStateMachineUtility.ResolveCombatController(stateMachine);
     }
 
-    // Purpose: Performs the statement workflow for this component.
-    protected override bool Statement()
+    // Preserve the old lazy evaluation boundary/call count. This is deliberately not
+    // a once-per-frame sensor tick: doing that would change dash/investigation timing.
+    protected override void PrepareEvaluation()
     {
         if (_combat == null)
-            return false;
-
+            return;
         if (_origin.RefreshAwarenessBeforeQuery)
             _combat.TickAwareness();
+        if (_origin.SelectedQuery == EnemyShooterCombatConditionSO.Query.InvestigationFinished)
+            _investigationCompleted = _combat.TryCompleteFinishedInvestigation();
+    }
+
+    // Boolean reads only. A debugger must read cached diagnostics, never invoke preparation.
+    protected override bool Statement()
+    {
+        if (_combat == null) return false;
 
         return _origin.SelectedQuery switch
         {
@@ -81,7 +90,7 @@ public class EnemyShooterCombatCondition : Condition
             EnemyShooterCombatConditionSO.Query.ShouldChaseTarget => _combat.ShouldChaseTarget,
             EnemyShooterCombatConditionSO.Query.HasInvestigation => _combat.HasInvestigation,
             EnemyShooterCombatConditionSO.Query.ShouldInvestigate => _combat.ShouldInvestigate,
-            EnemyShooterCombatConditionSO.Query.InvestigationFinished => _combat.TryCompleteFinishedInvestigation(),
+            EnemyShooterCombatConditionSO.Query.InvestigationFinished => _investigationCompleted,
             EnemyShooterCombatConditionSO.Query.ShouldPatrol => _combat.ShouldPatrol,
             EnemyShooterCombatConditionSO.Query.PatrolIdleFinished => _combat.PatrolIdleFinished,
             EnemyShooterCombatConditionSO.Query.PatrolDestinationReached => _combat.PatrolDestinationReached,

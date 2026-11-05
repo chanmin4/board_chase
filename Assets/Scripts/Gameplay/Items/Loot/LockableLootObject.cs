@@ -23,7 +23,7 @@ public sealed class LockableLootObject : MonoBehaviour
     [SerializeField] private string _lockedDisplayName = "Locked Loot";
 
     [Header("Locked Loot Reward")]
-    [Tooltip("Optional shared reward profile. When assigned, its key tier is used and its bonus rolls/rarity weights are applied only to this container's existing Loot Progression source.")]
+    [Tooltip("Optional key-tier profile. Slot-based loot uses the box's own filled-slot range and rarity weights; this profile's legacy bonus rolls / rarity multipliers are not applied.")]
     [SerializeField] private LockedLootProfileSO _lockedLootProfile;
 
     [Header("References")]

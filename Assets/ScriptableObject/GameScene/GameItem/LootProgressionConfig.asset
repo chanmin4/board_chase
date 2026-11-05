@@ -90,38 +90,6 @@ MonoBehaviour:
           maxAmount: 1
           useManualShare: 1
           manualSharePercent: 10
-  - sourceId: raider_upgrade
-    displayName: Raider Upgrade
-    localizedDisplayName:
-      m_TableReference:
-        m_TableCollectionName: 
-      m_TableEntryReference:
-        m_KeyId: 0
-        m_Key: 
-      m_FallbackState: 0
-      m_WaitForCompletion: 0
-      m_LocalVariables: []
-    lootSlotCount: 6
-    sourceKind: 0
-    enemyShooterConfig: {fileID: 11400000, guid: 11aa22bb33cc44dd55ee66ff77000101, type: 2}
-    lootObjectPrefab: {fileID: 0}
-    stagePools:
-    - stageIndex: 0
-      minRollCount: 1
-      maxRollCount: 1
-      rarityTiers:
-      - rarity: 0
-        chancePercent: 65
-        items: []
-      - rarity: 1
-        chancePercent: 25
-        items: []
-      - rarity: 3
-        chancePercent: 8
-        items: []
-      - rarity: 2
-        chancePercent: 2
-        items: []
   - sourceId: scraper
     displayName: Scraper
     localizedDisplayName:

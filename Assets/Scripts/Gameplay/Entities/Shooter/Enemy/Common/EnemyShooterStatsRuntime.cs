@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public class EnemyShooterStatsRuntime : ShooterStatsRuntime
+public partial class EnemyShooterStatsRuntime : ShooterStatsRuntime
 {
     [Header("Config")]
     [SerializeField] private EnemyShooterConfigSO _config;
@@ -21,6 +21,8 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
 
     private BulletSO _runtimeBullet;
     private SectorEnemyTraitModifier _sectorTraitModifier;
+    private EnemyLootInventoryRuntime _inventory;
+    private bool _inventoryResolved;
 
     public EnemyShooterConfigSO Config => ResolveConfig();
     public override EntityStatConfigSO StatConfig => Config;
@@ -28,22 +30,23 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         _equipmentController != null ? _equipmentController.CurrentWeapon : null;
     public override BulletSO CurrentBullet => _runtimeBullet;
     public override float AttackDamage => ResolveAttackDamage(CurrentBullet);
-    public override float MaxRange => ResolveWithRuntimeModifiers(PlayerStatId.MaxRange, Config != null ? Config.MaxRange : 0f, 0.1f);
-    public override float ShotsPerSecond => ApplyWeaponArchetypeToShotsPerSecond(
-        ResolveWithRuntimeModifiers(PlayerStatId.ShotsPerSecond, Config != null ? Config.ShotsPerSecond : 0f, 0.01f));
-    public override float ReloadDurationSeconds => ResolveWithRuntimeModifiers(PlayerStatId.ReloadDurationSeconds, Config != null ? Config.ReloadDurationSeconds : 0f, 0f);
-    public override int MagazineSize => Mathf.Max(1, Mathf.RoundToInt(ResolveWithRuntimeModifiers(PlayerStatId.MagazineSize, Config != null ? Config.MagazineSize : 1f, 1f)));
+    public override float DodgeChance => Mathf.Clamp01(ResolveWithRuntimeModifiers(PlayerStatId.DodgeChance,0f,0f));
+    public override float GasInfectionResistance => Mathf.Clamp(ResolveWithRuntimeModifiers(PlayerStatId.GasInfectionResistance, 0f, 0f), 0f, 0.9f);
+    public override float MaxRange => ResolveWithRuntimeModifiers(PlayerStatId.MaxRange, base.MaxRange, 0.1f);
+    public override float ShotsPerSecond => ResolveWithRuntimeModifiers(PlayerStatId.ShotsPerSecond, base.ShotsPerSecond, 0.01f);
+    public override float ReloadDurationSeconds => ResolveWithRuntimeModifiers(PlayerStatId.ReloadDurationSeconds, base.ReloadDurationSeconds, 0.01f);
+    public override int MagazineSize => base.MagazineSize;
     public override float PaintMarkDamage => ResolvePaintMarkDamage(CurrentBullet);
     public override float InfectionDamage => ResolveInfectionDamage(CurrentBullet);
-    public override int PenetrationClassBonus => Mathf.Max(
+    public override float PenetrationClassBonus => Mathf.Max(
         0,
-        Mathf.RoundToInt(ResolveWithRuntimeModifiers(
+        ResolveWithRuntimeModifiers(
             PlayerStatId.PenetrationClass,
-            Config != null ? Config.PenetrationClassBonus : 0,
-            0f)));
+            base.PenetrationClassBonus,
+            0f));
     public override float MoveSpeed => ApplyStatusMoveSpeed(
         ResolveWithRuntimeModifiers(PlayerStatId.MoveSpeed, Config != null ? Config.MoveSpeed : 0f, 0f)) *
-        ResolveSectorTraitMoveSpeedMultiplier();
+        ResolveSectorTraitMoveSpeedMultiplier() * ResolveBackpackMoveSpeedMultiplier();
     public override float MaxHealth => ResolveWithRuntimeModifiers(PlayerStatId.MaxHealth, Config != null ? Config.MaxHealth : 0f, 1f) *
         ResolveSectorTraitMaxHealthMultiplier();
     public override float ArmorClass => Mathf.Max(
@@ -63,10 +66,7 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         0f);
 
     public override float VisionRange => ResolveWithRuntimeModifiers(PlayerStatId.VisionRange, Config != null ? Config.Vision.VisionRange : 0f, 0f);
-    public override float GunshotSoundRadius =>
-        CurrentWeapon is RangedWeaponSO rangedWeapon
-            ? rangedWeapon.ResolveGunshotSoundRadius(Config != null ? Config.GunshotSoundRadius : 0f)
-            : Config != null ? Config.GunshotSoundRadius : 0f;
+    public override float GunshotSoundRadius => ResolveWithRuntimeModifiers(PlayerStatId.GunshotSoundRadius, base.GunshotSoundRadius, 0f);
     public override float SoundInvestigateDelaySeconds =>
         Config != null ? Config.SoundInvestigateDelaySeconds : 0f;
     public override float FootstepSoundRadius =>
@@ -75,28 +75,23 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         Config != null ? Config.FootstepSoundInterval : 0.35f;
     public override int InventoryCapacity =>
         Config != null ? Config.InventoryCapacity : 0;
-    public override float AimSpeed =>
-        Config != null ? Config.AimSpeed : 0f;
+    public override float AimSpeed => ResolveWithRuntimeModifiers(PlayerStatId.AimSpeed, base.AimSpeed, 0.01f);
+    public override float AimingMoveSpeedMultiplier => Mathf.Clamp01(ResolveWithRuntimeModifiers(
+        PlayerStatId.AimingMoveSpeedMultiplier, base.AimingMoveSpeedMultiplier, 0f));
+    public override float ShotKickDistance => ResolveWithRuntimeModifiers(PlayerStatId.ShotKickDistance, base.ShotKickDistance, 0f);
+    public override float MaximumShotKickDistance => ResolveWithRuntimeModifiers(PlayerStatId.MaximumShotKickDistance, base.MaximumShotKickDistance, 0f);
+    public override float ShotKickRecoveryPerSecond => ResolveWithRuntimeModifiers(PlayerStatId.ShotKickRecoveryPerSecond, base.ShotKickRecoveryPerSecond, 0f);
     public override float HipFireSpreadAngleDeg => ApplyWeaponConditionToSpread(ResolveWithRuntimeModifiers(
         PlayerStatId.HipFireSpreadAngleDeg,
-        Config != null ? Config.HipFireSpreadAngleDeg : 0f,
+        base.HipFireSpreadAngleDeg,
         0f));
     public override float AimSpreadAngleDeg => ApplyWeaponConditionToSpread(ResolveWithRuntimeModifiers(
         PlayerStatId.AimSpreadAngleDeg,
-        Config != null ? Config.AimSpreadAngleDeg : 0f,
+        base.AimSpreadAngleDeg,
         0f));
-    public override float RecoilForwardDistancePerShot =>
-        Config != null ? Config.RecoilForwardDistancePerShot : 0f;
-    public override float RecoilSideDistancePerShot =>
-        Config != null ? Config.RecoilSideDistancePerShot : 0f;
-    public override float MaxRecoilDistance =>
-        Config != null ? Config.MaxRecoilDistance : 0f;
-    public override float RecoilDistanceRecoveryPerSecond =>
-        Config != null ? Config.RecoilDistanceRecoveryPerSecond : 0f;
-    public override float HipFireSpreadRadius => ApplyWeaponConditionToSpread(
-        Config != null ? Config.HipFireSpreadRadius : 0f);
-    public override float AimSpreadRadius => ApplyWeaponConditionToSpread(
-        Config != null ? Config.AimSpreadRadius : 0f);
+    public override float DashCooldownSeconds => ResolveWithRuntimeModifiers(
+        PlayerStatId.DashCooldownSeconds, base.DashCooldownSeconds, 0f);
+    public override float DashDistanceMultiplier => ResolveWithRuntimeModifiers(PlayerStatId.DashDistance, base.DashDistanceMultiplier, 0f);
 
     // Purpose: Initializes Inspector defaults for this component.
     private void Reset()
@@ -113,6 +108,7 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     // Purpose: Updates the config state.
     public void SetConfig(EnemyShooterConfigSO config)
     {
+        if (_config != config) ResetPassiveModules();
         _config = config;
     }
 
@@ -125,9 +121,7 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     // Purpose: Resolves the attack damage needed by this component.
     public override float ResolveAttackDamage(BulletSO bullet)
     {
-        float baseDamage = bullet != null
-            ? bullet.HealthDamage * (Config != null ? Config.HealthDamageCoefficient : 1f)
-            : 0f;
+        float baseDamage = bullet != null ? bullet.HealthDamage : 0f;
         float runtimeValue = ResolveWithRuntimeModifiers(PlayerStatId.AttackDamage, baseDamage, 0f);
         return ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(
             ResolveWithExtraModifiers(PlayerStatId.AttackDamage, runtimeValue, 0f, bullet != null ? bullet.StatModifiers : null),
@@ -135,36 +129,10 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     }
 
     // Purpose: Resolves the paint mark damage needed by this component.
-    public override float ResolvePaintMarkDamage(BulletSO bullet)
-    {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletMark)
-            return 0f;
-
-        float baseAmount = bullet != null
-            ? bullet.MarkAmount * (Config != null ? Config.MarkAmountCoefficient : 1f)
-            : 0f;
-        float runtimeValue = ResolveWithRuntimeModifiers(PlayerStatId.PaintMarkDamage, baseAmount, 0f);
-        return ResolveWithExtraModifiers(PlayerStatId.PaintMarkDamage, runtimeValue, 0f, bullet != null ? bullet.StatModifiers : null);
-    }
+    public override float ResolvePaintMarkDamage(BulletSO bullet) => 0f; // WIP basic-bullet compatibility only.
 
     // Purpose: Resolves the infection damage needed by this component.
-    public override float ResolveInfectionDamage(BulletSO bullet)
-    {
-        if (!ProjectileCombatFeatureFlags.EnableLegacyBasicBulletInfectionDamage)
-            return 0f;
-
-        float baseDamage = bullet != null
-            ? bullet.InfectionDamage * (Config != null ? Config.InfectionDamageCoefficient : 1f)
-            : 0f;
-        float runtimeValue = ResolveWithRuntimeModifiers(PlayerStatId.InfectionDamage, baseDamage, 0f);
-        return ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(
-            ResolveWithExtraModifiers(
-                PlayerStatId.InfectionDamage,
-                runtimeValue,
-                0f,
-                bullet != null ? bullet.StatModifiers : null),
-            bullet));
-    }
+    public override float ResolveInfectionDamage(BulletSO bullet) => 0f; // WIP basic-bullet compatibility only.
 
     // Purpose: Resolves the shots per second needed by this component.
     public override float ResolveShotsPerSecond(BulletSO bullet)
@@ -175,15 +143,7 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     // Purpose: Resolves the magazine size needed by this component.
     public override int ResolveMagazineSize(BulletSO bullet)
     {
-        float weaponMagazineSize = CurrentWeapon is RangedWeaponSO rangedWeapon
-            ? rangedWeapon.MagazineSize
-            : MagazineSize;
-        float resolved = ResolveWithExtraModifiers(
-            PlayerStatId.MagazineSize,
-            weaponMagazineSize,
-            1f,
-            bullet != null ? bullet.StatModifiers : null);
-        return Mathf.Max(1, Mathf.RoundToInt(resolved));
+        return MagazineSize;
     }
 
     // Purpose: Resolves the armor health durability loss multiplier needed by this component.
@@ -267,6 +227,16 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         return modifier != null ? modifier.MoveSpeedMultiplier : 1f;
     }
 
+    private float ResolveBackpackMoveSpeedMultiplier()
+    {
+        if (!_inventoryResolved)
+        {
+            _inventory = EntityComponentResolver.Resolve<EnemyLootInventoryRuntime>(this);
+            _inventoryResolved = true;
+        }
+        return _inventory != null ? _inventory.BackpackMoveSpeedMultiplier : 1f;
+    }
+
     // Purpose: Resolves the sector trait armor class bonus needed by this component.
     private int ResolveSectorTraitArmorClassBonus()
     {
@@ -275,13 +245,20 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
     }
 
     // Purpose: Resolves the with runtime modifiers needed by this component.
+    public override float AdditionalStat(PlayerStatId stat,float baseline=0)=>ResolveWithRuntimeModifiers(stat,baseline,0);
     private float ResolveWithRuntimeModifiers(PlayerStatId stat, float baseValue, float minValue)
     {
+        if (!ShooterStatPolicy.IsCharacterStat(stat)) return Mathf.Max(minValue, baseValue);
         StatAccumulator accumulator = default;
         ApplyMatchingModifiers(ref accumulator, stat, CurrentWeapon != null ? CurrentWeapon.StatModifiers : null);
         ApplyMatchingModifiers(ref accumulator, stat, _equipmentRuntime != null && _equipmentRuntime.HasUsableArmor && _equipmentRuntime.CurrentArmor != null
             ? _equipmentRuntime.CurrentArmor.StatModifiers
             : null);
+        foreach (var passive in PassiveModules)
+            if (passive != null && ShooterStatPolicy.IsPassiveStat(stat))
+                foreach (var modifier in passive.StatModifiers ?? System.Array.Empty<PlayerStatModifier>())
+                    if (modifier.stat == stat)
+                        accumulator.Apply(PassiveModuleRulesSO.Active != null ? PassiveModuleRulesSO.Active.ApplyStrength(passive, modifier) : modifier);
 
         return Mathf.Max(minValue, accumulator.Resolve(baseValue));
     }
@@ -313,7 +290,7 @@ public class EnemyShooterStatsRuntime : ShooterStatsRuntime
         PlayerStatId stat,
         PlayerStatModifier[] modifiers)
     {
-        if (modifiers == null)
+        if (modifiers == null || !ShooterStatPolicy.IsCharacterStat(stat))
             return;
 
         for (int i = 0; i < modifiers.Length; i++)

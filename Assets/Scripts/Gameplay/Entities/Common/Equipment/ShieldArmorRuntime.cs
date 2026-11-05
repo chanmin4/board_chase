@@ -9,10 +9,12 @@ public sealed class ShieldArmorRuntime : MonoBehaviour
     [SerializeField, Min(0)] private float _currentDurability = 100f;
     public float ArmorClass => Mathf.Max(0, _armorClass);
     public float CurrentDurability => Mathf.Max(0, _currentDurability);
+    public float MaximumDurability => Mathf.Max(0, _maximumDurability);
+    public void ApplyDurabilityDamage(float amount) => _currentDurability = Mathf.Max(0, _currentDurability - Mathf.Max(0, amount));
     public bool IsProtecting => isActiveAndEnabled && CurrentDurability > 0 && ArmorClass > 0;
-    public float ResolveMultiplier(int penetration) => IsProtecting
+    public float ResolveMultiplier(float penetration) => IsProtecting
         ? ArmorPenetrationDamageCurve.RollMultiplier(ArmorClass, penetration) : 1f;
-    public float Absorb(float damage, int penetration, float durabilityLossMultiplier)
+    public float Absorb(float damage, float penetration, float durabilityLossMultiplier)
     {
         float incoming = Mathf.Max(0, damage);
         float outgoing = incoming * ResolveMultiplier(penetration);

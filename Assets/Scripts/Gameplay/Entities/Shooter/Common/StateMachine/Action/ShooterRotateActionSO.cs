@@ -125,6 +125,11 @@ public class ShooterRotateAction : StateAction
     // Purpose: Responds to the update callback.
     public override void OnUpdate()
     {
+        if ((_character != null || _playerAim != null) && GameplayActionInputBlocker.IsAimBlocked)
+        {
+            _turnSmoothSpeed = 0f;
+            return; // Preserve body and weapon orientation, including smoothed turning.
+        }
         if (GamePause.IsPaused || Time.timeScale <= 0f)
         {
             _turnSmoothSpeed = 0f;
@@ -227,23 +232,18 @@ public class ShooterRotateAction : StateAction
         if (_originSO.UsePlayerSelfScreenLock && IsMouseSelfLocked(aimCamera))
             return false;
 
-        if (_playerAim.HasAimPoint)
+        Vector3 pivot = ResolveBodyPivotPosition();
+        if (_playerAim.TryGetRawAimPoint(out var heldPoint) &&
+            _playerAim.TryGetFlatAimDirection(pivot, out var heldDirection))
         {
-            lookPoint = _playerAim.AimWorldPoint;
+            lookPoint = pivot + heldDirection * Mathf.Max(1f, Vector3.Distance(pivot, heldPoint));
+            lookPoint.y = heldPoint.y;
             return true;
         }
 
-        Vector3 pivot = ResolveBodyPivotPosition();
-
-        if (!VSplatterAimUtility.TryGetAimPointOnPlane(
-                aimCamera,
-                pivot.y,
-                out lookPoint))
-        {
-            return false;
-        }
-
-        return true;
+        // No independent mouse/plane fallback: all player turning must use the
+        // shared pointer-movement cache, including the initial invalid sample.
+        return false;
     }
 
     // Purpose: Attempts to resolve enemy combat point and reports whether the request succeeded.

@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
-public class PlayerAimController : EntityRange
+public partial class PlayerAimController : EntityRange
 {
     private const float AimingMoveSpeedMultiplier = 0.6f;
 
@@ -58,6 +58,10 @@ public class PlayerAimController : EntityRange
     private bool _hasAimPoint;
     private bool _isAimWithinRange;
     private bool _blockAimUntilRightMouseReleased;
+    private Vector2 _lastAimPointer;
+    private bool _hasAimPointer, _hasHeldAimDirection, _wasAimPointerBlocked;
+    private Camera _sampledAimCamera;
+    private Vector3 _heldAimDirection, _heldAimOffset;
 
     private float _nextPrimaryFireTime;
     private float _nextPaintFireTime;
@@ -81,7 +85,18 @@ public class PlayerAimController : EntityRange
     public event Action AimStarted;
     public event Action AimEnded;
 
-    public Vector3 AimWorldPoint => _aimWorldPoint;
+    public Vector3 AimWorldPoint => (_hasHeldAimDirection ? transform.position + _heldAimOffset : _aimWorldPoint) +
+        Vector3.ClampMagnitude(_shotAimKick + _hitAimKick,
+            Mathf.Max(MaximumShotKickDistance, Mathf.Max(0f, Feedback.maximumHitKickDistance)));
+    private Vector3 _shotAimKick;
+    private Vector3 _hitAimKick;
+    private static readonly ShooterAimFeedbackSettings DefaultFeedback = new();
+    private ShooterAimFeedbackSettings Feedback => _statsRuntime != null && _statsRuntime.StatConfig is ShooterStatConfigSO cfg
+        ? cfg.AimFeedback : DefaultFeedback;
+    private readonly RaycastHit[] _headshotHits = new RaycastHit[64];
+    private RangedWeaponSO FeedbackWeapon => CurrentWeapon as RangedWeaponSO;
+    private float MaximumShotKickDistance => _statsRuntime != null ? _statsRuntime.MaximumShotKickDistance
+        : FeedbackWeapon != null ? FeedbackWeapon.MaximumShotKickDistance : 0f;
     public bool HasAimPoint => _hasAimPoint;
     // The cursor is no longer constrained by projectile travel distance.
     public bool IsAimWithinRange => _hasAimPoint;
@@ -91,11 +106,15 @@ public class PlayerAimController : EntityRange
     public bool IsAiming => _isAiming;
     public float Aim01 => _aim01;
     public bool IsAimComplete => _aim01 >= 0.999f;
+    public bool IsAimTransitioning => _isAiming ? _aim01 < 0.999f : _aim01 > 0.001f;
+    private ShooterStaminaRuntime _stamina;
 
     public float RangeMultiplier => 1f;
 
     // Movement is slowed as soon as RMB is held and restored as soon as it is released.
-    public float MoveSpeedMultiplier => _isAiming ? AimingMoveSpeedMultiplier : 1f;
+    public float MoveSpeedMultiplier => !_isAiming ? 1f : _statsRuntime != null
+        ? _statsRuntime.AimingMoveSpeedMultiplier
+        : FeedbackWeapon != null ? FeedbackWeapon.AimingMoveSpeedMultiplier : AimingMoveSpeedMultiplier;
 
     public Camera AimCamera => _aimCamera;
     public override WeaponSO CurrentWeapon => base.CurrentWeapon;
@@ -103,12 +122,12 @@ public class PlayerAimController : EntityRange
     public override float MaxRange =>
         _statsRuntime != null
             ? Mathf.Max(0.1f, _statsRuntime.MaxRange)
-            : base.MaxRange;
+            : FeedbackWeapon != null ? FeedbackWeapon.MaxRange : base.MaxRange;
 
     private float CurrentReloadDuration =>
         _statsRuntime != null
             ? Mathf.Max(0.01f, _statsRuntime.Weapon.reloadDurationSeconds)
-            : 0.01f;
+            : FeedbackWeapon != null ? FeedbackWeapon.ReloadDurationSeconds : 0.01f;
 
     public bool CanFireNow
     {
@@ -183,6 +202,7 @@ public class PlayerAimController : EntityRange
 
         if (_inputReader != null)
             _inputReader.ReloadEvent += OnReloadRequested;
+        if (_inputReader != null) _inputReader.WeaponFunctionCheckEvent += HandleFunctionCheck;
 
         if (_equipmentRuntime != null)
             _equipmentRuntime.OnEquipmentChanged += HandleEquipmentSelectionChanged;
@@ -204,6 +224,8 @@ public class PlayerAimController : EntityRange
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        _shotAimKick = Vector3.zero;
+        _hitAimKick = Vector3.zero;
         bool wasReloading = _isReloading;
 
         if (_shoot != null)
@@ -211,6 +233,8 @@ public class PlayerAimController : EntityRange
 
         if (_inputReader != null)
             _inputReader.ReloadEvent -= OnReloadRequested;
+        if (_inputReader != null) _inputReader.WeaponFunctionCheckEvent -= HandleFunctionCheck;
+        CancelFunctionCheck();
 
         if (_equipmentRuntime != null)
             _equipmentRuntime.OnEquipmentChanged -= HandleEquipmentSelectionChanged;
@@ -232,6 +256,7 @@ public class PlayerAimController : EntityRange
     {
         if (GamePause.IsPaused || Time.timeScale <= 0f)
         {
+            RememberBlockedAimPointer();
             _hasAimPoint = false;
             _isAimWithinRange = false;
             SetAiming(false);
@@ -240,17 +265,28 @@ public class PlayerAimController : EntityRange
 
         EnsureAimCamera();
         UpdateAimState();
+        if (!GameplayActionInputBlocker.IsAimBlocked)
+        {
+            float shotRecovery = _statsRuntime != null ? _statsRuntime.ShotKickRecoveryPerSecond
+                : FeedbackWeapon != null ? FeedbackWeapon.ShotKickRecoveryPerSecond : 0f;
+            _shotAimKick = Vector3.MoveTowards(_shotAimKick, Vector3.zero, shotRecovery * Time.deltaTime);
+            _hitAimKick = Vector3.MoveTowards(_hitAimKick, Vector3.zero, Mathf.Max(0f, Feedback.hitKickRecoveryPerSecond) * Time.deltaTime);
+        }
         UpdateAimPoint();
         UpdateReloadState();
+        UpdateFunctionCheck();
     }
 
     // Purpose: Checks whether fire now for is currently permitted.
     public bool CanFireNowFor(BulletAmmoType ammoType)
     {
+        if (IsFunctionChecking) return false;
         _lastActiveAmmoType = ammoType;
 
         if (GameplayActionInputBlocker.IsAttackBlocked)
             return false;
+        _stamina ??= EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (IsAimTransitioning || (_stamina != null && _stamina.IsSprinting)) return false;
 
         if (CurrentWeapon == null)
             return false;
@@ -310,6 +346,9 @@ public class PlayerAimController : EntityRange
     // Purpose: Begins the reload workflow.
     private bool StartReload(BulletSO bullet, bool restartIfActive)
     {
+        if (IsFunctionChecking) return false;
+        _stamina ??= EntityComponentResolver.Resolve<ShooterStaminaRuntime>(this);
+        if (_stamina != null && _stamina.IsSprinting) return false;
         if (_bulletLoadout == null || bullet == null)
             return false;
 
@@ -349,6 +388,12 @@ public class PlayerAimController : EntityRange
     // Purpose: Attempts to get aim point and reports whether the request succeeded.
     public bool TryGetAimPoint(out Vector3 worldPoint)
     {
+        if (GameplayActionInputBlocker.IsAimBlocked)
+        {
+            RememberBlockedAimPointer();
+            worldPoint = AimWorldPoint;
+            return false; // No live gameplay pointer while a popup owns the mouse.
+        }
         worldPoint = default;
 
         if (_aimCamera == null ||
@@ -358,37 +403,78 @@ public class PlayerAimController : EntityRange
             return false;
         }
 
-        return VSplatterAimUtility.TryGetAimPoint(
-            _aimCamera,
-            _aimRaycastMask,
-            _allowFallbackPlane,
-            _fallbackPlaneY,
-            transform.root,
-            out worldPoint,  out _);
+        return TrySampleAimPointer(Input.mousePosition, out worldPoint);
     }
 
     // Purpose: Attempts to get raw aim point and reports whether the request succeeded.
     public bool TryGetRawAimPoint(out Vector3 worldPoint)
     {
+        if (GameplayActionInputBlocker.IsAimBlocked)
+        {
+            RememberBlockedAimPointer();
+            worldPoint = AimWorldPoint;
+            return false;
+        }
         worldPoint = default;
 
         if (_aimCamera == null)
             return false;
 
-        return VSplatterAimUtility.TryGetAimPoint(
-            _aimCamera,
-            _aimRaycastMask,
-            _allowFallbackPlane,
-            _fallbackPlaneY,
-            transform.root,
-            out worldPoint,
-            out _);
+        return TrySampleAimPointer(Input.mousePosition, out worldPoint);
+    }
+
+    private void RememberBlockedAimPointer()
+    {
+        _wasAimPointerBlocked = true;
+        _lastAimPointer = Input.mousePosition;
+        _hasAimPointer = true;
+    }
+
+    // Direction is sampled only on pointer movement, not camera/player movement.
+    // Targets translate with the actor so shooting and throwing keep the same heading.
+    private bool TrySampleAimPointer(Vector2 pointer, out Vector3 worldPoint)
+    {
+        worldPoint = AimWorldPoint;
+        if (GameplayActionInputBlocker.IsAimBlocked) return false;
+        EnsureAimCamera();
+        if (_aimCamera == null) return false;
+        if (_wasAimPointerBlocked)
+        {
+            _wasAimPointerBlocked = false;
+            _lastAimPointer = pointer; // UI dragging must not turn the player when it closes.
+        }
+        bool changed = !_hasAimPointer || _sampledAimCamera != _aimCamera ||
+                       (pointer - _lastAimPointer).sqrMagnitude > .25f;
+        if (!changed) return _hasHeldAimDirection;
+        _hasAimPointer = true;
+        _lastAimPointer = pointer;
+        _sampledAimCamera = _aimCamera;
+        if (!VSplatterAimUtility.TryGetAimPoint(_aimCamera, _aimRaycastMask,
+                _allowFallbackPlane, _fallbackPlaneY, transform.root, out var sampled, out _, pointer))
+            return _hasHeldAimDirection;
+        Vector3 offset = sampled - transform.position;
+        Vector3 flat = offset; flat.y = 0;
+        if (flat.sqrMagnitude <= .0001f) return _hasHeldAimDirection;
+        _heldAimOffset = offset;
+        _heldAimDirection = flat.normalized;
+        _hasHeldAimDirection = true;
+        worldPoint = AimWorldPoint;
+        return true;
     }
 
     // Purpose: Attempts to get flat aim direction and reports whether the request succeeded.
     public bool TryGetFlatAimDirection(Vector3 origin, out Vector3 direction)
     {
         direction = Vector3.zero;
+
+        if (_hasHeldAimDirection)
+        {
+            direction = AimWorldPoint - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f) direction = _heldAimDirection;
+            else direction.Normalize();
+            return true;
+        }
 
         if (!_hasAimPoint)
             return false;
@@ -448,8 +534,10 @@ public class PlayerAimController : EntityRange
             return target;
 
         Vector3 flatDirection = direction.normalized;
-        float hipSpread = _statsRuntime != null ? _statsRuntime.HipFireSpreadAngleDeg : 0f;
-        float aimSpread = _statsRuntime != null ? _statsRuntime.AimSpreadAngleDeg : 0f;
+        float hipSpread = _statsRuntime != null ? _statsRuntime.HipFireSpreadAngleDeg
+            : FeedbackWeapon != null ? FeedbackWeapon.HipFireSpreadAngleDeg : 0f;
+        float aimSpread = _statsRuntime != null ? _statsRuntime.AimSpreadAngleDeg
+            : FeedbackWeapon != null ? FeedbackWeapon.AimSpreadAngleDeg : 0f;
         bool receivesAimBonus = _isAiming && IsAimComplete;
         float fullConeAngle = receivesAimBonus ? aimSpread : hipSpread;
         float halfConeAngle = Mathf.Max(0f, fullConeAngle) * 0.5f;
@@ -463,11 +551,47 @@ public class PlayerAimController : EntityRange
         return origin + adjustedDirection * direction.magnitude;
     }
 
-    // Kept as a call-site seam for muzzle/animation code. Accuracy no longer
-    // accumulates recoil or bloom between automatic shots.
-    // Purpose: Applies the requested shot recoil change.
     public void ApplyShotRecoil()
     {
+        Vector3 forward = AimWorldPoint - transform.position;
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.0001f) forward = transform.forward;
+        else forward.Normalize();
+        Vector3 kick = Quaternion.AngleAxis(UnityEngine.Random.Range(-45f, 45f), Vector3.up) * -forward;
+        float kickDistance = _statsRuntime != null ? _statsRuntime.ShotKickDistance
+            : FeedbackWeapon != null ? FeedbackWeapon.ShotKickDistance : 0f;
+        _shotAimKick = Vector3.ClampMagnitude(_shotAimKick + kick * kickDistance, MaximumShotKickDistance);
+    }
+
+    public void ApplyHitKick()
+    {
+        Vector2 random = UnityEngine.Random.insideUnitCircle.normalized;
+        _hitAimKick = Vector3.ClampMagnitude(_hitAimKick + new Vector3(random.x, 0, random.y) *
+            Mathf.Max(0f, Feedback.hitKickDistance)*(1-Mathf.Clamp01((_statsRuntime?.AdditionalStat(PlayerStatId.AimPunchReduction)??0)/100f)), Mathf.Max(0f, Feedback.maximumHitKickDistance));
+    }
+
+    // Snapshot at trigger time, not when the bullet arrives. Closest geometry still blocks the mouse ray.
+    public Damageable CaptureHeadshotCandidate()
+    {
+        if (!_isAiming || !IsAimComplete || IsAimTransitioning || _aimCamera == null || GameplayActionInputBlocker.IsAimBlocked) return null;
+        Ray ray = _aimCamera.ScreenPointToRay(Input.mousePosition);
+        int count = Physics.RaycastNonAlloc(ray, _headshotHits, 2000f, ~0, QueryTriggerInteraction.Collide);
+        if (count == _headshotHits.Length) return null; // Saturation must not select through an unreturned wall.
+        float closest = float.PositiveInfinity;
+        Damageable candidate = null;
+        Transform owner = EntityComponentResolver.ResolveEntityRoot(this);
+        for (int i = 0; i < count; i++)
+        {
+            Collider col = _headshotHits[i].collider;
+            if (col == null || (owner != null && col.transform.IsChildOf(owner))) continue;
+            Damageable target = EntityComponentResolver.Resolve<Damageable>(col);
+            bool capsuleTarget = col is CapsuleCollider && target != null && !target.IsDead && target.StatConfig is EnemyShooterConfigSO;
+            if (col.isTrigger && !capsuleTarget) continue;
+            if (_headshotHits[i].distance >= closest) continue;
+            closest = _headshotHits[i].distance;
+            candidate = capsuleTarget ? target : null;
+        }
+        return candidate;
     }
 
     // Purpose: Resolves the refs needed by this component.
@@ -545,7 +669,10 @@ public class PlayerAimController : EntityRange
         _observedWeapon = nextWeapon;
 
         if (heldWeaponChanged)
+        {
+            _shotAimKick = Vector3.zero;
             CancelReload("Equipped weapon changed.");
+        }
     }
 
     // Purpose: Handles the incoming quick slot selection changed request or event.
@@ -593,7 +720,7 @@ public class PlayerAimController : EntityRange
 
         SetAiming(nextIsAiming);
 
-        float speed = _statsRuntime != null ? _statsRuntime.AimSpeed : 8f;
+        float speed = _statsRuntime != null ? _statsRuntime.AimSpeed : FeedbackWeapon != null ? FeedbackWeapon.AimSpeed : 3f;
         float target = _isAiming ? 1f : 0f;
 
         _aim01 = Mathf.MoveTowards(
@@ -709,6 +836,7 @@ public class PlayerAimController : EntityRange
     // Purpose: Updates the aim point from the current runtime state.
     private void UpdateAimPoint()
     {
+        if (GameplayActionInputBlocker.IsAimBlocked) { RememberBlockedAimPointer(); return; }
         _hasAimPoint = TryGetAimPoint(out _aimWorldPoint);
 
         if (!_hasAimPoint)

@@ -12,6 +12,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class SectorPortalManager : MonoBehaviour
 {
+    public float LinkedTravelCooldownRemaining => 0f; // Compatibility for debug UI; each use now casts instead.
     [Header("Refs")]
     [SerializeField] private SectorStateManager _sectorStateManager;
     [SerializeField] private CameraManager _cameraManager;
@@ -48,6 +49,7 @@ public class SectorPortalManager : MonoBehaviour
     private bool _bossExitConsumed;
     private bool _extractionConsumed;
     private bool _bossTransitionInProgress;
+    private RaidRuntime _raidRuntime;
 
     // Purpose: Caches the component references required before runtime initialization.
     private void Awake()
@@ -83,6 +85,7 @@ public class SectorPortalManager : MonoBehaviour
     // Purpose: Releases active subscriptions and transient state while disabled.
     private void OnDisable()
     {
+        BindRaidRuntime(null);
         if (_sectorOpenedEvent != null)
             _sectorOpenedEvent.OnEventRaised -= OnSectorOpened;
         if (_sectorStateManagerReadyChannel != null)
@@ -142,6 +145,9 @@ public class SectorPortalManager : MonoBehaviour
         }
 
         CacheSectors();
+        RaidRuntime activeRaid = RaidRuntime.Active;
+        BindRaidRuntime(activeRaid != null && activeRaid.State?.layout == _sectorStateManager?.CurrentStageMapLayout
+            ? activeRaid : null);
         BindPortals();
         RefreshAllPortals();
     }
@@ -170,6 +176,12 @@ public class SectorPortalManager : MonoBehaviour
 
         portal.Initialize(this, sector, direction);
         portal.SetExtraction(IsExtractionPortal(portal));
+        if (portal.IsExtraction)
+        {
+            // One-way Home route; it must never steal or retain a neighboring room link.
+            portal.SetLink(null, null);
+            return;
+        }
 
         Vector2Int ownerCoord = _sectorStateManager.GetSectorCoord(sector);
         if (!HasDeclaredStageConnection(ownerCoord, direction))
@@ -265,7 +277,7 @@ public class SectorPortalManager : MonoBehaviour
         portal.SetAvailable(
             CanUsePortal(portal),
             hideWholePortalWhenUnavailable:
-                isBossPortal || (!hasTopologyLink && !isSyntheticBossExit && !isExtractionPortal));
+                isBossPortal || isExtractionPortal || (!hasTopologyLink && !isSyntheticBossExit));
     }
 
     // Purpose: Checks whether use portal is currently permitted.
@@ -280,10 +292,18 @@ public class SectorPortalManager : MonoBehaviour
         SectorRuntime source = portal.OwnerSector;
         SectorRuntime target = portal.TargetSector;
 
+        if (_sectorStateManager != null && source != _sectorStateManager.CurrentSector) return false;
+
         if (source == null)
             return false;
 
         if (_bossTransitionInProgress)
+            return false;
+
+        // Destination power is deliberately not checked: enter a new room, then operate its own device.
+        if (_sectorStateManager != null && _sectorStateManager.CurrentStageMapLayout?.usesRaidLayout == true &&
+            (SectorTravelRulesSO.Active?.travel.requirePortalActivation ?? true) &&
+            (_raidRuntime == null || !_raidRuntime.HasActivatedPortals(source)))
             return false;
 
         // The generated extraction portal is a one-way Home return. It follows
@@ -291,10 +311,10 @@ public class SectorPortalManager : MonoBehaviour
         if (IsExtractionPortal(portal))
         {
             return !_extractionConsumed &&
+                   (_sectorStateManager.CurrentStageMapLayout?.usesRaidLayout != true ||
+                    (_raidRuntime != null && RaidRuntime.AllowsExtraction(_raidRuntime.State, source.Coord, RaidStationKind.NormalExtraction))) &&
                    source.IsOpened &&
-                   (source.IsCleared ||
-                    (_sectorStateManager != null && _sectorStateManager.IsSectorFailed(source)) ||
-                    source.AllowsPortalTravelBeforeClear);
+                   source.IsCleared;
         }
 
         // A cleared Boss goal sector owns one synthetic exit: its unlinked north portal.
@@ -330,6 +350,7 @@ public class SectorPortalManager : MonoBehaviour
             return false;
 
         bool sourceResolved =
+            (SectorTravelRulesSO.Active?.travel.freeSectorTravel == true && _sectorStateManager.CurrentStageMapLayout?.usesRaidLayout == true) ||
             source.IsCleared ||
             (_sectorStateManager != null && _sectorStateManager.IsSectorFailed(source)) ||
             source.AllowsPortalTravelBeforeClear;
@@ -360,12 +381,26 @@ public class SectorPortalManager : MonoBehaviour
 
         if (IsExtractionPortal(sourcePortal))
         {
-            bool extracted = _stageProgressionManager != null &&
+            // Accepted async loading is not completed extraction. A failed Home
+            // transition must allow the same exit to be used again.
+            System.Action<bool> extractionCompleted = success =>
+            {
+                if (this == null) return;
+                _extractionConsumed = success;
+                RefreshAllPortals();
+            };
+            bool extracted = _sectorStateManager.CurrentStageMapLayout?.usesRaidLayout == true
+                ? _raidRuntime != null && _raidRuntime.TryExtractThroughPortal(sourcePortal,
+                    EntityComponentResolver.Resolve<PlayerInventoryRuntime>(playerRoot), extractionCompleted)
+                : _stageProgressionManager != null &&
                              _stageProgressionManager.TryExtractToHomeFromNormalExit(
-                                 sourcePortal.OwnerSector);
+                                 sourcePortal.OwnerSector, extractionCompleted);
 
             if (extracted)
+            {
                 _extractionConsumed = true;
+                RefreshAllPortals();
+            }
 
             return extracted;
         }
@@ -393,7 +428,40 @@ public class SectorPortalManager : MonoBehaviour
         if (IsBossSector(targetSector))
             return TryStartBossEntryTransition(sourcePortal, playerRoot);
 
+        RaidRuntime raid = RaidRuntime.Active;
+        PlayerInventoryRuntime inventory = EntityComponentResolver.Resolve<PlayerInventoryRuntime>(playerRoot);
+        if (raid != null && raid.IsVaultEntryLocked(targetSector))
+        {
+            InteractionManager interactions = EntityComponentResolver.Resolve<InteractionManager>(playerRoot);
+            bool opened = ShopPurchaseTradePanel.TryOpenKeySubmission(sourcePortal, raid.RequiredVaultEntryKeyTier, inventory,
+                (int keySlot, KeyItemSO key, out string message) =>
+                    ConfirmVaultPortalEntry(sourcePortal, playerRoot, raid, inventory, keySlot, key, out message),
+                () => this != null && sourcePortal != null && inventory != null &&
+                    inventory.GetComponent<Damageable>()?.IsDead != true && raid != null && raid.State?.active == true &&
+                    _sectorStateManager != null && _sectorStateManager.CurrentSector == sourcePortal.OwnerSector &&
+                    interactions != null && interactions.CanInteractWithTarget(sourcePortal.gameObject) &&
+                    CanUsePortal(sourcePortal));
+            if (!opened) Debug.LogWarning("[Vault entry] 열쇠 확인창 또는 플레이어 인벤토리를 열지 못했습니다.", this);
+            return opened; // accepted UI interaction, not a failed portal movement
+        }
+        if (raid != null && !raid.TryAuthorizeVaultEntry(targetSector, inventory)) return false;
+
         return MovePlayerThroughPortalNow(sourcePortal, playerRoot);
+    }
+
+    private bool ConfirmVaultPortalEntry(SectorPortal portal, Transform playerRoot, RaidRuntime raid,
+        PlayerInventoryRuntime inventory, int keySlot, KeyItemSO expectedKey, out string message)
+    {
+        message = "포탈 또는 현재 섹터가 변경되었습니다. 다시 상호작용하세요.";
+        InteractionManager interactions = playerRoot != null ? EntityComponentResolver.Resolve<InteractionManager>(playerRoot) : null;
+        if (portal == null || playerRoot == null || raid == null || _sectorStateManager == null ||
+            _sectorStateManager.CurrentSector != portal.OwnerSector || portal.TargetSector == null ||
+            portal.TargetPortal == null || interactions == null || !interactions.CanInteractWithTarget(portal.gameObject) ||
+            !CanUsePortal(portal)) return false;
+        if (!raid.TryUnlockVaultEntry(portal.TargetSector, inventory, keySlot, expectedKey, out message)) return false;
+        if (MovePlayerThroughPortalNow(portal, playerRoot)) return true;
+        message = "금고는 열렸지만 이동에 실패했습니다. 취소 후 다시 상호작용하세요. 열쇠는 다시 소모하지 않습니다.";
+        return false;
     }
 
     // Purpose: Checks whether start hub stage entry portal is currently true.
@@ -418,6 +486,14 @@ public class SectorPortalManager : MonoBehaviour
                    ? portal.OwnerSector.Coord
                    : default,
                    portal.Direction);
+    }
+
+    private void BindRaidRuntime(RaidRuntime runtime)
+    {
+        if (_raidRuntime == runtime) return;
+        if (_raidRuntime != null) _raidRuntime.StateChanged -= RefreshAllPortals;
+        _raidRuntime = runtime;
+        if (_raidRuntime != null) _raidRuntime.StateChanged += RefreshAllPortals;
     }
 
     // Purpose: Attempts to start boss entry transition and reports whether the request succeeded.
@@ -598,6 +674,26 @@ public class SectorPortalManager : MonoBehaviour
                    notifySpawnSystem: false);
     }
 
+    // Interior shortcut uses the same parenting, camera and sector-event boundary as normal travel.
+    public bool TryMoveThroughRaidShortcut(SectorRuntime source, SectorRuntime target, Transform actor)
+    {
+        var manager = FindFirstObjectByType<SectorStateManager>();
+        Transform playerRoot = ResolvePlayerRoot(actor);
+        if (manager == null || manager.CurrentSector != source || !manager.IsManagedSector(target) ||
+            playerRoot == null || target.PlayerStartPoint == null) return false;
+        CharacterController controller = playerRoot.GetComponent<CharacterController>();
+        bool enabled = controller != null && controller.enabled;
+        if (enabled) controller.enabled = false;
+        playerRoot.SetParent(target.transform, true);
+        playerRoot.position = target.PlayerStartPoint.position;
+        if (enabled) controller.enabled = true;
+        _cameraManager?.SnapToTarget();
+        _moveSectorCameraEvent?.RaiseEvent(target);
+        if (_currentSectorChangedEvent != null) _currentSectorChangedEvent.RaiseEvent(target);
+        else manager.SetPlayerCurrentSector(target, false);
+        return true;
+    }
+
     // Purpose: Moves player through portal now toward its requested destination.
     private bool MovePlayerThroughPortalNow(
         SectorPortal sourcePortal,
@@ -630,6 +726,7 @@ public class SectorPortalManager : MonoBehaviour
         if (_currentSectorChangedEvent != null)
             _currentSectorChangedEvent.RaiseEvent(targetSector);
 
+        EntityComponentResolver.Resolve<InteractionManager>(playerRoot)?.NotifyPortalTravelCompleted();
         return true;
     }
 

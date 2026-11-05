@@ -12,7 +12,7 @@ public static class GameplayActionInputBlocker
 
     public static bool IsCombatInputBlocked { get; private set; }
     public static bool IsAttackBlocked => IsCombatInputBlocked;
-    public static bool IsAimBlocked => IsCombatInputBlocked;
+    public static bool IsAimBlocked => IsCombatInputBlocked || UIEscapeRouter.HasOpenPopup;
     public static bool IsMovementBlocked => IsCombatInputBlocked;
 
     // Purpose: Updates the blocked state.

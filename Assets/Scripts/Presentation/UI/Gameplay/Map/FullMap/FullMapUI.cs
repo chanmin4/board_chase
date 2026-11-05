@@ -10,9 +10,10 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 [DisallowMultipleComponent]
-public class FullMapUI : MonoBehaviour
+public class FullMapUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private const string StringTable = "UI_Map";
     [Header("Events")]
@@ -62,6 +63,22 @@ public class FullMapUI : MonoBehaviour
     private bool _hasSnapshot;
     private bool _isOpen;
     private Coroutine _localizationRefreshRoutine;
+    private RectTransform _mapContent;
+    private Vector2 _panOffset;
+    private Vector2 _dragPosition;
+    private bool _dragging;
+    private bool _pendingMapRefresh;
+    private readonly Dictionary<Vector2Int, SectorMapCellSnapshot> _presentedCells = new();
+    private readonly HashSet<Vector2Int> _visibleCoords = new();
+    private Vector2 _lastCenterOffset;
+    private bool _hasLayout;
+
+    private void LateUpdate()
+    {
+        if (!_isOpen || !_pendingMapRefresh) return;
+        _pendingMapRefresh = false;
+        RefreshMap();
+    }
 
     private FullMapUISettingsSO Settings => _settings;
 
@@ -81,6 +98,7 @@ public class FullMapUI : MonoBehaviour
         if (_cellRoot == null)
             _cellRoot = transform as RectTransform;
 
+        EnsureMapViewport();
         ApplyOpacityLabelText();
     }
 
@@ -130,6 +148,8 @@ public class FullMapUI : MonoBehaviour
     public void SetOpen(bool open)
     {
         bool changed = _isOpen != open;
+        if (open && changed) _panOffset = Vector2.zero;
+        if (!open) _dragging = false;
         _isOpen = open;
         SetVisible(_isOpen, immediate: false);
         SetMiniMapVisible(!_isOpen);
@@ -137,6 +157,47 @@ public class FullMapUI : MonoBehaviour
         if (_isOpen && (changed || !_hasSnapshot))
             RequestSnapshotAndRefresh();
     }
+
+    private void EnsureMapViewport()
+    {
+        if (_cellRoot == null || _mapContent != null) return;
+        // Keep the authored panel rectangle. Never grow it to the map's bounds.
+        if (_cellRoot.GetComponent<RectMask2D>() == null)
+            _cellRoot.gameObject.AddComponent<RectMask2D>();
+        Image hitArea = _cellRoot.GetComponent<Image>();
+        if (hitArea == null)
+        {
+            hitArea = _cellRoot.gameObject.AddComponent<Image>();
+            hitArea.color = Color.clear;
+        }
+        hitArea.raycastTarget = true;
+        _mapContent = (RectTransform)new GameObject("PannableMapContent", typeof(RectTransform)).transform;
+        _mapContent.gameObject.layer = _cellRoot.gameObject.layer;
+        _mapContent.SetParent(_cellRoot, false);
+        _mapContent.anchorMin = _mapContent.anchorMax = _mapContent.pivot = Vector2.one * 0.5f;
+        _mapContent.sizeDelta = Vector2.zero;
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        _dragging = _isOpen && eventData.button == PointerEventData.InputButton.Right &&
+            _cellRoot != null && RectTransformUtility.RectangleContainsScreenPoint(
+                _cellRoot, eventData.position, eventData.pressEventCamera) &&
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _cellRoot, eventData.position, eventData.pressEventCamera, out _dragPosition);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (!_dragging || eventData.button != PointerEventData.InputButton.Right) return;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            _cellRoot, eventData.position, eventData.pressEventCamera, out Vector2 local)) return;
+        _panOffset += local - _dragPosition;
+        _dragPosition = local;
+        _mapContent.anchoredPosition = _panOffset;
+    }
+
+    public void OnEndDrag(PointerEventData eventData) => _dragging = false;
 
     // Purpose: Updates the visible state.
     private void SetVisible(bool visible, bool immediate)
@@ -212,8 +273,7 @@ public class FullMapUI : MonoBehaviour
         _latestSnapshot = snapshot;
         _hasSnapshot = true;
 
-        if (_isOpen)
-            RefreshMap();
+        _pendingMapRefresh = true;
     }
 
     // Purpose: Requests snapshot and refresh from the owning service.
@@ -246,30 +306,50 @@ public class FullMapUI : MonoBehaviour
         }
 
         CalculateBounds(cells, out int minX, out int maxX, out int minY, out int maxY);
-        Rect layoutRect = CalculateLayoutRect(cells, minX, maxX, minY, maxY);
-        float mapScale = CalculateAutoScale(layoutRect);
-        Vector2 centerOffset = CalculateCenterOffset(layoutRect, mapScale);
-
-        HideAllCells();
+        EnsureMapViewport();
+        // A readable local map, not a whole-stage thumbnail. The current room
+        // always starts at the viewport centre; distant rooms are reached by pan.
+        float mapScale = 1f;
+        Vector2 centerOffset = -CalculateCellPosition(
+            _latestSnapshot.currentSectorCoord, minX, maxX, minY, maxY);
+        _mapContent.anchoredPosition = _panOffset;
+        bool layoutChanged = !_hasLayout || centerOffset != _lastCenterOffset;
+        _hasLayout = true;
+        _lastCenterOffset = centerOffset;
+        _visibleCoords.Clear();
 
         for (int i = 0; i < cells.Length; i++)
         {
             SectorMapCellSnapshot snapshot = cells[i];
             FullMapCellUI cell = GetOrCreateCell(snapshot.coord);
+            _visibleCoords.Add(snapshot.coord);
 
             Vector2 rawPosition = CalculateCellPosition(snapshot.coord, minX, maxX, minY, maxY);
             Vector2 position = TransformBoardPosition(rawPosition, mapScale, centerOffset);
 
-            cell.ApplyLayout(
+            if (layoutChanged || !_presentedCells.ContainsKey(snapshot.coord)) cell.ApplyLayout(
                 position,
                 mapScale,
                 Settings.CellRotationZ);
 
-            ApplyCell(cell, snapshot);
+            if (layoutChanged || !_presentedCells.TryGetValue(snapshot.coord, out var previous) ||
+                !SamePresentation(previous, snapshot)) ApplyCell(cell, snapshot);
+            _presentedCells[snapshot.coord] = snapshot;
         }
 
-        ApplyContentSize(layoutRect, mapScale);
+        foreach (var pair in _cellByCoord)
+        {
+            if (_visibleCoords.Contains(pair.Key) || !_presentedCells.ContainsKey(pair.Key)) continue;
+            pair.Value.SetMissing();
+            _presentedCells.Remove(pair.Key);
+        }
+
     }
+
+    private static bool SamePresentation(SectorMapCellSnapshot a, SectorMapCellSnapshot b) =>
+        a.isExtraction == b.isExtraction && a.hasPublicRaidMarker == b.hasPublicRaidMarker &&
+        a.isLocked == b.isLocked && a.isRevealed == b.isRevealed &&
+        a.isStartSector == b.isStartSector && a.roomType == b.roomType && a.raidRole == b.raidRole;
 
     // Purpose: Returns the current or create cell.
     private FullMapCellUI GetOrCreateCell(Vector2Int coord)
@@ -277,7 +357,10 @@ public class FullMapUI : MonoBehaviour
         if (_cellByCoord.TryGetValue(coord, out FullMapCellUI cell) && cell != null)
             return cell;
 
-        cell = Instantiate(_cellPrefab, _cellRoot);
+        cell = Instantiate(_cellPrefab, _mapContent);
+        RectTransform cellRect = (RectTransform)cell.transform;
+        cellRect.anchorMin = cellRect.anchorMax = cellRect.pivot = Vector2.one * 0.5f;
+        cellRect.sizeDelta = Settings.CellSize;
         cell.name = $"FullMapCell_{FormatCellObjectName(coord)}";
 
         _cellByCoord[coord] = cell;
@@ -298,11 +381,14 @@ public class FullMapUI : MonoBehaviour
             snapshot.roomType,
             snapshot.isStartSector,
             showUndiscoveredIcon);
+        if (isExtraction || snapshot.hasPublicRaidMarker || snapshot.isRevealed)
+            roomIconSprite = Settings.GetLandmarkIcon(snapshot.raidRole, isExtraction) ?? roomIconSprite;
+        roomIconSprite = SectorMapIconPolicy.SharedIcon(snapshot, Settings.SectorIcons, roomIconSprite);
 
         string roomLabel = isExtraction
             ? Localize("Map_Extract", "Extract")
             : Settings.ShowRoomLabel ? FormatRoomLabel(snapshot) : string.Empty;
-        if (snapshot.hasPublicRaidMarker && !snapshot.isStartSector)
+        if (snapshot.hasPublicRaidMarker && !isExtraction)
             roomLabel = RaidMapLabels.ForRole(snapshot.raidRole);
         bool showRoomLabel = isExtraction || snapshot.hasPublicRaidMarker || Settings.ShowRoomLabel;
         Color roomLabelColor = isExtraction
@@ -436,6 +522,7 @@ public class FullMapUI : MonoBehaviour
     // Purpose: Hides the all cells UI or visual state.
     private void HideAllCells()
     {
+        _presentedCells.Clear();
         for (int i = 0; i < _cellPool.Count; i++)
         {
             if (_cellPool[i] != null)
@@ -543,6 +630,7 @@ public class FullMapUI : MonoBehaviour
 
     private void HandleLocaleChanged(UnityEngine.Localization.Locale locale)
     {
+        _presentedCells.Clear();
         RequestLocalizationRefresh();
     }
 

@@ -9,43 +9,33 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 99ca85af63a94240aa97cd468d889997, type: 3}
+  m_Script: {fileID: 11500000, guid: 84f6310988464062bc8bf5b6ba2cf59a, type: 3}
   m_Name: ShootingTarget
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   _guid: 953b3e96e1249f04ba6ae9889204a5b9
   _name:
     m_TableReference:
       m_TableCollectionName: GUID:2432e5d59ba4d8f4dbf84e68b4e04bf4
     m_TableEntryReference:
       m_KeyId: 54795395072
-      m_Key: 
+      m_Key:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   _previewImage: {fileID: 21300000, guid: 121110ca2db9e7a42a01255a1e2a7b0c, type: 3}
   _description:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName:
     m_TableEntryReference:
       m_KeyId: 0
-      m_Key: 
+      m_Key:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   _rarity: 1
   _worldItemPrefab: {fileID: 4790057386220197299, guid: 25bb53089931c5940905d19ac92f3b19, type: 3}
-  _allowDuplicatePickup: 0
-  _statModifiers:
-  - stat: 2
-    type: 1
-    value: 10
-  - stat: 1
-    type: 0
-    value: 1
-  - stat: 7
-    type: 0
-    value: 1
-  _featureFlags: []
+  _valuableCategoryId: military
+  _wasPassive: 1
   references:
     version: 2
     RefIds: []

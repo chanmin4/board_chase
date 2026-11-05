@@ -20,7 +20,8 @@ public enum StatusEffectIconKind
     Custom = 0,
     Slow = 1,
     InfectionRecoveryDown = 2,
-    PaintCoated = 3
+    PaintCoated = 3,
+    InfectionAggravation = 4
 }
 
 public enum StatusEffectModifierType
@@ -45,7 +46,7 @@ public struct StatusEffectModifier
 [CreateAssetMenu(
     fileName = "StatusEffect",
     menuName = "Game/Character/Status Effect")]
-public sealed class StatusEffectDefinitionSO : ScriptableObject
+public class StatusEffectDefinitionSO : ScriptableObject
 {
     [Header("Identity")]
     [Tooltip("Stable identifier used by debug tools and future status encyclopedias.")]
@@ -67,6 +68,19 @@ public sealed class StatusEffectDefinitionSO : ScriptableObject
     [Header("Lifetime")]
     [Tooltip("Duration after the last application. Reapplying refreshes this timer; it never adds a stack.")]
     [SerializeField, Min(0.05f)] private float _durationSeconds = 1.25f;
+
+    [Tooltip("Persistent treatment-only effect. Reapplication adds stacks instead of refreshing a timer.")]
+    [SerializeField] private bool _persistentStacks;
+    [SerializeField, Min(1)] private int _maximumStacks = 10;
+    [SerializeField, Min(0)] private float _damagePerStackPerSecond;
+    [SerializeField, Min(.1f)] private float _damageTickInterval = 1f;
+    [SerializeField] private bool _isBleeding;
+    public virtual bool PersistentStacks => _persistentStacks;
+    public virtual bool DealsInfectionDamage => false;
+    public int MaximumStacks => Mathf.Max(1, _maximumStacks);
+    public float DamagePerStackPerSecond => Mathf.Max(0f, _damagePerStackPerSecond);
+    public float DamageTickInterval => Mathf.Max(.1f, _damageTickInterval);
+    public bool IsBleeding => _isBleeding;
 
     [Tooltip("Friendly paint removes this effect immediately instead of waiting for its timer.")]
     [SerializeField] private bool _removeOnFriendlyPaint = true;

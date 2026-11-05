@@ -20,10 +20,15 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
     private QuestMakerGraph.Layout _layout;
     private Vector2 _lineScrollPosition, _detailsScrollPosition;
     private string _search = "", _newQuestName = "New Quest";
+    private MakerSelectionUiState _questSelectionUi, _lineSelectionUi;
+    private MakerSelectionUiState QuestSelectionUi => _questSelectionUi ??= new MakerSelectionUiState();
+    private MakerSelectionUiState LineSelectionUi => _lineSelectionUi ??= new MakerSelectionUiState();
     private QuestDefinitionSO _questToAdd, _linkSource, _prerequisiteToAdd, _nextQuestToLink;
     private int _detailTab;
     private bool _showSetSettings, _showAdvanced, _frameRequested = true;
     private bool _fitAllRequested;
+    private const string CategoryTreeScope = "QuestMaker";
+    private static readonly string[] BranchTreeKeys = Array.ConvertAll(QuestMakerGraph.Branches, branch => branch.ToString());
     private readonly List<string> _lineValidationIssues = new();
     private bool _hasValidatedLine;
     private Rect _lastViewport;
@@ -37,6 +42,23 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         window.Show();
     }
 
+    // Shop Maker에서 실제 퀘스트 보상으로 이동한다. 조회만으로 세트/보상을 등록하거나 저장하지 않는다.
+    public static void OpenForShopReward(QuestDefinitionSO quest, ShopConfigSO preferredShop = null)
+    {
+        if (quest == null) return;
+        var window = GetWindow<QuestDesignTreeWindow>("Quest Maker");
+        window.RefreshCatalog();
+        QuestLineSO owner = window._lines.Find(line => Array.IndexOf(line.Quests, quest) >= 0);
+        if (owner != null) window.SelectLine(owner);
+        window._branchIndex = 0;
+        window._search = "";
+        window.SelectQuest(quest);
+        window._detailTab = 2;
+        window._preferredSaleShop = preferredShop;
+        window._frameRequested = true;
+        window.Show();
+    }
+
     private void OnEnable()
     {
         titleContent = new GUIContent("Quest Maker");
@@ -45,8 +67,9 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         RestorePanelWidths();
         RefreshCatalog();
         Undo.undoRedoPerformed += Invalidate;
+        EnableSaleRewardAuthoring();
     }
-    private void OnDisable() { Undo.undoRedoPerformed -= Invalidate; }
+    private void OnDisable() { Undo.undoRedoPerformed -= Invalidate; ShopMakerAuthoring.Changed -= OnSaleRewardChanged; }
     private void OnProjectChange() { RefreshCatalog(); }
     private void Invalidate() { _layout = null; _hasValidatedLine = false; Repaint(); }
 
@@ -59,6 +82,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             if (line != null) _lines.Add(line);
         }
         _lines.Sort((a,b) => string.Compare(a.DisplayName,b.DisplayName,StringComparison.OrdinalIgnoreCase));
+        RefreshSaleRewardCatalog();
         if (_questLine == null)
         {
             // Show existing authored content on first open, not an empty assignment screen.
@@ -75,6 +99,8 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
 
     private void OnGUI()
     {
+        _saleGuiOrigin = GUIUtility.GUIToScreenPoint(Vector2.zero);
+        MakerCategoryTreeUi.BeginWindow(this);
         DrawToolbar();
         float height = Mathf.Max(490, position.height - 56);
         DrawResizablePanels(height);
@@ -99,13 +125,15 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             using (new EditorGUI.DisabledScope(_questLine == null))
             {
                 if (GUILayout.Button("Validate", EditorStyles.toolbarButton, GUILayout.Width(62))) { ValidateQuestLine(); _detailTab = 4; }
-                if (GUILayout.Button("Save", EditorStyles.toolbarButton, GUILayout.Width(50))) SaveCurrentSet();
             }
+            using (new EditorGUI.DisabledScope(_questLine == null && _selectedQuest == null && _pendingSaleSaves.Count == 0))
+                if (GUILayout.Button("Save" + (_pendingSaleSaves.Count > 0 ? " *" : ""), EditorStyles.toolbarButton, GUILayout.Width(65))) SaveCurrentSet();
         }
     }
 
     private void SelectLine(QuestLineSO line)
     {
+        LineSelectionUi.SelectionClicked(); QuestSelectionUi.SelectionClicked();
         _questLine = line; _selectedQuest = null; CancelConnection();
         _edgeSource = null; _edgeTarget = null;
         _search = ""; _frameRequested = true; _pan = Vector2.zero;
@@ -126,34 +154,43 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
                 if (EditorGUI.EndChangeCheck()) SelectLine(_lines[next]);
             }
             var quests = GetLineQuests();
-            for (int i = 0; i < 4; i++)
-            {
-                int index = i;
-                int count = i == 0 ? quests.Count : quests.FindAll(q => q.Branch == QuestMakerGraph.Branches[i-1]).Count;
-                string label = i == 0 ? "All Branches" : QuestMakerGraph.BranchLabel(QuestMakerGraph.Branches[i-1]);
-                var color = GUI.backgroundColor;
-                if (_branchIndex == i) GUI.backgroundColor = i == 0 ? new Color(.2f,.7f,.8f) : BranchColor(QuestMakerGraph.Branches[i-1]) * 1.5f;
-                if (GUILayout.Button(label + " (" + count + ")", GUILayout.Height(30)))
-                { _branchIndex = index; _search = ""; _selectedQuest = null; _frameRequested = true; Invalidate(); }
-                GUI.backgroundColor = color;
-            }
+            Rect allRect = GUILayoutUtility.GetRect(GUIContent.none, GUI.skin.button, GUILayout.Height(30));
+            if (MakerCategoryTreeUi.DrawRow(allRect, CategoryTreeScope, "All", new GUIContent($"All Branches ({quests.Count})"), _branchIndex == 0, false))
+            { _branchIndex = 0; _search = ""; _selectedQuest = null; _frameRequested = true; Invalidate(); }
+            MakerCategoryTreeUi.DrawToolbar(CategoryTreeScope, BranchTreeKeys);
+            GUILayout.Label("Arrow: expand / collapse. Name: filter flow.", EditorStyles.wordWrappedMiniLabel);
             GUILayout.Space(6);
             EditorGUI.BeginChangeCheck(); _search = EditorGUILayout.TextField(_search, EditorStyles.toolbarSearchField);
-            if (EditorGUI.EndChangeCheck()) { _frameRequested = true; Invalidate(); }
-            _lineScrollPosition = EditorGUILayout.BeginScrollView(_lineScrollPosition);
-            var questStyle = new GUIStyle(EditorStyles.miniButton) { wordWrap = true, fixedHeight = 0, alignment = TextAnchor.MiddleLeft };
-            float listWidth = Mathf.Max(100, width - 30);
-            foreach (var quest in quests)
+            if (EditorGUI.EndChangeCheck())
             {
-                if (Filter.HasValue && quest.Branch != Filter.Value) continue;
-                if (!string.IsNullOrEmpty(_search) && quest.DisplayName.IndexOf(_search,StringComparison.OrdinalIgnoreCase)<0 &&
-                    quest.QuestId.IndexOf(_search,StringComparison.OrdinalIgnoreCase)<0) continue;
-                var color = GUI.backgroundColor;
-                if (quest == _selectedQuest) GUI.backgroundColor = new Color(.25f,.7f,.85f);
-                var content = new GUIContent(quest.DisplayName, quest.DisplayName + "\n" + quest.QuestId);
-                if (GUILayout.Button(content, questStyle, GUILayout.Width(listWidth), GUILayout.Height(Mathf.Max(28, questStyle.CalcHeight(content,listWidth)))))
-                { SelectQuest(quest); FocusQuest(quest); }
-                GUI.backgroundColor = color;
+                if (!string.IsNullOrWhiteSpace(_search))
+                    foreach (var quest in quests)
+                        if (MatchesBrowserSearch(quest)) MakerCategoryTreeUi.SetExpanded(CategoryTreeScope, quest.Branch.ToString(), true);
+                _frameRequested = true; Invalidate();
+            }
+            _lineScrollPosition = EditorGUILayout.BeginScrollView(_lineScrollPosition);
+            for (int i = 0; i < QuestMakerGraph.Branches.Length; i++)
+            {
+                QuestBranch branch = QuestMakerGraph.Branches[i];
+                var members = quests.FindAll(q => q.Branch == branch);
+                var matches = members.FindAll(MatchesBrowserSearch);
+                string count = string.IsNullOrWhiteSpace(_search) ? members.Count.ToString() : $"{matches.Count}/{members.Count}";
+                string label = QuestMakerGraph.BranchLabel(branch) + " (" + count + ")";
+                Rect row = GUILayoutUtility.GetRect(GUIContent.none, GUI.skin.button, GUILayout.Height(30));
+                if (MakerCategoryTreeUi.DrawRow(row, CategoryTreeScope, branch.ToString(), new GUIContent(label, label),
+                    _branchIndex == i + 1, members.Count > 0, tint: BranchColor(branch) * 1.5f))
+                { _branchIndex = i + 1; _search = ""; _selectedQuest = null; _frameRequested = true; Invalidate(); }
+                if (!MakerCategoryTreeUi.IsExpanded(CategoryTreeScope, branch.ToString())) continue;
+                foreach (var quest in matches)
+                {
+                    Rect child = GUILayoutUtility.GetRect(GUIContent.none, GUI.skin.button, GUILayout.Height(28));
+                    var content = new GUIContent(quest.DisplayName, quest.DisplayName + "\n" + quest.QuestId);
+                    if (MakerCategoryTreeUi.DrawRow(child, CategoryTreeScope, "Quest:" + quest.QuestId, content, quest == _selectedQuest, false, 18))
+                    {
+                        if (_branchIndex != 0 && _branchIndex != i + 1) { _branchIndex = i + 1; Invalidate(); }
+                        SelectQuest(quest); FocusQuest(quest);
+                    }
+                }
             }
             EditorGUILayout.EndScrollView();
             using (new EditorGUI.DisabledScope(_questLine == null))
@@ -174,6 +211,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
                         if (GUILayout.Button("Add to this set"))
                         { QuestMakerGraph.AddToLine(_questLine,_questToAdd); SelectQuest(_questToAdd); _questToAdd = null; Invalidate(); _frameRequested = true; }
                     using var line = new SerializedObject(_questLine);
+                    LineSelectionUi.Synchronize(_questLine);
                     EditorGUI.BeginChangeCheck();
                     EditorGUILayout.PropertyField(line.FindProperty("_displayName"), GUIContent.none);
                     if (EditorGUI.EndChangeCheck()) { line.ApplyModifiedProperties(); Invalidate(); }
@@ -182,6 +220,10 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             }
         }
     }
+
+    private bool MatchesBrowserSearch(QuestDefinitionSO quest) => string.IsNullOrWhiteSpace(_search) ||
+        quest.DisplayName.IndexOf(_search, StringComparison.OrdinalIgnoreCase) >= 0 ||
+        quest.QuestId.IndexOf(_search, StringComparison.OrdinalIgnoreCase) >= 0;
 
     private void DrawFlow(float width, float height)
     {
@@ -347,7 +389,14 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         if(_layout.Rects.TryGetValue(quest,out var rect))
         { _zoom=Mathf.Max(.75f,_zoom); _pan=rect.center*_zoom-_lastViewport.size*.5f; _frameRequested=false; }
     }
-    private void SelectQuest(QuestDefinitionSO quest) { _selectedQuest=quest; _detailsScrollPosition=Vector2.zero; Repaint(); }
+    private void SelectQuest(QuestDefinitionSO quest)
+    {
+        QuestSelectionUi.SelectionClicked();
+        _selectedQuest = quest;
+        if (quest != null) MakerCategoryTreeUi.SetExpanded(CategoryTreeScope, quest.Branch.ToString(), true);
+        _detailsScrollPosition = Vector2.zero;
+        Repaint();
+    }
     private void ShowBranchMenu()
     {
         var source=_selectedQuest; if(source==null) return;
@@ -363,6 +412,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         {
             GUILayout.Label("QUEST WORKBENCH",EditorStyles.boldLabel);
             _detailTab=GUILayout.Toolbar(_detailTab,new[]{"Details","Goals","Rewards","Links","Check"},GUILayout.Height(26));
+            QuestSelectionUi.Synchronize(_selectedQuest, _detailTab.ToString());
             _detailsScrollPosition=EditorGUILayout.BeginScrollView(_detailsScrollPosition);
             float label=EditorGUIUtility.labelWidth; EditorGUIUtility.labelWidth=112;
             try
@@ -391,6 +441,8 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
     {
         EditorGUILayout.PropertyField(serialized.FindProperty("_displayName"),new GUIContent("Quest name"));
         EditorGUILayout.PropertyField(serialized.FindProperty("_description"),new GUIContent("Description"));
+        EditorGUILayout.PropertyField(serialized.FindProperty("_experienceReward"),new GUIContent("완료 경험치 · -1=공용 기본값"));
+        EditorGUILayout.PropertyField(serialized.FindProperty("_acceptanceItems"),new GUIContent("수락 지급품 · 인벤 공간 필수"),true);
         int branch=Array.IndexOf(QuestMakerGraph.Branches,_selectedQuest.Branch);
         EditorGUI.BeginChangeCheck();
         int next=EditorGUILayout.Popup("Branch",Mathf.Max(0,branch),new[]{"MainQuest","StatUnlock","GearUnlock"});
@@ -442,6 +494,8 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             if(GUILayout.Button("+ Kill")) AddGoal(serialized,QuestObjectiveType.Kill);
             if(GUILayout.Button("+ Hit")) AddGoal(serialized,QuestObjectiveType.Hit);
             if(GUILayout.Button("+ Collect")) AddGoal(serialized,QuestObjectiveType.CollectItem);
+            if(GUILayout.Button("+ 아이템 제출")) AddGoal(serialized,QuestObjectiveType.SubmitItem);
+            if(GUILayout.Button("+ 헤드샷 처치")) AddGoal(serialized,QuestObjectiveType.HeadshotKill);
         }
     }
 
@@ -455,10 +509,10 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             {
                 using(new EditorGUILayout.HorizontalScope())
                 {
-                    GUILayout.Label("Reward "+(i+1),EditorStyles.boldLabel);
+                    GUILayout.Label("보상 "+(i+1),EditorStyles.boldLabel);
                     if(GUILayout.Button("Remove",GUILayout.Width(60))) { rewards.DeleteArrayElementAtIndex(i); ApplyArrayEdit(serialized); }
                 }
-                DrawRewardFields(rewards.GetArrayElementAtIndex(i));
+                DrawRewardFields(rewards.GetArrayElementAtIndex(i), i);
             }
         }
         using(new EditorGUILayout.HorizontalScope())
@@ -466,11 +520,15 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             if(GUILayout.Button("+ Item")) AddReward(serialized,QuestRewardType.Item);
             if(GUILayout.Button("+ Stat")) AddReward(serialized,QuestRewardType.Stat);
         }
-        if(GUILayout.Button("+ Gear / Shop Unlock")) AddReward(serialized,QuestRewardType.ShopUnlock);
+        if(GUILayout.Button("+ 상점 판매 해금")) AddReward(serialized,QuestRewardType.ShopUnlock);
+        ObserveSale("sale:addReward");
         using(new EditorGUILayout.HorizontalScope())
         {
             if(GUILayout.Button("+ Stage Unlock")) AddReward(serialized,QuestRewardType.StageUnlock);
             if(GUILayout.Button("+ Warehouse")) AddReward(serialized,QuestRewardType.WarehouseSlots);
+            if(GUILayout.Button("+ 패시브칸")) AddReward(serialized,QuestRewardType.PassiveSlots);
+            if(GUILayout.Button("+ 포켓칸")) AddReward(serialized,QuestRewardType.PocketSlots);
+            if(GUILayout.Button("+ 분해기칸")) AddReward(serialized,QuestRewardType.RecyclingSlots);
         }
     }
 
@@ -542,17 +600,19 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         value.FindPropertyRelative("_stat").intValue=(int)PlayerStatId.MaxHealth;
         value.FindPropertyRelative("_statModifierType").intValue=(int)StatModifierType.PercentAdd;
         value.FindPropertyRelative("_statValue").floatValue=5;
-        value.FindPropertyRelative("_shopConfig").objectReferenceValue=null;
+        value.FindPropertyRelative("_shopConfig").objectReferenceValue=type == QuestRewardType.ShopUnlock ? _preferredSaleShop : null;
         value.FindPropertyRelative("_shopUnlockNodeId").stringValue="";
         value.FindPropertyRelative("_stageToUnlock").objectReferenceValue=null;
         value.FindPropertyRelative("_warehouseSlotAmount").intValue=1;
+        value.FindPropertyRelative("_passiveSlotAmount").intValue=1;
+        value.FindPropertyRelative("_pocketSlotAmount").intValue=1;
         Invalidate(); ApplyArrayEdit(serialized);
     }
 
     private static void DrawShopUnlockNodePicker(SerializedProperty shopProperty,SerializedProperty idProperty)
     {
         var shop=shopProperty.objectReferenceValue as ShopConfigSO;
-        if(shop==null) { EditorGUILayout.HelpBox("Choose the shop catalog to select its unlock node.",MessageType.Info); return; }
+        if(shop==null) { EditorGUILayout.HelpBox("상점을 먼저 선택하세요.",MessageType.Info); return; }
         var nodes=shop.UnlockNodes;
         var labels=new List<string> { string.IsNullOrEmpty(idProperty.stringValue)?"Choose unlock node...":"Missing node: "+idProperty.stringValue };
         var ids=new List<string>{idProperty.stringValue}; int selected=0;
@@ -563,7 +623,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             if(nodes[i].NodeId==idProperty.stringValue) selected=ids.Count-1;
         }
         EditorGUI.BeginChangeCheck();
-        int next=EditorGUILayout.Popup("Unlock node",selected,labels.ToArray());
+        int next=EditorGUILayout.Popup("기존 해금 연결",selected,labels.ToArray());
         if(EditorGUI.EndChangeCheck() && next>0) idProperty.stringValue=ids[next];
         // Merely viewing a blank or stale selector never assigns its first node.
     }
@@ -619,12 +679,13 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
     }
     private void SaveCurrentSet()
     {
-        AssetDatabase.SaveAssetIfDirty(_questLine);
+        if (_questLine != null) AssetDatabase.SaveAssetIfDirty(_questLine);
         // Save referenced prerequisite edits too, but not unrelated project assets.
         var graph=QuestMakerGraph.Build(GetLineQuests(),null,null);
         foreach(var quest in graph.Nodes) AssetDatabase.SaveAssetIfDirty(quest);
         if(_selectedQuest!=null) AssetDatabase.SaveAssetIfDirty(_selectedQuest);
-        ShowNotification(new GUIContent("Quest set and quest edits saved."));
+        SaveSaleRewardAssets();
+        ShowNotification(new GUIContent("퀘스트와 편집한 상점 판매 해금 연결을 저장했어요."));
     }
     private void DrawChecks()
     {
@@ -635,25 +696,24 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
     }
     private static void SelectAsset(UnityEngine.Object asset) { Selection.activeObject=asset; EditorGUIUtility.PingObject(asset); }
 
-    private static void DrawRewardFields(SerializedProperty reward)
+    private void DrawRewardFields(SerializedProperty reward, int rewardIndex)
     {
         SerializedProperty rewardType = reward.FindPropertyRelative("_rewardType");
-        EditorGUILayout.PropertyField(rewardType, new GUIContent("Reward Type"));
+        rewardType.intValue = EditorGUILayout.Popup("보상 종류", rewardType.intValue,
+            new[] { "아이템 지급", "능력치 증가", "상점 판매 해금", "스테이지 해금", "창고 확장", "패시브칸 확장", "포켓칸 확장", "분해기칸 확장" });
 
         QuestRewardType type = (QuestRewardType)rewardType.enumValueIndex;
         if (type == QuestRewardType.Item)
         {
             EditorGUILayout.PropertyField(reward.FindPropertyRelative("_item"), new GUIContent("Item"));
             EditorGUILayout.PropertyField(reward.FindPropertyRelative("_itemAmount"), new GUIContent("Amount"));
+            MakerRegistrationUi.ItemSummary(reward.FindPropertyRelative("_item").objectReferenceValue as ItemSO, "이 퀘스트의 아이템 보상으로 지정됨");
             return;
         }
 
         if (type == QuestRewardType.ShopUnlock)
         {
-            SerializedProperty shopConfig = reward.FindPropertyRelative("_shopConfig");
-            SerializedProperty nodeId = reward.FindPropertyRelative("_shopUnlockNodeId");
-            EditorGUILayout.PropertyField(shopConfig, new GUIContent("Shop Config"));
-            DrawShopUnlockNodePicker(shopConfig, nodeId);
+            DrawSaleReward(reward, rewardIndex);
             return;
         }
 
@@ -663,6 +723,23 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
             return;
         }
 
+        if (type == QuestRewardType.RecyclingSlots)
+        {
+            EditorGUILayout.PropertyField(reward.FindPropertyRelative("_recyclingSlotAmount"), new GUIContent("영구 분해기 슬롯 추가"));
+            EditorGUILayout.HelpBox("기본/최대 슬롯 수는 Game System Tool에서 설정합니다. 퀘스트 보상별 중복 지급을 방지합니다.", MessageType.Info);
+            return;
+        }
+        if (type == QuestRewardType.PocketSlots)
+        {
+            EditorGUILayout.PropertyField(reward.FindPropertyRelative("_pocketSlotAmount"), new GUIContent("영구 포켓 확장 · 최대 10칸"));
+            return;
+        }
+        if (type == QuestRewardType.PassiveSlots)
+        {
+            EditorGUILayout.PropertyField(reward.FindPropertyRelative("_passiveSlotAmount"), new GUIContent("영구 추가 장착칸"));
+            EditorGUILayout.HelpBox("기본 2칸, 현재 최대 5칸. 퀘스트/보상별 중복 지급 방지와 사망 후 유지.", MessageType.Info);
+            return;
+        }
         if (type == QuestRewardType.WarehouseSlots)
         {
             EditorGUILayout.PropertyField(
@@ -708,9 +785,10 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         EditorGUILayout.PropertyField(requiredCount, new GUIContent("Required Count"));
 
         QuestObjectiveType objectiveType = (QuestObjectiveType)type.enumValueIndex;
-        if (objectiveType == QuestObjectiveType.CollectItem)
+        if (objectiveType == QuestObjectiveType.CollectItem || objectiveType == QuestObjectiveType.SubmitItem)
         {
             EditorGUILayout.PropertyField(targetItem, new GUIContent("Required Item"));
+            MakerRegistrationUi.ItemSummary(targetItem.objectReferenceValue as ItemSO, "이 퀘스트의 수집 목표로 지정됨");
             EditorGUILayout.HelpBox(
                 "Collect Item records the highest amount held in the player's main inventory after this quest is accepted. It does not consume the item.",
                 MessageType.None);
@@ -719,6 +797,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
 
         EditorGUILayout.PropertyField(targetConfig, new GUIContent("Target Enemy", "Leave empty to count any enemy."));
         EditorGUILayout.PropertyField(requiredWeapon, new GUIContent("Weapon (optional)", "Leave empty to count any weapon."));
+        MakerRegistrationUi.ItemSummary(requiredWeapon.objectReferenceValue as ItemSO, "이 퀘스트의 지정 무기 조건으로 사용됨");
         EditorGUILayout.PropertyField(distanceRule, new GUIContent("Distance Rule"));
         if ((QuestDistanceRule)distanceRule.enumValueIndex != QuestDistanceRule.Any)
             EditorGUILayout.PropertyField(distanceMeters, new GUIContent("Distance (m)"));
@@ -729,12 +808,10 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         if (quest == null)
             return "None";
 
-        QuestRewardDefinition[] rewards = quest.Rewards;
-        for (int index = 0; index < rewards.Length; index++)
-        {
-            if (rewards[index] != null)
-                return rewards[index].BuildSummary();
-        }
+        var summaries = new List<string>();
+        foreach (var reward in quest.Rewards)
+            if (reward != null) summaries.Add(ShopMakerAuthoring.ShopRewardSummary(reward));
+        if (summaries.Count > 0) return string.Join(" / ", summaries);
 
         return string.IsNullOrWhiteSpace(quest.PersistentRewardSummary)
             ? "None"
@@ -821,7 +898,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
                     continue;
                 }
 
-                if (objective.ObjectiveType == QuestObjectiveType.CollectItem && objective.TargetItem == null)
+                if ((objective.ObjectiveType == QuestObjectiveType.CollectItem || objective.ObjectiveType == QuestObjectiveType.SubmitItem) && objective.TargetItem == null)
                     _lineValidationIssues.Add($"{quest.DisplayName}: Collect objective {objectiveIndex + 1} has no item.");
             }
 

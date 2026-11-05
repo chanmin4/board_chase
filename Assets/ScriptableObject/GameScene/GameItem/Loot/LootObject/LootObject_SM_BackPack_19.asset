@@ -12,8 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1100000000000000000000000000001, type: 3}
   m_Name: LootObject_SM_BackPack_19
   m_EditorClassIdentifier: 
-  _worldPrefab: {fileID: 100100000, guid: 5445941407b635e46a005bcb13892213, type: 3}
-  _displayName: Backpack 19
+  _worldPrefab: {fileID: 2198208236720349904, guid: 5445941407b635e46a005bcb13892213, type: 3}
+  _displayName: BackPack01
+  _localizedDisplayName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   _lootSlotCount: 6
-  _lootObjectType: {fileID: 11400000, guid: b8aa1000000000000000000000000001, type: 2}
-  _lootTable: {fileID: 11400000, guid: b330000000000000000000000000000f, type: 2}
+  _sizeClass: 2
+  _rollSettings:
+    overrideTableRollCount: 0
+    minRollCount: 1
+    maxRollCount: 1
+    rollSuccessChancePercent: 100
+  _slotGenerationVersion: 1
+  _minGeneratedSlots: 1
+  _maxGeneratedSlots: 2
+  _rarityWeights:
+    normal: 63
+    rare: 30
+    unique: 6
+    legendary: 1
+  _lootObjectType: {fileID: 0}
+  _overrideCategory: 1
+  _category: 6
+  _lootTable: {fileID: 11400000, guid: b9239d01a33aae3418cd2ec6988301d4, type: 2}
+  references:
+    version: 2
+    RefIds: []
