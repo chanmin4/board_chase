@@ -32,6 +32,15 @@ public class SectorPortal : MonoBehaviour
     public SectorPortalDirection Direction => _direction;
     public bool IsAvailable => _isAvailable;
     public bool IsExtraction => _isExtraction;
+    public float ReturnCooldownRemaining
+    {
+        get
+        {
+            var state=RaidRuntime.Active?.State;
+            return state?.active==true&&OwnerSector!=null&&state.returnPortalCoord==OwnerSector.Coord&&
+                state.returnPortalDirection==Direction ? Mathf.Max(0,state.returnPortalCooldownRemaining):0f;
+        }
+    }
     public bool CanInteract => _isAvailable && _manager != null;
     public bool HasPendingKeyConfirmation => ShopPurchaseTradePanel.IsKeySubmissionOwnedBy(this);
 

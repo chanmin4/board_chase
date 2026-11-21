@@ -20,6 +20,8 @@ public partial class EnemyShooterStatsRuntime : ShooterStatsRuntime
     [SerializeField] private EntityEquipmentRuntime _equipmentRuntime;
 
     private BulletSO _runtimeBullet;
+    private int _balanceStageIndex;
+    public void SetStageBalance(int stageIndex)=>_balanceStageIndex=stageIndex;
     private SectorEnemyTraitModifier _sectorTraitModifier;
     private EnemyLootInventoryRuntime _inventory;
     private bool _inventoryResolved;
@@ -47,7 +49,7 @@ public partial class EnemyShooterStatsRuntime : ShooterStatsRuntime
     public override float MoveSpeed => ApplyStatusMoveSpeed(
         ResolveWithRuntimeModifiers(PlayerStatId.MoveSpeed, Config != null ? Config.MoveSpeed : 0f, 0f)) *
         ResolveSectorTraitMoveSpeedMultiplier() * ResolveBackpackMoveSpeedMultiplier();
-    public override float MaxHealth => ResolveWithRuntimeModifiers(PlayerStatId.MaxHealth, Config != null ? Config.MaxHealth : 0f, 1f) *
+    public override float MaxHealth => ResolveWithRuntimeModifiers(PlayerStatId.MaxHealth, CombatBalanceRules.EnemyHealth(_balanceStageIndex, Config != null ? Config.EnemyRole : default, Config != null ? Config.MaxHealth : 0f), 1f) *
         ResolveSectorTraitMaxHealthMultiplier();
     public override float ArmorClass => Mathf.Max(
         0f,
@@ -121,7 +123,7 @@ public partial class EnemyShooterStatsRuntime : ShooterStatsRuntime
     // Purpose: Resolves the attack damage needed by this component.
     public override float ResolveAttackDamage(BulletSO bullet)
     {
-        float baseDamage = bullet != null ? bullet.HealthDamage : 0f;
+        float baseDamage = CombatBalanceRules.EnemyDamage(_balanceStageIndex, Config != null ? Config.EnemyRole : default, bullet != null ? bullet.HealthDamage : 0f);
         float runtimeValue = ResolveWithRuntimeModifiers(PlayerStatId.AttackDamage, baseDamage, 0f);
         return ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(
             ResolveWithExtraModifiers(PlayerStatId.AttackDamage, runtimeValue, 0f, bullet != null ? bullet.StatModifiers : null),

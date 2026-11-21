@@ -1,0 +1,186 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+namespace UnityEngine {
+ public class Object {public string name;}
+ public class ScriptableObject:Object {}
+ public class CreateAssetMenuAttribute:Attribute {public string menuName,fileName;}
+ public class MinAttribute:Attribute {public MinAttribute(float n){}}
+ public class RangeAttribute:Attribute {public RangeAttribute(float a,float b){}}
+ public class TooltipAttribute:Attribute {public TooltipAttribute(string s){}}
+ public static class Resources {public static T Load<T>(string s)where T:class=>null;}
+ public static class Mathf {
+  public static float Max(float a,float b)=>Math.Max(a,b);public static int Max(int a,int b)=>Math.Max(a,b);
+  public static float Min(float a,float b)=>Math.Min(a,b);public static int Min(int a,int b)=>Math.Min(a,b);
+  public static float Clamp01(float a)=>Math.Clamp(a,0,1);public static int Clamp(int a,int b,int c)=>Math.Clamp(a,b,c);
+  public static float Exp(float a)=>(float)Math.Exp(a);public static float Abs(float a)=>Math.Abs(a);
+  public static int Abs(int a)=>Math.Abs(a);public static int RoundToInt(float a)=>(int)Math.Round(a);
+ }
+ public struct Vector3 {public float x,y,z;public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;}
+  public static Vector3 operator -(Vector3 a,Vector3 b)=>new(a.x-b.x,a.y-b.y,a.z-b.z);
+  public float sqrMagnitude=>x*x+y*y+z*z;}
+ public struct Vector2Int:IEquatable<Vector2Int> {
+  public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}
+  public static Vector2Int zero=>new(0,0);public static Vector2Int left=>new(-1,0);public static Vector2Int right=>new(1,0);
+  public static Vector2Int up=>new(0,1);public static Vector2Int down=>new(0,-1);
+  public static Vector2Int operator +(Vector2Int a,Vector2Int b)=>new(a.x+b.x,a.y+b.y);
+  public static bool operator ==(Vector2Int a,Vector2Int b)=>a.Equals(b);public static bool operator !=(Vector2Int a,Vector2Int b)=>!a.Equals(b);
+  public bool Equals(Vector2Int b)=>x==b.x&&y==b.y;public override bool Equals(object a)=>a is Vector2Int b&&Equals(b);
+  public override int GetHashCode()=>HashCode.Combine(x,y);public override string ToString()=>x+","+y;
+ }
+}
+public enum PlayerShopItemRarity {Normal=0,Rare=1,Legendary=2,Unique=3,Mythic=4}
+public enum BulletTier {Tier1=1,Tier2=2,Tier3=3,Tier4=4,Tier5=5,Tier6=6,Tier7=7,Tier8=8}
+public enum EnemyShooterRole {StandardEnemy,NamedEnemy,Boss,BossGuard}
+public class ItemSO:ScriptableObject {public string Guid;public PlayerShopItemRarity Rarity;}
+public class ValuableItemSO:ItemSO {public string ValuableCategoryId;}
+public class CurrencyItemSO:ValuableItemSO {}
+public class PassiveItemSO:ItemSO {}
+public class ShopTradeRequirement {public ItemSO Item;public int Amount;public bool IsValid=>Item!=null&&Amount>0;public ShopTradeRequirement(ItemSO i,int n){Item=i;Amount=n;}}
+public class Save {public List<CraftRecipeSave> craftingRecipes=new();}
+public class RunSaveData {public List<CraftRecipeSave> craftingRecipeCommits=new();}
+public class CombatBalanceRulesSO {
+ public static CombatBalanceRulesSO Active=>null;
+ public float penetrationCurve,minimumPenetration,maximumPenetration,failedHitDamage;
+ public int[] protectionByTier;public float[] ammoDamageByTier,normalHealth,eliteHealth,bossHealth,normalDamage,eliteDamage,bossDamage;
+}
+public enum StageRoomType {Normal,Boss}
+public enum RaidRoomRole {Normal,Hatch,Generator,Extraction,Armory,Medical,Vault}
+public enum SectorPortalDirection {XMin,XMax,ZMin,ZMax}
+public class RaidExtractionPortalRoute {public Vector2Int coord;public SectorPortalDirection direction;}
+public enum SectorMapIconKind {NormalCombat,ThemedCombat}
+[Flags]public enum StageRoomConnectionFlags {Left=1,Right=2,Up=4,Down=8}
+public class SectorPresetSO {}
+public class SectorRuntime {}
+public class StageRoomNode {
+ public Vector2Int coord,landmarkAnchor,landmarkOffset;
+ public string landmarkId,landmarkVariantId;public SectorMapIconKind landmarkIcon;
+ public StageRoomType roomType;public RaidRoomRole raidRole;public StageRoomConnectionFlags connections;
+ public bool isCleared,isOpened,isRevealed;
+ public StageRoomNode(Vector2Int c,StageRoomType t,StageRoomConnectionFlags f){coord=c;roomType=t;connections=f;}
+ public bool HasConnection(StageRoomConnectionFlags f)=>(connections&f)!=0;
+}
+public class StageMapLayout {
+ public int runSeed,stageSeed,stageIndex,gridSize,generationVersion,landmarkSchemaVersion,extractionPortalVersion;
+ public SectorPortalDirection extractionDirection;public List<RaidExtractionPortalRoute> extractionPortals=new();
+ public bool usesRaidLayout,hasExtraction,bossSpawned,bossAvoidsExtractionRoutes;
+ public Vector2Int startSectorCoord,firstRoomCoord,hatchRoomCoord,generatorRoomCoord,extractionSectorCoord,bossRoomCoord,goalRoomCoord;
+ public List<StageRoomNode> rooms=new();public List<Vector2Int> extractionRooms=new(),extractionCandidates=new();
+ public bool TryGetRoom(Vector2Int c,out StageRoomNode room){room=rooms.Find(x=>x.coord==c);return room!=null;}
+ public bool IsExtractionSector(Vector2Int c)=>extractionRooms.Contains(c);
+}
+public class LandmarkDefinitionSO {public string id,displayName;public bool powerStation,bossEligible=true;public SectorMapIconKind mapIconKind;public List<LandmarkPrefab> variants=new();}
+public class LandmarkPrefab {
+ public string variantId="one";
+ public class Cell {public Vector2Int offset;public SectorPresetSO preset=new();public SectorRuntime sector=new();}
+ public List<Cell> cells=new();
+ public bool TryValidate(out string error){error=null;return cells.Count>0&&cells.Any(x=>x.offset==Vector2Int.zero);}
+}
+public class StageLandmarkSettings {
+ public List<LandmarkDefinitionSO> guaranteed=new();
+ public LandmarkDefinitionSO Find(string id)=>guaranteed.Find(x=>x.id==id);
+}
+public class RaidMapSettings {public int extractionCount=1,bossSpawnPercent=100;public bool preventBossBlockingExtraction=true;}
+public class StageDefinitionSO {
+ public int RoomGridSize=12,StageIndex=1;public StageLandmarkSettings Landmarks=new();public RaidMapSettings RaidMap=new();
+ public static int BuildSectorSeed(int seed,Vector2Int coord,int salt)=>seed^coord.x*751^coord.y*8191^salt;
+}
+public static class StageMapGenerator {public static int BuildStageSeed(int seed,int stage)=>seed^stage*751;}
+public static class StageSystemPolicies {public static void Apply(StageDefinitionSO stage,StageMapLayout map){}}
+public static class RaidMapGenerator {
+ public static Dictionary<Vector2Int,int> GetDistances(StageMapLayout map,Vector2Int start){
+  var reached=new Dictionary<Vector2Int,int>{{start,0}};var queue=new Queue<Vector2Int>();queue.Enqueue(start);
+  while(queue.Count>0){var c=queue.Dequeue();var room=map.rooms.Find(x=>x.coord==c);if(room==null)continue;
+   for(int i=0;i<4;i++){var next=c+LandmarkMapGenerator.Steps[i];var other=map.rooms.Find(x=>x.coord==next);
+    if(other!=null&&room.HasConnection(LandmarkMapGenerator.Flags[i])&&other.HasConnection(LandmarkMapGenerator.Flags[i^1])&&!reached.ContainsKey(next)){reached.Add(next,reached[c]+1);queue.Enqueue(next);}}}
+  return reached;
+ }
+}
+public static class SystemsPatchChecks {
+ private static int count;
+ private static void Check(bool yes,string name){if(!yes)throw new Exception("FAIL: "+name);count++;}
+ private static void Near(float value,float expected,string name)=>Check(Math.Abs(value-expected)<.0001f,name);
+ public static int Run(){
+  count=0;
+  Near(RaidArmorPenetration.Resolve(100,0,100,100,1).probability,.05f,"minimum probability");
+  Near(RaidArmorPenetration.Resolve(100,100,100,100,1).probability,.95f,"equal probability");
+  Near(RaidArmorPenetration.Resolve(100,200,1,100,1).probability,.95f,"overpenetration cap");
+  Near(RaidArmorPenetration.Resolve(0,0,1,1,1).healthMultiplier,1,"unarmored");
+  Near(RaidArmorPenetration.Resolve(100,50,1,100,0).healthMultiplier,.75f,"successful damage");
+  Near(RaidArmorPenetration.Resolve(100,50,1,100,1).healthMultiplier,.15f,"failed damage");
+  float previous=0;
+  for(int i=0;i<=100;i++){float c=RaidArmorPenetration.Resolve(100,i,1,1,0).probability;Check(c>=previous,"monotonic "+i);previous=c;}
+  Near(RaidArmorPenetration.Resolve(100,50,1,100,0).probability,.2504301f,"k2.5 midpoint");
+  Near(CombatBalanceRules.AmmoDamageAdjustment(BulletTier.Tier1),0,"T1 damage");
+  Near(CombatBalanceRules.AmmoDamageAdjustment(BulletTier.Tier6),-6,"T6 adjustment");
+  Check(CombatBalanceRules.Penetration(8)==85,"T8 penetration");
+  Near(CombatBalanceRules.EnemyHealth(3,EnemyShooterRole.Boss,1),650,"S3 boss");
+  Near(CombatBalanceRules.EnemyHealth(4,EnemyShooterRole.StandardEnemy,1),300,"S4 normal");
+  Near(CombatBalanceRules.EnemyDamage(4,EnemyShooterRole.Boss,1),52,"S4 boss damage");
+  Check(FactionDiscoveryRulesSO.InRange(new(0,0,0),new(45,100,0),45),"planar sharing boundary");
+  Check(!FactionDiscoveryRulesSO.InRange(new(0,0,0),new(46,0,0),45),"outside sharing");
+  Check(!FactionDiscoveryRulesSO.InRange(new(0,0,0),new(0,0,0),0),"disabled radius");
+  var catalog=new CraftingCatalogSO();
+  foreach(var rarity in new[]{PlayerShopItemRarity.Normal,PlayerShopItemRarity.Rare,PlayerShopItemRarity.Unique,PlayerShopItemRarity.Legendary,PlayerShopItemRarity.Mythic})
+   catalog.materials.Add(new ValuableItemSO{Guid="material-"+rarity,Rarity=rarity,ValuableCategoryId="military"});
+  var recipe=new CraftingRecipe{id="test",output=new PassiveItemSO(),randomModuleMaterials=true,valuableCategories=new[]{"military"}};
+  foreach(var rarity in new[]{PlayerShopItemRarity.Normal,PlayerShopItemRarity.Rare,PlayerShopItemRarity.Unique,PlayerShopItemRarity.Legendary,PlayerShopItemRarity.Mythic}){
+   recipe.moduleRarity=rarity;
+   Check(CraftingRecipeRoll.TryRoll(catalog,recipe,5,out var state,out var message),"roll "+rarity+": "+message);
+   Check(state.materials.Sum(x=>x.amount)==CraftingRecipeRoll.RequiredRarities(rarity).Length,"recipe total "+rarity);
+   Check(state.revision==5,"revision");
+   var expected=CraftingRecipeRoll.RequiredRarities(rarity).GroupBy(x=>x).ToDictionary(x=>"material-"+x.Key,x=>x.Count());
+   Check(state.materials.All(x=>expected[x.itemGuid]==x.amount),"no rarity downgrade "+rarity);
+  }
+  var approved=catalog.materials[0];catalog.materials.RemoveAt(0);recipe.moduleRarity=PlayerShopItemRarity.Normal;
+  Check(!CraftingRecipeRoll.TryRoll(catalog,recipe,6,out var rejected,out _)&&rejected==null,"shortage no recipe");
+  catalog.materials.Add(approved);
+  var profile=new Save();profile.craftingRecipes.Add(new CraftRecipeSave{recipeId="test",revision=1});
+  var run=new RunSaveData();run.craftingRecipeCommits.Add(new CraftRecipeSave{recipeId="test",revision=2,
+   materials=new(){new(){itemGuid="material-Normal",amount=3}}});
+  CraftingRecipeRoll.ReconcileCommittedRecipes(profile,run);Check(profile.craftingRecipes[0].revision==2,"recover interrupted profile");
+  CraftingRecipeRoll.ReconcileCommittedRecipes(profile,run);Check(profile.craftingRecipes.Count==1,"recovery idempotence");
+  run.craftingRecipeCommits[0].revision=0;CraftingRecipeRoll.ReconcileCommittedRecipes(profile,run);
+  Check(profile.craftingRecipes[0].revision==2,"never rollback committed recipe");
+  Check(!CraftingRecipeRoll.IsValidState(new CraftRecipeSave{recipeId="broken"}),"empty saved recipe rejected");
+  Check(!CraftingRecipeRoll.IsValidState(new CraftRecipeSave{recipeId="broken",materials=new(){null}}),"null saved material rejected");
+  Check(!CraftingRecipeRoll.IsValidState(new CraftRecipeSave{recipeId="broken",materials=new(){
+   new(){itemGuid="a",amount=1},new(){itemGuid="a",amount=2}}}),"duplicate saved material rejected");
+  var fixedRecipe=new CraftingRecipe{id="overflow",output=new ItemSO(),fixedMaterials=new[]{
+   new ShopTradeRequirement(approved,int.MaxValue),new ShopTradeRequirement(approved,1)}};
+  Check(!CraftingRecipeRoll.TryRoll(catalog,fixedRecipe,0,out _,out _),"material quantity overflow rejected");
+  var stage=new StageDefinitionSO();
+  for(int i=0;i<3;i++){
+   var definition=new LandmarkDefinitionSO{id="landmark"+i,displayName="L"+i,powerStation=i==0};
+   var variant=new LandmarkPrefab();variant.cells.Add(new(){offset=new(0,0)});
+   if(i!=1)variant.cells.Add(new(){offset=new(1,0)});
+   if(i==2)variant.cells.Add(new(){offset=new(0,1)});
+   definition.variants.Add(variant);stage.Landmarks.guaranteed.Add(definition);
+  }
+  for(int seed=1;seed<=100;seed++){
+   bool ok=LandmarkMapGenerator.TryGenerate(stage,seed,out var map,out var message);
+   Check(ok,"map "+seed+": "+message);
+   Check(map.rooms.Where(x=>!string.IsNullOrEmpty(x.landmarkId)).Select(x=>x.coord).Distinct().Count()==6,"guaranteed footprint "+seed);
+   Check(map.rooms.Where(x=>!string.IsNullOrEmpty(x.landmarkId)).All(x=>x.isRevealed),"public landmarks "+seed);
+   Check(!string.IsNullOrEmpty(map.rooms.Find(x=>x.coord==map.bossRoomCoord).landmarkId),"boss in landmark "+seed);
+   Check(map.extractionRooms.All(c=>{var room=map.rooms.Find(x=>x.coord==c);return LandmarkMapGenerator.Flags.Count(f=>room.HasConnection(f))==1;}),"leaf extraction "+seed);
+   Check(LandmarkMapGenerator.TryValidate(map,out _),"saved validation "+seed);
+   Check(LandmarkMapGenerator.TryGenerate(stage,seed,out var duplicate,out _),"repeat seed");
+   Check(string.Join(";",map.rooms.Select(x=>x.coord+":"+x.landmarkId))==string.Join(";",duplicate.rooms.Select(x=>x.coord+":"+x.landmarkId)),"deterministic "+seed);
+  }
+  foreach(int size in new[]{7,9})foreach(int exitCount in new[]{1,2,3})
+  {
+   stage.RoomGridSize=size;stage.RaidMap.extractionCount=exitCount;
+   for(int seed=1;seed<=100;seed++)
+   {
+    Check(LandmarkMapGenerator.TryGenerate(stage,seed,out var map,out var error),"grid/exit/seed "+size+"/"+exitCount+"/"+seed+": "+error);
+    Check(map.extractionPortals.Count==exitCount,"exact extraction route count");
+   }
+  }
+  stage.RoomGridSize=1;
+  Check(!LandmarkMapGenerator.TryGenerate(stage,1,out _,out _),"small grid explicit failure");
+  Console.WriteLine("Systems patch managed checks passed: "+count);
+  return count;
+ }
+}

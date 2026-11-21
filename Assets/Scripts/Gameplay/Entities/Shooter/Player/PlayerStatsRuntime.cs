@@ -379,7 +379,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
         PlayerFeatureFlags flags = default;
 
         ApplyQuestRewardEffects();
-        ExperienceRulesSO.Active?.experience.ApplyRewards(_saveSystem?.Profile.experience?.total ?? 0, modifier => ApplyModifier(modifier));
+        // Experience/level rewards are retired; permanent growth comes from quest receipts.
         ApplyPassiveItemEffects(ref flags);
         ApplyEquipmentEffects();
 
@@ -657,7 +657,7 @@ public class PlayerStatsRuntime : ShooterStatsRuntime
     public override float ResolveAttackDamage(BulletSO bullet)
     {
         if (bullet == null) return 0f;
-        float baseDamage = (_playerStatsConfig?.BaseRangedAttackDamage ?? 10f) + bullet.HealthDamage;
+        float baseDamage = (_playerStatsConfig?.BaseRangedAttackDamage ?? 30f) + CombatBalanceRules.AmmoDamageAdjustment(bullet.Tier);
         float playerAndWeapon = ResolveFrom(_withoutPassiveAccumulators, PlayerStatId.AttackDamage, baseDamage, 0f);
         float withAmmo = ResolveWithExtraModifiers(PlayerStatId.AttackDamage, playerAndWeapon, 0f, bullet.StatModifiers);
         float shot = ApplyWeaponConditionToDamage(ApplyWeaponArchetypeToDamage(withAmmo, bullet));

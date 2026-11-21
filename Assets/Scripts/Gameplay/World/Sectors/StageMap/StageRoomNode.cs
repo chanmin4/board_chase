@@ -10,6 +10,11 @@ using UnityEngine;
 [Serializable]
 public class StageRoomNode
 {
+    public string landmarkId;
+    public string landmarkVariantId;
+    public Vector2Int landmarkAnchor;
+    public Vector2Int landmarkOffset;
+    public SectorMapIconKind landmarkIcon;
     public Vector2Int coord;
     public StageRoomType roomType;
     public RaidRoomRole raidRole;

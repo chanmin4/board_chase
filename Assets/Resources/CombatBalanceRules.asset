@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c707d029f0b0eebb74e57d457715a44d, type: 3}
+  m_Name: CombatBalanceRules
+  m_EditorClassIdentifier:
+  penetrationCurve: 2.5
+  minimumPenetration: 0.05
+  maximumPenetration: 0.95
+  failedHitDamage: 0.15
+  protectionByTier: 1e000000250000002c000000330000003b000000430000004c00000055000000
+  ammoDamageByTier:
+  - 0
+  - -2
+  - -3
+  - -4
+  - -5
+  - -6
+  - -7
+  - -8
+  normalHealth:
+  - 150
+  - 220
+  - 300
+  eliteHealth:
+  - 205
+  - 295
+  - 400
+  bossHealth:
+  - 450
+  - 650
+  - 850
+  normalDamage:
+  - 20
+  - 26
+  - 32
+  eliteDamage:
+  - 24
+  - 30
+  - 38
+  bossDamage:
+  - 32
+  - 42
+  - 52

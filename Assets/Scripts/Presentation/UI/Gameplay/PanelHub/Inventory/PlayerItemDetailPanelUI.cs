@@ -317,7 +317,7 @@ public sealed class PlayerItemDetailPanelUI : MonoBehaviour
                 else
                     builder.AppendLine($"티어: {(int)bullet.Tier}");
                 builder.AppendLine($"관통 클래스: {bullet.PenetrationClass:0.###}");
-                builder.AppendLine($"HP 피해: {bullet.HealthDamage:0.##}");
+                builder.AppendLine($"캐릭터 공격 보정: {CombatBalanceRules.AmmoDamageAdjustment(bullet.Tier):+0.##;-0.##;0}");
                 builder.AppendLine($"Infection 피해: {bullet.InfectionDamage:0.##}");
                 break;
 

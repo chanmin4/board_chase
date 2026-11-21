@@ -96,7 +96,7 @@ public sealed class RaidRuntime : MonoBehaviour
         Active.State != null && Active.State.active && Active.State.layout == layout && Active.State.hatchRevealed;
 
     public bool IsInSector(SectorRuntime sector) => _ready && State != null && State.active && !State.extractionCommitted &&
-        sector != null && _sectors != null && _sectors.CurrentSector == sector && _sectors.IsManagedSector(sector);
+        sector != null && _sectors != null && LandmarkPrefab.SameGroup(_sectors.CurrentSector, sector) && _sectors.IsManagedSector(sector);
 
     public bool IsPlayerInRaid => _sectors != null && IsInSector(_sectors.CurrentSector);
     public bool HasActivatedPortals(SectorRuntime sector) => sector != null && State?.layout != null &&
@@ -128,6 +128,7 @@ public sealed class RaidRuntime : MonoBehaviour
         Damageable player = _player != null ? _player.GetComponent<Damageable>() : null;
         if (player != null && player.IsDead) { EndRaid(); return; }
         State.playerSectorCoord = _sectors.CurrentSector.Coord;
+        State.returnPortalCooldownRemaining = Mathf.Max(0f, State.returnPortalCooldownRemaining - Time.deltaTime);
         if (State.layout.bossSpawned && State.layout.TryGetRoom(State.layout.bossRoomCoord, out var boss))
             State.bossDefeated = boss.isCleared;
         TickClock(State, Time.deltaTime); // Pauses with game time; offline time does not elapse.
@@ -159,7 +160,7 @@ public sealed class RaidRuntime : MonoBehaviour
     public bool TryPowerGenerator(PlayerInventoryRuntime inventory)
     {
         if (_transaction || inventory == null || _sectors == null || !IsInSector(_sectors.CurrentSector) ||
-            _sectors.CurrentSector.Coord != State.layout.generatorRoomCoord || State.generatorPowered ||
+            !IsCurrentCompound(State.layout.generatorRoomCoord) || State.generatorPowered ||
             inventory.GetComponent<Damageable>()?.IsDead == true) return false;
         RaidRuntimeSettings settings = Definition.RaidRuntime;
         if (settings.generatorBattery == null || settings.batteryAmount <= 0 ||
@@ -227,7 +228,7 @@ public sealed class RaidRuntime : MonoBehaviour
             return RejectExtraction("현재 해치는 다음 스테이지 이동 모드가 아닙니다.");
         if (inventory == null || !inventory.gameObject.activeInHierarchy || inventory != _player || inventory.GetComponent<Damageable>()?.IsDead == true)
             return RejectExtraction("현재 레이드의 살아 있는 플레이어가 필요합니다.");
-        if (sector == null || _sectors == null || _sectors.CurrentSector != sector || !IsInSector(sector) || !sector.IsCleared ||
+        if (sector == null || _sectors == null || !LandmarkPrefab.SameGroup(_sectors.CurrentSector, sector) || !IsInSector(sector) || !sector.IsCleared ||
             !AllowsExtraction(State, sector.Coord, RaidStationKind.Hatch))
             return RejectExtraction("현재 해치 방 클리어와 발전기 전력 조건이 필요합니다.");
         if (Definition.RaidRuntime.hatchRequiredQuest != null && !QuestRuntime.IsCompleted(Definition.RaidRuntime.hatchRequiredQuest))
@@ -333,7 +334,7 @@ public sealed class RaidRuntime : MonoBehaviour
         if (_transaction || inventory == null || State?.layout == null || _sectors == null ||
             inventory.GetComponent<Damageable>()?.IsDead == true ||
             !State.generatorPowered || State.layout.generationVersion != 3 || !IsInSector(_sectors.CurrentSector) ||
-            _sectors.CurrentSector.Coord != State.layout.generatorRoomCoord ||
+            !IsCurrentCompound(State.layout.generatorRoomCoord) ||
             !_sectors.TryGetSector(State.layout.hatchRoomCoord, out var hatch)) return false;
         var portals = FindFirstObjectByType<SectorPortalManager>();
         if (portals == null || !portals.TryMoveThroughRaidShortcut(_sectors.CurrentSector, hatch, inventory.transform)) return false;
@@ -342,6 +343,9 @@ public sealed class RaidRuntime : MonoBehaviour
         SaveSystem.Active?.TrySaveRunDataToDisk();
         return true;
     }
+
+    private bool IsCurrentCompound(Vector2Int coordinate) => _sectors!=null&&
+        _sectors.TryGetSector(coordinate,out var sector)&&LandmarkPrefab.SameGroup(_sectors.CurrentSector,sector);
 
     public bool TryAuthorizeVaultEntry(SectorRuntime destination, PlayerInventoryRuntime inventory)
     {

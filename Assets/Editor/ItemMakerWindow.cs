@@ -320,6 +320,8 @@ public sealed partial class ItemMakerWindow : EditorWindow
 
             if (GUILayout.Button("Open Loot Maker", EditorStyles.toolbarButton, GUILayout.Width(108f)))
                 LootProgressionEditorWindow.Open();
+            if (GUILayout.Button("제작 Maker", EditorStyles.toolbarButton, GUILayout.Width(88f)))
+                CraftingMakerWindow.Open();
             if (GUILayout.Button("물품 분류 관리", EditorStyles.toolbarButton, GUILayout.Width(105f)))
                 ValuableCategoryEditorWindow.Open();
 

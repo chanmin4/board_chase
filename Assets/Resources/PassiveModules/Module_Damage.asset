@@ -32,28 +32,35 @@ MonoBehaviour:
   - rarity: 0
     stats:
     - stat: 0
-      minimum: 5
-      maximum: 7.5
+      minimum: 10
+      maximum: 10
       type: 1
       step: 0.5
   - rarity: 1
     stats:
     - stat: 0
-      minimum: 8
-      maximum: 10.5
+      minimum: 15
+      maximum: 15
       type: 1
       step: 0.5
   - rarity: 3
     stats:
     - stat: 0
-      minimum: 11
-      maximum: 13.5
+      minimum: 20
+      maximum: 20
       type: 1
       step: 0.5
   - rarity: 2
     stats:
     - stat: 0
-      minimum: 14
-      maximum: 16.5
+      minimum: 30
+      maximum: 30
+      type: 1
+      step: 0.5
+  - rarity: 4
+    stats:
+    - stat: 0
+      minimum: 45
+      maximum: 45
       type: 1
       step: 0.5

@@ -5,6 +5,8 @@ public static class RaidMapValidation
 {
     public static bool TryValidate(StageMapLayout layout, out string error)
     {
+        if (layout?.landmarkSchemaVersion > 0)
+            return LandmarkMapGenerator.TryValidate(layout, out error);
         if (layout?.generationVersion == RadialBraidedRaidGenerator.GenerationVersion)
             return RadialBraidedRaidGenerator.TryValidate(layout, out error);
         error = string.Empty;

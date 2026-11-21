@@ -71,6 +71,7 @@ public class StageSectorInstantiator : MonoBehaviour
 
     [SerializeField, Min(1)] private int _inheritanceWarehouseCapacity = 24;
 
+    private readonly Dictionary<Vector2Int, LandmarkPrefab> _landmarkInstances = new();
     private readonly List<SectorRuntime> _generatedSectors = new();
     private SectorRuntime _hideoutSector;
 
@@ -221,16 +222,28 @@ public class StageSectorInstantiator : MonoBehaviour
                 node.roomType == StageRoomType.Start ||
                 node.coord == CurrentLayout.startSectorCoord;
 
-            SectorRuntime sector = Instantiate(
-                prefab,
-                ResolveWorldPosition(node.coord, roomStep),
-                prefab.transform.rotation,
-                _generatedRoot != null ? _generatedRoot : transform);
+            SectorRuntime sector;
+            if (!string.IsNullOrEmpty(node.landmarkId))
+            {
+                if (!_landmarkInstances.TryGetValue(node.landmarkAnchor, out var compound))
+                {
+                    if (!LandmarkMapGenerator.TryResolve(stage, node, out var authored, out _))
+                    { ClearGeneratedSectors(); return false; }
+                    compound = Instantiate(authored, ResolveWorldPosition(node.landmarkAnchor, roomStep),
+                        authored.transform.rotation, _generatedRoot != null ? _generatedRoot : transform);
+                    compound.RuntimeLandmarkId=node.landmarkId;
+                    _landmarkInstances.Add(node.landmarkAnchor, compound);
+                }
+                sector = compound.cells.Find(x => x.offset == node.landmarkOffset)?.sector;
+                if (sector == null) { ClearGeneratedSectors(); return false; }
+            }
+            else sector = Instantiate(prefab, ResolveWorldPosition(node.coord, roomStep),
+                prefab.transform.rotation, _generatedRoot != null ? _generatedRoot : transform);
 
             sector.name = $"Stage_{stage.StageIndex}_{node.roomType}_{node.raidRole}_{node.coord.x}_{node.coord.y}";
             SectorAppearance.ApplyStageDefault(sector, stage.SectorTheme);
             sector.SetRuntimeInfo(node.coord, node.isOpened, isStartSector);
-            sector.ConfigureMapIconKind(SectorMapIconPolicy.KindForRoom(node));
+            sector.ConfigureMapIconKind(!string.IsNullOrEmpty(node.landmarkId) ? node.landmarkIcon : SectorMapIconPolicy.KindForRoom(node));
             if (CurrentLayout.usesRaidLayout) SectorDestructibleCover.BindSector(sector, raidRuntime.State);
             if (node.roomType == StageRoomType.Normal)
                 sector.ConfigureNormalSectorPolicy(sectorPreset.NormalSectorPolicy);
@@ -532,6 +545,7 @@ public class StageSectorInstantiator : MonoBehaviour
         if (!_rebuildGeneratedSectorNavMesh || !Application.isPlaying)
             return;
 
+        var builtNavigationRoots=new HashSet<Transform>();
         for (int i = 0; i < _generatedSectors.Count; i++)
         {
             SectorRuntime sector = _generatedSectors[i];
@@ -539,8 +553,11 @@ public class StageSectorInstantiator : MonoBehaviour
             if (sector == null)
                 continue;
 
+            var compound=sector.GetComponentInParent<LandmarkPrefab>();
+            Transform navigationRoot=compound!=null?compound.transform:sector.transform;
+            if(!builtNavigationRoots.Add(navigationRoot))continue;
             NavMeshSurface[] nestedSurfaces =
-                sector.GetComponentsInChildren<NavMeshSurface>(true);
+                navigationRoot.GetComponentsInChildren<NavMeshSurface>(true);
 
             if (nestedSurfaces == null || nestedSurfaces.Length == 0)
                 continue;
@@ -570,7 +587,7 @@ public class StageSectorInstantiator : MonoBehaviour
             }
 
             if (_validateRuntimeNavMeshSources &&
-                !HasRuntimeNavMeshColliderSource(sector.transform, layerMask))
+                !HasRuntimeNavMeshColliderSource(navigationRoot, layerMask))
             {
                 Debug.LogError(
                     $"[StageSectorInstantiator] Runtime NavMesh build skipped because sector has no enabled, non-trigger Collider in the configured layer mask. sector={sector.name}, coord={sector.Coord}, layerMask={layerMask.value}",
@@ -578,10 +595,10 @@ public class StageSectorInstantiator : MonoBehaviour
                 continue;
             }
 
-            NavMeshSurface unifiedSurface = sector.GetComponent<NavMeshSurface>();
+            NavMeshSurface unifiedSurface = navigationRoot.GetComponent<NavMeshSurface>();
 
             if (unifiedSurface == null)
-                unifiedSurface = sector.gameObject.AddComponent<NavMeshSurface>();
+                unifiedSurface = navigationRoot.gameObject.AddComponent<NavMeshSurface>();
 
             unifiedSurface.agentTypeID = agentTypeId;
             unifiedSurface.collectObjects = CollectObjects.Children;
@@ -664,6 +681,9 @@ public class StageSectorInstantiator : MonoBehaviour
         }
 
         _generatedSectors.Clear();
+        foreach (var group in _landmarkInstances.Values)
+            if (group != null) { if (Application.isPlaying) Destroy(group.gameObject); else DestroyImmediate(group.gameObject); }
+        _landmarkInstances.Clear();
     }
 
     // Purpose: Performs the detach player from generated sectors workflow for this component.

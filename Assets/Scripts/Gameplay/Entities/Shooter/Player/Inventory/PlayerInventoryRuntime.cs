@@ -3427,6 +3427,8 @@ public partial class PlayerInventoryRuntime : InventoryRuntimeBase
     private void NotifyChanged()
     {
         _carryWeightFrame = -1;
+        // A crafting transaction publishes only after inventory and its next recipe are durable.
+        if (_craftingTransaction) return;
         NormalizeStorage();
         OnChanged?.Invoke();
     }

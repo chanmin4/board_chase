@@ -12,7 +12,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class SectorPortalManager : MonoBehaviour
 {
-    public float LinkedTravelCooldownRemaining => 0f; // Compatibility for debug UI; each use now casts instead.
+    public float LinkedTravelCooldownRemaining => Mathf.Max(0,RaidRuntime.Active?.State?.returnPortalCooldownRemaining??0);
     [Header("Refs")]
     [SerializeField] private SectorStateManager _sectorStateManager;
     [SerializeField] private CameraManager _cameraManager;
@@ -292,10 +292,11 @@ public class SectorPortalManager : MonoBehaviour
         SectorRuntime source = portal.OwnerSector;
         SectorRuntime target = portal.TargetSector;
 
-        if (_sectorStateManager != null && source != _sectorStateManager.CurrentSector) return false;
+        if (_sectorStateManager != null && !LandmarkPrefab.SameGroup(source, _sectorStateManager.CurrentSector)) return false;
 
         if (source == null)
             return false;
+        if (target != null && LandmarkPrefab.SameGroup(source, target)) return false; // Walk across baked interiors.
 
         if (_bossTransitionInProgress)
             return false;
@@ -438,7 +439,7 @@ public class SectorPortalManager : MonoBehaviour
                     ConfirmVaultPortalEntry(sourcePortal, playerRoot, raid, inventory, keySlot, key, out message),
                 () => this != null && sourcePortal != null && inventory != null &&
                     inventory.GetComponent<Damageable>()?.IsDead != true && raid != null && raid.State?.active == true &&
-                    _sectorStateManager != null && _sectorStateManager.CurrentSector == sourcePortal.OwnerSector &&
+                    _sectorStateManager != null && LandmarkPrefab.SameGroup(_sectorStateManager.CurrentSector, sourcePortal.OwnerSector) &&
                     interactions != null && interactions.CanInteractWithTarget(sourcePortal.gameObject) &&
                     CanUsePortal(sourcePortal));
             if (!opened) Debug.LogWarning("[Vault entry] 열쇠 확인창 또는 플레이어 인벤토리를 열지 못했습니다.", this);
@@ -455,7 +456,7 @@ public class SectorPortalManager : MonoBehaviour
         message = "포탈 또는 현재 섹터가 변경되었습니다. 다시 상호작용하세요.";
         InteractionManager interactions = playerRoot != null ? EntityComponentResolver.Resolve<InteractionManager>(playerRoot) : null;
         if (portal == null || playerRoot == null || raid == null || _sectorStateManager == null ||
-            _sectorStateManager.CurrentSector != portal.OwnerSector || portal.TargetSector == null ||
+            !LandmarkPrefab.SameGroup(_sectorStateManager.CurrentSector, portal.OwnerSector) || portal.TargetSector == null ||
             portal.TargetPortal == null || interactions == null || !interactions.CanInteractWithTarget(portal.gameObject) ||
             !CanUsePortal(portal)) return false;
         if (!raid.TryUnlockVaultEntry(portal.TargetSector, inventory, keySlot, expectedKey, out message)) return false;
@@ -679,7 +680,7 @@ public class SectorPortalManager : MonoBehaviour
     {
         var manager = FindFirstObjectByType<SectorStateManager>();
         Transform playerRoot = ResolvePlayerRoot(actor);
-        if (manager == null || manager.CurrentSector != source || !manager.IsManagedSector(target) ||
+        if (manager == null || !LandmarkPrefab.SameGroup(manager.CurrentSector, source) || !manager.IsManagedSector(target) ||
             playerRoot == null || target.PlayerStartPoint == null) return false;
         CharacterController controller = playerRoot.GetComponent<CharacterController>();
         bool enabled = controller != null && controller.enabled;
@@ -701,6 +702,7 @@ public class SectorPortalManager : MonoBehaviour
     {
         if (sourcePortal == null || playerRoot == null)
             return false;
+        if (sourcePortal.ReturnCooldownRemaining > 0f) return false;
 
         SectorPortal targetPortal = sourcePortal.TargetPortal;
         SectorRuntime targetSector = sourcePortal.TargetSector;
@@ -714,6 +716,13 @@ public class SectorPortalManager : MonoBehaviour
 
         playerRoot.SetParent(targetSector.transform, worldPositionStays: true);
         playerRoot.position = targetPortal.ArrivalPosition;
+        if (RaidRuntime.Active?.State?.active == true)
+        {
+            var state=RaidRuntime.Active.State;
+            state.returnPortalCoord=targetSector.Coord;
+            state.returnPortalDirection=targetPortal.Direction;
+            state.returnPortalCooldownRemaining=Mathf.Max(0,SectorTravelRulesSO.Active?.travel.returnPortalCooldown??5);
+        }
 
         if (controller != null)
             controller.enabled = true;

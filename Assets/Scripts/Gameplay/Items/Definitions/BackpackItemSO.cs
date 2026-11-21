@@ -21,6 +21,8 @@ public class BackpackItemSO : ItemSO
     [SerializeField, Min(0)] private int _inventorySlotCapacity = 8;
 
     [Header("Mobility")]
+    [SerializeField, Min(0)] private float _carryCapacityBonusKg;
+    public float CarryCapacityBonusKg => Mathf.Max(0,_carryCapacityBonusKg);
     [Tooltip("Final character movement multiplier while this bag is worn. Shared by player and future enemy backpack equipment. 1 means no penalty; 0.8 means 20% slower.")]
     [SerializeField, Range(0.05f, 1f)] private float _moveSpeedMultiplier = 0.9f;
 

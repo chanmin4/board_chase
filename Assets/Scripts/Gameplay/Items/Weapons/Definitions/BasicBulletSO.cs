@@ -20,14 +20,14 @@ public class BasicBulletSO : BulletSO
 
     [Header("Penetration")]
     [Tooltip("Equal or higher than the effective Armor Class deals full Health damage. Infection and Mark ignore armor penetration.")]
-    [SerializeField, Min(0)] private float penetrationClass = 1;
+    [SerializeField, HideInInspector, Min(0)] private float penetrationClass = 1;
 
     [Header("Direct Combat Values")]
     [Tooltip("Balance tier used by loot, shops, and debug TTK tables. It adds no hidden damage.")]
     [SerializeField] private BulletTier _tier = BulletTier.Tier1;
 
     [Tooltip("Raw Health damage before weapon and Shooter modifiers.")]
-    [SerializeField, Min(0f)] private float _healthDamage = 30f;
+    [SerializeField, HideInInspector] private float _healthDamage = 30f; // WIP authored payload; new damage is character baseline + tier adjustment.
 
     [Tooltip("Legacy normal-bullet Infection value retained only so existing assets deserialize safely. It is disabled while the Infection Injection ammo WIP is active.")]
     [SerializeField, HideInInspector, Min(0f)] private float _infectionDamage = 10f;
@@ -38,8 +38,9 @@ public class BasicBulletSO : BulletSO
     // Existing BasicBulletSO assets remain light ammunition. Use a concrete
     // Medium/Heavy/Sniper/Shotgun/Rocket SO type for the other families.
     public override BulletFamily Family => BulletFamily.Light;
-    public override float PenetrationClass => Mathf.Max(0, penetrationClass);
+    public override float PenetrationClass => CombatBalanceRules.Penetration((int)Tier);
     public override BulletTier Tier => _tier;
+    // Legacy generic shooters still consume an absolute payload. Character stats use the tier adjustment separately.
     public override float HealthDamage => Mathf.Max(0f, _healthDamage);
     public override float InfectionDamage =>
         ProjectileCombatFeatureFlags.EnableLegacyBasicBulletInfectionDamage

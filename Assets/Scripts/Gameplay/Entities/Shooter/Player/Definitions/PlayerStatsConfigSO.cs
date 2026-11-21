@@ -12,7 +12,7 @@ using UnityEngine.Serialization;
     menuName = "VSplatter/Player/Stats Config")]
 public class PlayerStatsConfigSO : ShooterStatConfigSO
 {
-    [SerializeField, Min(0f)] private float _baseRangedAttackDamage = 10f;
+    [SerializeField, Min(0f)] private float _baseRangedAttackDamage = 30f;
     public float BaseRangedAttackDamage => Mathf.Max(0f, _baseRangedAttackDamage);
     [Tooltip("부하 100%에 해당하는 기준 무게입니다. 초과 소지를 막지 않습니다.")]
     [SerializeField, Min(.1f)] private float _carryCapacityKg = 70f;

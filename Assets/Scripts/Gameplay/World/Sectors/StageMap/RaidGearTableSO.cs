@@ -11,7 +11,7 @@ public sealed class RaidGearTableSO : ScriptableObject
 
     public int PickGrade(int stage, bool strongRoom, float roll)
     {
-        int first = Mathf.Clamp(stage, 1, 6);
+        int first = stage==3 ? 2 : Mathf.Clamp(stage, 1, 6); // S2 and S3 are equivalent branches.
         float low = strongRoom ? 0f : Mathf.Max(0f, _tierWeights.x);
         float middle = Mathf.Max(0f, _tierWeights.y), high = Mathf.Max(0f, _tierWeights.z);
         float value = Mathf.Clamp01(roll) * (low + middle + high);
@@ -21,7 +21,7 @@ public sealed class RaidGearTableSO : ScriptableObject
     public ArmorItemSO FindArmor(int grade)
     {
         if (_armor != null) foreach (var armor in _armor)
-            if (armor != null && armor.ArmorClass == grade) return armor;
+            if (armor != null && armor.EquipmentTier == grade) return armor;
         return null;
     }
 
@@ -29,7 +29,7 @@ public sealed class RaidGearTableSO : ScriptableObject
     {
         if (weapon != null && _basicAmmo != null) foreach (var bullet in _basicAmmo)
             if (bullet != null && bullet.AmmoType == BulletAmmoType.Basic &&
-                bullet.PenetrationClass == grade && weapon.IsCompatibleWith(bullet)) return bullet;
+                (int)bullet.Tier == grade && weapon.IsCompatibleWith(bullet)) return bullet;
         return null;
     }
 

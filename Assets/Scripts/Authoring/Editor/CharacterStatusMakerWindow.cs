@@ -10,8 +10,8 @@ using Object = UnityEngine.Object;
 /// <summary>Edits authored SOs directly. Never edits scene instances, applies effects, or rewires prefabs.</summary>
 public sealed class CharacterStatusMakerWindow : EditorWindow
 {
-    private enum Domain { All, Player, Enemy, Creature, Status, Experience, Usage, Infection, Recycling, Passive, Travel, Map, Rarity, Shared }
-    private static readonly string[] DomainNames = { "전체 SO", "플레이어 · 대시", "적 스탯 · AI · 순찰", "크리처 · 행동", "상태이상", "경험치 · 레벨", "아이템 사용 레벨", "감염", "시간제 분해기", "패시브 · 리롤 · 배정", "섹터 이동", "지도 · 발견 · 아이콘", "아이템 등급 색상", "공유 기본값 · 피격" };
+    private enum Domain { All, Player, Enemy, Creature, Status, Experience, Usage, Infection, Recycling, Passive, Travel, Map, Rarity, Shared, Combat, Crafting, LootNoise, FactionDiscovery }
+    private static readonly string[] DomainNames = { "전체 SO", "플레이어 · 대시", "적 스탯 · AI · 순찰", "크리처 · 행동", "상태이상", "경험치 · 레벨", "아이템 사용 레벨", "감염", "시간제 분해기", "패시브 · 리롤 · 배정", "섹터 이동", "지도 · 발견 · 아이콘", "아이템 등급 색상", "공유 기본값 · 피격", "전투 · 성장 밸런스", "제작 · 모듈 재료", "루팅 소음", "팩션 발견 공유" };
     [SerializeField] private Domain _domain;
     private Vector2 _domainScroll;
     private enum Family { All, Shooter, Creature, Status, Common, OtherCharacter }
@@ -27,7 +27,7 @@ public sealed class CharacterStatusMakerWindow : EditorWindow
     };
     private static readonly HashSet<string> RelatedTypes = new(StringComparer.Ordinal)
     {
-        "ExperienceRulesSO", "ItemUsageRulesSO", "RecyclingRulesSO",
+        "CombatBalanceRulesSO", "CraftingCatalogSO", "LootNoiseRulesSO", "FactionDiscoveryRulesSO", "RecyclingRulesSO",
         "SectorTravelRulesSO", "MapDiscoveryRulesSO", "ItemRarityStyleSO", "SectorMapIconSetSO", "MiniMapUISettingsSO", "FullMapUISettingsSO", "PassiveModuleRulesSO", "ShooterCommonRulesSO", "PlayerInteractConfigSO", "DifficultyRulesSO",
         "DamageFlash_GetHitConfigSO", "CreatureMovementConfigSO",
         "EnemyAttackConfigSO", "EnemyFireProjectileConfigSO", "EnemyArcBombAttackConfigSO",
@@ -83,6 +83,7 @@ public sealed class CharacterStatusMakerWindow : EditorWindow
     private void OnEnable()
     {
         if (_domain == Domain.Infection) _domain = Domain.Status;
+        if (_domain == Domain.Experience || _domain == Domain.Usage) _domain = Domain.All;
         minSize = new Vector2(880f, 540f);
         _listWidth = EditorPrefs.GetFloat(PreferenceKey, 285f);
         _createTypes = TypeCache.GetTypesDerivedFrom<ScriptableObject>()
@@ -271,6 +272,10 @@ public sealed class CharacterStatusMakerWindow : EditorWindow
 
     private static Domain DomainFor(Type type)
     {
+        if(type==typeof(CombatBalanceRulesSO))return Domain.Combat;
+        if(type==typeof(CraftingCatalogSO))return Domain.Crafting;
+        if(type==typeof(LootNoiseRulesSO))return Domain.LootNoise;
+        if(type==typeof(FactionDiscoveryRulesSO))return Domain.FactionDiscovery;
         if (typeof(PlayerStatsConfigSO).IsAssignableFrom(type) || type.Name == "PlayerInteractConfigSO") return Domain.Player;
         if (typeof(EnemyShooterConfigSO).IsAssignableFrom(type)) return Domain.Enemy;
         if (typeof(StatusEffectDefinitionSO).IsAssignableFrom(type)) return Domain.Status;
@@ -295,7 +300,7 @@ public sealed class CharacterStatusMakerWindow : EditorWindow
             _domainScroll = EditorGUILayout.BeginScrollView(_domainScroll);
             for (int i=0; i<DomainNames.Length; i++)
             {
-                if (i == (int)Domain.Infection) continue; // Now owned by the Status menu; keep serialized indices stable.
+                if (i == (int)Domain.Infection || i == (int)Domain.Experience || i == (int)Domain.Usage) continue; // Now owned by the Status menu; keep serialized indices stable.
                 var domain=(Domain)i;
                 if (GUILayout.Toggle(_domain==domain,DomainNames[i],EditorStyles.miniButton,GUILayout.Height(31f)) && _domain!=domain)
                 {

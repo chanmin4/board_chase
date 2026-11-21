@@ -230,6 +230,11 @@ public class InteractionManager : MonoBehaviour
 		Debug.Log($"[InteractionManager] Current interaction type={interaction.type}, obj={interaction.interactableObject}");
 
         float castSeconds = ResolveInteractionCastSeconds(interaction);
+        if(interaction.type==InteractionType.Portal&&interaction.interactableObject.GetComponentInParent<SectorPortal>()?.ReturnCooldownRemaining>0)
+            return;
+        if(interaction.type==InteractionType.Loot||interaction.type==InteractionType.Treasure)
+            LootNoiseRulesSO.Emit(InteractionActor!=null?InteractionActor.gameObject:gameObject,
+                interaction.interactableObject.transform.position);
 
         if (castSeconds > 0f)
         {
@@ -1351,6 +1356,8 @@ public class InteractionManager : MonoBehaviour
         if (interaction?.type == InteractionType.Portal && interaction.interactableObject != null)
         {
             var portal = interaction.interactableObject.GetComponentInParent<SectorPortal>();
+            if(portal!=null&&portal.ReturnCooldownRemaining>0)
+                return $"섹터 이동 · 재사용 {portal.ReturnCooldownRemaining:0.0}초";
             if (portal != null && portal.IsExtraction)
                 return UIRuntimeLocalization.Get("UI_Map", "Map_Extract", "탈출");
         }

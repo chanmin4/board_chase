@@ -14,7 +14,12 @@ public enum QuestObjectiveType
     CollectItem = 2,
     SubmitItem = 3,
     HeadshotHit = 4,
-    HeadshotKill = 5
+    HeadshotKill = 5,
+    Action = 6,
+    Craft = 7,
+    SectorClear = 8,
+    StructureDestroyed = 9,
+    LandmarkClear = 10
 }
 
 public enum QuestDistanceRule
@@ -33,7 +38,8 @@ public enum QuestRewardType
     WarehouseSlots = 4,
     PassiveSlots = 5,
     PocketSlots = 6,
-    RecyclingSlots = 7
+    RecyclingSlots = 7,
+    CraftUnlock = 8
 }
 
 /// <summary>
@@ -50,6 +56,8 @@ public enum QuestBranch
 [Serializable]
 public sealed class QuestRewardDefinition
 {
+    [SerializeField] private string _craftRecipeId;
+    public string CraftRecipeId => _craftRecipeId;
     [SerializeField] private QuestRewardType _rewardType = QuestRewardType.Item;
     [SerializeField] private ItemSO _item;
     [SerializeField, Min(1)] private int _itemAmount = 1;
@@ -107,6 +115,8 @@ public sealed class QuestRewardDefinition
 
         if (_rewardType == QuestRewardType.PassiveSlots)
             return $"패시브 장착칸 +{PassiveSlotAmount}";
+        if (_rewardType == QuestRewardType.CraftUnlock)
+            return $"제작법 해금: {_craftRecipeId}";
         if (_rewardType == QuestRewardType.PocketSlots) return $"포켓 +{PocketSlotAmount}칸 (최대 10칸)";
         if(_rewardType==QuestRewardType.RecyclingSlots)return $"분해기 +{RecyclingSlotAmount}칸";
         if (_rewardType == QuestRewardType.WarehouseSlots)
@@ -126,6 +136,8 @@ public sealed class QuestRewardDefinition
 [Serializable]
 public sealed class QuestObjectiveDefinition
 {
+    [SerializeField] private string _actionId;
+    public string ActionId => _actionId;
     [SerializeField] private QuestObjectiveType _objectiveType = QuestObjectiveType.Kill;
     [Tooltip("Optional exact EntityStatConfigSO target. Leave empty to match every enemy target.")]
     [SerializeField] private EntityStatConfigSO _targetConfig;
@@ -175,6 +187,16 @@ public sealed class QuestObjectiveDefinition
     // Purpose: Builds the summary from the current authored data.
     public string BuildSummary()
     {
+        if(_objectiveType>=QuestObjectiveType.Action)
+        {
+            string label=_objectiveType switch
+            {
+                QuestObjectiveType.Craft=>"제작",QuestObjectiveType.SectorClear=>"섹터 클리어",
+                QuestObjectiveType.LandmarkClear=>"랜드마크 클리어",QuestObjectiveType.StructureDestroyed=>"구조물 파괴",
+                _=>"행동 완료"
+            };
+            return label+(string.IsNullOrEmpty(_actionId)?"":" · "+_actionId);
+        }
         if (_objectiveType == QuestObjectiveType.SubmitItem)
             return $"Submit {(_targetItem != null ? _targetItem.name : "Item")}";
         if (_objectiveType == QuestObjectiveType.CollectItem)
@@ -206,7 +228,14 @@ public sealed class QuestObjectiveDefinition
 [CreateAssetMenu(fileName = "Quest", menuName = "VSplatter/Progression/Quest Definition")]
 public sealed class QuestDefinitionSO : ScriptableObject
 {
-    [Header("경험치 · -1이면 Game System Tool 기본값")]
+    [Header("System gates (empty = existing behavior)")]
+    [SerializeField] private int[] _requiredVisitedStages = Array.Empty<int>();
+    [SerializeField] private string _sharedGrowthRewardGroup;
+    [SerializeField] private string[] _craftUnlocksOnAccept = Array.Empty<string>();
+    public int[] RequiredVisitedStages => _requiredVisitedStages ?? Array.Empty<int>();
+    public string SharedGrowthRewardGroup => _sharedGrowthRewardGroup;
+    public string[] CraftUnlocksOnAccept => _craftUnlocksOnAccept ?? Array.Empty<string>();
+    [HideInInspector]
     [SerializeField, Min(-1)] private int _experienceReward = -1;
     public int ExperienceReward => _experienceReward;
     [Header("수락 시 인벤토리 지급 · 빈 공간 필수")]

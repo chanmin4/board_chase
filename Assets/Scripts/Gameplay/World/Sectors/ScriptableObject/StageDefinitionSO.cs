@@ -14,6 +14,9 @@ using UnityEngine.Serialization;
     menuName = "Game/Stage/Stage Definition")]
 public sealed class StageDefinitionSO : ScriptableObject
 {
+    [Header("보장 랜드마크 · 스테이지 전용 일반섹터")]
+    [SerializeField] private StageLandmarkSettings _landmarks = new();
+    public StageLandmarkSettings Landmarks => _landmarks ??= new();
     private const int SectorPresetPickSalt = 809;
     private const int NormalEncounterPickSalt = 103;
     private const int BossBattlePickSalt = 211;

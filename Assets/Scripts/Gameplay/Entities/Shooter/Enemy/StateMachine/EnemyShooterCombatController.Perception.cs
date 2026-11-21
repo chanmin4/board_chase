@@ -261,6 +261,7 @@ public partial class EnemyShooterCombatController
             _owner._canSeeTarget = _owner._vision == null || _owner._vision.CanSeeTarget(_owner._target);
             if (_owner._canSeeTarget)
             {
+                _owner.ShareDetectedTarget(_owner._target);
                 if (!couldSeeTarget)
                     _owner.BeginDirectSightReaction(_owner._hasSeenTargetDuringCurrentEngagement);
                 _owner._isAlerted = true;
@@ -332,6 +333,7 @@ public partial class EnemyShooterCombatController
             _owner._hasSoundInvestigation = false;
             _owner.FaceDirection(playerTransform.position - _owner.transform.position);
             _owner.RefreshGoal();
+            _owner.ShareDetectedTarget(playerTransform, true);
             return true;
         }
 
@@ -370,6 +372,7 @@ public partial class EnemyShooterCombatController
             _owner.SetTarget(playerTransform);
             _owner._isAlerted = true;
             _owner._canSeeTarget = true;
+            _owner.ShareDetectedTarget(playerTransform, true);
             _owner.BeginDirectSightReaction(isPursuitReacquisition);
             _owner.RefreshTargetLock();
             _owner._lastSeenTime = Time.time;

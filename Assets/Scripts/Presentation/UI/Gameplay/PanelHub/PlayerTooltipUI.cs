@@ -145,7 +145,7 @@ public class PlayerTooltipUI : MonoBehaviour
             InventoryItemDisplayUtility.ResolveItemName(item),
             description,
             string.Empty,
-            item is PassiveItemSO ? $"{item.Rarity} / 원정 패시브 · 슬롯 해금 Lv.{GameProgressionRuntime.Level}" : $"{item.Rarity} / {item.Kind} / 필요 Lv.{ItemUsageRulesSO.Active?.usage.Required(item)??1} · 현재 Lv.{GameProgressionRuntime.Level}",
+            item is PassiveItemSO ? $"{item.Rarity} / 원정 모듈 · 퀘스트 슬롯 해금" : $"{item.Rarity} / {item.Kind}",
             anchor,
             side,
             gap);

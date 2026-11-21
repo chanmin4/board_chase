@@ -19,7 +19,7 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     private readonly List<PassiveItemSO> _equippedItems = new(MaximumSlotCount);
 
     [Header("Passive Slots")]
-    [Tooltip("Legacy saved count only. Current slots use common combat/survival level thresholds.")]
+    [Tooltip("Legacy local count only. Current slots use saved quest slot rewards.")]
     [SerializeField, HideInInspector, Range(MinimumUnlockedSlotCount, MaximumSlotCount)]
     private int _unlockedSlotCount = MinimumUnlockedSlotCount;
 
@@ -98,17 +98,16 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     // Purpose: Checks whether slot unlocked is currently true.
     public bool IsSlotUnlocked(int slotIndex)
     {
-        return PassiveModuleRulesSO.Active != null
-            ? PassiveModuleRulesSO.Active.IsSlotUnlocked(slotIndex, GameProgressionRuntime.Level)
-            : slotIndex >= 0 && slotIndex < MinimumUnlockedSlotCount;
+        int count = SaveSystem.Active?.Profile.UnlockedPassiveSlotCount ?? MinimumUnlockedSlotCount;
+        return slotIndex >= 0 && slotIndex < Mathf.Clamp(count, MinimumUnlockedSlotCount, MaximumSlotCount);
     }
 
-    private int _lastLevel = -1;
+    private int _lastUnlockedCount = -1;
     private bool _lastEffectsActive;
     private void Update()
     {
-        if (_lastLevel == GameProgressionRuntime.Level && _lastEffectsActive == GameProgressionRuntime.PassiveEffectsActive) return;
-        _lastLevel = GameProgressionRuntime.Level; _lastEffectsActive = GameProgressionRuntime.PassiveEffectsActive;
+        if (_lastUnlockedCount == (SaveSystem.Active?.Profile.UnlockedPassiveSlotCount ?? MinimumUnlockedSlotCount) && _lastEffectsActive == GameProgressionRuntime.PassiveEffectsActive) return;
+        _lastUnlockedCount = SaveSystem.Active?.Profile.UnlockedPassiveSlotCount ?? MinimumUnlockedSlotCount; _lastEffectsActive = GameProgressionRuntime.PassiveEffectsActive;
         RefreshModuleEffects();
     }
 
@@ -407,7 +406,7 @@ public class PlayerPassiveInventoryRuntime : MonoBehaviour
     // Purpose: Updates the unlocked slot count state.
     public void SetUnlockedSlotCount(int value)
     {
-        // Kept for old quest/editor callers. Legacy profile counts no longer bypass level unlocks.
+        _unlockedSlotCount = Mathf.Clamp(value, MinimumUnlockedSlotCount, MaximumSlotCount);
         RefreshModuleEffects();
     }
 

@@ -423,8 +423,11 @@ public class SectorStateManager : MonoBehaviour
         {
             return false;
         }
+        var compound = sector.GetComponentInParent<LandmarkPrefab>();
+        if (compound != null && !compound.Completing) return compound.TryComplete(sector, this);
         _failedSectors.Remove(sector);
         sector.SetCleared(true);
+        if (compound == null) QuestRuntime.ReportAction("", 1, QuestObjectiveType.SectorClear);
 
         if (_roomBySector.TryGetValue(sector, out StageRoomNode room))
         {
@@ -495,6 +498,17 @@ public class SectorStateManager : MonoBehaviour
         SectorRoomTraitRuntime.SetCurrentPlayerSector(CurrentSector);
         RevealSector(sector);
         GameProgressionRuntime.EnterSector(sector);
+        // A compound landmark is one physical encounter. Open all authored cells together;
+        // otherwise unopened child cells never start their spawners and cannot be cleared.
+        var landmark=sector.GetComponentInParent<LandmarkPrefab>();
+        if(landmark!=null)
+            foreach(var cell in landmark.cells)
+            {
+                if(cell?.sector==null||!IsManagedSector(cell.sector))continue;
+                SetSectorOpened(cell.sector);
+                RevealSector(cell.sector);
+                if(SectorTravelRulesSO.Active?.travel.freeSectorTravel==true)OpenAdjacentSectors(cell.sector);
+            }
         if (SectorTravelRulesSO.Active?.travel.freeSectorTravel == true && IsManagedSector(sector))
             OpenAdjacentSectors(sector);
         OpenAdjacentSectorsForFreePassNormalSector(sector);

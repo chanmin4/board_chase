@@ -22,7 +22,7 @@ public static class StageSystemPolicies
             if(candidates[i].roomType==StageRoomType.Normal&&!candidates[i].hasInternalCombatLock)
                 candidates[i].extraEnemyCount=random.NextDouble()<rules.extraEnemyChance?1:0;
         }
-        if(stage.StageIndex!=1||!layout.bossSpawned||!layout.TryGetRoom(layout.bossRoomCoord,out var previous))return;
+        if(layout.landmarkSchemaVersion>0||stage.StageIndex!=1||!layout.bossSpawned||!layout.TryGetRoom(layout.bossRoomCoord,out var previous))return;
         var bossCandidates=new List<StageRoomNode>();
         foreach(var room in candidates)
         {

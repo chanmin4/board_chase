@@ -16,6 +16,7 @@ public class ArmorItemSO : ItemSO
     [SerializeField] private string _displayName = "Armor";
 
     [Header("Defense")]
+    [SerializeField, Range(1,8)] private int _equipmentTier = 1;
     [SerializeField, Min(0)] private int _armorClass = 1;
 
     [Header("Durability")]
@@ -54,6 +55,7 @@ public class ArmorItemSO : ItemSO
     public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? _armorId : _displayName;
 
     public int ArmorClass => Mathf.Max(0, _armorClass);
+    public int EquipmentTier => Mathf.Clamp(_equipmentTier,1,8);
     public float MaxDurability => Mathf.Max(0f, _maxDurability);
     public float RepairPermanentLossRatio => Mathf.Clamp01(_repairPermanentLossRatio);
     public PlayerStatModifier[] StatModifiers => _statModifiers;

@@ -62,7 +62,8 @@ public enum PlayerStatId
     AimPunchReduction = 47,
     SuppressionDurationBonus = 48,
     AmmoPreservationChance = 49,
-    ExperienceGainBonus = 50
+    ExperienceGainBonus = 50, // Retired save enum.
+    CarryCapacityKg = 51
 }
 
 public enum PlayerFeatureFlagId
@@ -76,7 +77,7 @@ public static class ShooterStatPolicy
 {
     public static bool IsCharacterStat(PlayerStatId stat) => stat switch
     {
-        PlayerStatId.ExperienceGainBonus or PlayerStatId.InfectionDefense or PlayerStatId.InventorySlots or PlayerStatId.MaximumStamina or
+        PlayerStatId.CarryCapacityKg or PlayerStatId.InfectionDefense or PlayerStatId.InventorySlots or PlayerStatId.MaximumStamina or
         PlayerStatId.VisionArcBonus or PlayerStatId.AimPunchReduction or PlayerStatId.SuppressionDurationBonus or PlayerStatId.AmmoPreservationChance => true,
         PlayerStatId.AttackDamage or PlayerStatId.MaxRange or PlayerStatId.ShotsPerSecond or
         PlayerStatId.MoveSpeed or PlayerStatId.VisionRange or PlayerStatId.MaxHealth or
@@ -95,7 +96,7 @@ public static class ShooterStatPolicy
     public static bool IsPassiveStat(PlayerStatId stat) => stat switch
     {
         PlayerStatId.InfectionDefense or PlayerStatId.GasInfectionResistance => false, // Protection is equipment-owned.
-        PlayerStatId.ExperienceGainBonus or PlayerStatId.InventorySlots or PlayerStatId.MaximumStamina or
+        PlayerStatId.InventorySlots or PlayerStatId.MaximumStamina or
         PlayerStatId.VisionArcBonus or PlayerStatId.AimPunchReduction or PlayerStatId.SuppressionDurationBonus or PlayerStatId.AmmoPreservationChance or
         PlayerStatId.ArmorHealthDurabilityLossMultiplier => true,
         PlayerStatId.AttackDamage or PlayerStatId.MaxRange or PlayerStatId.DodgeChance or

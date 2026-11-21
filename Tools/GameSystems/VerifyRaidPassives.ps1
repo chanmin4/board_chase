@@ -47,7 +47,7 @@ public class ValuableItemSO:ItemSO {public bool WasPassive;}
 public class RecyclingRecipe {public ItemKind kind;public PlayerShopItemRarity rarity;public ItemSO output;public int outputAmount;public float seconds;}
 public class Damageable {public bool IsDead;}
 public class PlayerRunStateSaveData {public bool hasSnapshot=true;public int unlockedPassiveSlotCount=2,passiveSlotSchemaVersion;public List<string> equippedPassiveGuids=new();}
-public class Save {public List<PassiveInstanceSaveData> passiveInstances=new();}
+public class Save {public List<PassiveInstanceSaveData> passiveInstances=new();public int UnlockedPassiveSlotCount=2;}
 public class RunSaveData {public List<PassiveInstanceSaveData> passiveInstances=new();public StartingPassivePreparationSaveData startingPassives=new();}
 public class SaveSystem {public static SaveSystem Active=new();public Save Profile=new();public RunSaveData RunData=new();public int Writes;public void SaveDataToDisk()=>Writes++;}
 public static partial class GameProgressionRuntime {public static int Level=1;public static bool PassiveEffectsActive;public static bool IsHomePreparation=>!PassiveEffectsActive;public static bool CanUse(ItemSO item,out string message){message="";return true;}}
@@ -110,7 +110,7 @@ public static class RaidPassiveProbe {
   var first=Add(bag,combat,0);var second=Add(bag,other,1);var safe=Add(bag,survival,2);
   Check(!slots.TryEquip(first,1,out _),"Cross-category equipment accepted");
   Check(slots.TryEquip(combat,0,out _)&&first.IsBound&&first.EverEquipped&&slots.Items.Count==0,"HOME equip did not bind its owned rolled copy without active effects");
-  GameProgressionRuntime.Level=5;var duplicate=Add(bag,combat,4);Check(!slots.TryEquip(duplicate,2,out _),"Same-effect duplicate equipped");GameProgressionRuntime.Level=1;
+  SaveSystem.Active.Profile.UnlockedPassiveSlotCount=4;GameProgressionRuntime.Level=5;var duplicate=Add(bag,combat,4);Check(!slots.TryEquip(duplicate,2,out _),"Same-effect duplicate equipped");GameProgressionRuntime.Level=1;SaveSystem.Active.Profile.UnlockedPassiveSlotCount=2;
   Check(slots.TryEquip(second,0,out _)&&slots.EquippedSlots[0]==second,"HOME replacement failed");
   Check(slots.TryEquip(safe,1,out _)&&slots.TryUnequip(1,out _),"HOME survival equip/unequip failed");
   GameProgressionRuntime.PassiveEffectsActive=true;slots.RefreshModuleEffects();
@@ -122,11 +122,13 @@ public static class RaidPassiveProbe {
   // Save reconstruction uses actual instance registry; state survives a new live instance.
   string id=first.Guid;((Dictionary<string,PassiveItemSO>)typeof(PassiveInstanceRuntime).GetField("Live",BindingFlags.Static|BindingFlags.NonPublic).GetValue(null)).Remove(id);
   Check(catalog.TryResolveItem(id,out var resolved)&&((PassiveItemSO)resolved).EverEquipped,"Bound state lost during registry restore");
-  for(int level=1;level<=30;level++){
-   GameProgressionRuntime.Level=level;int expected=0;
-   for(int i=0;i<8;i++){bool unlocked=level>=Resources.Rules.SlotLevel((PassiveCategory)(i%2),i/2);Check(slots.IsSlotUnlocked(i)==unlocked,"Slot-level policy differs");if(unlocked)expected++;}
-   Check(slots.UnlockedSlotCount==expected,"Non-contiguous unlock count is wrong");
+  for(int unlockedCount=0;unlockedCount<=10;unlockedCount++){
+   SaveSystem.Active.Profile.UnlockedPassiveSlotCount=unlockedCount;GameProgressionRuntime.Level=30;
+   int expected=Math.Clamp(unlockedCount,2,8);
+   for(int i=0;i<8;i++)Check(slots.IsSlotUnlocked(i)==(i<expected),"Quest slot unlock policy differs");
+   Check(slots.UnlockedSlotCount==expected,"Saved quest slot count is wrong");
   }
+  SaveSystem.Active.Profile.UnlockedPassiveSlotCount=8;
   GameProgressionRuntime.Level=18;var snapshot=new PlayerRunStateSaveData();slots.CaptureRunState(snapshot);Check(snapshot.equippedPassiveGuids.Count==8&&snapshot.passiveSlotSchemaVersion==2,"Eight-slot save schema missing");
   var (restoreBag,restoreSlots)=Player();for(int i=0;i<bag._items.Count;i++){while(restoreBag._items.Count<=i)restoreBag._items.Add(new());if(!bag._items[i].IsEmpty)restoreBag._items[i].Set(bag._items[i].Item,bag._items[i].Amount);}
   Check(restoreSlots.TryRestoreRunState(snapshot,catalog,out _)&&restoreSlots.EquippedSlots[0]==second,"Eight-slot assignments not restored");

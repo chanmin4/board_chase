@@ -12,6 +12,8 @@ public static class StageMapBuildPipeline
         if (stage == null) { error = "Stage SO가 없습니다."; return false; }
         if (!System.Enum.IsDefined(typeof(StageMapPolicy), stage.MapPolicy) || stage.RaidMap == null || stage.RaidRuntime == null)
         { error = "맵 정책 또는 Raid Map/Runtime 설정이 없습니다."; return false; }
+        if (stage.Landmarks.enabled)
+            return LandmarkMapGenerator.TryGenerate(stage, runSeed, out layout, out error);
         bool specialRatio = stage.SpecialSectors.enabled && stage.SpecialSectors.useRatio;
         if (!stage.RoomComposition.TryValidate(out error, specialRatio)) return false;
         bool startOnly = stage.UseStartSectorOnly || stage.RoomGridSize <= 0;
@@ -48,6 +50,25 @@ public static class StageMapBuildPipeline
     {
         preset = null; bossEncounter = null; error = null;
         if (stage == null || layout == null || room == null) { error = "맵/방/SO가 없습니다."; return false; }
+        if (!string.IsNullOrEmpty(room.landmarkId))
+        {
+            if (!LandmarkMapGenerator.TryResolve(stage, room, out _, out var cell))
+            { error = room.landmarkId + ": 저장된 랜드마크 프리셋/칸을 찾을 수 없습니다."; return false; }
+            preset = cell.preset;
+            if (layout.bossSpawned && room.coord == layout.bossRoomCoord &&
+                !stage.TryPickBossEncounter(layout.stageSeed, room.coord, out bossEncounter))
+            { error = "랜드마크 보스 Encounter가 없습니다."; return false; }
+            return true;
+        }
+        if (layout.landmarkSchemaVersion > 0)
+        {
+            if (room.coord == layout.startSectorCoord)
+                return stage.TryPickSectorPreset(layout.stageSeed, room.coord, StageRoomType.Normal, out preset);
+            room.combatPoolId = "theme";
+            if (!stage.RoomComposition.TryResolve(stage, layout, room, out preset))
+            { error = "스테이지 전용 일반섹터 풀이 비어 있습니다."; return false; }
+            return true;
+        }
         if (room.roomType == StageRoomType.Boss)
         {
             if (layout.landmarkPlacementVersion == 1)

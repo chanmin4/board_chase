@@ -7,6 +7,9 @@ using UnityEngine;
 public sealed class RaidRunSaveData
 {
     public bool active;
+    public Vector2Int returnPortalCoord;
+    public SectorPortalDirection returnPortalDirection;
+    public float returnPortalCooldownRemaining;
     public StageMapLayout layout;
     public Vector2Int playerSectorCoord;
     public bool generatorPowered;
@@ -37,6 +40,9 @@ public sealed class RaidRunSaveData
             return false;
         }
         if (!RaidMapValidation.TryValidate(layout, out error)) return false;
+        if(!ValidMedicalNumber(returnPortalCooldownRemaining)||returnPortalCooldownRemaining>0f&&
+            (!Enum.IsDefined(typeof(SectorPortalDirection),returnPortalDirection)||!layout.TryGetRoom(returnPortalCoord,out _)))
+        {error="Saved return portal cooldown is invalid.";return false;}
         if (infectionSpread != null && infectionSpread.initialized && !ValidMedicalNumber(infectionSpread.remainingSeconds))
         {
             error = "Saved infection spread countdown is invalid.";

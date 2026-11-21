@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 using TMPro;
 
 /// <summary>Inventory-owned processor. Drag inventory items in; click to cancel or claim.</summary>
-public sealed class PlayerRecyclingPanelUI:MonoBehaviour
+public sealed partial class PlayerRecyclingPanelUI:MonoBehaviour
 {
     private PlayerInventoryUI _owner;private GameObject _panel;private RectTransform _rows;private TMP_Text _summary;private TMP_Text _feedback;private int _count=-1;
     private RuntimeContentCatalogSO _catalog;
@@ -16,7 +16,7 @@ public sealed class PlayerRecyclingPanelUI:MonoBehaviour
     {
         _owner=owner;
         var open=MakeButton("분해기",transform,new Vector2(-80,-28),new Vector2(150,34));
-        open.onClick.AddListener(()=>{if(_draftPanel!=null)_draftPanel.SetActive(false);_panel.SetActive(!_panel.activeSelf);});
+        open.onClick.AddListener(()=>{if(_draftPanel!=null)_draftPanel.SetActive(false);if(_craftPanel!=null)_craftPanel.SetActive(false);_panel.SetActive(!_panel.activeSelf);});
         _panel=new GameObject("시간제 분해기",typeof(RectTransform),typeof(Image));_panel.transform.SetParent(transform,false);
         var rect=(RectTransform)_panel.transform;rect.anchorMin=rect.anchorMax=new Vector2(.5f,1);rect.pivot=new Vector2(.5f,1);
         rect.anchoredPosition=new Vector2(0,-70);rect.sizeDelta=new Vector2(470,260);
@@ -38,7 +38,7 @@ public sealed class PlayerRecyclingPanelUI:MonoBehaviour
         _rows.anchoredPosition=Vector2.zero;
         var scroll=scrollObject.GetComponent<ScrollRect>();scroll.content=_rows;scroll.viewport=viewport;scroll.horizontal=false;scroll.vertical=true;scroll.scrollSensitivity=25;scroll.movementType=ScrollRect.MovementType.Clamped;
         _panel.SetActive(false);
-        InitializeStartingDraw();
+        InitializeCrafting();
     }
     private void InitializeStartingDraw()
     {
@@ -92,10 +92,11 @@ public sealed class PlayerRecyclingPanelUI:MonoBehaviour
     }
     private void Update()
     {
+        TickCrafting();
         if(_owner?.InventoryRuntime==null)return;var runtime=_owner.InventoryRuntime;
         RefreshStartingDraw();
         var profile=SaveSystem.Active?.Profile.experience;var pending=SaveSystem.Active?.RunData.experience;
-        if(_summary!=null)_summary.text=$"Lv.{GameProgressionRuntime.Level} · 총 XP {profile?.total??0} · 원정 대기 XP {pending?.pending??0}";
+        if(_summary!=null)_summary.text="시간제 분해기 · 결과 공간이 필요합니다";
         if(!_panel.activeSelf)return;
         if(_count!=runtime.RecyclingCapacity)
         {

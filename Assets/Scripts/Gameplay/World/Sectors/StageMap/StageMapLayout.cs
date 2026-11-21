@@ -11,6 +11,7 @@ using UnityEngine;
 [Serializable]
 public class StageMapLayout
 {
+    public int landmarkSchemaVersion;
     public int runSeed;
     public int stageIndex;
     public int stageSeed;

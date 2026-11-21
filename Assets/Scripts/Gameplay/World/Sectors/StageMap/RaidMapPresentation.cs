@@ -6,6 +6,14 @@ public static class RaidMapPresentation
     public static void Apply(StageMapLayout layout, StageRoomNode room, Vector2Int current, ref SectorMapCellSnapshot cell)
     {
         if (layout?.generationVersion != 3 || room == null) return;
+        if(layout.landmarkSchemaVersion>0&&!string.IsNullOrEmpty(room.landmarkId))
+        {
+            cell.isRevealed=true;cell.isLocked=false;cell.hasPublicRaidMarker=true;
+            cell.roomType=StageRoomType.Normal;cell.raidRole=RaidRoomRole.Normal;
+            cell.mapIconKind=room.landmarkIcon;cell.specialState&=~SectorSpecialState.BossActive;
+            cell.isExtraction=layout.IsExtractionSector(room.coord);
+            return; // Public landmark identity must never disclose its random boss assignment.
+        }
         bool known = room.isRevealed || room.coord==current;
         bool generator = room.coord == layout.generatorRoomCoord;
         bool candidate = layout.IsExtractionCandidate(room.coord);

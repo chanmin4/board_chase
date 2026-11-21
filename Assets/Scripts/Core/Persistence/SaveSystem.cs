@@ -176,6 +176,7 @@ public class SaveSystem : ScriptableObject
             _deviceSettings = new DeviceSettingsSaveData();
         }
 
+        CraftingRecipeRoll.ReconcileCommittedRecipes(saveData,_runData);
         bool migratedPlayerPrefs = !loadedSettings && !migratedLegacy && ImportLegacyPlayerPrefs();
 
         _hasLoadedSaveData = true;

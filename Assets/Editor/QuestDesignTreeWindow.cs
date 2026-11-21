@@ -441,7 +441,9 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
     {
         EditorGUILayout.PropertyField(serialized.FindProperty("_displayName"),new GUIContent("Quest name"));
         EditorGUILayout.PropertyField(serialized.FindProperty("_description"),new GUIContent("Description"));
-        EditorGUILayout.PropertyField(serialized.FindProperty("_experienceReward"),new GUIContent("완료 경험치 · -1=공용 기본값"));
+        EditorGUILayout.PropertyField(serialized.FindProperty("_requiredVisitedStages"),new GUIContent("최초 방문 필요 스테이지 · 모두 방문"),true);
+        EditorGUILayout.PropertyField(serialized.FindProperty("_sharedGrowthRewardGroup"),new GUIContent("분기 공유 성장 보상 그룹"));
+        EditorGUILayout.PropertyField(serialized.FindProperty("_craftUnlocksOnAccept"),new GUIContent("수락 시 제작법 해금 ID"),true);
         EditorGUILayout.PropertyField(serialized.FindProperty("_acceptanceItems"),new GUIContent("수락 지급품 · 인벤 공간 필수"),true);
         int branch=Array.IndexOf(QuestMakerGraph.Branches,_selectedQuest.Branch);
         EditorGUI.BeginChangeCheck();
@@ -486,6 +488,7 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
                     if(GUILayout.Button("Remove",GUILayout.Width(60))) { goals.DeleteArrayElementAtIndex(i); ApplyArrayEdit(serialized); }
                 }
                 DrawObjectiveFields(goals.GetArrayElementAtIndex(i));
+        EditorGUILayout.PropertyField(goals.GetArrayElementAtIndex(i).FindPropertyRelative("_actionId"),new GUIContent("행동·제작·랜드마크 ID"));
             }
         }
         GUILayout.Space(6);
@@ -513,12 +516,22 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
                     if(GUILayout.Button("Remove",GUILayout.Width(60))) { rewards.DeleteArrayElementAtIndex(i); ApplyArrayEdit(serialized); }
                 }
                 DrawRewardFields(rewards.GetArrayElementAtIndex(i), i);
+                if(rewards.GetArrayElementAtIndex(i).FindPropertyRelative("_rewardType").enumValueIndex==(int)QuestRewardType.CraftUnlock)
+                    EditorGUILayout.PropertyField(rewards.GetArrayElementAtIndex(i).FindPropertyRelative("_craftRecipeId"),new GUIContent("제작법 ID"));
             }
         }
         using(new EditorGUILayout.HorizontalScope())
         {
             if(GUILayout.Button("+ Item")) AddReward(serialized,QuestRewardType.Item);
             if(GUILayout.Button("+ Stat")) AddReward(serialized,QuestRewardType.Stat);
+        }
+        using(new EditorGUILayout.HorizontalScope())
+        {
+            if(GUILayout.Button("+ 행동/조사")) AddGoal(serialized,QuestObjectiveType.Action);
+            if(GUILayout.Button("+ 제작")) AddGoal(serialized,QuestObjectiveType.Craft);
+            if(GUILayout.Button("+ 섹터 클리어")) AddGoal(serialized,QuestObjectiveType.SectorClear);
+            if(GUILayout.Button("+ 랜드마크 클리어")) AddGoal(serialized,QuestObjectiveType.LandmarkClear);
+            if(GUILayout.Button("+ 제작법 해금")) AddReward(serialized,QuestRewardType.CraftUnlock);
         }
         if(GUILayout.Button("+ 상점 판매 해금")) AddReward(serialized,QuestRewardType.ShopUnlock);
         ObserveSale("sale:addReward");
@@ -785,6 +798,12 @@ public sealed partial class QuestDesignTreeWindow : EditorWindow
         EditorGUILayout.PropertyField(requiredCount, new GUIContent("Required Count"));
 
         QuestObjectiveType objectiveType = (QuestObjectiveType)type.enumValueIndex;
+        if(objectiveType>=QuestObjectiveType.Action)
+        {
+            if(objectiveType==QuestObjectiveType.Craft)EditorGUILayout.PropertyField(targetItem,new GUIContent("제작 결과물 (선택)"));
+            EditorGUILayout.HelpBox("위의 행동·제작·랜드마크 ID로 실제 성공 이벤트를 연결합니다. 비워두면 해당 종류 전체를 집계합니다.",MessageType.Info);
+            return;
+        }
         if (objectiveType == QuestObjectiveType.CollectItem || objectiveType == QuestObjectiveType.SubmitItem)
         {
             EditorGUILayout.PropertyField(targetItem, new GUIContent("Required Item"));

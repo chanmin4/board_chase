@@ -251,6 +251,7 @@ public sealed partial class StageMakerWindow : EditorWindow
         _settingsScroll = EditorGUILayout.BeginScrollView(_settingsScroll);
         EditorGUI.BeginChangeCheck();
         DrawGenerationFeedback();
+        DrawLandmarkSettings();
         if (BeginSection(ref _generationOpen, "1. 맵 크기 · 생성 규칙", "격자 크기, 방 밀도, 연결, 발전실·탈출구"))
         {
             using (new EditorGUI.DisabledScope(!CanWrite)) DrawGeneration();

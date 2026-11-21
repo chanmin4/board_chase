@@ -100,6 +100,7 @@ public sealed class StageMakerPreview
 
     public static string Category(StageRoomNode room)
     {
+        if(!string.IsNullOrEmpty(room.landmarkId))return "랜드마크 · "+room.landmarkId;
         if (room.hasMerchant) return "공용 전투 · 상인";
         if (!string.IsNullOrEmpty(room.specialSectorPoolId)) return "특별 · " + room.specialSectorPoolId;
         if (room.roomType == StageRoomType.Boss) return room.combatPoolId == "theme" ? "보스 · 스테이지 전용" : "보스";

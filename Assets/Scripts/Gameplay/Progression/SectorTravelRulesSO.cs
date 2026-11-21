@@ -17,7 +17,8 @@ public sealed class SectorTravelRules
 {
     public bool freeSectorTravel = true;
     [HideInInspector] public float portalCooldown; // Legacy serialization only; travel no longer reads this.
-    public bool requirePortalActivation = true;
+    public bool requirePortalActivation = false;
+    [Min(0)] public float returnPortalCooldown = 5f;
     [Min(0)] public float portalActivationCast = 5f;
     [Min(0)] public float portalCast = 5f;
 }

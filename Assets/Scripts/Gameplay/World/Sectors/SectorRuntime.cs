@@ -10,6 +10,7 @@ using UnityEngine;
 
 public class SectorRuntime : MonoBehaviour
 {
+    [HideInInspector] public float AuthoredSpaceMultiplier=1f;
     private const string WorldItemContainerName = "WorldItemContainer";
 
     [Header("NeedRef Roots")]

@@ -72,6 +72,7 @@ public class SectorEnemySpawner : MonoBehaviour
 
     public bool HasCompletedEncounter =>
         _hasEnemyEncounterConfiguration && _encounterCleared;
+    public bool HasConfiguredEnemyEncounter => _hasEnemyEncounterConfiguration;
     public bool HasStartedEncounter => _encounterStarted;
     public int AliveEnemyCount => _aliveEnemies.Count;
     public int AliveEncounterTargetCount => _aliveEncounterTargets.Count;
@@ -299,7 +300,7 @@ public class SectorEnemySpawner : MonoBehaviour
         bool isThisCurrentSector =
             _sectorRuntime != null &&
             _sectorStateManager != null &&
-            _sectorStateManager.CurrentSector == _sectorRuntime;
+            LandmarkPrefab.SameGroup(_sectorStateManager.CurrentSector, _sectorRuntime);
 
         _isBattleResolveCountdownLocked =
             snapshot.isResolveCountdown &&
@@ -798,7 +799,7 @@ private void TryRefreshResolvedSettings(string reason)
         _isSectorActive =
             _sectorRuntime != null &&
             _sectorStateManager != null &&
-            _sectorStateManager.CurrentSector == _sectorRuntime &&
+            LandmarkPrefab.SameGroup(_sectorStateManager.CurrentSector, _sectorRuntime) &&
             (!_spawnOnlyWhenOpened || _sectorRuntime.IsOpened) &&
             !_sectorRuntime.IsCleared &&
             !isFailed &&
@@ -852,6 +853,7 @@ private void TryRefreshResolvedSettings(string reason)
         instance.SetSpawnReady(false);
         instance.SetCurrentSector(sector);
         BindShooterEnemyConfig(instance, config, stageIndex);
+        EntityComponentResolver.Resolve<EnemyShooterStatsRuntime>(instance)?.SetStageBalance(stageIndex);
         var layout=RaidRuntime.Active?.State?.layout;
         if(spawnOrdinal>=0)
             instance.gameObject.AddComponent<GameProgressionIdentity>().Configure($"stage:{stageIndex}:seed:{layout?.stageSeed??0}:sector:{sector.Coord}:enemy:{spawnOrdinal}");
@@ -863,6 +865,9 @@ private void TryRefreshResolvedSettings(string reason)
                 instance.gameObject.AddComponent<InfectedEnemyMarker>().Configure(infection.infectedBulletExposure);
         }
         sector.GetComponent<SectorRoomTraitRuntime>()?.ApplyToSpawnedEnemy(instance);
+        var balancedStats=EntityComponentResolver.Resolve<EnemyShooterStatsRuntime>(instance);
+        var balancedHealth=EntityComponentResolver.Resolve<Damageable>(instance);
+        if(balancedStats!=null&&balancedHealth!=null)balancedHealth.ApplyMaxHealthFromStats(balancedStats.MaxHealth,true);
         BindProjectileRoot(instance, projectileRoot);
         return instance;
     }

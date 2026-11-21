@@ -366,6 +366,7 @@ public partial class EnemyShooterCombatController : MonoBehaviour
     /// <summary>활성화될 때 이동 설정을 맞추고 체력·피격·소리 이벤트를 구독합니다.</summary>
     private void OnEnable()
     {
+        RegisterFactionDiscovery();
         ResolveRefs();
         ConfigureAgent();
         Navigation.ResetRecovery();
@@ -381,6 +382,7 @@ public partial class EnemyShooterCombatController : MonoBehaviour
     /// <summary>구독을 해제하고 대시·회피·엄폐 예약·전술 토큰·이펙트를 정리합니다.</summary>
     private void OnDisable()
     {
+        UnregisterFactionDiscovery();
         if (_damageable != null)
             _damageable.OnHealthChanged -= OnHealthChanged;
         if (_hitReceivedEvent != null)

@@ -12,6 +12,10 @@ using UnityEngine.Localization;
 [Serializable]
 public class Save
 {
+    public List<int> visitedStageIndices = new();
+    public List<CraftRecipeSave> craftingRecipes = new();
+    public List<string> unlockedCraftRecipeIds = new();
+    public List<string> sharedQuestRewardGroups = new();
     public PlayerExperienceSaveData experience = new();
     public int recyclingSlotBonus;
     public List<string> recyclingSlotReceipts=new();
@@ -880,6 +884,8 @@ public sealed class DeviceSettingsSaveData
 [Serializable]
 public sealed class RunSaveData
 {
+    // Atomically stored with inventory. Repairs a profile write interrupted after successful crafting.
+    public List<CraftRecipeSave> craftingRecipeCommits = new();
     public StartingPassivePreparationSaveData startingPassives = new();
     public RunExperienceSaveData experience = new();
     public InfectionExposureSaveData infectionExposure = new();

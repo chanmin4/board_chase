@@ -85,8 +85,10 @@ public sealed class SectorCoverNavMeshUpdater : MonoBehaviour
     private bool _dirty, _running;
     public static void Request(SectorRuntime sector)
     {
-        var updater = sector.GetComponent<SectorCoverNavMeshUpdater>();
-        if (updater == null) updater = sector.gameObject.AddComponent<SectorCoverNavMeshUpdater>();
+        var compound=sector.GetComponentInParent<LandmarkPrefab>();
+        var root=compound!=null?compound.gameObject:sector.gameObject;
+        var updater = root.GetComponent<SectorCoverNavMeshUpdater>();
+        if (updater == null) updater = root.AddComponent<SectorCoverNavMeshUpdater>();
         updater._dirty = true;
     }
     private void LateUpdate() { if (_dirty && !_running) StartCoroutine(Rebuild()); }

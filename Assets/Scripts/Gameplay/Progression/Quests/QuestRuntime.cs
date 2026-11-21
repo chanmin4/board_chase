@@ -224,7 +224,7 @@ public sealed class QuestRuntimeState
 }
 
 [DisallowMultipleComponent]
-public sealed class QuestRuntime : MonoBehaviour
+public sealed partial class QuestRuntime : MonoBehaviour
 {
     private static QuestRuntime _instance;
     private bool _submittingItems;
@@ -389,6 +389,7 @@ public sealed class QuestRuntime : MonoBehaviour
         if (definition == null || FindState(definition) != null)
             return false;
 
+        if (!HasVisitedStages(definition)) return false;
         QuestDefinitionSO[] prerequisites = definition.Prerequisites;
         for (int i = 0; i < prerequisites.Length; i++)
         {
@@ -423,6 +424,7 @@ public sealed class QuestRuntime : MonoBehaviour
         _states.Add(state);
         if(definition.AcceptanceItems.Length>0&&(_playerInventory==null||!_playerInventory.TryReceiveQuestAcceptance(definition.AcceptanceItems,out _)))
         {_states.Remove(state);return false;}
+        foreach (string id in definition.CraftUnlocksOnAccept) GrantCraftUnlock(id);
         PublishSystemMessage($"Quest accepted: {definition.DisplayName}");
         UIAudio.PlayQuestNotification(definition.AcceptedAudioCue, false);
 
@@ -775,8 +777,9 @@ public sealed class QuestRuntime : MonoBehaviour
 
         return reward.RewardType switch
         {
+            QuestRewardType.CraftUnlock => GrantCraftUnlock(reward.CraftRecipeId),
             QuestRewardType.Item => TryGrantItemReward(definition, rewardIndex, reward),
-            QuestRewardType.Stat => TryGrantPersistentStatReward(definition, rewardIndex, reward),
+            QuestRewardType.Stat => GrantSharedStat(definition, rewardIndex, reward),
             QuestRewardType.ShopUnlock => TryGrantShopUnlockReward(definition, rewardIndex, reward),
             QuestRewardType.StageUnlock => TryGrantStageUnlockReward(definition, rewardIndex, reward),
             QuestRewardType.WarehouseSlots => TryGrantWarehouseSlotReward(definition, rewardIndex, reward),

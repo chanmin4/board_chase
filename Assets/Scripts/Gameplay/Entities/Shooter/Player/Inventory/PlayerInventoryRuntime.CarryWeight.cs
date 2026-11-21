@@ -37,7 +37,9 @@ public partial class PlayerInventoryRuntime
                 _carryWeightKg = CalculateCarriedWeightKg();
                 _carryWeightFrame = Time.frameCount;
             }
-            return new PlayerCarryLoad(_carryWeightKg, (_statsRuntime?.StatConfig as PlayerStatsConfigSO)?.CarryCapacityKg ?? 70f);
+            float baseline=(_statsRuntime?.StatConfig as PlayerStatsConfigSO)?.CarryCapacityKg??70f;
+            float capacity=(_statsRuntime?.AdditionalStat(PlayerStatId.CarryCapacityKg,baseline)??baseline)+(_equippedBackpack?.CarryCapacityBonusKg??0);
+            return new PlayerCarryLoad(_carryWeightKg,capacity);
         }
     }
 

@@ -49,7 +49,7 @@ public sealed class PassiveInventorySlotUI : EquipmentInventorySlotUI
             base.Bind(null);
             string category = _passiveSlotIndex % 2 == 0 ? "전투" : "생존";
             int level = PassiveModuleRulesSO.Active?.SlotLevel((PassiveCategory)(_passiveSlotIndex % 2), _passiveSlotIndex / 2) ?? 1;
-            SetRuntimeSlotTypeOverride(_inspectionOnly ? $"{category} {_passiveSlotIndex / 2 + 1} · 빈칸" : $"{category} {_passiveSlotIndex / 2 + 1} · Lv.{level}");
+            SetRuntimeSlotTypeOverride(_inspectionOnly ? $"{category} {_passiveSlotIndex / 2 + 1} · 빈칸" : $"{category} {_passiveSlotIndex / 2 + 1} · 퀘스트 해금");
             return;
         }
 
